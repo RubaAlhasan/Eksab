@@ -1,0 +1,23 @@
+<Solution>
+    <Configurations>
+        <Platform Name="Any CPU" />
+    </Configurations>
+    <Folder Name="/src/">
+        <Project Path="src/Eksabli.Domain/Eksabli.Domain.csproj" />
+        <Project Path="src/Eksabli.Application/Eksabli.Application.csproj" />
+        <Project Path="src/Eksabli.EntityFrameworkCore/Eksabli.EntityFrameworkCore.csproj" />
+        <Project Path="src/Eksabli.Domain.Shared/Eksabli.Domain.Shared.csproj" />
+        <Project Path="src/Eksabli.Application.Contracts/Eksabli.Application.Contracts.csproj" />
+        <Project Path="src/Eksabli.HttpApi/Eksabli.HttpApi.csproj" />
+        <Project Path="src/Eksabli.HttpApi.Client/Eksabli.HttpApi.Client.csproj" />
+        <Project Path="src/Eksabli.HttpApi.Host/Eksabli.HttpApi.Host.csproj" />
+        <Project Path="src/Eksabli.DbMigrator/Eksabli.DbMigrator.csproj" />
+    </Folder>
+    <Folder Name="/test/">
+        <Project Path="test/Eksabli.Application.Tests/Eksabli.Application.Tests.csproj" />
+        <Project Path="test/Eksabli.EntityFrameworkCore.Tests/Eksabli.EntityFrameworkCore.Tests.csproj" />
+        <Project Path="test/Eksabli.TestBase/Eksabli.TestBase.csproj" />
+        <Project Path="test/Eksabli.Domain.Tests/Eksabli.Domain.Tests.csproj" />
+        <Project Path="test/Eksabli.HttpApi.Client.ConsoleTestApp/Eksabli.HttpApi.Client.ConsoleTestApp.csproj" />
+    </Folder>
+</Solution>
