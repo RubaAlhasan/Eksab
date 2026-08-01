@@ -6,5 +6,6 @@ public enum PointsTransactionSource
     Campaign = 1,
     Referral = 2,
     Birthday = 3,
-    Manual = 4
+    Manual = 4,
+    Reward = 5
 }

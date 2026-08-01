@@ -9,6 +9,7 @@ using Eksabli.EmployeeAssignments;
 using Eksabli.Devices;
 using Eksabli.Memberships;
 using Eksabli.Wallets;
+using Eksabli.Rewards;
 
 namespace Eksabli;
 
@@ -140,4 +141,24 @@ public partial class EksabliPointRuleToPointRuleDtoMapper : MapperBase<PointRule
     public override partial PointRuleDto Map(PointRule source);
 
     public override partial void Map(PointRule source, PointRuleDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliRewardToRewardDtoMapper : MapperBase<Reward, RewardDto>
+{
+    public override partial RewardDto Map(Reward source);
+
+    public override partial void Map(Reward source, RewardDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliCouponToCouponDtoMapper : MapperBase<Coupon, CouponDto>
+{
+    [MapperIgnoreTarget(nameof(CouponDto.RewardNameAr))]
+    [MapperIgnoreTarget(nameof(CouponDto.RewardNameEn))]
+    public override partial CouponDto Map(Coupon source);
+
+    [MapperIgnoreTarget(nameof(CouponDto.RewardNameAr))]
+    [MapperIgnoreTarget(nameof(CouponDto.RewardNameEn))]
+    public override partial void Map(Coupon source, CouponDto destination);
 }

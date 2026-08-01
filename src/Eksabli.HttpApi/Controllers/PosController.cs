@@ -41,4 +41,10 @@ public class PosController : EksabliController
     {
         return _posAppService.ManualAdjustAsync(input);
     }
+
+    [HttpPost("confirm-redemption")]
+    public Task<RedemptionConfirmationDto> ConfirmRedemptionAsync(ConfirmRedemptionDto input)
+    {
+        return _posAppService.ConfirmRedemptionAsync(input);
+    }
 }

@@ -16,4 +16,6 @@ public interface IPosAppService : IApplicationService
     Task<AwardPointsResultDto> AwardPointsByCustomerIdAsync(Guid customerId, AwardPointsByCustomerIdDto input);
 
     Task<AwardPointsResultDto> ManualAdjustAsync(ManualAdjustDto input);
+
+    Task<RedemptionConfirmationDto> ConfirmRedemptionAsync(ConfirmRedemptionDto input);
 }

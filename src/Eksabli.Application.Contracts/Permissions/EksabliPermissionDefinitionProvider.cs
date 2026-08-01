@@ -47,6 +47,12 @@ public class EksabliPermissionDefinitionProvider : PermissionDefinitionProvider
         pointRulesPermission.AddChild(EksabliPermissions.PointRules.Create, L("Permission:PointRules.Create"));
         pointRulesPermission.AddChild(EksabliPermissions.PointRules.Edit, L("Permission:PointRules.Edit"));
         pointRulesPermission.AddChild(EksabliPermissions.PointRules.Delete, L("Permission:PointRules.Delete"));
+
+        var rewardsPermission = myGroup.AddPermission(EksabliPermissions.Rewards.Default, L("Permission:Rewards"));
+        rewardsPermission.AddChild(EksabliPermissions.Rewards.Create, L("Permission:Rewards.Create"));
+        rewardsPermission.AddChild(EksabliPermissions.Rewards.Edit, L("Permission:Rewards.Edit"));
+        rewardsPermission.AddChild(EksabliPermissions.Rewards.Delete, L("Permission:Rewards.Delete"));
+        rewardsPermission.AddChild(EksabliPermissions.Rewards.Redeem, L("Permission:Rewards.Redeem"));
         //Define your own permissions here. Example:
         //myGroup.AddPermission(EksabliPermissions.MyPermission1, L("Permission:MyPermission1"));
     }

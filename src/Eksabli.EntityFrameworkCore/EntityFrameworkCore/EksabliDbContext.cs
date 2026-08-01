@@ -9,6 +9,7 @@ using Eksabli.CustomerProfiles;
 using Eksabli.EmployeeAssignments;
 using Eksabli.Devices;
 using Eksabli.Wallets;
+using Eksabli.Rewards;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;
 using Volo.Abp.Data;
@@ -59,6 +60,10 @@ public class EksabliDbContext :
     public DbSet<Tier> Tiers { get; set; }
 
     public DbSet<PointRule> PointRules { get; set; }
+
+    public DbSet<Reward> Rewards { get; set; }
+
+    public DbSet<Coupon> Coupons { get; set; }
 
     #region Entities from the modules
 
@@ -240,6 +245,26 @@ public class EksabliDbContext :
             b.ConfigureByConvention(); //auto configure for the base class props
             b.Property(x => x.PointsPerUnit).HasColumnType("numeric(9,4)");
             b.HasIndex(x => new { x.TenantId, x.RuleType }).IsUnique();
+        });
+
+        builder.Entity<Reward>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "Rewards", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.NameAr).IsRequired().HasMaxLength(RewardConsts.MaxNameLength);
+            b.Property(x => x.NameEn).IsRequired().HasMaxLength(RewardConsts.MaxNameLength);
+            b.Property(x => x.ImageBlobName).HasMaxLength(RewardConsts.MaxImageBlobNameLength);
+            b.HasIndex(x => new { x.TenantId, x.ValidFrom, x.ValidTo });
+        });
+
+        builder.Entity<Coupon>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "Coupons", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.Code).IsRequired().HasMaxLength(CouponConsts.CodeLength);
+            b.HasIndex(x => x.Code).IsUnique();
+            b.HasIndex(x => new { x.MembershipId, x.Status });
+            b.HasIndex(x => new { x.TenantId, x.Status });
         });
     }
 }

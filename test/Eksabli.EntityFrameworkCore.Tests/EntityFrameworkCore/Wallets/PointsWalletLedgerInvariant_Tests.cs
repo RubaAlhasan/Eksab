@@ -94,4 +94,37 @@ public class PointsWalletLedgerInvariant_Tests : EksabliEntityFrameworkCoreTestB
             finalWallet.Balance.ShouldBe(100 + 500 - 10);
         });
     }
+
+    [Fact]
+    public async Task Redeem_Should_Move_LifetimeRedeemed_By_The_Positive_Amount()
+    {
+        var wallet = PointsWallet.Create(Guid.NewGuid(), Guid.NewGuid());
+        await WithUnitOfWorkAsync(() => _walletRepository.InsertAsync(wallet, autoSave: true));
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var w = await _walletRepository.GetAsync(wallet.Id);
+            w.ApplyTransaction(PointsTransactionType.Earn, 100);
+            await _walletRepository.UpdateAsync(w, autoSave: true);
+        });
+
+        // A reward redemption records a negative Points delta (see PointsTransactionSource.Reward).
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var w = await _walletRepository.GetAsync(wallet.Id);
+            var tx = PointsTransaction.Create(Guid.NewGuid(), w.Id, PointsTransactionType.Redeem, -30, PointsTransactionSource.Reward);
+            await _transactionRepository.InsertAsync(tx, autoSave: true);
+
+            w.ApplyTransaction(PointsTransactionType.Redeem, -30);
+            await _walletRepository.UpdateAsync(w, autoSave: true);
+        });
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var finalWallet = await _walletRepository.GetAsync(wallet.Id);
+            finalWallet.Balance.ShouldBe(70);
+            finalWallet.LifetimeEarned.ShouldBe(100);
+            finalWallet.LifetimeRedeemed.ShouldBe(30);
+        });
+    }
 }

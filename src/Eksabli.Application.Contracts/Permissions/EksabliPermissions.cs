@@ -68,6 +68,17 @@ public static class EksabliPermissions
         public const string Delete = Default + ".Delete";
     }
 
+    public static class Rewards
+    {
+        public const string Default = GroupName + ".Rewards";
+        public const string Create = Default + ".Create";
+        public const string Edit = Default + ".Edit";
+        public const string Delete = Default + ".Delete";
+        // Defined for parity/future use — actual redemption-confirm gate is the role check inside
+        // PosAppService.ConfirmRedemptionAsync, same treatment as Memberships.Award/.Adjust.
+        public const string Redeem = Default + ".Redeem";
+    }
+
     //Add your own permission names. Example:
     //public const string MyPermission1 = GroupName + ".MyPermission1";
 }

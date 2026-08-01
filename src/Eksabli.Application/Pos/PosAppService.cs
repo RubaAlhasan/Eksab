@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Eksabli.CustomerProfiles;
 using Eksabli.EmployeeAssignments;
 using Eksabli.Memberships;
+using Eksabli.Rewards;
 using Eksabli.Wallets;
 using Microsoft.Extensions.Caching.Distributed;
 using Volo.Abp;
@@ -26,6 +27,8 @@ public class PosAppService : ApplicationService, IPosAppService
     private readonly IRepository<PointRule, Guid> _pointRuleRepository;
     private readonly IRepository<EmployeeAssignment, Guid> _employeeAssignmentRepository;
     private readonly IRepository<CustomerProfile, Guid> _customerProfileRepository;
+    private readonly ICouponRepository _couponRepository;
+    private readonly IRewardRepository _rewardRepository;
     private readonly IIdentityUserRepository _identityUserRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDistributedCache _qrCache;
@@ -38,6 +41,8 @@ public class PosAppService : ApplicationService, IPosAppService
         IRepository<PointRule, Guid> pointRuleRepository,
         IRepository<EmployeeAssignment, Guid> employeeAssignmentRepository,
         IRepository<CustomerProfile, Guid> customerProfileRepository,
+        ICouponRepository couponRepository,
+        IRewardRepository rewardRepository,
         IIdentityUserRepository identityUserRepository,
         ICurrentTenant currentTenant,
         IDistributedCache qrCache)
@@ -49,6 +54,8 @@ public class PosAppService : ApplicationService, IPosAppService
         _pointRuleRepository = pointRuleRepository;
         _employeeAssignmentRepository = employeeAssignmentRepository;
         _customerProfileRepository = customerProfileRepository;
+        _couponRepository = couponRepository;
+        _rewardRepository = rewardRepository;
         _identityUserRepository = identityUserRepository;
         _currentTenant = currentTenant;
         _qrCache = qrCache;
@@ -114,7 +121,7 @@ public class PosAppService : ApplicationService, IPosAppService
 
     public async Task<AwardPointsResultDto> ManualAdjustAsync(ManualAdjustDto input)
     {
-        var employeeId = await CheckStaffRoleAsync(EmployeeRole.Owner, EmployeeRole.BranchManager);
+        var (employeeId, _) = await CheckStaffRoleAsync(EmployeeRole.Owner, EmployeeRole.BranchManager);
 
         var todayStartUtc = Clock.Now.Date;
         var todaysCount = await _transactionRepository.CountAsync(t =>
@@ -243,10 +250,46 @@ public class PosAppService : ApplicationService, IPosAppService
         };
     }
 
+    public async Task<RedemptionConfirmationDto> ConfirmRedemptionAsync(ConfirmRedemptionDto input)
+    {
+        var coupon = await _couponRepository.FirstOrDefaultAsync(c => c.Code == input.Code);
+        if (coupon == null || coupon.Status != CouponStatus.Issued)
+        {
+            throw new UserFriendlyException("Invalid or already-used code.");
+        }
+
+        var reward = await _rewardRepository.GetAsync(coupon.RewardId);
+
+        if (reward.ValidTo.HasValue && reward.ValidTo.Value < Clock.Now)
+        {
+            coupon.MarkExpired();
+            await _couponRepository.UpdateAsync(coupon);
+            throw new UserFriendlyException("This reward offer has expired.");
+        }
+
+        // High-value rewards (per-reward, tenant-configured threshold) require Manager+, not just Cashier.
+        var allowedRoles = reward.ApprovalThresholdPoints.HasValue && reward.PointsCost >= reward.ApprovalThresholdPoints.Value
+            ? new[] { EmployeeRole.Owner, EmployeeRole.BranchManager }
+            : new[] { EmployeeRole.Owner, EmployeeRole.BranchManager, EmployeeRole.Cashier };
+
+        var (employeeId, defaultBranchId) = await CheckStaffRoleAsync(allowedRoles);
+
+        coupon.MarkRedeemed(Clock.Now, employeeId, input.BranchId ?? defaultBranchId);
+        await _couponRepository.UpdateAsync(coupon);
+
+        return new RedemptionConfirmationDto
+        {
+            CouponId = coupon.Id,
+            RewardNameAr = reward.NameAr,
+            RewardNameEn = reward.NameEn,
+            RedeemedAt = coupon.RedeemedAt!.Value
+        };
+    }
+
     // Role-hierarchy check — NOT an ABP permission check. No invited employee has any ABP permission
     // grant today (only the seeded tenant Owner does), so gating this with [Authorize(...)] would lock
     // out every real Cashier. Mirrors DeviceAppService.RemoveAsync's ownership-check shape.
-    private async Task<Guid> CheckStaffRoleAsync(params EmployeeRole[] allowedRoles)
+    private async Task<(Guid EmployeeId, Guid? BranchId)> CheckStaffRoleAsync(params EmployeeRole[] allowedRoles)
     {
         var userId = CurrentUser.GetId();
         var assignment = await _employeeAssignmentRepository.FirstOrDefaultAsync(a => a.UserId == userId)
@@ -257,6 +300,6 @@ public class PosAppService : ApplicationService, IPosAppService
             throw new AbpAuthorizationException("Your role does not permit this action.");
         }
 
-        return userId;
+        return (userId, assignment.BranchId);
     }
 }

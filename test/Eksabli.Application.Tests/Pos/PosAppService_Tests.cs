@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Eksabli.CustomerProfiles;
 using Eksabli.EmployeeAssignments;
 using Eksabli.Memberships;
+using Eksabli.Rewards;
 using Eksabli.Wallets;
 using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
@@ -35,6 +36,8 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
     private readonly IRepository<PointRule, Guid> _pointRuleRepository;
     private readonly IRepository<EmployeeAssignment, Guid> _employeeAssignmentRepository;
     private readonly IRepository<CustomerProfile, Guid> _customerProfileRepository;
+    private readonly IRewardRepository _rewardRepository;
+    private readonly ICouponRepository _couponRepository;
     private readonly IDistributedCache _qrCache;
     private readonly ICurrentTenant _currentTenant;
     private readonly ICurrentPrincipalAccessor _currentPrincipalAccessor;
@@ -52,6 +55,8 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         _pointRuleRepository = GetRequiredService<IRepository<PointRule, Guid>>();
         _employeeAssignmentRepository = GetRequiredService<IRepository<EmployeeAssignment, Guid>>();
         _customerProfileRepository = GetRequiredService<IRepository<CustomerProfile, Guid>>();
+        _rewardRepository = GetRequiredService<IRewardRepository>();
+        _couponRepository = GetRequiredService<ICouponRepository>();
         _qrCache = GetRequiredService<IDistributedCache>();
         _currentTenant = GetRequiredService<ICurrentTenant>();
         _currentPrincipalAccessor = GetRequiredService<ICurrentPrincipalAccessor>();
@@ -134,6 +139,37 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
             }
         });
         return walletId;
+    }
+
+    private async Task<Guid> CreateRewardAsync(Guid tenantId, int pointsCost, int? approvalThresholdPoints = null, DateTime? validTo = null)
+    {
+        Guid rewardId = default;
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var reward = Reward.Create(Guid.NewGuid(), "مكافأة", "Reward", RewardType.Discount, pointsCost);
+                reward.SetApprovalThresholdPoints(approvalThresholdPoints);
+                reward.SetValidity(null, validTo);
+                await _rewardRepository.InsertAsync(reward, autoSave: true);
+                rewardId = reward.Id;
+            }
+        });
+        return rewardId;
+    }
+
+    private async Task<string> IssueCouponAsync(Guid tenantId, Guid membershipId, Guid rewardId)
+    {
+        var code = Guid.NewGuid().ToString("N")[..CouponConsts.CodeLength].ToUpperInvariant();
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var coupon = Coupon.Create(Guid.NewGuid(), rewardId, membershipId, code, DateTime.UtcNow);
+                await _couponRepository.InsertAsync(coupon, autoSave: true);
+            }
+        });
+        return code;
     }
 
     [Fact]
@@ -472,6 +508,150 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
             {
                 await WithUnitOfWorkAsync(() => _posAppService.ManualAdjustAsync(new ManualAdjustDto { CustomerId = customerId, Points = 1 }));
             });
+        }
+    }
+
+    [Fact]
+    public async Task Should_Confirm_Redemption_And_Mark_Coupon_Redeemed()
+    {
+        var tenantId = await CreateTenantAsync();
+        var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var (customerId, _) = await CreateCustomerAsync();
+        var walletId = await JoinBusinessAsync(tenantId, customerId);
+        var membershipId = await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var wallet = await _walletRepository.GetAsync(walletId);
+                return wallet.MembershipId;
+            }
+        });
+        var rewardId = await CreateRewardAsync(tenantId, pointsCost: 50);
+        var code = await IssueCouponAsync(tenantId, membershipId, rewardId);
+
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashierId))
+        {
+            var result = await WithUnitOfWorkAsync(() => _posAppService.ConfirmRedemptionAsync(new ConfirmRedemptionDto { Code = code }));
+            result.RewardNameEn.ShouldBe("Reward");
+        }
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var coupon = await _couponRepository.SingleAsync(c => c.Code == code);
+                coupon.Status.ShouldBe(CouponStatus.Redeemed);
+                coupon.RedeemedByEmployeeId.ShouldBe(cashierId);
+            }
+        });
+    }
+
+    [Fact]
+    public async Task Should_Reject_Confirm_Redemption_For_Wrong_Or_AlreadyUsed_Code()
+    {
+        var tenantId = await CreateTenantAsync();
+        var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var (customerId, _) = await CreateCustomerAsync();
+        var walletId = await JoinBusinessAsync(tenantId, customerId);
+        var membershipId = await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var wallet = await _walletRepository.GetAsync(walletId);
+                return wallet.MembershipId;
+            }
+        });
+        var rewardId = await CreateRewardAsync(tenantId, pointsCost: 50);
+        var code = await IssueCouponAsync(tenantId, membershipId, rewardId);
+
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashierId))
+        {
+            await Assert.ThrowsAsync<UserFriendlyException>(async () =>
+            {
+                await WithUnitOfWorkAsync(() => _posAppService.ConfirmRedemptionAsync(new ConfirmRedemptionDto { Code = "BADCODE1" }));
+            });
+
+            await WithUnitOfWorkAsync(() => _posAppService.ConfirmRedemptionAsync(new ConfirmRedemptionDto { Code = code }));
+
+            await Assert.ThrowsAsync<UserFriendlyException>(async () =>
+            {
+                await WithUnitOfWorkAsync(() => _posAppService.ConfirmRedemptionAsync(new ConfirmRedemptionDto { Code = code }));
+            });
+        }
+    }
+
+    [Fact]
+    public async Task Should_Reject_And_Mark_Expired_When_Reward_Validity_Has_Passed()
+    {
+        var tenantId = await CreateTenantAsync();
+        var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var (customerId, _) = await CreateCustomerAsync();
+        var walletId = await JoinBusinessAsync(tenantId, customerId);
+        var membershipId = await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var wallet = await _walletRepository.GetAsync(walletId);
+                return wallet.MembershipId;
+            }
+        });
+        var rewardId = await CreateRewardAsync(tenantId, pointsCost: 50, validTo: DateTime.UtcNow.AddDays(-1));
+        var code = await IssueCouponAsync(tenantId, membershipId, rewardId);
+
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashierId))
+        {
+            await Assert.ThrowsAsync<UserFriendlyException>(async () =>
+            {
+                await WithUnitOfWorkAsync(() => _posAppService.ConfirmRedemptionAsync(new ConfirmRedemptionDto { Code = code }));
+            });
+        }
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var coupon = await _couponRepository.SingleAsync(c => c.Code == code);
+                coupon.Status.ShouldBe(CouponStatus.Expired);
+            }
+        });
+    }
+
+    [Fact]
+    public async Task Should_Escalate_HighValue_Reward_Confirmation_To_Manager()
+    {
+        var tenantId = await CreateTenantAsync();
+        var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var managerId = await CreateStaffAsync(tenantId, EmployeeRole.BranchManager);
+        var (customerId, _) = await CreateCustomerAsync();
+        var walletId = await JoinBusinessAsync(tenantId, customerId);
+        var membershipId = await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var wallet = await _walletRepository.GetAsync(walletId);
+                return wallet.MembershipId;
+            }
+        });
+        var rewardId = await CreateRewardAsync(tenantId, pointsCost: 500, approvalThresholdPoints: 300);
+        var code = await IssueCouponAsync(tenantId, membershipId, rewardId);
+
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashierId))
+        {
+            await Assert.ThrowsAsync<AbpAuthorizationException>(async () =>
+            {
+                await WithUnitOfWorkAsync(() => _posAppService.ConfirmRedemptionAsync(new ConfirmRedemptionDto { Code = code }));
+            });
+        }
+
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(managerId))
+        {
+            var result = await WithUnitOfWorkAsync(() => _posAppService.ConfirmRedemptionAsync(new ConfirmRedemptionDto { Code = code }));
+            result.CouponId.ShouldNotBe(Guid.Empty);
         }
     }
 }
