@@ -39,6 +39,11 @@ already wired in before reaching for a new tool.**
 | 6 | [Dashboards & Admin](06-dashboards-admin.md) | Business (tenant) dashboard, platform admin panel, reporting/analytics *(§6, 7, 12)* |
 | 7 | [Loyalty Engine](07-loyalty-engine.md) | Points strategies, rewards/redemption, campaign engine, engagement/gamification, future features *(§8, 9, 10, 11, 18)* |
 
+**Ready to start building?** The seven documents above are organized by concern. The
+**[`features/`](features/README.md)** folder re-slices the same decisions into implementation-ready
+feature folders — one per bounded context, each with its own domain model, API surface, screens,
+permissions, and build checklist. Start there, not here, once you're writing code.
+
 ## The one decision everything else depends on
 
 Before any of the documents below make sense, one architectural fork needs to be named explicitly,
