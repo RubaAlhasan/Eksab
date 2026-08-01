@@ -9,7 +9,7 @@ function configureRoutes() {
   const routes = inject(RoutesService);
   routes.add([
       {
-        path: '/',
+        path: '/home',
         name: '::Menu:Home',
         iconClass: 'fas fa-home',
         order: 1,
