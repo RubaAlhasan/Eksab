@@ -52,6 +52,7 @@ public class OpenIddictDataSeedContributor : OpenIddictDataSeedContributorBase, 
             OpenIddictConstants.Permissions.Scopes.Phone,
             OpenIddictConstants.Permissions.Scopes.Profile,
             OpenIddictConstants.Permissions.Scopes.Roles,
+            OpenIddictConstants.Scopes.OfflineAccess,
             "Eksabli"
         };
 
@@ -77,7 +78,8 @@ public class OpenIddictDataSeedContributor : OpenIddictDataSeedContributorBase, 
                     OpenIddictConstants.GrantTypes.ClientCredentials,
                     OpenIddictConstants.GrantTypes.RefreshToken,
                     "LinkLogin",
-                    "Impersonation"
+                    "Impersonation",
+                    "otp"
                 },
                 scopes: commonScopes,
                 redirectUris: new List<string> { appClientRootUrl },

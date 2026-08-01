@@ -36,9 +36,11 @@ using Microsoft.AspNetCore.Hosting;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Identity;
 using Volo.Abp.OpenIddict;
+using Volo.Abp.OpenIddict.ExtensionGrantTypes;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.Studio.Client.AspNetCore;
 using Volo.Abp.Security.Claims;
+using Eksabli.OpenIddict;
 
 namespace Eksabli;
 
@@ -120,6 +122,7 @@ public class EksabliHttpApiHostModule : AbpModule
 
         ConfigureStudio(hostingEnvironment);
         ConfigureAuthentication(context);
+        ConfigureExtensionGrants();
         ConfigureUrls(configuration);
         ConfigureBundles(hostingEnvironment);
         ConfigureConventionalControllers();
@@ -146,6 +149,14 @@ public class EksabliHttpApiHostModule : AbpModule
         context.Services.Configure<AbpClaimsPrincipalFactoryOptions>(options =>
         {
             options.IsDynamicClaimsEnabled = true;
+        });
+    }
+
+    private void ConfigureExtensionGrants()
+    {
+        Configure<AbpOpenIddictExtensionGrantsOptions>(options =>
+        {
+            options.Grants["otp"] = new OtpLoginGrantHandler();
         });
     }
 

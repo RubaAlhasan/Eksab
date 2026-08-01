@@ -2,6 +2,13 @@ using Riok.Mapperly.Abstractions;
 using Volo.Abp.Mapperly;
 using Eksabli.Authors;
 using Eksabli.Books;
+using Eksabli.BusinessProfiles;
+using Eksabli.Branches;
+using Eksabli.CustomerProfiles;
+using Eksabli.EmployeeAssignments;
+using Eksabli.Devices;
+using Eksabli.Memberships;
+using Eksabli.Wallets;
 
 namespace Eksabli;
 
@@ -45,4 +52,92 @@ public partial class EksabliAuthorToAuthorExcelDtoMapper : MapperBase<Author, Au
     public override partial AuthorExcelDto Map(Author source);
 
     public override partial void Map(Author source, AuthorExcelDto destination);
+}
+
+// The 5 entities below are rich models (private setters, behavior methods) — unlike Book/Author,
+// app-service code calls constructors/behavior methods directly for creates/updates rather than
+// ObjectMapper.Map<CreateDto, Entity>(), so only the read direction (Entity -> Dto) is mapped here.
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliBusinessProfileToBusinessProfileDtoMapper : MapperBase<BusinessProfile, BusinessProfileDto>
+{
+    public override partial BusinessProfileDto Map(BusinessProfile source);
+
+    public override partial void Map(BusinessProfile source, BusinessProfileDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliBranchToBranchDtoMapper : MapperBase<Branch, BranchDto>
+{
+    public override partial BranchDto Map(Branch source);
+
+    public override partial void Map(Branch source, BranchDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliCustomerProfileToCustomerProfileDtoMapper : MapperBase<CustomerProfile, CustomerProfileDto>
+{
+    public override partial CustomerProfileDto Map(CustomerProfile source);
+
+    public override partial void Map(CustomerProfile source, CustomerProfileDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliEmployeeAssignmentToEmployeeAssignmentDtoMapper : MapperBase<EmployeeAssignment, EmployeeAssignmentDto>
+{
+    [MapperIgnoreTarget(nameof(EmployeeAssignmentDto.UserEmail))]
+    public override partial EmployeeAssignmentDto Map(EmployeeAssignment source);
+
+    [MapperIgnoreTarget(nameof(EmployeeAssignmentDto.UserEmail))]
+    public override partial void Map(EmployeeAssignment source, EmployeeAssignmentDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliDeviceToDeviceDtoMapper : MapperBase<Device, DeviceDto>
+{
+    public override partial DeviceDto Map(Device source);
+
+    public override partial void Map(Device source, DeviceDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliMembershipToMembershipDtoMapper : MapperBase<Membership, MembershipDto>
+{
+    public override partial MembershipDto Map(Membership source);
+
+    public override partial void Map(Membership source, MembershipDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliPointsWalletToPointsWalletDtoMapper : MapperBase<PointsWallet, PointsWalletDto>
+{
+    [MapperIgnoreTarget(nameof(PointsWalletDto.CurrentTierName))]
+    public override partial PointsWalletDto Map(PointsWallet source);
+
+    [MapperIgnoreTarget(nameof(PointsWalletDto.CurrentTierName))]
+    public override partial void Map(PointsWallet source, PointsWalletDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliPointsTransactionToPointsTransactionDtoMapper : MapperBase<PointsTransaction, PointsTransactionDto>
+{
+    public override partial PointsTransactionDto Map(PointsTransaction source);
+
+    public override partial void Map(PointsTransaction source, PointsTransactionDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliTierToTierDtoMapper : MapperBase<Tier, TierDto>
+{
+    public override partial TierDto Map(Tier source);
+
+    public override partial void Map(Tier source, TierDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliPointRuleToPointRuleDtoMapper : MapperBase<PointRule, PointRuleDto>
+{
+    public override partial PointRuleDto Map(PointRule source);
+
+    public override partial void Map(PointRule source, PointRuleDto destination);
 }

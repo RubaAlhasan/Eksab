@@ -22,12 +22,12 @@ namespace Eksabli.Books;
 [Authorize(EksabliPermissions.Books.Default)]
 public class BookAppService : ApplicationService, IBookAppService
 {
-    private readonly IRepository<Book, Guid> _repository;
+    private readonly IBookRepository _repository;
     private readonly IRepository<Author, Guid> _authorRepository;
     private readonly IDistributedCache<BookExcelDownloadTokenCacheItem, string> _excelDownloadTokenCache;
 
     public BookAppService(
-        IRepository<Book, Guid> repository,
+        IBookRepository repository,
         IRepository<Author, Guid> authorRepository,
         IDistributedCache<BookExcelDownloadTokenCacheItem, string> excelDownloadTokenCache)
     {
@@ -46,14 +46,10 @@ public class BookAppService : ApplicationService, IBookAppService
 
     public async Task<PagedResultDto<BookDto>> GetListAsync(PagedAndSortedResultRequestDto input)
     {
-        var queryable = await _repository.GetQueryableAsync();
-        var query = queryable
-            .OrderBy(input.Sorting.IsNullOrWhiteSpace() ? "Name" : input.Sorting)
-            .Skip(input.SkipCount)
-            .Take(input.MaxResultCount);
-
-        var books = await AsyncExecuter.ToListAsync(query);
-        var totalCount = await AsyncExecuter.CountAsync(queryable);
+        var (books, totalCount) = await _repository.GetListAsync(
+            sorting: input.Sorting,
+            skipCount: input.SkipCount,
+            maxResultCount: input.MaxResultCount);
 
         var bookDtos = ObjectMapper.Map<List<Book>, List<BookDto>>(books);
         await SetAuthorNamesAsync(bookDtos);

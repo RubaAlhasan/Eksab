@@ -1,0 +1,262 @@
+using System;
+using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
+using Eksabli.CustomerProfiles;
+using Eksabli.EmployeeAssignments;
+using Eksabli.Memberships;
+using Eksabli.Wallets;
+using Microsoft.Extensions.Caching.Distributed;
+using Volo.Abp;
+using Volo.Abp.Application.Services;
+using Volo.Abp.Authorization;
+using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Identity;
+using Volo.Abp.MultiTenancy;
+using Volo.Abp.Users;
+
+namespace Eksabli.Pos;
+
+public class PosAppService : ApplicationService, IPosAppService
+{
+    private readonly IRepository<Membership, Guid> _membershipRepository;
+    private readonly IRepository<PointsWallet, Guid> _walletRepository;
+    private readonly IRepository<PointsTransaction, Guid> _transactionRepository;
+    private readonly IRepository<Wallets.Tier, Guid> _tierRepository;
+    private readonly IRepository<PointRule, Guid> _pointRuleRepository;
+    private readonly IRepository<EmployeeAssignment, Guid> _employeeAssignmentRepository;
+    private readonly IRepository<CustomerProfile, Guid> _customerProfileRepository;
+    private readonly IIdentityUserRepository _identityUserRepository;
+    private readonly ICurrentTenant _currentTenant;
+    private readonly IDistributedCache _qrCache;
+
+    public PosAppService(
+        IRepository<Membership, Guid> membershipRepository,
+        IRepository<PointsWallet, Guid> walletRepository,
+        IRepository<PointsTransaction, Guid> transactionRepository,
+        IRepository<Wallets.Tier, Guid> tierRepository,
+        IRepository<PointRule, Guid> pointRuleRepository,
+        IRepository<EmployeeAssignment, Guid> employeeAssignmentRepository,
+        IRepository<CustomerProfile, Guid> customerProfileRepository,
+        IIdentityUserRepository identityUserRepository,
+        ICurrentTenant currentTenant,
+        IDistributedCache qrCache)
+    {
+        _membershipRepository = membershipRepository;
+        _walletRepository = walletRepository;
+        _transactionRepository = transactionRepository;
+        _tierRepository = tierRepository;
+        _pointRuleRepository = pointRuleRepository;
+        _employeeAssignmentRepository = employeeAssignmentRepository;
+        _customerProfileRepository = customerProfileRepository;
+        _identityUserRepository = identityUserRepository;
+        _currentTenant = currentTenant;
+        _qrCache = qrCache;
+    }
+
+    public async Task<CustomerLookupResultDto> LookupCustomerByPhoneAsync(PhoneLookupDto input)
+    {
+        await CheckStaffRoleAsync(EmployeeRole.Owner, EmployeeRole.BranchManager, EmployeeRole.Cashier);
+
+        IdentityUser? user;
+        using (_currentTenant.Change(null)) // Host-realm identity space, same shape as OtpLoginService
+        {
+            user = await _identityUserRepository.FindByNormalizedUserNameAsync(input.PhoneNumber.ToUpperInvariant());
+        }
+
+        // Ambient tenant is still the caller's own tenant here — Membership's IMultiTenant filter
+        // already scopes this lookup to "this tenant only".
+        var membership = user == null
+            ? null
+            : await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == user.Id);
+
+        if (user == null || membership == null)
+        {
+            // Deliberately identical exception for both cases — don't leak "is this phone number an
+            // Eksabli customer at all" to staff at a business this customer hasn't joined.
+            throw new UserFriendlyException("No matching customer found.");
+        }
+
+        var wallet = await _walletRepository.FirstAsync(w => w.MembershipId == membership.Id);
+
+        CustomerProfile? profile;
+        using (_currentTenant.Change(null))
+        {
+            profile = await _customerProfileRepository.FirstOrDefaultAsync(p => p.UserId == user.Id);
+        }
+
+        return new CustomerLookupResultDto
+        {
+            CustomerId = user.Id,
+            MembershipId = membership.Id,
+            WalletId = wallet.Id,
+            Balance = wallet.Balance,
+            FirstName = profile?.FirstName,
+            LastName = profile?.LastName
+        };
+    }
+
+    public async Task<AwardPointsResultDto> AwardPointsByQrAsync(AwardPointsByQrDto input)
+    {
+        var cacheKey = WalletQrCacheItem.CacheKeyPrefix + input.QrToken;
+        var bytes = await _qrCache.GetAsync(cacheKey)
+            ?? throw new AbpAuthorizationException("Invalid or expired wallet QR token.");
+        await _qrCache.RemoveAsync(cacheKey); // single-use — burn on any successful read
+
+        var cached = JsonSerializer.Deserialize<WalletQrCacheItem>(bytes)!;
+        return await AwardPointsCoreAsync(cached.CustomerId, input.PurchaseAmount);
+    }
+
+    public async Task<AwardPointsResultDto> AwardPointsByCustomerIdAsync(Guid customerId, AwardPointsByCustomerIdDto input)
+    {
+        return await AwardPointsCoreAsync(customerId, input.PurchaseAmount);
+    }
+
+    public async Task<AwardPointsResultDto> ManualAdjustAsync(ManualAdjustDto input)
+    {
+        var employeeId = await CheckStaffRoleAsync(EmployeeRole.Owner, EmployeeRole.BranchManager);
+
+        var todayStartUtc = Clock.Now.Date;
+        var todaysCount = await _transactionRepository.CountAsync(t =>
+            t.CreatedByEmployeeId == employeeId &&
+            t.Type == PointsTransactionType.Adjust &&
+            t.CreationTime >= todayStartUtc);
+
+        if (todaysCount >= PointsTransactionConsts.MaxDailyManualAdjustmentsPerEmployee)
+        {
+            throw new UserFriendlyException("You've reached today's limit for manual point adjustments.");
+        }
+
+        var membership = await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == input.CustomerId)
+            ?? throw new UserFriendlyException("This customer hasn't joined your business yet.");
+        var wallet = await _walletRepository.FirstAsync(w => w.MembershipId == membership.Id);
+
+        var transaction = PointsTransaction.Create(
+            GuidGenerator.Create(),
+            wallet.Id,
+            PointsTransactionType.Adjust,
+            input.Points,
+            PointsTransactionSource.Manual,
+            createdByEmployeeId: employeeId,
+            reason: input.Reason);
+        await _transactionRepository.InsertAsync(transaction);
+
+        wallet.ApplyTransaction(PointsTransactionType.Adjust, input.Points);
+        await _walletRepository.UpdateAsync(wallet);
+
+        return await BuildResultAsync(transaction, wallet);
+    }
+
+    // Private helper, not a manager service — pipeline/ledger/tier-recompute logic shared by both
+    // award paths (QR and phone/customer-id) so it isn't duplicated.
+    private async Task<AwardPointsResultDto> AwardPointsCoreAsync(Guid customerId, decimal? purchaseAmount)
+    {
+        await CheckStaffRoleAsync(EmployeeRole.Owner, EmployeeRole.BranchManager, EmployeeRole.Cashier);
+
+        var membership = await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == customerId)
+            ?? throw new UserFriendlyException("This customer hasn't joined your business yet.");
+
+        var wallet = await _walletRepository.FirstAsync(w => w.MembershipId == membership.Id);
+
+        decimal tierMultiplier = 1.0m;
+        if (wallet.CurrentTierId.HasValue)
+        {
+            var tier = await _tierRepository.FindAsync(wallet.CurrentTierId.Value);
+            if (tier != null)
+            {
+                tierMultiplier = tier.Multiplier;
+            }
+        }
+
+        var points = await ComputePointsAsync(purchaseAmount, tierMultiplier);
+
+        var transaction = PointsTransaction.Create(
+            GuidGenerator.Create(),
+            wallet.Id,
+            PointsTransactionType.Earn,
+            points,
+            PointsTransactionSource.Purchase,
+            tierMultiplierSnapshot: tierMultiplier);
+        await _transactionRepository.InsertAsync(transaction);
+
+        wallet.ApplyTransaction(PointsTransactionType.Earn, points);
+        await RecomputeTierAsync(wallet);
+        await _walletRepository.UpdateAsync(wallet);
+
+        return await BuildResultAsync(transaction, wallet);
+    }
+
+    // Points pipeline: base rule × tier multiplier × campaign multiplier (fixed at 1m — Feature 05's
+    // campaign engine doesn't exist yet; this constant is the seam it plugs into later). Rounding:
+    // floor, applied once at the end — see docs/eksabli-loyalty-platform/07-loyalty-engine.md#8.
+    private async Task<int> ComputePointsAsync(decimal? purchaseAmount, decimal tierMultiplier)
+    {
+        const decimal campaignMultiplier = 1.0m;
+        decimal basePoints = 0m;
+
+        if (purchaseAmount.HasValue)
+        {
+            var rule = await _pointRuleRepository.FirstOrDefaultAsync(r => r.RuleType == PointRuleType.PerCurrencyUnit);
+            if (rule != null)
+            {
+                basePoints = purchaseAmount.Value * rule.PointsPerUnit;
+            }
+        }
+
+        if (basePoints == 0m)
+        {
+            var rule = await _pointRuleRepository.FirstOrDefaultAsync(r => r.RuleType == PointRuleType.PerVisit);
+            if (rule != null)
+            {
+                basePoints = rule.PointsPerUnit;
+            }
+        }
+
+        return (int)Math.Floor(basePoints * tierMultiplier * campaignMultiplier);
+    }
+
+    private async Task RecomputeTierAsync(PointsWallet wallet)
+    {
+        var qualifying = (await _tierRepository.GetListAsync(t => t.MinLifetimePoints <= wallet.LifetimeEarned))
+            .OrderByDescending(t => t.MinLifetimePoints)
+            .FirstOrDefault();
+
+        wallet.ChangeTier(qualifying?.Id);
+    }
+
+    private async Task<AwardPointsResultDto> BuildResultAsync(PointsTransaction transaction, PointsWallet wallet)
+    {
+        string? tierName = null;
+        if (wallet.CurrentTierId.HasValue)
+        {
+            var tier = await _tierRepository.FindAsync(wallet.CurrentTierId.Value);
+            tierName = tier?.Name;
+        }
+
+        return new AwardPointsResultDto
+        {
+            TransactionId = transaction.Id,
+            PointsAwarded = transaction.Points,
+            NewBalance = wallet.Balance,
+            NewTierId = wallet.CurrentTierId,
+            NewTierName = tierName
+        };
+    }
+
+    // Role-hierarchy check — NOT an ABP permission check. No invited employee has any ABP permission
+    // grant today (only the seeded tenant Owner does), so gating this with [Authorize(...)] would lock
+    // out every real Cashier. Mirrors DeviceAppService.RemoveAsync's ownership-check shape.
+    private async Task<Guid> CheckStaffRoleAsync(params EmployeeRole[] allowedRoles)
+    {
+        var userId = CurrentUser.GetId();
+        var assignment = await _employeeAssignmentRepository.FirstOrDefaultAsync(a => a.UserId == userId)
+            ?? throw new AbpAuthorizationException("You are not staff at this business.");
+
+        if (!allowedRoles.Contains(assignment.Role))
+        {
+            throw new AbpAuthorizationException("Your role does not permit this action.");
+        }
+
+        return userId;
+    }
+}

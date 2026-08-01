@@ -22,11 +22,11 @@ namespace Eksabli.Authors;
 [Authorize(EksabliPermissions.Authors.Default)]
 public class AuthorAppService : ApplicationService, IAuthorAppService
 {
-    private readonly IRepository<Author, Guid> _repository;
+    private readonly IAuthorRepository _repository;
     private readonly IDistributedCache<AuthorExcelDownloadTokenCacheItem, string> _excelDownloadTokenCache;
 
     public AuthorAppService(
-        IRepository<Author, Guid> repository,
+        IAuthorRepository repository,
         IDistributedCache<AuthorExcelDownloadTokenCacheItem, string> excelDownloadTokenCache)
     {
         _repository = repository;
@@ -41,14 +41,10 @@ public class AuthorAppService : ApplicationService, IAuthorAppService
 
     public async Task<PagedResultDto<AuthorDto>> GetListAsync(PagedAndSortedResultRequestDto input)
     {
-        var queryable = await _repository.GetQueryableAsync();
-        var query = queryable
-            .OrderBy(input.Sorting.IsNullOrWhiteSpace() ? "Name" : input.Sorting)
-            .Skip(input.SkipCount)
-            .Take(input.MaxResultCount);
-
-        var authors = await AsyncExecuter.ToListAsync(query);
-        var totalCount = await AsyncExecuter.CountAsync(queryable);
+        var (authors, totalCount) = await _repository.GetListAsync(
+            sorting: input.Sorting,
+            skipCount: input.SkipCount,
+            maxResultCount: input.MaxResultCount);
 
         return new PagedResultDto<AuthorDto>(
             totalCount,
