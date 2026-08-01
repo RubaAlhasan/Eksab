@@ -49,6 +49,8 @@
     "About": "About",
     "Privacy": "Privacy",
     "Contact": "Contact",
+    "Dashboard:WelcomeHeading": "Welcome to Eksabli",
+    "Dashboard:Placeholder": "Your real dashboard is on the way. For now, here's what's available.",
     "Landing:Kicker": "One account. Every business.",
     "Landing:Headline": "The loyalty app your customers already have.",
     "Landing:Lead": "Eksabli is one wallet across every business a customer joins — so when you launch your program, you're not asking for a new download. You're asking for a tap.",
@@ -99,6 +101,8 @@
     "Landing:TierEnterpriseItem3": "Dedicated support",
     "Landing:CtaHeading": "Ready to meet customers where they already are?",
     "Landing:FooterTagline": "One wallet. Every business.",
+    "Landing:QuickLinks": "Quick Links",
+    "Landing:Legal": "Legal",
     "Landing:Privacy": "Privacy",
     "Landing:Terms": "Terms",
     "Landing:Contact": "Contact"

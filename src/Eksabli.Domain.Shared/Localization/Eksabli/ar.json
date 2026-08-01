@@ -41,6 +41,8 @@
     "About": "من نحن",
     "Privacy": "الخصوصية",
     "Contact": "تواصل معنا",
+    "Dashboard:WelcomeHeading": "مرحبًا بك في إكسابلي",
+    "Dashboard:Placeholder": "لوحة التحكم الحقيقية قيد الإنشاء. في الوقت الحالي، إليك ما هو متاح.",
     "Landing:Kicker": "حساب واحد. كل الأعمال.",
     "Landing:Headline": "تطبيق الولاء اللي عملاؤك عندهم بالفعل.",
     "Landing:Lead": "إكسابلي محفظة واحدة تجمع كل الأعمال التي ينضم إليها العميل — فعندما تطلق برنامجك، أنت لا تطلب تحميل تطبيق جديد. أنت فقط تطلب لمسة واحدة.",
@@ -91,6 +93,8 @@
     "Landing:TierEnterpriseItem3": "دعم مخصص",
     "Landing:CtaHeading": "جاهز لمقابلة عملائك حيث هم بالفعل؟",
     "Landing:FooterTagline": "محفظة واحدة. كل الأعمال.",
+    "Landing:QuickLinks": "روابط سريعة",
+    "Landing:Legal": "الشروط والخصوصية",
     "Landing:Privacy": "الخصوصية",
     "Landing:Terms": "الشروط",
     "Landing:Contact": "تواصل معنا"
