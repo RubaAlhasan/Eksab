@@ -126,6 +126,12 @@ public static class EksabliPermissions
         public const string ConvertToCampaign = Default + ".ConvertToCampaign";
     }
 
+    public static class Reports
+    {
+        public const string Default = GroupName + ".Reports";
+        public const string Export = Default + ".Export";
+    }
+
     //Add your own permission names. Example:
     //public const string MyPermission1 = GroupName + ".MyPermission1";
 }

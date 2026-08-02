@@ -80,6 +80,9 @@ public class EksabliPermissionDefinitionProvider : PermissionDefinitionProvider
         var followersPermission = myGroup.AddPermission(EksabliPermissions.Followers.Default, L("Permission:Followers"));
         followersPermission.AddChild(EksabliPermissions.Followers.View, L("Permission:Followers.View"));
         followersPermission.AddChild(EksabliPermissions.Followers.ConvertToCampaign, L("Permission:Followers.ConvertToCampaign"));
+
+        var reportsPermission = myGroup.AddPermission(EksabliPermissions.Reports.Default, L("Permission:Reports"));
+        reportsPermission.AddChild(EksabliPermissions.Reports.Export, L("Permission:Reports.Export"));
         //Define your own permissions here. Example:
         //myGroup.AddPermission(EksabliPermissions.MyPermission1, L("Permission:MyPermission1"));
     }
