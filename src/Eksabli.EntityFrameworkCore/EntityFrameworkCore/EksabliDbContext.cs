@@ -10,6 +10,7 @@ using Eksabli.EmployeeAssignments;
 using Eksabli.Devices;
 using Eksabli.Wallets;
 using Eksabli.Rewards;
+using Eksabli.Billing;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;
 using Volo.Abp.Data;
@@ -64,6 +65,14 @@ public class EksabliDbContext :
     public DbSet<Reward> Rewards { get; set; }
 
     public DbSet<Coupon> Coupons { get; set; }
+
+    public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
+
+    public DbSet<TenantSubscription> TenantSubscriptions { get; set; }
+
+    public DbSet<Invoice> Invoices { get; set; }
+
+    public DbSet<Payment> Payments { get; set; }
 
     #region Entities from the modules
 
@@ -265,6 +274,39 @@ public class EksabliDbContext :
             b.HasIndex(x => x.Code).IsUnique();
             b.HasIndex(x => new { x.MembershipId, x.Status });
             b.HasIndex(x => new { x.TenantId, x.Status });
+        });
+
+        builder.Entity<SubscriptionPlan>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "SubscriptionPlans", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.Name).IsRequired().HasMaxLength(SubscriptionPlanConsts.MaxNameLength);
+            b.Property(x => x.MonthlyPrice).HasColumnType("numeric(10,2)");
+            b.Property(x => x.FeatureLimitsJson).HasMaxLength(SubscriptionPlanConsts.MaxFeatureLimitsJsonLength);
+        });
+
+        builder.Entity<TenantSubscription>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "TenantSubscriptions", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.HasIndex(x => x.TenantId).IsUnique();
+        });
+
+        builder.Entity<Invoice>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "Invoices", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.Amount).HasColumnType("numeric(10,2)");
+            b.HasIndex(x => new { x.TenantSubscriptionId, x.DueDate });
+        });
+
+        builder.Entity<Payment>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "Payments", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.Provider).IsRequired().HasMaxLength(PaymentConsts.MaxProviderLength);
+            b.Property(x => x.ProviderTransactionRef).HasMaxLength(PaymentConsts.MaxProviderTransactionRefLength);
+            b.HasIndex(x => x.InvoiceId);
         });
     }
 }

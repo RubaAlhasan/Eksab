@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Eksabli.Billing;
 using Eksabli.BusinessProfiles;
 using Eksabli.Branches;
 using Eksabli.EmployeeAssignments;
@@ -23,6 +24,8 @@ public abstract class BusinessAppService_Tests<TStartupModule> : EksabliApplicat
     private readonly IRepository<Branch, Guid> _branchRepository;
     private readonly IRepository<EmployeeAssignment, Guid> _employeeAssignmentRepository;
     private readonly IIdentityUserRepository _identityUserRepository;
+    private readonly ITenantSubscriptionRepository _tenantSubscriptionRepository;
+    private readonly ISubscriptionPlanRepository _subscriptionPlanRepository;
     private readonly ICurrentTenant _currentTenant;
 
     protected BusinessAppService_Tests()
@@ -33,6 +36,8 @@ public abstract class BusinessAppService_Tests<TStartupModule> : EksabliApplicat
         _branchRepository = GetRequiredService<IRepository<Branch, Guid>>();
         _employeeAssignmentRepository = GetRequiredService<IRepository<EmployeeAssignment, Guid>>();
         _identityUserRepository = GetRequiredService<IIdentityUserRepository>();
+        _tenantSubscriptionRepository = GetRequiredService<ITenantSubscriptionRepository>();
+        _subscriptionPlanRepository = GetRequiredService<ISubscriptionPlanRepository>();
         _currentTenant = GetRequiredService<ICurrentTenant>();
     }
 
@@ -75,6 +80,26 @@ public abstract class BusinessAppService_Tests<TStartupModule> : EksabliApplicat
 
                 var ownerUser = await _identityUserRepository.GetAsync(result.OwnerUserId);
                 ownerUser.Email.ShouldBe(input.OwnerEmail);
+            }
+        });
+    }
+
+    [Fact]
+    public async Task Should_Provision_A_Trialing_Subscription_On_The_TrialDefault_Plan()
+    {
+        var input = CreateInput("Trial Test Biz " + Guid.NewGuid().ToString("N"));
+
+        var result = await WithUnitOfWorkAsync(() => _businessAppService.RegisterAsync(input));
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(result.TenantId))
+            {
+                var subscription = await _tenantSubscriptionRepository.SingleAsync();
+                subscription.Status.ShouldBe(Billing.TenantSubscriptionStatus.Trialing);
+
+                var plan = await _subscriptionPlanRepository.GetAsync(subscription.PlanId);
+                plan.IsTrialDefault.ShouldBeTrue();
             }
         });
     }

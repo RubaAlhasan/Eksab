@@ -79,6 +79,13 @@ public static class EksabliPermissions
         public const string Redeem = Default + ".Redeem";
     }
 
+    public static class Billing
+    {
+        public const string Default = GroupName + ".Billing";
+        public const string ManageOwn = Default + ".ManageOwn";           // tenant Owner: their own subscription
+        public const string ManagePlatform = Default + ".ManagePlatform"; // platform Billing Admin: everything
+    }
+
     //Add your own permission names. Example:
     //public const string MyPermission1 = GroupName + ".MyPermission1";
 }

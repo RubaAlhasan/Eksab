@@ -59,5 +59,6 @@ public class EksabliDomainModule : AbpModule
     public override async Task OnApplicationInitializationAsync(ApplicationInitializationContext context)
     {
         await context.AddBackgroundWorkerAsync<PointsExpirationWorker>();
+        await context.AddBackgroundWorkerAsync<Billing.SubscriptionRenewalWorker>();
     }
 }

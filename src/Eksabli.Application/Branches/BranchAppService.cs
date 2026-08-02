@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Dynamic.Core;
 using System.Threading.Tasks;
+using Eksabli.Features;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Features;
 
 namespace Eksabli.Branches;
 
@@ -40,6 +42,15 @@ public class BranchAppService : ApplicationService, IBranchAppService
 
     public async Task<BranchDto> CreateAsync(CreateUpdateBranchDto input)
     {
+        // Plan-limit enforcement via ABP Feature Management, not new business logic — see
+        // docs/eksabli-loyalty-platform/features/04-billing-subscriptions/README.md.
+        var maxBranches = await FeatureChecker.GetAsync<int>(EksabliFeatures.MaxBranches);
+        var currentCount = await _repository.GetCountAsync();
+        if (currentCount >= maxBranches)
+        {
+            throw new UserFriendlyException("You've reached the branch limit for your current plan. Upgrade to add more branches.");
+        }
+
         var branch = Branch.Create(GuidGenerator.Create(), input.Name);
         ApplyInput(branch, input);
         await _repository.InsertAsync(branch);

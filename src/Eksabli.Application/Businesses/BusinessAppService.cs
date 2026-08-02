@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Eksabli.Billing;
 using Eksabli.BusinessProfiles;
 using Eksabli.Branches;
 using Eksabli.EmployeeAssignments;
@@ -7,6 +10,7 @@ using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.TenantManagement;
@@ -23,6 +27,9 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
     private readonly IRepository<BusinessProfile, Guid> _businessProfileRepository;
     private readonly IRepository<Branch, Guid> _branchRepository;
     private readonly IRepository<EmployeeAssignment, Guid> _employeeAssignmentRepository;
+    private readonly ITenantSubscriptionRepository _tenantSubscriptionRepository;
+    private readonly ISubscriptionPlanRepository _subscriptionPlanRepository;
+    private readonly IFeatureManager _featureManager;
 
     public BusinessAppService(
         TenantManager tenantManager,
@@ -32,7 +39,10 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
         ICurrentTenant currentTenant,
         IRepository<BusinessProfile, Guid> businessProfileRepository,
         IRepository<Branch, Guid> branchRepository,
-        IRepository<EmployeeAssignment, Guid> employeeAssignmentRepository)
+        IRepository<EmployeeAssignment, Guid> employeeAssignmentRepository,
+        ITenantSubscriptionRepository tenantSubscriptionRepository,
+        ISubscriptionPlanRepository subscriptionPlanRepository,
+        IFeatureManager featureManager)
     {
         _tenantManager = tenantManager;
         _tenantRepository = tenantRepository;
@@ -42,6 +52,9 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
         _businessProfileRepository = businessProfileRepository;
         _branchRepository = branchRepository;
         _employeeAssignmentRepository = employeeAssignmentRepository;
+        _tenantSubscriptionRepository = tenantSubscriptionRepository;
+        _subscriptionPlanRepository = subscriptionPlanRepository;
+        _featureManager = featureManager;
     }
 
     public async Task<BusinessRegistrationResultDto> RegisterAsync(RegisterBusinessDto input)
@@ -78,6 +91,8 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
 
             var employeeAssignment = EmployeeAssignment.Create(GuidGenerator.Create(), ownerUserId, EmployeeRole.Owner);
             await _employeeAssignmentRepository.InsertAsync(employeeAssignment, autoSave: true);
+
+            await ProvisionTrialSubscriptionAsync(tenant.Id);
         }
 
         return new BusinessRegistrationResultDto
@@ -88,6 +103,29 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
             BranchId = branchId,
             OwnerUserId = ownerUserId
         };
+    }
+
+    // Trial, not permanent freemium — see docs/eksabli-loyalty-platform/01-business-strategy.md#revenue-model--pricing.
+    // Runs inside the caller's _currentTenant.Change(tenant.Id) block, same shape as the other
+    // per-tenant provisioning above (BusinessProfile/Branch/EmployeeAssignment).
+    private async Task ProvisionTrialSubscriptionAsync(Guid tenantId)
+    {
+        var trialPlan = await _subscriptionPlanRepository.FirstOrDefaultAsync(p => p.IsTrialDefault)
+            ?? throw new AbpException("No subscription plan is flagged as the trial default.");
+
+        var subscription = TenantSubscription.Create(
+            GuidGenerator.Create(),
+            trialPlan.Id,
+            Clock.Now,
+            Clock.Now.AddDays(BillingConsts.TrialDurationDays),
+            TenantSubscriptionStatus.Trialing);
+        await _tenantSubscriptionRepository.InsertAsync(subscription, autoSave: true);
+
+        var limits = JsonSerializer.Deserialize<Dictionary<string, string>>(trialPlan.FeatureLimitsJson) ?? new Dictionary<string, string>();
+        foreach (var (key, value) in limits)
+        {
+            await _featureManager.SetForTenantAsync(tenantId, key, value);
+        }
     }
 
     public async Task<BusinessProfileDto> GetProfileAsync()

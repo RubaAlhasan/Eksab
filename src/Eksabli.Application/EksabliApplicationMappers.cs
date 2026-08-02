@@ -10,6 +10,7 @@ using Eksabli.Devices;
 using Eksabli.Memberships;
 using Eksabli.Wallets;
 using Eksabli.Rewards;
+using Eksabli.Billing;
 
 namespace Eksabli;
 
@@ -161,4 +162,30 @@ public partial class EksabliCouponToCouponDtoMapper : MapperBase<Coupon, CouponD
     [MapperIgnoreTarget(nameof(CouponDto.RewardNameAr))]
     [MapperIgnoreTarget(nameof(CouponDto.RewardNameEn))]
     public override partial void Map(Coupon source, CouponDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliSubscriptionPlanToSubscriptionPlanDtoMapper : MapperBase<SubscriptionPlan, SubscriptionPlanDto>
+{
+    public override partial SubscriptionPlanDto Map(SubscriptionPlan source);
+
+    public override partial void Map(SubscriptionPlan source, SubscriptionPlanDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliTenantSubscriptionToTenantSubscriptionDtoMapper : MapperBase<TenantSubscription, TenantSubscriptionDto>
+{
+    [MapperIgnoreTarget(nameof(TenantSubscriptionDto.PlanName))]
+    public override partial TenantSubscriptionDto Map(TenantSubscription source);
+
+    [MapperIgnoreTarget(nameof(TenantSubscriptionDto.PlanName))]
+    public override partial void Map(TenantSubscription source, TenantSubscriptionDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliInvoiceToInvoiceDtoMapper : MapperBase<Invoice, InvoiceDto>
+{
+    public override partial InvoiceDto Map(Invoice source);
+
+    public override partial void Map(Invoice source, InvoiceDto destination);
 }

@@ -44,4 +44,17 @@ public abstract class BranchAppService_Tests<TStartupModule> : EksabliApplicatio
 
         exception.ValidationErrors.ShouldContain(err => err.MemberNames.Any(mem => mem == "Name"));
     }
+
+    [Fact]
+    public async Task Should_Reject_Creating_A_Branch_Beyond_The_Plan_Limit()
+    {
+        // No subscription/feature override in this test context — falls back to the
+        // EksabliFeatureDefinitionProvider default of "1" (Starter-tier value).
+        await WithUnitOfWorkAsync(() => _branchAppService.CreateAsync(new CreateUpdateBranchDto { Name = "First Branch" }));
+
+        await Assert.ThrowsAsync<Volo.Abp.UserFriendlyException>(async () =>
+        {
+            await WithUnitOfWorkAsync(() => _branchAppService.CreateAsync(new CreateUpdateBranchDto { Name = "Second Branch" }));
+        });
+    }
 }

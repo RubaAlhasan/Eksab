@@ -53,6 +53,10 @@ public class EksabliPermissionDefinitionProvider : PermissionDefinitionProvider
         rewardsPermission.AddChild(EksabliPermissions.Rewards.Edit, L("Permission:Rewards.Edit"));
         rewardsPermission.AddChild(EksabliPermissions.Rewards.Delete, L("Permission:Rewards.Delete"));
         rewardsPermission.AddChild(EksabliPermissions.Rewards.Redeem, L("Permission:Rewards.Redeem"));
+
+        var billingPermission = myGroup.AddPermission(EksabliPermissions.Billing.Default, L("Permission:Billing"));
+        billingPermission.AddChild(EksabliPermissions.Billing.ManageOwn, L("Permission:Billing.ManageOwn"));
+        billingPermission.AddChild(EksabliPermissions.Billing.ManagePlatform, L("Permission:Billing.ManagePlatform"));
         //Define your own permissions here. Example:
         //myGroup.AddPermission(EksabliPermissions.MyPermission1, L("Permission:MyPermission1"));
     }
