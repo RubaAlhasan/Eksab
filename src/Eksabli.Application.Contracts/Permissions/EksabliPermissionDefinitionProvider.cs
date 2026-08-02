@@ -57,6 +57,19 @@ public class EksabliPermissionDefinitionProvider : PermissionDefinitionProvider
         var billingPermission = myGroup.AddPermission(EksabliPermissions.Billing.Default, L("Permission:Billing"));
         billingPermission.AddChild(EksabliPermissions.Billing.ManageOwn, L("Permission:Billing.ManageOwn"));
         billingPermission.AddChild(EksabliPermissions.Billing.ManagePlatform, L("Permission:Billing.ManagePlatform"));
+
+        var campaignsPermission = myGroup.AddPermission(EksabliPermissions.Campaigns.Default, L("Permission:Campaigns"));
+        campaignsPermission.AddChild(EksabliPermissions.Campaigns.Create, L("Permission:Campaigns.Create"));
+        campaignsPermission.AddChild(EksabliPermissions.Campaigns.Edit, L("Permission:Campaigns.Edit"));
+        campaignsPermission.AddChild(EksabliPermissions.Campaigns.Activate, L("Permission:Campaigns.Activate"));
+
+        var offersPermission = myGroup.AddPermission(EksabliPermissions.Offers.Default, L("Permission:Offers"));
+        offersPermission.AddChild(EksabliPermissions.Offers.Create, L("Permission:Offers.Create"));
+        offersPermission.AddChild(EksabliPermissions.Offers.Edit, L("Permission:Offers.Edit"));
+        offersPermission.AddChild(EksabliPermissions.Offers.Delete, L("Permission:Offers.Delete"));
+
+        var notificationsPermission = myGroup.AddPermission(EksabliPermissions.Notifications.Default, L("Permission:Notifications"));
+        notificationsPermission.AddChild(EksabliPermissions.Notifications.Send, L("Permission:Notifications.Send"));
         //Define your own permissions here. Example:
         //myGroup.AddPermission(EksabliPermissions.MyPermission1, L("Permission:MyPermission1"));
     }

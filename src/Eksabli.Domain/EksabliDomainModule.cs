@@ -60,5 +60,6 @@ public class EksabliDomainModule : AbpModule
     {
         await context.AddBackgroundWorkerAsync<PointsExpirationWorker>();
         await context.AddBackgroundWorkerAsync<Billing.SubscriptionRenewalWorker>();
+        await context.AddBackgroundWorkerAsync<Campaigns.CampaignSweepWorker>();
     }
 }

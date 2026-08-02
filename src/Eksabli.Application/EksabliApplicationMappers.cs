@@ -11,6 +11,9 @@ using Eksabli.Memberships;
 using Eksabli.Wallets;
 using Eksabli.Rewards;
 using Eksabli.Billing;
+using Eksabli.Campaigns;
+using Eksabli.Offers;
+using Eksabli.Notifications;
 
 namespace Eksabli;
 
@@ -188,4 +191,40 @@ public partial class EksabliInvoiceToInvoiceDtoMapper : MapperBase<Invoice, Invo
     public override partial InvoiceDto Map(Invoice source);
 
     public override partial void Map(Invoice source, InvoiceDto destination);
+}
+
+// TargetRules is mapped manually in CampaignAppService (source is IReadOnlyCollection<CampaignTargetRule>,
+// only populated when the aggregate was loaded via ICampaignRepository.WithDetailsAsync).
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliCampaignToCampaignDtoMapper : MapperBase<Campaign, CampaignDto>
+{
+    [MapperIgnoreTarget(nameof(CampaignDto.TargetRules))]
+    public override partial CampaignDto Map(Campaign source);
+
+    [MapperIgnoreTarget(nameof(CampaignDto.TargetRules))]
+    public override partial void Map(Campaign source, CampaignDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliCampaignTargetRuleToCampaignTargetRuleDtoMapper : MapperBase<CampaignTargetRule, CampaignTargetRuleDto>
+{
+    public override partial CampaignTargetRuleDto Map(CampaignTargetRule source);
+
+    public override partial void Map(CampaignTargetRule source, CampaignTargetRuleDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliOfferToOfferDtoMapper : MapperBase<Offer, OfferDto>
+{
+    public override partial OfferDto Map(Offer source);
+
+    public override partial void Map(Offer source, OfferDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliNotificationToNotificationDtoMapper : MapperBase<Notification, NotificationDto>
+{
+    public override partial NotificationDto Map(Notification source);
+
+    public override partial void Map(Notification source, NotificationDto destination);
 }

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Eksabli.Campaigns;
 using Eksabli.CustomerProfiles;
 using Eksabli.EmployeeAssignments;
 using Eksabli.Memberships;
@@ -32,6 +33,7 @@ public class PosAppService : ApplicationService, IPosAppService
     private readonly IIdentityUserRepository _identityUserRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDistributedCache _qrCache;
+    private readonly ICampaignRulesEngine _campaignRulesEngine;
 
     public PosAppService(
         IRepository<Membership, Guid> membershipRepository,
@@ -45,7 +47,8 @@ public class PosAppService : ApplicationService, IPosAppService
         IRewardRepository rewardRepository,
         IIdentityUserRepository identityUserRepository,
         ICurrentTenant currentTenant,
-        IDistributedCache qrCache)
+        IDistributedCache qrCache,
+        ICampaignRulesEngine campaignRulesEngine)
     {
         _membershipRepository = membershipRepository;
         _walletRepository = walletRepository;
@@ -59,6 +62,7 @@ public class PosAppService : ApplicationService, IPosAppService
         _identityUserRepository = identityUserRepository;
         _currentTenant = currentTenant;
         _qrCache = qrCache;
+        _campaignRulesEngine = campaignRulesEngine;
     }
 
     public async Task<CustomerLookupResultDto> LookupCustomerByPhoneAsync(PhoneLookupDto input)
@@ -193,12 +197,15 @@ public class PosAppService : ApplicationService, IPosAppService
         return await BuildResultAsync(transaction, wallet);
     }
 
-    // Points pipeline: base rule × tier multiplier × campaign multiplier (fixed at 1m — Feature 05's
-    // campaign engine doesn't exist yet; this constant is the seam it plugs into later). Rounding:
-    // floor, applied once at the end — see docs/eksabli-loyalty-platform/07-loyalty-engine.md#8.
+    // Points pipeline: base rule × tier multiplier × campaign multiplier, plus any flat SpendXGetY
+    // bonus — the real-time evaluation mode from
+    // docs/eksabli-loyalty-platform/features/05-campaigns-notifications/README.md#business-rules,
+    // evaluated inline via ICampaignRulesEngine (DoublePoints/SpendXGetY campaigns only; the *other*
+    // mode — Birthday/WinBack/Vip/NewCustomer — runs as a batch sweep in Campaigns.CampaignSweepWorker).
+    // Rounding: floor, applied once to the multiplied portion — see
+    // docs/eksabli-loyalty-platform/07-loyalty-engine.md#8.
     private async Task<int> ComputePointsAsync(decimal? purchaseAmount, decimal tierMultiplier)
     {
-        const decimal campaignMultiplier = 1.0m;
         decimal basePoints = 0m;
 
         if (purchaseAmount.HasValue)
@@ -219,7 +226,9 @@ public class PosAppService : ApplicationService, IPosAppService
             }
         }
 
-        return (int)Math.Floor(basePoints * tierMultiplier * campaignMultiplier);
+        var campaignResult = await _campaignRulesEngine.EvaluateAsync(purchaseAmount);
+
+        return (int)Math.Floor(basePoints * tierMultiplier * campaignResult.Multiplier) + campaignResult.BonusPoints;
     }
 
     private async Task RecomputeTierAsync(PointsWallet wallet)

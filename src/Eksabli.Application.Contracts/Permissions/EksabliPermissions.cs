@@ -86,6 +86,28 @@ public static class EksabliPermissions
         public const string ManagePlatform = Default + ".ManagePlatform"; // platform Billing Admin: everything
     }
 
+    public static class Campaigns
+    {
+        public const string Default = GroupName + ".Campaigns";
+        public const string Create = Default + ".Create";
+        public const string Edit = Default + ".Edit";   // also gates Delete — no separate Delete permission
+        public const string Activate = Default + ".Activate";
+    }
+
+    public static class Offers
+    {
+        public const string Default = GroupName + ".Offers";
+        public const string Create = Default + ".Create";
+        public const string Edit = Default + ".Edit";
+        public const string Delete = Default + ".Delete";
+    }
+
+    public static class Notifications
+    {
+        public const string Default = GroupName + ".Notifications";
+        public const string Send = Default + ".Send";
+    }
+
     //Add your own permission names. Example:
     //public const string MyPermission1 = GroupName + ".MyPermission1";
 }

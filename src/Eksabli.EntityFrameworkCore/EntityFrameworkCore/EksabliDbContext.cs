@@ -11,6 +11,9 @@ using Eksabli.Devices;
 using Eksabli.Wallets;
 using Eksabli.Rewards;
 using Eksabli.Billing;
+using Eksabli.Campaigns;
+using Eksabli.Offers;
+using Eksabli.Notifications;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;
 using Volo.Abp.Data;
@@ -73,6 +76,12 @@ public class EksabliDbContext :
     public DbSet<Invoice> Invoices { get; set; }
 
     public DbSet<Payment> Payments { get; set; }
+
+    public DbSet<Campaign> Campaigns { get; set; }
+
+    public DbSet<Offer> Offers { get; set; }
+
+    public DbSet<Notification> Notifications { get; set; }
 
     #region Entities from the modules
 
@@ -307,6 +316,50 @@ public class EksabliDbContext :
             b.Property(x => x.Provider).IsRequired().HasMaxLength(PaymentConsts.MaxProviderLength);
             b.Property(x => x.ProviderTransactionRef).HasMaxLength(PaymentConsts.MaxProviderTransactionRefLength);
             b.HasIndex(x => x.InvoiceId);
+        });
+
+        builder.Entity<Campaign>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "Campaigns", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.NameAr).IsRequired().HasMaxLength(CampaignConsts.MaxNameLength);
+            b.Property(x => x.NameEn).IsRequired().HasMaxLength(CampaignConsts.MaxNameLength);
+            b.Property(x => x.RulesJson).HasMaxLength(CampaignConsts.MaxRulesJsonLength);
+            b.HasIndex(x => new { x.TenantId, x.Status, x.StartDate });
+
+            // Child collection, no separate repository — see CampaignTargetRule's own comment.
+            b.HasMany(x => x.TargetRules).WithOne().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
+            b.Navigation(x => x.TargetRules).UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        builder.Entity<CampaignTargetRule>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "CampaignTargetRules", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.ParametersJson).HasMaxLength(CampaignTargetRuleConsts.MaxParametersJsonLength);
+            b.HasIndex(x => x.CampaignId);
+        });
+
+        builder.Entity<Offer>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "Offers", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.TitleAr).IsRequired().HasMaxLength(OfferConsts.MaxTitleLength);
+            b.Property(x => x.TitleEn).IsRequired().HasMaxLength(OfferConsts.MaxTitleLength);
+            b.Property(x => x.DescriptionAr).HasMaxLength(OfferConsts.MaxDescriptionLength);
+            b.Property(x => x.DescriptionEn).HasMaxLength(OfferConsts.MaxDescriptionLength);
+            b.Property(x => x.ImageBlobName).HasMaxLength(OfferConsts.MaxImageBlobNameLength);
+            b.HasIndex(x => new { x.TenantId, x.StartDate, x.EndDate });
+        });
+
+        builder.Entity<Notification>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "Notifications", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.Title).IsRequired().HasMaxLength(NotificationConsts.MaxTitleLength);
+            b.Property(x => x.Body).IsRequired().HasMaxLength(NotificationConsts.MaxBodyLength);
+            b.HasIndex(x => new { x.TenantId, x.CampaignId });
+            b.HasIndex(x => new { x.MembershipId, x.CreationTime });
         });
     }
 }
