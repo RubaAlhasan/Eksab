@@ -15,6 +15,7 @@ using Eksabli.Campaigns;
 using Eksabli.Offers;
 using Eksabli.Notifications;
 using Eksabli.Engagement;
+using Eksabli.Platform;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;
 using Volo.Abp.Data;
@@ -91,6 +92,10 @@ public class EksabliDbContext :
     public DbSet<AchievementAward> AchievementAwards { get; set; }
 
     public DbSet<Follow> Follows { get; set; }
+
+    public DbSet<Category> Categories { get; set; }
+
+    public DbSet<SupportTicket> SupportTickets { get; set; }
 
     #region Entities from the modules
 
@@ -401,6 +406,39 @@ public class EksabliDbContext :
             b.ToTable(EksabliConsts.DbTablePrefix + "Follows", EksabliConsts.DbSchema);
             b.ConfigureByConvention(); //auto configure for the base class props
             b.HasIndex(x => new { x.CustomerId, x.TenantId }).IsUnique();
+        });
+
+        builder.Entity<Category>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "Categories", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.NameAr).IsRequired().HasMaxLength(CategoryConsts.MaxNameLength);
+            b.Property(x => x.NameEn).IsRequired().HasMaxLength(CategoryConsts.MaxNameLength);
+            b.Property(x => x.IconBlobName).HasMaxLength(CategoryConsts.MaxIconBlobNameLength);
+            b.HasIndex(x => x.ParentCategoryId);
+            b.HasOne<Category>().WithMany().HasForeignKey(x => x.ParentCategoryId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<SupportTicket>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "SupportTickets", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.Subject).IsRequired().HasMaxLength(SupportTicketConsts.MaxSubjectLength);
+            b.HasIndex(x => new { x.Status, x.Priority });
+            b.HasIndex(x => x.TenantId);
+            b.HasIndex(x => x.CustomerId);
+
+            // Child collection, no separate repository — see SupportTicketMessage's own comment.
+            b.HasMany(x => x.Messages).WithOne().HasForeignKey(x => x.TicketId).OnDelete(DeleteBehavior.Cascade);
+            b.Navigation(x => x.Messages).UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        builder.Entity<SupportTicketMessage>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "SupportTicketMessages", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.Body).IsRequired().HasMaxLength(SupportTicketMessageConsts.MaxBodyLength);
+            b.HasIndex(x => new { x.TicketId, x.CreatedAt });
         });
     }
 }

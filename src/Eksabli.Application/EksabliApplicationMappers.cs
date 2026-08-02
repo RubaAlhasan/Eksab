@@ -15,6 +15,7 @@ using Eksabli.Campaigns;
 using Eksabli.Offers;
 using Eksabli.Notifications;
 using Eksabli.Engagement;
+using Eksabli.Platform;
 
 namespace Eksabli;
 
@@ -260,4 +261,32 @@ public partial class EksabliFollowToFollowDtoMapper : MapperBase<Follow, FollowD
     public override partial FollowDto Map(Follow source);
 
     public override partial void Map(Follow source, FollowDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliCategoryToCategoryDtoMapper : MapperBase<Category, CategoryDto>
+{
+    public override partial CategoryDto Map(Category source);
+
+    public override partial void Map(Category source, CategoryDto destination);
+}
+
+// Messages is mapped manually in SupportTicketAppService (source is IReadOnlyCollection<SupportTicketMessage>,
+// only meaningful when the aggregate was loaded via ISupportTicketRepository.WithDetailsAsync).
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliSupportTicketToSupportTicketDtoMapper : MapperBase<SupportTicket, SupportTicketDto>
+{
+    [MapperIgnoreTarget(nameof(SupportTicketDto.Messages))]
+    public override partial SupportTicketDto Map(SupportTicket source);
+
+    [MapperIgnoreTarget(nameof(SupportTicketDto.Messages))]
+    public override partial void Map(SupportTicket source, SupportTicketDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliSupportTicketMessageToSupportTicketMessageDtoMapper : MapperBase<SupportTicketMessage, SupportTicketMessageDto>
+{
+    public override partial SupportTicketMessageDto Map(SupportTicketMessage source);
+
+    public override partial void Map(SupportTicketMessage source, SupportTicketMessageDto destination);
 }

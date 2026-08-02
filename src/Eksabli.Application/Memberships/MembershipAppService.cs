@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Eksabli.BusinessProfiles;
 using Eksabli.Engagement;
 using Eksabli.Wallets;
 using Microsoft.Extensions.Caching.Distributed;
@@ -21,6 +22,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
     private readonly IRepository<PointsWallet, Guid> _walletRepository;
     private readonly IRepository<Wallets.Tier, Guid> _tierRepository;
     private readonly IReferralRepository _referralRepository;
+    private readonly IRepository<BusinessProfile, Guid> _businessProfileRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
     private readonly IDistributedCache _qrCache;
@@ -30,6 +32,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
         IRepository<PointsWallet, Guid> walletRepository,
         IRepository<Wallets.Tier, Guid> tierRepository,
         IReferralRepository referralRepository,
+        IRepository<BusinessProfile, Guid> businessProfileRepository,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
         IDistributedCache qrCache)
@@ -38,6 +41,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
         _walletRepository = walletRepository;
         _tierRepository = tierRepository;
         _referralRepository = referralRepository;
+        _businessProfileRepository = businessProfileRepository;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
         _qrCache = qrCache;
@@ -49,6 +53,15 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
 
         using (_currentTenant.Change(input.TenantId))
         {
+            // FirstOrDefault, not Single — a missing BusinessProfile (shouldn't happen outside tests/
+            // seed data that bypassed BusinessAppService.RegisterAsync) fails open rather than blocking
+            // every join with an unrelated 500.
+            var businessProfile = await _businessProfileRepository.FirstOrDefaultAsync();
+            if (businessProfile?.ApprovalStatus == TenantApprovalStatus.Suspended)
+            {
+                throw new UserFriendlyException("This business isn't currently accepting new members.");
+            }
+
             var existing = await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == customerId);
             if (existing != null)
             {

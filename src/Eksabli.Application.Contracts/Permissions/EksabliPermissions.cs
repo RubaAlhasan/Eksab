@@ -132,6 +132,33 @@ public static class EksabliPermissions
         public const string Export = Default + ".Export";
     }
 
+    // Host-realm platform-operations permissions (Feature 08 — Admin Panel). Distinct from the
+    // tenant-realm groups above: these gate Super Admin/Support Agent/Billing Admin/Content Moderator
+    // tooling, not anything a business's own staff can be granted.
+    public static class Tenants
+    {
+        public const string Default = GroupName + ".Tenants";
+        public const string View = Default + ".View";
+        public const string Approve = Default + ".Approve";
+        public const string Suspend = Default + ".Suspend";
+    }
+
+    public static class Categories
+    {
+        public const string Default = GroupName + ".Categories";
+        public const string Create = Default + ".Create";
+        public const string Edit = Default + ".Edit";
+        public const string Delete = Default + ".Delete";
+    }
+
+    public static class SupportTickets
+    {
+        public const string Default = GroupName + ".SupportTickets";
+        // Reporter-initiated create/read-own doesn't need a permission beyond authenticated — this
+        // gates the Support Agent queue/thread/resolve tooling specifically.
+        public const string Manage = Default + ".Manage";
+    }
+
     //Add your own permission names. Example:
     //public const string MyPermission1 = GroupName + ".MyPermission1";
 }

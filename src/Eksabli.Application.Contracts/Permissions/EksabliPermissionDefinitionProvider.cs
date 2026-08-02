@@ -83,6 +83,19 @@ public class EksabliPermissionDefinitionProvider : PermissionDefinitionProvider
 
         var reportsPermission = myGroup.AddPermission(EksabliPermissions.Reports.Default, L("Permission:Reports"));
         reportsPermission.AddChild(EksabliPermissions.Reports.Export, L("Permission:Reports.Export"));
+
+        var tenantsPermission = myGroup.AddPermission(EksabliPermissions.Tenants.Default, L("Permission:Tenants"));
+        tenantsPermission.AddChild(EksabliPermissions.Tenants.View, L("Permission:Tenants.View"));
+        tenantsPermission.AddChild(EksabliPermissions.Tenants.Approve, L("Permission:Tenants.Approve"));
+        tenantsPermission.AddChild(EksabliPermissions.Tenants.Suspend, L("Permission:Tenants.Suspend"));
+
+        var categoriesPermission = myGroup.AddPermission(EksabliPermissions.Categories.Default, L("Permission:Categories"));
+        categoriesPermission.AddChild(EksabliPermissions.Categories.Create, L("Permission:Categories.Create"));
+        categoriesPermission.AddChild(EksabliPermissions.Categories.Edit, L("Permission:Categories.Edit"));
+        categoriesPermission.AddChild(EksabliPermissions.Categories.Delete, L("Permission:Categories.Delete"));
+
+        var supportTicketsPermission = myGroup.AddPermission(EksabliPermissions.SupportTickets.Default, L("Permission:SupportTickets"));
+        supportTicketsPermission.AddChild(EksabliPermissions.SupportTickets.Manage, L("Permission:SupportTickets.Manage"));
         //Define your own permissions here. Example:
         //myGroup.AddPermission(EksabliPermissions.MyPermission1, L("Permission:MyPermission1"));
     }
