@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Eksabli.Engagement;
 using Eksabli.Wallets;
 using Microsoft.Extensions.Caching.Distributed;
 using Volo.Abp;
@@ -19,6 +20,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
     private readonly IRepository<Membership, Guid> _membershipRepository;
     private readonly IRepository<PointsWallet, Guid> _walletRepository;
     private readonly IRepository<Wallets.Tier, Guid> _tierRepository;
+    private readonly IReferralRepository _referralRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
     private readonly IDistributedCache _qrCache;
@@ -27,6 +29,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
         IRepository<Membership, Guid> membershipRepository,
         IRepository<PointsWallet, Guid> walletRepository,
         IRepository<Wallets.Tier, Guid> tierRepository,
+        IReferralRepository referralRepository,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
         IDistributedCache qrCache)
@@ -34,6 +37,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
         _membershipRepository = membershipRepository;
         _walletRepository = walletRepository;
         _tierRepository = tierRepository;
+        _referralRepository = referralRepository;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
         _qrCache = qrCache;
@@ -57,8 +61,30 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
             var wallet = PointsWallet.Create(GuidGenerator.Create(), membership.Id);
             await _walletRepository.InsertAsync(wallet, autoSave: true);
 
+            await TryCreateReferralAsync(input.ReferralCode, membership);
+
             return ObjectMapper.Map<Membership, MembershipDto>(membership);
         }
+    }
+
+    // Invalid, self-referral, or already-referred codes are ignored rather than rejected — a bad
+    // referral code shouldn't block the join itself. Actual bonus payout happens later, on the
+    // referee's first purchase (Engagement.ReferralCompletionService via PosAppService).
+    private async Task TryCreateReferralAsync(Guid? referralCode, Membership refereeMembership)
+    {
+        if (!referralCode.HasValue)
+        {
+            return;
+        }
+
+        var referrerMembership = await _membershipRepository.FindAsync(referralCode.Value);
+        if (referrerMembership == null || referrerMembership.CustomerId == refereeMembership.CustomerId)
+        {
+            return;
+        }
+
+        var referral = Referral.Create(GuidGenerator.Create(), referrerMembership.Id, refereeMembership.CustomerId);
+        await _referralRepository.InsertAsync(referral);
     }
 
     public async Task<List<MembershipDto>> GetMyMembershipsAsync()

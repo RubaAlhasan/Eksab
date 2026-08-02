@@ -14,6 +14,7 @@ using Eksabli.Billing;
 using Eksabli.Campaigns;
 using Eksabli.Offers;
 using Eksabli.Notifications;
+using Eksabli.Engagement;
 
 namespace Eksabli;
 
@@ -227,4 +228,36 @@ public partial class EksabliNotificationToNotificationDtoMapper : MapperBase<Not
     public override partial NotificationDto Map(Notification source);
 
     public override partial void Map(Notification source, NotificationDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliReferralToReferralDtoMapper : MapperBase<Referral, ReferralDto>
+{
+    public override partial ReferralDto Map(Referral source);
+
+    public override partial void Map(Referral source, ReferralDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliAchievementToAchievementDtoMapper : MapperBase<Achievement, AchievementDto>
+{
+    public override partial AchievementDto Map(Achievement source);
+
+    public override partial void Map(Achievement source, AchievementDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliAchievementAwardToAchievementAwardDtoMapper : MapperBase<AchievementAward, AchievementAwardDto>
+{
+    public override partial AchievementAwardDto Map(AchievementAward source);
+
+    public override partial void Map(AchievementAward source, AchievementAwardDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliFollowToFollowDtoMapper : MapperBase<Follow, FollowDto>
+{
+    public override partial FollowDto Map(Follow source);
+
+    public override partial void Map(Follow source, FollowDto destination);
 }

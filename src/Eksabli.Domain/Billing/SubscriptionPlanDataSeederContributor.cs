@@ -36,7 +36,8 @@ public class SubscriptionPlanDataSeederContributor : IDataSeedContributor, ITran
             [EksabliFeatures.MaxActiveMembers] = "500",
             [EksabliFeatures.MaxCampaigns] = "1",
             [EksabliFeatures.SmsNotifications] = "false",
-            [EksabliFeatures.PushNotifications] = "false"
+            [EksabliFeatures.PushNotifications] = "false",
+            [EksabliFeatures.Gamification] = "false"
         });
 
         await CreatePlanAsync("Growth", 49m, isTrialDefault: true, new Dictionary<string, string>
@@ -45,7 +46,8 @@ public class SubscriptionPlanDataSeederContributor : IDataSeedContributor, ITran
             [EksabliFeatures.MaxActiveMembers] = "5000",
             [EksabliFeatures.MaxCampaigns] = Unlimited,
             [EksabliFeatures.SmsNotifications] = "true",
-            [EksabliFeatures.PushNotifications] = "true"
+            [EksabliFeatures.PushNotifications] = "true",
+            [EksabliFeatures.Gamification] = "true"
         });
 
         await CreatePlanAsync("Scale", 199m, isTrialDefault: false, new Dictionary<string, string>
@@ -54,7 +56,8 @@ public class SubscriptionPlanDataSeederContributor : IDataSeedContributor, ITran
             [EksabliFeatures.MaxActiveMembers] = "50000",
             [EksabliFeatures.MaxCampaigns] = Unlimited,
             [EksabliFeatures.SmsNotifications] = "true",
-            [EksabliFeatures.PushNotifications] = "true"
+            [EksabliFeatures.PushNotifications] = "true",
+            [EksabliFeatures.Gamification] = "true"
         });
 
         await CreatePlanAsync("Enterprise", 499m, isTrialDefault: false, new Dictionary<string, string>
@@ -63,7 +66,8 @@ public class SubscriptionPlanDataSeederContributor : IDataSeedContributor, ITran
             [EksabliFeatures.MaxActiveMembers] = Unlimited,
             [EksabliFeatures.MaxCampaigns] = Unlimited,
             [EksabliFeatures.SmsNotifications] = "true",
-            [EksabliFeatures.PushNotifications] = "true"
+            [EksabliFeatures.PushNotifications] = "true",
+            [EksabliFeatures.Gamification] = "true"
         });
     }
 

@@ -14,6 +14,7 @@ using Eksabli.Billing;
 using Eksabli.Campaigns;
 using Eksabli.Offers;
 using Eksabli.Notifications;
+using Eksabli.Engagement;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;
 using Volo.Abp.Data;
@@ -82,6 +83,14 @@ public class EksabliDbContext :
     public DbSet<Offer> Offers { get; set; }
 
     public DbSet<Notification> Notifications { get; set; }
+
+    public DbSet<Referral> Referrals { get; set; }
+
+    public DbSet<Achievement> Achievements { get; set; }
+
+    public DbSet<AchievementAward> AchievementAwards { get; set; }
+
+    public DbSet<Follow> Follows { get; set; }
 
     #region Entities from the modules
 
@@ -360,6 +369,38 @@ public class EksabliDbContext :
             b.Property(x => x.Body).IsRequired().HasMaxLength(NotificationConsts.MaxBodyLength);
             b.HasIndex(x => new { x.TenantId, x.CampaignId });
             b.HasIndex(x => new { x.MembershipId, x.CreationTime });
+        });
+
+        builder.Entity<Referral>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "Referrals", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.HasIndex(x => new { x.TenantId, x.Status });
+            b.HasIndex(x => x.ReferrerMembershipId);
+            b.HasIndex(x => x.RefereeCustomerId);
+        });
+
+        builder.Entity<Achievement>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "Achievements", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.Name).IsRequired().HasMaxLength(AchievementConsts.MaxNameLength);
+            b.Property(x => x.CriteriaJson).HasMaxLength(AchievementConsts.MaxCriteriaJsonLength);
+            b.HasIndex(x => x.TenantId);
+        });
+
+        builder.Entity<AchievementAward>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "AchievementAwards", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.HasIndex(x => new { x.MembershipId, x.AchievementId }).IsUnique();
+        });
+
+        builder.Entity<Follow>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "Follows", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.HasIndex(x => new { x.CustomerId, x.TenantId }).IsUnique();
         });
     }
 }

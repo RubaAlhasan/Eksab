@@ -44,6 +44,12 @@ public class EksabliFeatureDefinitionProvider : FeatureDefinitionProvider
             defaultValue: "false",
             displayName: L("Feature:PushNotifications"),
             valueType: new ToggleStringValueType());
+
+        myGroup.AddFeature(
+            EksabliFeatures.Gamification,
+            defaultValue: "false",
+            displayName: L("Feature:Gamification"),
+            valueType: new ToggleStringValueType());
     }
 
     private static LocalizableString L(string name)

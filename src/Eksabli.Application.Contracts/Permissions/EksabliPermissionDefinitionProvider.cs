@@ -70,6 +70,16 @@ public class EksabliPermissionDefinitionProvider : PermissionDefinitionProvider
 
         var notificationsPermission = myGroup.AddPermission(EksabliPermissions.Notifications.Default, L("Permission:Notifications"));
         notificationsPermission.AddChild(EksabliPermissions.Notifications.Send, L("Permission:Notifications.Send"));
+
+        var achievementsPermission = myGroup.AddPermission(EksabliPermissions.Achievements.Default, L("Permission:Achievements"));
+        achievementsPermission.AddChild(EksabliPermissions.Achievements.Create, L("Permission:Achievements.Create"));
+        achievementsPermission.AddChild(EksabliPermissions.Achievements.Edit, L("Permission:Achievements.Edit"));
+        achievementsPermission.AddChild(EksabliPermissions.Achievements.Delete, L("Permission:Achievements.Delete"));
+        achievementsPermission.AddChild(EksabliPermissions.Achievements.Award, L("Permission:Achievements.Award"));
+
+        var followersPermission = myGroup.AddPermission(EksabliPermissions.Followers.Default, L("Permission:Followers"));
+        followersPermission.AddChild(EksabliPermissions.Followers.View, L("Permission:Followers.View"));
+        followersPermission.AddChild(EksabliPermissions.Followers.ConvertToCampaign, L("Permission:Followers.ConvertToCampaign"));
         //Define your own permissions here. Example:
         //myGroup.AddPermission(EksabliPermissions.MyPermission1, L("Permission:MyPermission1"));
     }

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Eksabli.Campaigns;
 using Eksabli.CustomerProfiles;
 using Eksabli.EmployeeAssignments;
+using Eksabli.Engagement;
 using Eksabli.Memberships;
 using Eksabli.Rewards;
 using Eksabli.Wallets;
@@ -34,6 +35,7 @@ public class PosAppService : ApplicationService, IPosAppService
     private readonly ICurrentTenant _currentTenant;
     private readonly IDistributedCache _qrCache;
     private readonly ICampaignRulesEngine _campaignRulesEngine;
+    private readonly IReferralCompletionService _referralCompletionService;
 
     public PosAppService(
         IRepository<Membership, Guid> membershipRepository,
@@ -48,7 +50,8 @@ public class PosAppService : ApplicationService, IPosAppService
         IIdentityUserRepository identityUserRepository,
         ICurrentTenant currentTenant,
         IDistributedCache qrCache,
-        ICampaignRulesEngine campaignRulesEngine)
+        ICampaignRulesEngine campaignRulesEngine,
+        IReferralCompletionService referralCompletionService)
     {
         _membershipRepository = membershipRepository;
         _walletRepository = walletRepository;
@@ -63,6 +66,7 @@ public class PosAppService : ApplicationService, IPosAppService
         _currentTenant = currentTenant;
         _qrCache = qrCache;
         _campaignRulesEngine = campaignRulesEngine;
+        _referralCompletionService = referralCompletionService;
     }
 
     public async Task<CustomerLookupResultDto> LookupCustomerByPhoneAsync(PhoneLookupDto input)
@@ -180,6 +184,7 @@ public class PosAppService : ApplicationService, IPosAppService
         }
 
         var points = await ComputePointsAsync(purchaseAmount, tierMultiplier);
+        var isFirstEarn = wallet.LifetimeEarned == 0; // the qualifying action for referral completion
 
         var transaction = PointsTransaction.Create(
             GuidGenerator.Create(),
@@ -193,6 +198,10 @@ public class PosAppService : ApplicationService, IPosAppService
         wallet.ApplyTransaction(PointsTransactionType.Earn, points);
         await RecomputeTierAsync(wallet);
         await _walletRepository.UpdateAsync(wallet);
+
+        // Feature 06's referral bonus — awarded only on the referee's actual first purchase, not just
+        // signup. See docs/eksabli-loyalty-platform/features/06-engagement-gamification/README.md.
+        await _referralCompletionService.TryCompleteAsync(membership, wallet, isFirstEarn);
 
         return await BuildResultAsync(transaction, wallet);
     }

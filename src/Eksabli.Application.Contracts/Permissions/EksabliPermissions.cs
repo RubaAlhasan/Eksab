@@ -108,6 +108,24 @@ public static class EksabliPermissions
         public const string Send = Default + ".Send";
     }
 
+    public static class Achievements
+    {
+        public const string Default = GroupName + ".Achievements";
+        public const string Create = Default + ".Create";
+        public const string Edit = Default + ".Edit";
+        public const string Delete = Default + ".Delete";
+        public const string Award = Default + ".Award";
+    }
+
+    public static class Followers
+    {
+        public const string Default = GroupName + ".Followers";
+        public const string View = Default + ".View";
+        // Defined for parity/future use — "convert followers to a campaign target" isn't built yet,
+        // same treatment as Memberships.Award/.Adjust.
+        public const string ConvertToCampaign = Default + ".ConvertToCampaign";
+    }
+
     //Add your own permission names. Example:
     //public const string MyPermission1 = GroupName + ".MyPermission1";
 }
