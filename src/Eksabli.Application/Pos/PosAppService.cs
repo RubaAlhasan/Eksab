@@ -36,6 +36,7 @@ public class PosAppService : ApplicationService, IPosAppService
     private readonly IDistributedCache _qrCache;
     private readonly ICampaignRulesEngine _campaignRulesEngine;
     private readonly IReferralCompletionService _referralCompletionService;
+    private readonly ITierRecomputeService _tierRecomputeService;
 
     public PosAppService(
         IRepository<Membership, Guid> membershipRepository,
@@ -51,7 +52,8 @@ public class PosAppService : ApplicationService, IPosAppService
         ICurrentTenant currentTenant,
         IDistributedCache qrCache,
         ICampaignRulesEngine campaignRulesEngine,
-        IReferralCompletionService referralCompletionService)
+        IReferralCompletionService referralCompletionService,
+        ITierRecomputeService tierRecomputeService)
     {
         _membershipRepository = membershipRepository;
         _walletRepository = walletRepository;
@@ -67,6 +69,7 @@ public class PosAppService : ApplicationService, IPosAppService
         _qrCache = qrCache;
         _campaignRulesEngine = campaignRulesEngine;
         _referralCompletionService = referralCompletionService;
+        _tierRecomputeService = tierRecomputeService;
     }
 
     public async Task<CustomerLookupResultDto> LookupCustomerByPhoneAsync(PhoneLookupDto input)
@@ -196,7 +199,7 @@ public class PosAppService : ApplicationService, IPosAppService
         await _transactionRepository.InsertAsync(transaction);
 
         wallet.ApplyTransaction(PointsTransactionType.Earn, points);
-        await RecomputeTierAsync(wallet);
+        await _tierRecomputeService.RecomputeAsync(wallet);
         await _walletRepository.UpdateAsync(wallet);
 
         // Feature 06's referral bonus — awarded only on the referee's actual first purchase, not just
@@ -238,15 +241,6 @@ public class PosAppService : ApplicationService, IPosAppService
         var campaignResult = await _campaignRulesEngine.EvaluateAsync(purchaseAmount);
 
         return (int)Math.Floor(basePoints * tierMultiplier * campaignResult.Multiplier) + campaignResult.BonusPoints;
-    }
-
-    private async Task RecomputeTierAsync(PointsWallet wallet)
-    {
-        var qualifying = (await _tierRepository.GetListAsync(t => t.MinLifetimePoints <= wallet.LifetimeEarned))
-            .OrderByDescending(t => t.MinLifetimePoints)
-            .FirstOrDefault();
-
-        wallet.ChangeTier(qualifying?.Id);
     }
 
     private async Task<AwardPointsResultDto> BuildResultAsync(PointsTransaction transaction, PointsWallet wallet)

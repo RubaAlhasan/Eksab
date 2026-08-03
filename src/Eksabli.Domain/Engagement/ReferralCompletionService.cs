@@ -19,6 +19,7 @@ public class ReferralCompletionService : IReferralCompletionService, ITransientD
     private readonly INotificationRepository _notificationRepository;
     private readonly IBackgroundJobManager _backgroundJobManager;
     private readonly IGuidGenerator _guidGenerator;
+    private readonly ITierRecomputeService _tierRecomputeService;
 
     public ReferralCompletionService(
         IReferralRepository referralRepository,
@@ -27,7 +28,8 @@ public class ReferralCompletionService : IReferralCompletionService, ITransientD
         IRepository<PointsTransaction, Guid> transactionRepository,
         INotificationRepository notificationRepository,
         IBackgroundJobManager backgroundJobManager,
-        IGuidGenerator guidGenerator)
+        IGuidGenerator guidGenerator,
+        ITierRecomputeService tierRecomputeService)
     {
         _referralRepository = referralRepository;
         _membershipRepository = membershipRepository;
@@ -36,6 +38,7 @@ public class ReferralCompletionService : IReferralCompletionService, ITransientD
         _notificationRepository = notificationRepository;
         _backgroundJobManager = backgroundJobManager;
         _guidGenerator = guidGenerator;
+        _tierRecomputeService = tierRecomputeService;
     }
 
     public async Task TryCompleteAsync(Membership refereeMembership, PointsWallet refereeWallet, bool isFirstEarn)
@@ -77,6 +80,11 @@ public class ReferralCompletionService : IReferralCompletionService, ITransientD
         await _transactionRepository.InsertAsync(transaction);
 
         wallet.ApplyTransaction(PointsTransactionType.Earn, ReferralConsts.BonusPoints);
+
+        // The bonus moves LifetimeEarned, so CurrentTierId needs re-checking here too — otherwise a
+        // referral bonus that crosses a tier threshold wouldn't show up until the wallet's next
+        // purchase (see ITierRecomputeService's own comment for why that's not just cosmetic).
+        await _tierRecomputeService.RecomputeAsync(wallet);
         await _walletRepository.UpdateAsync(wallet);
     }
 
