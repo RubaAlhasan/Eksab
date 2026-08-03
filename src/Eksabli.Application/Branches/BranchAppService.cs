@@ -12,6 +12,7 @@ using Volo.Abp.Features;
 
 namespace Eksabli.Branches;
 
+[RemoteService(IsEnabled = false)]
 public class BranchAppService : ApplicationService, IBranchAppService
 {
     private readonly IBranchRepository _repository;

@@ -14,6 +14,7 @@ using Volo.Abp.TenantManagement;
 
 namespace Eksabli.Businesses;
 
+[RemoteService(IsEnabled = false)]
 public class AdminTenantAppService : ApplicationService, IAdminTenantAppService
 {
     private readonly IRepository<BusinessProfile, Guid> _businessProfileRepository;

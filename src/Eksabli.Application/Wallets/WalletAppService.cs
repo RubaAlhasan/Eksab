@@ -14,6 +14,7 @@ using Eksabli.Memberships;
 
 namespace Eksabli.Wallets;
 
+[RemoteService(IsEnabled = false)]
 public class WalletAppService : ApplicationService, IWalletAppService
 {
     private readonly IRepository<Membership, Guid> _membershipRepository;

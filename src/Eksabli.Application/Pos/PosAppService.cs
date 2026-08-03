@@ -20,6 +20,7 @@ using Volo.Abp.Users;
 
 namespace Eksabli.Pos;
 
+[RemoteService(IsEnabled = false)]
 public class PosAppService : ApplicationService, IPosAppService
 {
     private readonly IRepository<Membership, Guid> _membershipRepository;

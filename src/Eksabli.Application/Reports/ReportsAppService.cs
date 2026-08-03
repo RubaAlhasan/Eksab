@@ -23,6 +23,7 @@ using Volo.Abp.MultiTenancy;
 
 namespace Eksabli.Reports;
 
+[RemoteService(IsEnabled = false)]
 public class ReportsAppService : ApplicationService, IReportsAppService
 {
     // Presentation tuning, not a domain rule — how many units left before a reward shows up on the

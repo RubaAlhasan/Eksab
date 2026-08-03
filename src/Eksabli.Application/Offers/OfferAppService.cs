@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 
 namespace Eksabli.Offers;
 
+[RemoteService(IsEnabled = false)]
 public class OfferAppService : ApplicationService, IOfferAppService
 {
     private readonly IOfferRepository _repository;

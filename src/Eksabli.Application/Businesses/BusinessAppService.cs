@@ -17,6 +17,7 @@ using Volo.Abp.TenantManagement;
 
 namespace Eksabli.Businesses;
 
+[RemoteService(IsEnabled = false)]
 public class BusinessAppService : ApplicationService, IBusinessAppService
 {
     private readonly TenantManager _tenantManager;

@@ -14,6 +14,7 @@ using Volo.Abp.Users;
 
 namespace Eksabli.Rewards;
 
+[RemoteService(IsEnabled = false)]
 public class CouponAppService : ApplicationService, ICouponAppService
 {
     private const int MaxCodeGenerationAttempts = 5;

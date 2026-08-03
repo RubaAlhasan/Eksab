@@ -13,6 +13,7 @@ using Volo.Abp.Features;
 
 namespace Eksabli.Billing;
 
+[RemoteService(IsEnabled = false)]
 public class BillingAppService : ApplicationService, IBillingAppService
 {
     private readonly ITenantSubscriptionRepository _subscriptionRepository;

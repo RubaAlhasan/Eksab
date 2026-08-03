@@ -13,6 +13,7 @@ using Volo.Abp.MultiTenancy;
 
 namespace Eksabli.Engagement;
 
+[RemoteService(IsEnabled = false)]
 public class AchievementAppService : ApplicationService, IAchievementAppService
 {
     private readonly IAchievementRepository _repository;

@@ -12,6 +12,7 @@ using Volo.Abp.Users;
 
 namespace Eksabli.Engagement;
 
+[RemoteService(IsEnabled = false)]
 public class ReferralAppService : ApplicationService, IReferralAppService
 {
     private readonly IRepository<Membership, Guid> _membershipRepository;

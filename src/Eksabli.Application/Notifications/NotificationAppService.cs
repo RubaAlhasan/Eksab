@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Eksabli.Memberships;
+using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.BackgroundJobs;
@@ -9,6 +10,7 @@ using Volo.Abp.Domain.Repositories;
 
 namespace Eksabli.Notifications;
 
+[RemoteService(IsEnabled = false)]
 public class NotificationAppService : ApplicationService, INotificationAppService
 {
     private readonly INotificationRepository _repository;

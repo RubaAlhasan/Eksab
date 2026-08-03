@@ -3,11 +3,13 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
 using Eksabli.Sms;
+using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Caching;
 
 namespace Eksabli.Otp;
 
+[RemoteService(IsEnabled = false)]
 public class OtpAppService : ApplicationService, IOtpAppService
 {
     private readonly IDistributedCache<OtpCacheItem, string> _otpCache;

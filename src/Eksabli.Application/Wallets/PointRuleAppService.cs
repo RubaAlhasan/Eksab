@@ -10,6 +10,7 @@ using Volo.Abp.Domain.Repositories;
 
 namespace Eksabli.Wallets;
 
+[RemoteService(IsEnabled = false)]
 public class PointRuleAppService : ApplicationService, IPointRuleAppService
 {
     private readonly IPointRuleRepository _repository;

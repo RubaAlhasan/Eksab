@@ -11,6 +11,7 @@ using Volo.Abp.MultiTenancy;
 
 namespace Eksabli.Billing;
 
+[RemoteService(IsEnabled = false)]
 public class AdminSubscriptionAppService : ApplicationService, IAdminSubscriptionAppService
 {
     private readonly ITenantSubscriptionRepository _subscriptionRepository;

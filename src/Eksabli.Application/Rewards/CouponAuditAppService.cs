@@ -19,6 +19,7 @@ using Volo.Abp.Identity;
 
 namespace Eksabli.Rewards;
 
+[RemoteService(IsEnabled = false)]
 public class CouponAuditAppService : ApplicationService, ICouponAuditAppService
 {
     private readonly ICouponRepository _couponRepository;

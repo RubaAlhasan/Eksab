@@ -10,6 +10,7 @@ using Volo.Abp.Features;
 
 namespace Eksabli.Campaigns;
 
+[RemoteService(IsEnabled = false)]
 public class CampaignAppService : ApplicationService, ICampaignAppService
 {
     private readonly ICampaignRepository _repository;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Authorization;
 using Volo.Abp.Domain.Repositories;
@@ -8,6 +9,7 @@ using Volo.Abp.Users;
 
 namespace Eksabli.Devices;
 
+[RemoteService(IsEnabled = false)]
 public class DeviceAppService : ApplicationService, IDeviceAppService
 {
     private readonly IRepository<Device, Guid> _repository;

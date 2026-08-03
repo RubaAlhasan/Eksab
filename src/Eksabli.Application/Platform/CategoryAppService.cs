@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 
 namespace Eksabli.Platform;
 
+[RemoteService(IsEnabled = false)]
 public class CategoryAppService : ApplicationService, ICategoryAppService
 {
     private readonly ICategoryRepository _repository;

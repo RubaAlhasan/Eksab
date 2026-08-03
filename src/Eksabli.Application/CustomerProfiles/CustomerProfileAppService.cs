@@ -1,11 +1,13 @@
 using System;
 using System.Threading.Tasks;
+using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
 
 namespace Eksabli.CustomerProfiles;
 
+[RemoteService(IsEnabled = false)]
 public class CustomerProfileAppService : ApplicationService, ICustomerProfileAppService
 {
     private readonly IRepository<CustomerProfile, Guid> _repository;

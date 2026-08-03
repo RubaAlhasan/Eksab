@@ -12,6 +12,7 @@ using Volo.Abp.Users;
 
 namespace Eksabli.Platform;
 
+[RemoteService(IsEnabled = false)]
 public class SupportTicketAppService : ApplicationService, ISupportTicketAppService
 {
     private readonly ISupportTicketRepository _repository;

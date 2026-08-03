@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 
 namespace Eksabli.Rewards;
 
+[RemoteService(IsEnabled = false)]
 public class RewardAppService : ApplicationService, IRewardAppService
 {
     private readonly IRewardRepository _repository;

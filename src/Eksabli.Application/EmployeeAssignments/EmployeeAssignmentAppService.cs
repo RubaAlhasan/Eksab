@@ -12,6 +12,7 @@ using Volo.Abp.Identity;
 
 namespace Eksabli.EmployeeAssignments;
 
+[RemoteService(IsEnabled = false)]
 public class EmployeeAssignmentAppService : ApplicationService, IEmployeeAssignmentAppService
 {
     private readonly IEmployeeAssignmentRepository _repository;
