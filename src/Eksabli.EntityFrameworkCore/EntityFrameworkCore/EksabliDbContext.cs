@@ -1,7 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
-using Eksabli.Authors;
-using Eksabli.Books;
 using Eksabli.Memberships;
 using Eksabli.BusinessProfiles;
 using Eksabli.Branches;
@@ -42,10 +40,6 @@ public class EksabliDbContext :
     IIdentityDbContext
 {
     /* Add DbSet properties for your Aggregate Roots / Entities here. */
-
-    public DbSet<Author> Authors { get; set; }
-
-    public DbSet<Book> Books { get; set; }
 
     public DbSet<Membership> Memberships { get; set; }
 
@@ -159,23 +153,6 @@ public class EksabliDbContext :
                 .HasFilter("\"TenantId\" IS NULL AND \"PhoneNumber\" IS NOT NULL");
         });
 
-        builder.Entity<Author>(b =>
-        {
-            b.ToTable(EksabliConsts.DbTablePrefix + "Authors",
-                EksabliConsts.DbSchema);
-            b.ConfigureByConvention(); //auto configure for the base class props
-            b.Property(x => x.Name).IsRequired().HasMaxLength(AuthorConsts.MaxNameLength);
-            b.Property(x => x.ShortBio).HasMaxLength(AuthorConsts.MaxShortBioLength);
-        });
-
-        builder.Entity<Book>(b =>
-        {
-            b.ToTable(EksabliConsts.DbTablePrefix + "Books",
-                EksabliConsts.DbSchema);
-            b.ConfigureByConvention(); //auto configure for the base class props
-            b.Property(x => x.Name).IsRequired().HasMaxLength(128);
-            b.HasOne<Author>().WithMany().HasForeignKey(x => x.AuthorId).IsRequired();
-        });
 
         /* Configure your own tables/entities inside here */
 

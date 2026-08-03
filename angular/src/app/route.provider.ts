@@ -15,19 +15,5 @@ function configureRoutes() {
         order: 1,
         layout: eLayoutType.application,
       },
-      {
-        path: '/books',
-        name: '::Menu:Books',
-        iconClass: 'fas fa-book',
-        layout: eLayoutType.application,
-        requiredPolicy: 'Eksabli.Books',
-      },
-      {
-        path: '/authors',
-        name: '::Menu:Authors',
-        iconClass: 'fas fa-user-edit',
-        layout: eLayoutType.application,
-        requiredPolicy: 'Eksabli.Authors',
-      },
   ]);
 }

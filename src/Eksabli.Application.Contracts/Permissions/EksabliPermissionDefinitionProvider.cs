@@ -11,16 +11,6 @@ public class EksabliPermissionDefinitionProvider : PermissionDefinitionProvider
     {
         var myGroup = context.AddGroup(EksabliPermissions.GroupName);
 
-        var booksPermission = myGroup.AddPermission(EksabliPermissions.Books.Default, L("Permission:Books"));
-        booksPermission.AddChild(EksabliPermissions.Books.Create, L("Permission:Books.Create"));
-        booksPermission.AddChild(EksabliPermissions.Books.Edit, L("Permission:Books.Edit"));
-        booksPermission.AddChild(EksabliPermissions.Books.Delete, L("Permission:Books.Delete"));
-
-        var authorsPermission = myGroup.AddPermission(EksabliPermissions.Authors.Default, L("Permission:Authors"));
-        authorsPermission.AddChild(EksabliPermissions.Authors.Create, L("Permission:Authors.Create"));
-        authorsPermission.AddChild(EksabliPermissions.Authors.Edit, L("Permission:Authors.Edit"));
-        authorsPermission.AddChild(EksabliPermissions.Authors.Delete, L("Permission:Authors.Delete"));
-
         var businessProfilePermission = myGroup.AddPermission(EksabliPermissions.BusinessProfile.Default, L("Permission:BusinessProfile"));
         businessProfilePermission.AddChild(EksabliPermissions.BusinessProfile.Edit, L("Permission:BusinessProfile.Edit"));
 
