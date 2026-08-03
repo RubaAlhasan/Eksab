@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Eksabli.StartupTasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -34,6 +35,13 @@ public class Program
             await builder.AddApplicationAsync<EksabliHttpApiHostModule>();
             var app = builder.Build();
             await app.InitializeApplicationAsync();
+
+            var startupTasks = app.Services.GetServices<IStartupTask>();
+            foreach (var item in startupTasks)
+            {
+                await item.Execute(app);
+            }
+
             await app.RunAsync();
             return 0;
         }

@@ -1,930 +1,470 @@
 'use strict';
 
+// Rebuilt from the LIVE Swagger doc (https://localhost:44330/swagger/v1/swagger.json) of the actual
+// running Eksabli.HttpApi.Host, the real [Authorize]/permission attributes found on the hand-written
+// controllers in src/Eksabli.HttpApi/Controllers/ (ABP auto-API-controllers are disabled here via
+// [RemoteService(IsEnabled = false)] on every app service), AND live curl verification against the
+// running host with a throwaway registered user (postman.smoketest) — response shapes/status codes
+// below are observed, not guessed, wherever a verification was feasible without side effects that
+// matter (see inline notes for what was actually exercised).
+//
+// Folders/endpoints the docs describe but that have no real route yet (store discovery/search, a
+// customer notification inbox, campaigns/offers reads open to customers, leaderboard, app-level
+// settings) are intentionally left out — see the collection description for the full gap list
+// instead of inventing routes that would 404.
+
 const fs = require('fs');
 const path = require('path');
-const { item, folder, query, pathVar, validationErrorBody, unauthorizedBody } = require('./lib');
+const { item, folder, query, pathVar, notFoundBody, businessRuleBody } = require('./lib');
+const { enumVal, enumDoc } = require('./enums');
 
-// ---------------------------------------------------------------------------------------
-// Fixed sample IDs (also mirrored as example values on {{...}} vars so examples read naturally)
-// ---------------------------------------------------------------------------------------
 const IDS = {
   customer: '5f3d8e2a-0000-4000-8000-000000000001',
-  businessStarbucks: '2b7c9a10-0000-4000-8000-000000000101',
-  businessNike: '2b7c9a10-0000-4000-8000-000000000102',
-  branch: '3c8da211-0000-4000-8000-000000000201',
+  tenantStarbucks: '2b7c9a10-0000-4000-8000-000000000101',
   membership: '4d9eb322-0000-4000-8000-000000000301',
-  wallet: '5eafc433-0000-4000-8000-000000000401',
-  transaction: '6fb0d544-0000-4000-8000-000000000501',
-  tierGold: '70c1e655-0000-4000-8000-000000000601',
   reward: '81d2f766-0000-4000-8000-000000000701',
   coupon: '92e30877-0000-4000-8000-000000000801',
-  campaign: 'a3f41988-0000-4000-8000-000000000901',
-  notification: 'b4052a99-0000-4000-8000-000000001001',
   device: 'c5163baa-0000-4000-8000-000000001101',
-  referral: 'd6274cbb-0000-4000-8000-000000001201',
   achievement: 'e7385dcc-0000-4000-8000-000000001301',
   ticket: 'f8496edd-0000-4000-8000-000000001401',
   category: '095a7fee-0000-4000-8000-000000001501',
+  transaction: '6fb0d544-0000-4000-8000-000000000501',
+  userId: '0a1b2c3d-4e5f-4000-8000-000000009999',
 };
 
-const business = {
-  id: IDS.businessStarbucks,
-  nameEn: 'Starbucks - Downtown',
-  nameAr: 'ستاربكس - وسط البلد',
-  categoryId: IDS.category,
-  categoryNameEn: 'Cafe',
-  categoryNameAr: 'مقهى',
-  logoUrl: 'https://cdn.eksabli.com/logos/starbucks.png',
-  descriptionEn: 'Handcrafted coffee, tea and more.',
-  descriptionAr: 'قهوة وشاي مصنوعان يدويًا والمزيد.',
-  website: 'https://starbucks.com',
-  distanceKm: 1.2,
-  isMember: true,
-  isFollowing: true,
-  activeCampaignsCount: 1,
-  branchesCount: 12,
+const PLACEHOLDER_NOTE = 'Placeholder GUID for illustration only — replace with a real id returned by ' +
+  'Join Business / My Memberships (this backend has no seed data for Author/Book-style tutorial fixtures once Books/Authors were removed). ' +
+  'Note: Join Business does NOT currently validate that the tenantId exists (verified live) — a bogus id still returns 200 with a Membership row, so a 404 here is aspirational, not observed.';
+
+const TOKEN_RESPONSE_EXAMPLE = {
+  access_token: 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjhCMTk3NjcyMEMyMDg5QzYzQUFDREM2RUZDMTczNUY5MUJEMEZEOTMiLCJ4NXQiOiJpeGwyY2d3Z2ljWTZyTnh1X0JjMS1SdlFfWk0iLCJ0eXAiOiJhdCtqd3QifQ.mobile-access-token-truncated-for-readability',
+  token_type: 'Bearer',
+  expires_in: 3599,
+  scope: 'Eksabli offline_access profile email phone roles',
+  refresh_token: 'eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZDQkMtSFM1MTIi...refresh-token-truncated',
 };
 
-const branch = {
-  id: IDS.branch,
-  tenantId: IDS.businessStarbucks,
-  name: 'Downtown Mall Branch',
-  address: '123 King Fahd Rd, Riyadh',
-  latitude: 24.7136,
-  longitude: 46.6753,
-  phone: '+966501234567',
-  openingHours: { sun: '08:00-23:00', mon: '08:00-23:00', tue: '08:00-23:00', wed: '08:00-23:00', thu: '08:00-23:00', fri: '14:00-23:00', sat: '08:00-23:00' },
-};
+const tokenTestScript = [
+  "if (pm.response.code === 200) {",
+  "    const json = pm.response.json();",
+  "    pm.collectionVariables.set('accessToken', json.access_token);",
+  "    if (json.refresh_token) { pm.collectionVariables.set('refreshToken', json.refresh_token); }",
+  "    pm.collectionVariables.set('tokenExpiresAt', Date.now() + (json.expires_in * 1000));",
+  "    pm.environment.set('accessToken', json.access_token);",
+  "    if (json.refresh_token) { pm.environment.set('refreshToken', json.refresh_token); }",
+  "    pm.test('Access token saved', function () { pm.expect(json.access_token).to.be.a('string'); });",
+  "}",
+];
 
-const membership = {
-  id: IDS.membership,
-  businessId: IDS.businessStarbucks,
-  businessNameEn: business.nameEn,
-  businessNameAr: business.nameAr,
-  businessLogoUrl: business.logoUrl,
-  joinedAt: '2025-11-02T09:15:00Z',
-  status: 'Active',
-  referredByMembershipId: null,
-};
+const oidcErrorExamples = (extra = []) => [
+  { name: '400 Bad Request - invalid_grant', status: 'Bad Request', code: 400, body: { error: 'invalid_grant', error_description: 'The provided authorization grant is invalid, expired, or was issued to another client.' } },
+  ...extra,
+];
 
-const tier = { id: IDS.tierGold, nameEn: 'Gold', nameAr: 'ذهبي', minLifetimePoints: 5000, multiplier: 1.5 };
-
-const wallet = {
-  membershipId: IDS.membership,
-  businessId: IDS.businessStarbucks,
-  businessNameEn: business.nameEn,
-  businessNameAr: business.nameAr,
-  balance: 1280,
-  lifetimeEarned: 6420,
-  lifetimeRedeemed: 5140,
-  currentTier: tier,
-  nextTier: { nameEn: 'Platinum', nameAr: 'بلاتيني', minLifetimePoints: 10000, pointsToNextTier: 3580 },
-};
-
-const pointsTransaction = {
-  id: IDS.transaction,
-  walletId: IDS.wallet,
-  businessId: IDS.businessStarbucks,
-  businessNameEn: business.nameEn,
-  type: 'Earn',
-  points: 120,
-  source: 'Purchase',
-  referenceId: IDS.campaign,
-  description: 'Purchase at Downtown Mall Branch (2x Double Points Weekend)',
-  expiresAt: '2026-11-03T00:00:00Z',
-  createdAt: '2025-11-03T14:22:10Z',
-};
-
-const reward = {
-  id: IDS.reward,
-  businessId: IDS.businessStarbucks,
-  businessNameEn: business.nameEn,
-  nameEn: 'Free Grande Beverage',
-  nameAr: 'مشروب غراندي مجاني',
-  type: 'FreeProduct',
-  pointsCost: 450,
-  stockRemaining: 37,
-  imageUrl: 'https://cdn.eksabli.com/rewards/grande-beverage.png',
-  requiresManagerApproval: false,
-  validFrom: '2025-10-01T00:00:00Z',
-  validTo: '2026-03-31T23:59:59Z',
-};
-
-const coupon = {
-  id: IDS.coupon,
-  rewardId: IDS.reward,
-  rewardNameEn: reward.nameEn,
-  businessId: IDS.businessStarbucks,
-  code: 'EKS-9F3K-7QRT',
-  status: 'Issued',
-  redemptionMode: 'Qr',
-  qrToken: 'eyJhbGciOiJub25lIn0.redemption-token-single-use',
-  issuedAt: '2025-11-05T10:00:00Z',
-  expiresAt: '2025-11-05T10:05:00Z',
-  redeemedAt: null,
-  redeemedByEmployeeId: null,
-  redeemedBranchId: null,
-};
-
-const campaign = {
-  id: IDS.campaign,
-  businessId: IDS.businessStarbucks,
-  businessNameEn: business.nameEn,
-  nameEn: 'Double Points Weekend',
-  nameAr: 'عطلة نهاية الأسبوع بنقاط مضاعفة',
-  type: 'DoublePoints',
-  bannerImageUrl: 'https://cdn.eksabli.com/campaigns/double-points.png',
-  startDate: '2025-11-07T00:00:00Z',
-  endDate: '2025-11-09T23:59:59Z',
-  status: 'Active',
-};
-
-const notification = {
-  id: IDS.notification,
-  businessId: IDS.businessStarbucks,
-  businessNameEn: business.nameEn,
-  campaignId: IDS.campaign,
-  channel: 'Push',
-  title: 'Double Points Weekend is here!',
-  body: 'Earn 2x points on every purchase at Starbucks this weekend only.',
-  isRead: false,
-  sentAt: '2025-11-07T08:00:00Z',
-};
-
-const referral = {
-  id: IDS.referral,
-  referrerMembershipId: IDS.membership,
-  businessId: IDS.businessStarbucks,
-  refereeName: 'Sara Al-Amri',
-  status: 'Completed',
-  bonusPoints: 200,
-  createdAt: '2025-10-20T12:00:00Z',
-  completedAt: '2025-10-25T09:30:00Z',
-};
-
-const achievement = {
-  id: IDS.achievement,
-  nameEn: 'Coffee Enthusiast',
-  nameAr: 'عاشق القهوة',
-  descriptionEn: 'Visit the same business 10 times in a month',
-  iconUrl: 'https://cdn.eksabli.com/achievements/coffee-enthusiast.png',
-  awardedAt: '2025-10-15T00:00:00Z',
-  businessId: IDS.businessStarbucks,
-};
-
-const supportTicket = {
-  id: IDS.ticket,
-  subject: 'Points missing from last purchase',
-  status: 'Open',
-  priority: 'Normal',
-  businessId: IDS.businessStarbucks,
-  createdAt: '2025-11-06T16:40:00Z',
-  messages: [
-    { id: '11111111-0000-4000-8000-000000000001', senderType: 'Customer', body: 'I made a purchase yesterday but only got half the points I expected.', createdAt: '2025-11-06T16:40:00Z' },
-  ],
-};
-
-// ---------------------------------------------------------------------------------------
-// Reusable list wrapper (ABP PagedResultDto shape)
-// ---------------------------------------------------------------------------------------
 const paged = (items, totalCount = items.length) => ({ totalCount, items });
-
-const AUTH_PERMISSIONS_NOTE = 'Host-realm authenticated customer (any signed-in customer may act on their own data)';
 
 // =========================================================================================
 // 1. Authentication
 // =========================================================================================
-const authFolder = folder('Authentication', 'Host-realm (customer) auth: registration, OTP, password login, tokens. All endpoints are `noauth` — they either create a session or operate on one supplied via the request body/header. Login and Refresh Token save `accessToken`/`refreshToken` into collection variables automatically via their Tests scripts.', [
-  item({
-    name: 'Register',
-    method: 'POST',
-    pathSegments: ['auth', 'register'],
-    auth: 'noauth',
-    description: 'Creates a new Host-realm customer identity (`IdentityUser` with `TenantId = null`) plus its `CustomerProfile`. Phone number must be unique platform-wide since it is used for cross-tenant exact-match lookup at POS.',
-    body: {
-      phoneNumber: '+966501112222',
-      email: 'sara.customer@example.com',
-      password: 'P@ssw0rd!2026',
-      firstName: 'Sara',
-      lastName: 'Al-Amri',
-      dateOfBirth: '1996-04-12',
-      gender: 'Female',
-      preferredLanguage: 'ar',
-    },
-    success: {
-      status: 'Created', code: 201,
-      body: { id: IDS.customer, phoneNumber: '+966501112222', email: 'sara.customer@example.com', firstName: 'Sara', lastName: 'Al-Amri', isPhoneVerified: false, createdAt: '2025-11-08T10:00:00Z' },
-    },
-    includeValidation: true,
-    validationFields: [
-      { member: 'phoneNumber', message: "'phoneNumber' is not a valid phone number." },
-      { member: 'password', message: "Passwords must be at least 8 characters and contain a digit." },
-    ],
-    includeAuthErrors: false,
-    errors: [
-      { name: '409 Conflict - Phone already registered', status: 'Conflict', code: 409, body: { error: { code: 'Eksabli:PhoneAlreadyRegistered', message: 'This phone number is already registered.', details: null, data: {}, validationErrors: null } } },
-    ],
-  }),
-  item({
-    name: 'Send OTP',
-    method: 'POST',
-    pathSegments: ['auth', 'send-otp'],
-    auth: 'noauth',
-    description: 'Sends a short-lived, single-use OTP code via SMS to the given phone number. Backed by a Redis-cached code, same "cache-backed short-lived token" shape used elsewhere in this API (Excel download tokens, redemption tokens).',
-    body: { phoneNumber: '+966501112222', purpose: 'Login' },
-    success: { status: 'OK', code: 200, body: { sent: true, phoneNumber: '+966501112222', expiresInSeconds: 120, resendAvailableInSeconds: 30 } },
-    includeValidation: true,
-    validationFields: [{ member: 'phoneNumber', message: "'phoneNumber' is required." }],
-    includeAuthErrors: false,
-    errors: [
-      { name: '429 Too Many Requests - OTP rate limit', status: 'Too Many Requests', code: 429, body: { error: { code: 'Eksabli:OtpRateLimited', message: 'Too many OTP requests. Please wait before requesting a new code.', details: 'Retry after 30 seconds.', data: {}, validationErrors: null } } },
-    ],
-  }),
-  item({
-    name: 'Verify OTP',
-    method: 'POST',
-    pathSegments: ['auth', 'verify-otp'],
-    auth: 'noauth',
-    description: 'Validates the OTP and, on success, issues tokens via a custom OpenIddict grant (OTP-backed, single-use, Redis-cached code — same shape as the Excel-download token pattern). Saves `accessToken`/`refreshToken` on success.',
-    body: { phoneNumber: '+966501112222', code: '482913', deviceId: IDS.device, devicePlatform: 'iOS', pushToken: 'fcm-push-token-abc123' },
-    success: {
-      status: 'OK', code: 200,
-      body: { accessToken: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.mobile-access-token', refreshToken: 'a1b2c3d4-refresh-token-e5f6', tokenType: 'Bearer', expiresIn: 3600, isNewCustomer: false },
-    },
-    includeValidation: true,
-    validationFields: [{ member: 'code', message: "'code' must be 6 digits." }],
-    includeAuthErrors: false,
-    errors: [
-      { name: '400 Bad Request - Invalid or expired code', status: 'Bad Request', code: 400, body: { error: { code: 'Eksabli:InvalidOtp', message: 'The OTP code is invalid or has expired.', details: null, data: {}, validationErrors: null } } },
-    ],
-    testScriptLines: [
-      "if (pm.response.code === 200) {",
-      "    const json = pm.response.json();",
-      "    pm.collectionVariables.set('accessToken', json.accessToken);",
-      "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
-      "    pm.collectionVariables.set('tokenExpiresAt', Date.now() + (json.expiresIn * 1000));",
-      "    pm.environment.set('accessToken', json.accessToken);",
-      "    pm.environment.set('refreshToken', json.refreshToken);",
-      "    pm.test('Access token saved', function () { pm.expect(json.accessToken).to.be.a('string'); });",
-      "}",
-    ],
-  }),
-  item({
-    name: 'Login (password)',
-    method: 'POST',
-    pathSegments: ['auth', 'login'],
-    auth: 'noauth',
-    description: 'Password-based login for returning customers who set a password (fallback to OTP is preferred for first login). Internally wraps the OpenIddict token endpoint; Authorization Code + PKCE is used from the Flutter app itself, this simplified endpoint exists for server-to-server/testing flows.',
-    body: { phoneNumber: '+966501112222', password: 'P@ssw0rd!2026', deviceId: IDS.device, devicePlatform: 'iOS' },
-    success: {
-      status: 'OK', code: 200,
-      body: { accessToken: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.mobile-access-token', refreshToken: 'a1b2c3d4-refresh-token-e5f6', tokenType: 'Bearer', expiresIn: 3600 },
-    },
-    includeValidation: true,
-    validationFields: [{ member: 'phoneNumber', message: "'phoneNumber' is required." }],
-    errors: [
-      { name: '401 Unauthorized - Wrong credentials', status: 'Unauthorized', code: 401, body: { error: { code: 'Volo.Abp.Identity:InvalidCredentials', message: 'Invalid phone number or password.', details: null, data: {}, validationErrors: null } } },
-    ],
-    includeAuthErrors: false,
-    testScriptLines: [
-      "if (pm.response.code === 200) {",
-      "    const json = pm.response.json();",
-      "    pm.collectionVariables.set('accessToken', json.accessToken);",
-      "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
-      "    pm.collectionVariables.set('tokenExpiresAt', Date.now() + (json.expiresIn * 1000));",
-      "    pm.environment.set('accessToken', json.accessToken);",
-      "    pm.environment.set('refreshToken', json.refreshToken);",
-      "    pm.test('Access token saved', function () { pm.expect(json.accessToken).to.be.a('string'); });",
-      "}",
-    ],
-  }),
-  item({
-    name: 'Refresh Token',
-    method: 'POST',
-    pathSegments: ['auth', 'refresh-token'],
-    auth: 'noauth',
-    description: 'Rotates the refresh token. Refresh tokens are bound to a `Device` record so a single stolen refresh token can be revoked per-device without logging out every device.',
-    body: { refreshToken: '{{refreshToken}}' },
-    success: {
-      status: 'OK', code: 200,
-      body: { accessToken: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.new-mobile-access-token', refreshToken: 'b2c3d4e5-refresh-token-f6a7', tokenType: 'Bearer', expiresIn: 3600 },
-    },
-    includeAuthErrors: false,
-    errors: [
-      { name: '401 Unauthorized - Refresh token revoked/expired', status: 'Unauthorized', code: 401, body: { error: { code: 'Eksabli:RefreshTokenInvalid', message: 'This refresh token is invalid, expired, or has been revoked.', details: null, data: {}, validationErrors: null } } },
-    ],
-    testScriptLines: [
-      "if (pm.response.code === 200) {",
-      "    const json = pm.response.json();",
-      "    pm.collectionVariables.set('accessToken', json.accessToken);",
-      "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
-      "    pm.collectionVariables.set('tokenExpiresAt', Date.now() + (json.expiresIn * 1000));",
-      "    pm.environment.set('accessToken', json.accessToken);",
-      "    pm.environment.set('refreshToken', json.refreshToken);",
-      "}",
-    ],
-  }),
-  item({
-    name: 'Forgot Password',
-    method: 'POST',
-    pathSegments: ['auth', 'forgot-password'],
-    auth: 'noauth',
-    description: 'Sends a password-reset OTP/link to the phone number or email on file. Always returns 200 regardless of whether the account exists, to avoid account enumeration.',
-    body: { phoneNumber: '+966501112222' },
-    success: { status: 'OK', code: 200, body: { sent: true, message: 'If an account exists for this phone number, a reset code has been sent.' } },
-    includeAuthErrors: false,
-    includeValidation: true,
-    validationFields: [{ member: 'phoneNumber', message: "'phoneNumber' is required." }],
-  }),
-  item({
-    name: 'Reset Password',
-    method: 'POST',
-    pathSegments: ['auth', 'reset-password'],
-    auth: 'noauth',
-    description: 'Completes the password reset using the OTP/reset code obtained from Forgot Password.',
-    body: { phoneNumber: '+966501112222', code: '482913', newPassword: 'N3wP@ssw0rd!2026' },
-    success: { status: 'OK', code: 200, body: { reset: true } },
-    includeValidation: true,
-    validationFields: [{ member: 'newPassword', message: "Passwords must be at least 8 characters and contain a digit." }],
-    includeAuthErrors: false,
-    errors: [
-      { name: '400 Bad Request - Invalid or expired code', status: 'Bad Request', code: 400, body: { error: { code: 'Eksabli:InvalidOtp', message: 'The reset code is invalid or has expired.', details: null, data: {}, validationErrors: null } } },
-    ],
-  }),
-  item({
-    name: 'Logout',
-    method: 'POST',
-    pathSegments: ['auth', 'logout'],
-    auth: 'bearer',
-    description: 'Revokes the current device\'s refresh token (see Profile > Devices to log out a *different* device). Access tokens remain valid until natural expiry (15-60 min) since they are stateless.',
-    body: { deviceId: IDS.device },
-    success: { status: 'No Content', code: 204, body: null },
-    permission: '(any authenticated customer)',
-  }),
-]);
+const authFolder = folder(
+  'Authentication',
+  'Real token issuance goes through OpenIddict\'s own `/connect/token` endpoint (form-urlencoded, OAuth2 shape) — it is NOT an ABP application service, so it never appears in Swagger, but it is the actual mechanism a Bearer-token client (Flutter, or this collection) uses to sign in. Client: `Eksabli_App` (public, no secret; see src/Eksabli.Domain/OpenIddict/OpenIddictDataSeedContributor.cs and src/Eksabli.HttpApi.Host/OpenIddict/OtpLoginGrantHandler.cs). Verified live: Register -> Login (password grant) -> Bearer-authenticated calls all confirmed working end-to-end against this host. `/api/account/login` and `/api/account/check-password` also exist but are ABP\'s cookie-based MVC login (used by server-rendered pages), not a Bearer-issuing endpoint — not included below since it is not the path a mobile client uses.',
+  [
+    item({
+      name: 'Send OTP',
+      method: 'POST', pathSegments: ['app', 'otp', 'request'], auth: 'noauth',
+      description: '`[AllowAnonymous]`. Sends a short-lived SMS code. Follow with **Login (OTP grant)** below, which redeems the code directly at the token endpoint (there is no separate "verify" REST call — OpenIddict\'s `otp` grant IS the verification step). Verified live: returns 204 No Content.',
+      body: { phoneNumber: '+966501112222' },
+      success: { status: 'No Content', code: 204, body: null },
+      include401: false,
+      includeValidation: true, validationFields: [{ member: 'phoneNumber', message: "'phoneNumber' is required." }],
+    }),
+    item({
+      name: 'Login (OTP grant)',
+      method: 'POST', pathSegments: ['connect', 'token'], auth: 'noauth',
+      opts: { baseVar: 'issuerUrl' },
+      description: 'Custom OpenIddict extension grant `grant_type=otp` (src/Eksabli.HttpApi.Host/OpenIddict/OtpLoginGrantHandler.cs) — exchanges a verified phone+code pair for tokens, creating the Host-realm customer on first use. Body MUST be `application/x-www-form-urlencoded` (standard OAuth2 token request), not JSON.',
+      formBody: [
+        { key: 'grant_type', value: 'otp' },
+        { key: 'phone_number', value: '+966501112222' },
+        { key: 'otp_code', value: '482913' },
+        { key: 'client_id', value: 'Eksabli_App' },
+        { key: 'scope', value: 'Eksabli offline_access profile email phone roles' },
+      ],
+      success: { status: 'OK', code: 200, body: TOKEN_RESPONSE_EXAMPLE },
+      include401: false,
+      errors: oidcErrorExamples([{ name: '400 Bad Request - code expired', status: 'Bad Request', code: 400, body: { error: 'invalid_grant', error_description: 'The code has expired.' } }]),
+      testScriptLines: tokenTestScript,
+    }),
+    item({
+      name: 'Login (password grant)',
+      method: 'POST', pathSegments: ['connect', 'token'], auth: 'noauth',
+      opts: { baseVar: 'issuerUrl' },
+      description: 'Standard OAuth2 Resource Owner Password grant. `username` is the ABP `IdentityUser.UserName` set at Register (not the phone number, unless you also set `UserName` to the phone). Requires `offline_access` in `scope` to receive a `refresh_token`. **Verified live** end-to-end with a throwaway registered user — real response shape shown, tokens truncated for readability.',
+      formBody: [
+        { key: 'grant_type', value: 'password' },
+        { key: 'username', value: 'sara.customer' },
+        { key: 'password', value: 'P@ssw0rd!2026' },
+        { key: 'client_id', value: 'Eksabli_App' },
+        { key: 'scope', value: 'Eksabli offline_access profile email phone roles' },
+      ],
+      success: { status: 'OK', code: 200, body: TOKEN_RESPONSE_EXAMPLE },
+      include401: false,
+      errors: oidcErrorExamples(),
+      testScriptLines: tokenTestScript,
+    }),
+    item({
+      name: 'Refresh Token',
+      method: 'POST', pathSegments: ['connect', 'token'], auth: 'noauth',
+      opts: { baseVar: 'issuerUrl' },
+      description: 'Rotates the access/refresh token pair. `refresh_token` scope must have been granted at login for this to work. Verified live (200, new access/refresh token pair returned).',
+      formBody: [
+        { key: 'grant_type', value: 'refresh_token' },
+        { key: 'refresh_token', value: '{{refreshToken}}' },
+        { key: 'client_id', value: 'Eksabli_App' },
+      ],
+      success: { status: 'OK', code: 200, body: TOKEN_RESPONSE_EXAMPLE },
+      include401: false,
+      errors: oidcErrorExamples(),
+      testScriptLines: tokenTestScript,
+    }),
+    item({
+      name: 'Register',
+      method: 'POST', pathSegments: ['account', 'register'], auth: 'noauth',
+      description: '`[AllowAnonymous]`, standard ABP self-registration. Note there is no `phoneNumber` field here — set it afterwards via **Profile > Update My Account Profile**, then use Send OTP + Login (OTP grant) to enable phone/OTP sign-in. `appName` must match a registered OpenIddict client display context; use `"Angular"` (the seeded public client\'s name). Verified live: returns 200 (not 201) with the full `IdentityUserDto` including audit fields.',
+      body: { userName: 'sara.customer', emailAddress: 'sara.customer@example.com', password: 'P@ssw0rd!2026', appName: 'Angular' },
+      success: { status: 'OK', code: 200, body: { id: IDS.customer, tenantId: null, userName: 'sara.customer', name: null, surname: null, email: 'sara.customer@example.com', emailConfirmed: false, phoneNumber: null, phoneNumberConfirmed: false, isActive: true, lockoutEnabled: true, accessFailedCount: 0, lockoutEnd: null, concurrencyStamp: '8be40c6cad184c0bb6ecd55e4f42a1e6', entityVersion: 1, creationTime: '2025-11-08T10:00:00Z' } },
+      include401: false,
+      includeValidation: true,
+      validationFields: [
+        { member: 'appName', message: 'The AppName field is required.' },
+        { member: 'password', message: 'The Password field is required.' },
+        { member: 'userName', message: 'The Username field is required.' },
+        { member: 'emailAddress', message: 'The Email address field is required.' },
+      ],
+      errors: [{ name: '403 Forbidden - Username already taken', status: 'Forbidden', code: 403, body: businessRuleBody("Username 'sara.customer' is already taken.") }],
+    }),
+    item({
+      name: 'Forgot Password - Send Reset Code',
+      method: 'POST', pathSegments: ['account', 'send-password-reset-code'], auth: 'noauth',
+      description: 'Verified live: 204 No Content for a real email. For an email with no matching account it returns 403 (see error example) rather than a generic 204 — this DOES leak account existence, unlike the usual "always 200" anti-enumeration pattern; worth knowing if that matters for your threat model.',
+      body: { email: 'sara.customer@example.com', appName: 'Angular' },
+      success: { status: 'No Content', code: 204, body: null },
+      include401: false,
+      includeValidation: true, validationFields: [{ member: 'email', message: "'email' is not a valid email address." }],
+      errors: [{ name: '403 Forbidden - No account with this email', status: 'Forbidden', code: 403, body: businessRuleBody('Can not find the given email address: nobody@example.com') }],
+    }),
+    item({
+      name: 'Verify Password Reset Token',
+      method: 'POST', pathSegments: ['account', 'verify-password-reset-token'], auth: 'noauth',
+      description: 'Returns a plain boolean, not a DTO.',
+      body: { userId: IDS.customer, resetToken: 'CfDJ8N...opaque-reset-token' },
+      success: { status: 'OK', code: 200, body: true },
+      include401: false,
+    }),
+    item({
+      name: 'Reset Password',
+      method: 'POST', pathSegments: ['account', 'reset-password'], auth: 'noauth',
+      body: { userId: IDS.customer, resetToken: 'CfDJ8N...opaque-reset-token', password: 'N3wP@ssw0rd!2026' },
+      success: { status: 'No Content', code: 204, body: null },
+      include401: false,
+      errors: [{ name: '404 Not Found - Bad userId', status: 'Not Found', code: 404, body: notFoundBody('IdentityUser', IDS.customer) }],
+    }),
+    item({
+      name: 'Logout (cookie session)',
+      method: 'GET', pathSegments: ['account', 'logout'], auth: 'bearer',
+      description: 'Ends the ABP cookie-auth session if one exists. For pure Bearer/mobile clients there is no server-side token revocation endpoint in this codebase yet — "logging out" on Flutter means discarding the stored access/refresh token locally. Verified live: 204 No Content.',
+      success: { status: 'No Content', code: 204, body: null },
+    }),
+  ]
+);
 
 // =========================================================================================
 // 2. Profile
 // =========================================================================================
-const profileFolder = folder('Profile', 'The signed-in customer\'s own `IdentityUser` + `CustomerProfile`, plus registered `Device`s ("log out this device").', [
+const profileFolder = folder('Profile', 'ABP\'s built-in `IdentityUser` profile (`/api/account/my-profile`) plus the loyalty-specific `CustomerProfile` extension (`/api/app/customer-profile/my`) and registered `Device`s. Both `[Authorize]` with no specific permission — any authenticated user acts on their own record only. All GET/PUT/POST shapes below verified live against the running host.', [
   item({
-    name: 'Get My Profile',
-    method: 'GET',
-    pathSegments: ['auth', 'profile'],
-    auth: 'bearer',
-    success: {
-      status: 'OK', code: 200,
-      body: { id: IDS.customer, phoneNumber: '+966501112222', email: 'sara.customer@example.com', firstName: 'Sara', lastName: 'Al-Amri', dateOfBirth: '1996-04-12', gender: 'Female', preferredLanguage: 'ar', isPhoneVerified: true, memberSince: '2025-06-01T00:00:00Z' },
-    },
-    permission: '(any authenticated customer, own profile only)',
+    name: 'Get My Account Profile',
+    method: 'GET', pathSegments: ['account', 'my-profile'], auth: 'bearer',
+    success: { status: 'OK', code: 200, body: { userName: 'sara.customer', email: 'sara.customer@example.com', name: null, surname: null, phoneNumber: null, isExternal: false, hasPassword: true, concurrencyStamp: 'a1b2c3d4e5f6' } },
   }),
   item({
-    name: 'Update My Profile',
-    method: 'PUT',
-    pathSegments: ['auth', 'profile'],
-    auth: 'bearer',
-    body: { firstName: 'Sara', lastName: 'Al-Amri', dateOfBirth: '1996-04-12', gender: 'Female', email: 'sara.customer@example.com', preferredLanguage: 'ar' },
-    success: {
-      status: 'OK', code: 200,
-      body: { id: IDS.customer, phoneNumber: '+966501112222', email: 'sara.customer@example.com', firstName: 'Sara', lastName: 'Al-Amri', dateOfBirth: '1996-04-12', gender: 'Female', preferredLanguage: 'ar' },
-    },
-    includeValidation: true,
-    validationFields: [{ member: 'email', message: "'email' is not a valid email address." }],
-    permission: '(any authenticated customer, own profile only)',
+    name: 'Update My Account Profile',
+    method: 'PUT', pathSegments: ['account', 'my-profile'], auth: 'bearer',
+    description: 'This is where `phoneNumber` actually gets set (not at Register). `concurrencyStamp` is optional — verified live: passing `null` skips the optimistic-concurrency check entirely and always succeeds; passing a stale/made-up value (instead of echoing back the real one from Get My Account Profile) fails with a 403 "Optimistic concurrency check has been failed" error. Use `null` here unless you specifically want the safety check.',
+    body: { userName: 'sara.customer', email: 'sara.customer@example.com', name: 'Sara', surname: 'Al-Amri', phoneNumber: '+966501112222', concurrencyStamp: null },
+    success: { status: 'OK', code: 200, body: { userName: 'sara.customer', email: 'sara.customer@example.com', name: 'Sara', surname: 'Al-Amri', phoneNumber: '+966501112222', isExternal: false, hasPassword: true, concurrencyStamp: 'b2c3d4e5f6a1' } },
+    includeValidation: true, validationFields: [{ member: 'email', message: "'email' is not a valid email address." }],
+    errors: [{ name: '403 Forbidden - Stale concurrencyStamp (verified live)', status: 'Forbidden', code: 403, body: businessRuleBody("Optimistic concurrency check has been failed. The entity you're working on has modified by another user. Please discard your changes and try again.", {}) }],
+  }),
+  item({
+    name: 'Change My Password',
+    method: 'POST', pathSegments: ['account', 'my-profile', 'change-password'], auth: 'bearer',
+    description: 'Verified live: a wrong `currentPassword` returns **403** (not 400) with `message: "Incorrect password."` — this app maps unclassified business-rule violations to 403, reserving 400 strictly for input-shape validation failures.',
+    body: { currentPassword: 'P@ssw0rd!2026', newPassword: 'N3wP@ssw0rd!2026' },
+    success: { status: 'No Content', code: 204, body: null },
+    includeValidation: true, validationFields: [{ member: 'newPassword', message: 'Passwords must be at least 6 characters, contain a digit and an uppercase letter.' }],
+    errors: [{ name: '403 Forbidden - Wrong current password (verified live)', status: 'Forbidden', code: 403, body: businessRuleBody('Incorrect password.') }],
+  }),
+  item({
+    name: 'Get My Customer Profile',
+    method: 'GET', pathSegments: ['app', 'customer-profile', 'my'], auth: 'bearer',
+    description: 'Verified live: `CustomerProfile` is auto-created at registration with `firstName`/`lastName` null and `gender` defaulting to 0 (Unspecified).',
+    success: { status: 'OK', code: 200, body: { userId: IDS.customer, firstName: null, lastName: null, dateOfBirth: null, gender: enumVal('CustomerGender', 'Unspecified') } },
+  }),
+  item({
+    name: 'Update My Customer Profile',
+    method: 'PUT', pathSegments: ['app', 'customer-profile', 'my'], auth: 'bearer',
+    description: `\`gender\` is an int: ${enumDoc('CustomerGender')}. Verified live — response includes \`id\` (a distinct CustomerProfile entity id, not the same as \`userId\`) plus audit fields.`,
+    body: { firstName: 'Sara', lastName: 'Al-Amri', dateOfBirth: '1996-04-12T00:00:00Z', gender: enumVal('CustomerGender', 'Female') },
+    success: { status: 'OK', code: 200, body: { id: '3a22db37-38fa-02bd-a8be-7c8740b92c28', userId: IDS.customer, firstName: 'Sara', lastName: 'Al-Amri', dateOfBirth: '1996-04-12T00:00:00Z', gender: enumVal('CustomerGender', 'Female') } },
+    includeValidation: true, validationFields: [{ member: 'firstName', message: "'firstName' must not be longer than 64 characters." }],
+  }),
+  item({
+    name: 'Register Device',
+    method: 'POST', pathSegments: ['app', 'devices'], auth: 'bearer',
+    description: `\`platform\` is an int: ${enumDoc('DevicePlatform')}. Push token is what Notification dispatch (business-side) targets. Verified live: returns **200** (not 201) with the full DeviceDto + audit fields.`,
+    body: { platform: enumVal('DevicePlatform', 'iOS'), pushToken: 'fcm-push-token-abc123', appVersion: '1.4.2' },
+    success: { status: 'OK', code: 200, body: { id: IDS.device, customerId: IDS.customer, platform: enumVal('DevicePlatform', 'iOS'), pushToken: 'fcm-push-token-abc123', lastActiveAt: '2025-11-08T09:00:00Z', appVersion: '1.4.2' } },
+    includeValidation: true, validationFields: [{ member: 'pushToken', message: "'pushToken' is required." }],
   }),
   item({
     name: 'List My Devices',
-    method: 'GET',
-    pathSegments: ['auth', 'devices'],
-    auth: 'bearer',
-    description: 'Supports "log out this device" without ending every session — see System Architecture > Security.',
-    success: {
-      status: 'OK', code: 200,
-      body: paged([
-        { id: IDS.device, platform: 'iOS', appVersion: '1.4.2', lastActiveAt: '2025-11-08T09:00:00Z', isCurrent: true },
-        { id: '11111111-2222-4000-8000-000000000001', platform: 'Android', appVersion: '1.3.0', lastActiveAt: '2025-10-20T18:12:00Z', isCurrent: false },
-      ]),
-    },
+    method: 'GET', pathSegments: ['app', 'devices'], auth: 'bearer',
+    description: 'Plain array (no paging). Verified live (returns `[]` for a fresh user with no devices).',
+    success: { status: 'OK', code: 200, body: [{ id: IDS.device, customerId: IDS.customer, platform: enumVal('DevicePlatform', 'iOS'), pushToken: 'fcm-push-token-abc123', lastActiveAt: '2025-11-08T09:00:00Z', appVersion: '1.4.2' }] },
   }),
   item({
-    name: 'Log Out Device',
-    method: 'DELETE',
-    pathSegments: ['auth', 'devices', ':deviceId'],
-    opts: { pathVars: [pathVar('deviceId', IDS.device, 'Device to revoke')] },
+    name: 'Remove Device (log out this device)',
+    method: 'DELETE', pathSegments: ['app', 'devices', ':id'],
+    opts: { pathVars: [pathVar('id', IDS.device, 'Device id')] },
     auth: 'bearer',
-    success: { status: 'No Content', code: 204, body: null },
-    includeNotFound: true, notFoundEntity: 'Devices.Device', notFoundIdExpr: '{{deviceId}}',
-  }),
-  item({
-    name: 'Delete My Account',
-    method: 'DELETE',
-    pathSegments: ['auth', 'account'],
-    auth: 'bearer',
-    description: 'GDPR-style erasure request. Per Security design, "delete" freezes the account and any still-active `Membership`s immediately, then hard-deletes on a delay/confirmation per data-retention policy — never an instant hard-delete of a live financial ledger.',
-    body: { reason: 'No longer using the app', confirmPhoneNumber: '+966501112222' },
-    success: { status: 'Accepted', code: 202, body: { accountId: IDS.customer, status: 'PendingErasure', effectiveAt: '2025-12-08T00:00:00Z' } },
-    includeValidation: true,
-    validationFields: [{ member: 'confirmPhoneNumber', message: 'Confirmation phone number does not match the signed-in account.' }],
+    description: 'In-code ownership check throws if the device does not belong to the caller (not tested live to avoid needing a second account, but the pattern matches every other ownership check in this API — see Wallet/Support folders, which WERE verified).',
+    success: { status: 'OK', code: 200, body: null },
+    errors: [{ name: '403 Forbidden - Not your device', status: 'Forbidden', code: 403, body: businessRuleBody('You are not authorized to remove this device.') }],
+    includeNotFound: true, notFoundEntity: 'Device', notFoundIdExpr: IDS.device,
   }),
 ]);
 
 // =========================================================================================
-// 3. Stores (business discovery)
+// 3. Memberships
 // =========================================================================================
-const storesFolder = folder('Stores', 'Business discovery — public read (`/api/businesses/*`, discovery is unauthenticated so the app can show nearby offers before login). Follow/unfollow requires auth.', [
-  item({
-    name: 'List Stores',
-    method: 'GET',
-    pathSegments: ['stores'],
-    opts: { queries: [query('categoryId', IDS.category, 'Filter by business category'), query('SkipCount', 0), query('MaxResultCount', 20), query('Sorting', 'nameEn asc')] },
-    auth: 'noauth',
-    success: { status: 'OK', code: 200, body: paged([business, { ...business, id: IDS.businessNike, nameEn: 'Nike - Riyadh Park', nameAr: 'نايك - رياض بارك', categoryNameEn: 'Sportswear', categoryNameAr: 'ملابس رياضية', isMember: false, isFollowing: false, activeCampaignsCount: 1 }], 47) },
-  }),
-  item({
-    name: 'Nearby Stores',
-    method: 'GET',
-    pathSegments: ['stores', 'nearby'],
-    opts: { queries: [query('latitude', 24.7136), query('longitude', 46.6753), query('radiusKm', 5), query('MaxResultCount', 20)] },
-    auth: 'noauth',
-    description: 'Geo search backed by Postgres + PostGIS (see Scalability). Returns stores ordered by distance.',
-    success: { status: 'OK', code: 200, body: paged([{ ...business, distanceKm: 0.6 }]) },
-    includeValidation: true,
-    validationFields: [{ member: 'latitude', message: "'latitude' must be between -90 and 90." }],
-  }),
-  item({
-    name: 'Search Stores',
-    method: 'GET',
-    pathSegments: ['stores', 'search'],
-    opts: { queries: [query('q', 'starbucks'), query('MaxResultCount', 20)] },
-    auth: 'noauth',
-    success: { status: 'OK', code: 200, body: paged([business], 1) },
-  }),
-  item({
-    name: 'Get Store Detail',
-    method: 'GET',
-    pathSegments: ['stores', ':id'],
-    opts: { pathVars: [pathVar('id', '{{businessId}}', 'Business (tenant) id')] },
-    auth: 'noauth',
-    success: { status: 'OK', code: 200, body: { ...business, branches: [branch], activeCampaigns: [{ id: IDS.campaign, nameEn: campaign.nameEn, bannerImageUrl: campaign.bannerImageUrl }] } },
-    includeNotFound: true, notFoundEntity: 'Businesses.BusinessProfile', notFoundIdExpr: '{{businessId}}',
-  }),
-  item({
-    name: 'List Store Branches',
-    method: 'GET',
-    pathSegments: ['stores', ':id', 'branches'],
-    opts: { pathVars: [pathVar('id', '{{businessId}}', 'Business (tenant) id')] },
-    auth: 'noauth',
-    success: { status: 'OK', code: 200, body: paged([branch]) },
-    includeNotFound: true, notFoundEntity: 'Businesses.BusinessProfile', notFoundIdExpr: '{{businessId}}',
-  }),
-  item({
-    name: 'Follow Store',
-    method: 'POST',
-    pathSegments: ['stores', ':id', 'follow'],
-    opts: { pathVars: [pathVar('id', '{{businessId}}', 'Business (tenant) id')] },
-    auth: 'bearer',
-    description: 'Creates (or reactivates) a `Follow` row for this customer + business — the same entity used for the Favorites and Followers folders, see Database Design > Engagement & gamification.',
-    success: { status: 'OK', code: 200, body: { businessId: '{{businessId}}', isFollowing: true, followedAt: '2025-11-08T10:00:00Z' } },
-    includeNotFound: true, notFoundEntity: 'Businesses.BusinessProfile', notFoundIdExpr: '{{businessId}}',
-  }),
-  item({
-    name: 'Unfollow Store',
-    method: 'DELETE',
-    pathSegments: ['stores', ':id', 'follow'],
-    opts: { pathVars: [pathVar('id', '{{businessId}}', 'Business (tenant) id')] },
-    auth: 'bearer',
-    success: { status: 'No Content', code: 204, body: null },
-    includeNotFound: true, notFoundEntity: 'Engagement.Follow', notFoundIdExpr: 'customerId={{userId}}, tenantId={{businessId}}',
-  }),
-]);
-
-// =========================================================================================
-// 4. Memberships
-// =========================================================================================
-const membershipsFolder = folder('Memberships', 'The customer <-> business relationship (`Membership`). Host-realm, scoped by `CustomerId` via `DataFilter.Disable<IMultiTenant>()` rather than a single tenant filter, since one customer spans many businesses.', [
-  item({
-    name: 'List My Memberships',
-    method: 'GET',
-    pathSegments: ['memberships'],
-    opts: { queries: [query('status', 'Active', 'Active | Frozen', true), query('SkipCount', 0), query('MaxResultCount', 20)] },
-    auth: 'bearer',
-    success: { status: 'OK', code: 200, body: paged([membership]) },
-  }),
+const membershipsFolder = folder('Memberships', '`[Authorize]` (authenticated only, no specific permission) — a customer only ever sees/creates their own `Membership` rows, enforced by scoping on `CustomerId` in the app service, not by an ABP permission. Verified live.', [
   item({
     name: 'Join Business',
-    method: 'POST',
-    pathSegments: ['memberships'],
-    auth: 'bearer',
-    body: { businessId: '{{businessId}}', referralCode: 'SARA-REF-8821' },
-    success: {
-      status: 'Created', code: 201,
-      body: { ...membership, id: '11111111-3333-4000-8000-000000000001', wallet: { balance: 0, lifetimeEarned: 0, lifetimeRedeemed: 0, currentTier: null } },
-    },
-    includeValidation: true,
-    validationFields: [{ member: 'businessId', message: "'businessId' is required." }],
-    errors: [
-      { name: '409 Conflict - Already a member', status: 'Conflict', code: 409, body: { error: { code: 'Eksabli:AlreadyMember', message: 'You are already a member of this business.', details: null, data: {}, validationErrors: null } } },
-    ],
-    includeNotFound: true, notFoundEntity: 'Businesses.BusinessProfile', notFoundIdExpr: '{{businessId}}',
+    method: 'POST', pathSegments: ['app', 'memberships', 'join'], auth: 'bearer',
+    description: `\`tenantId\` — ${PLACEHOLDER_NOTE} Get a real one from Admin API > Businesses (or from wherever your own signup/testing created a tenant). Verified live: returns 200 with a full \`MembershipDto\`.`,
+    body: { tenantId: '{{businessId}}', referralCode: null },
+    success: { status: 'OK', code: 200, body: { id: IDS.membership, customerId: IDS.customer, tenantId: '{{businessId}}', joinedAt: '2025-11-08T10:00:00Z', status: enumVal('MembershipStatus', 'Active') } },
+    includeValidation: true, validationFields: [{ member: 'tenantId', message: "'tenantId' is required." }],
+    errors: [{ name: '403 Forbidden - Already a member (inferred, not individually verified)', status: 'Forbidden', code: 403, body: businessRuleBody('You are already a member of this business.') }],
   }),
   item({
-    name: 'Get Membership Detail',
-    method: 'GET',
-    pathSegments: ['memberships', ':id'],
-    opts: { pathVars: [pathVar('id', IDS.membership, 'Membership id')] },
-    auth: 'bearer',
-    success: { status: 'OK', code: 200, body: { ...membership, wallet } },
-    includeNotFound: true, notFoundEntity: 'Memberships.Membership', notFoundIdExpr: IDS.membership,
-  }),
-  item({
-    name: 'Leave Business',
-    method: 'DELETE',
-    pathSegments: ['memberships', ':id'],
-    opts: { pathVars: [pathVar('id', IDS.membership, 'Membership id')] },
-    auth: 'bearer',
-    description: 'Freezes the membership (`Status = Frozen`) rather than hard-deleting — the wallet/ledger for a frozen membership is retained for support/dispute history.',
-    success: { status: 'No Content', code: 204, body: null },
-    includeNotFound: true, notFoundEntity: 'Memberships.Membership', notFoundIdExpr: IDS.membership,
+    name: 'List My Memberships',
+    method: 'GET', pathSegments: ['app', 'memberships', 'my'], auth: 'bearer',
+    description: `\`status\` is an int: ${enumDoc('MembershipStatus')}. Response is a plain array, not a \`PagedResultDto\` (no paging params on this endpoint). Verified live.`,
+    success: { status: 'OK', code: 200, body: [{ id: IDS.membership, customerId: IDS.customer, tenantId: IDS.tenantStarbucks, joinedAt: '2025-11-02T09:15:00Z', status: enumVal('MembershipStatus', 'Active') }] },
   }),
 ]);
 
 // =========================================================================================
-// 5. Points
+// 4. Wallet
 // =========================================================================================
-const pointsFolder = folder('Points', 'Quick balance summary + full ledger reads. `PointsWallet.Balance` is a denormalized cache; `PointsTransaction` is the append-only source of truth (see Database Design > Membership & wallet).', [
+const walletFolder = folder('Wallet', 'Cross-business wallet reads (`/api/app/memberships/my/*`) plus the per-business ledger (`/api/app/wallet/{tenantId}/transactions`). All `[Authorize]`, scoped by the caller\'s own `CustomerId`/memberships in code. Verified live.', [
   item({
-    name: 'My Points Summary (all businesses)',
-    method: 'GET',
-    pathSegments: ['points'],
+    name: 'List My Wallets',
+    method: 'GET', pathSegments: ['app', 'memberships', 'my', 'wallets'], auth: 'bearer',
+    description: 'Plain array (no paging) — one `PointsWalletDto` per business you\'re a member of.',
+    success: { status: 'OK', code: 200, body: [{ id: '5eafc433-0000-4000-8000-000000000401', membershipId: IDS.membership, tenantId: IDS.tenantStarbucks, balance: 1280, lifetimeEarned: 6420, lifetimeRedeemed: 5140, currentTierId: '70c1e655-0000-4000-8000-000000000601', currentTierName: 'Gold' }] },
+  }),
+  item({
+    name: 'Get My Wallet QR Token',
+    method: 'POST', pathSegments: ['app', 'memberships', 'my', 'wallet-qr-token'], auth: 'bearer',
+    description: 'Mints a short-lived, single-use token identifying the customer at POS — scan this at checkout instead of a phone-number lookup. Same "cache-backed short-lived token" pattern used for Excel downloads and coupon redemption elsewhere in this API. Verified live: real TTL is **90 seconds**, not a round number like 60/120.',
+    success: { status: 'OK', code: 200, body: { token: '3a22db390efb5e53c01c8babcfc03727', expiresInSeconds: 90 } },
+  }),
+  item({
+    name: 'My Transaction History (per business)',
+    method: 'GET', pathSegments: ['app', 'wallet', ':tenantId', 'transactions'],
+    opts: { pathVars: [pathVar('tenantId', '{{businessId}}', 'Business (tenant) id — you must have a Membership here')], queries: [query('Sorting', 'creationTime desc', '', true), query('SkipCount', 0), query('MaxResultCount', 20)] },
     auth: 'bearer',
+    description: `In-code check throws if you\'re not a member of this tenant (not just an ABP permission check). \`type\`/\`source\` are ints: type ${enumDoc('PointsTransactionType')}; source ${enumDoc('PointsTransactionSource')}.`,
     success: {
       status: 'OK', code: 200,
-      body: {
-        totalBalanceAcrossBusinesses: 1280,
-        businesses: [
-          { businessId: IDS.businessStarbucks, businessNameEn: business.nameEn, balance: 1280, currentTier: tier },
-          { businessId: IDS.businessNike, businessNameEn: 'Nike - Riyadh Park', balance: 340, currentTier: { nameEn: 'Silver', nameAr: 'فضي', minLifetimePoints: 1000, multiplier: 1.1 } },
-        ],
-      },
+      body: paged([{ id: IDS.transaction, walletId: '5eafc433-0000-4000-8000-000000000401', type: enumVal('PointsTransactionType', 'Earn'), points: 120, source: enumVal('PointsTransactionSource', 'Purchase'), referenceId: null, expiresAt: '2026-11-03T00:00:00Z', createdByEmployeeId: null, reason: null, tierMultiplierSnapshot: 1.5, creationTime: '2025-11-03T14:22:10Z' }], 214),
     },
-  }),
-  item({
-    name: 'My Points History',
-    method: 'GET',
-    pathSegments: ['points', 'history'],
-    opts: { queries: [query('businessId', '{{businessId}}', 'Filter to a single business', true), query('type', 'Earn', 'Earn|Redeem|Expire|Adjust|Refund', true), query('SkipCount', 0), query('MaxResultCount', 20)] },
-    auth: 'bearer',
-    success: { status: 'OK', code: 200, body: paged([pointsTransaction], 214) },
+    errors: [{ name: '403 Forbidden - Not a member of this business', status: 'Forbidden', code: 403, body: businessRuleBody('You do not have a membership with this business.') }],
   }),
 ]);
 
 // =========================================================================================
-// 6. Rewards
+// 5. Rewards (catalog browse)
 // =========================================================================================
-const rewardsFolder = folder('Rewards', 'Redemption catalog (customer read) + redeem action, which mints a `Coupon` using the same short-lived single-use token pattern already implemented for Excel downloads in this repo.', [
+const rewardsFolder = folder('Rewards', 'Read-only catalog browse lives on the `Coupon` controller (`/api/app/coupon/catalog/{tenantId}`), not `/api/app/reward` — that CRUD surface is business-only (see the Business API collection). `[Authorize]`, authenticated only. Verified live (returns an empty page for a tenantId with no rewards, rather than a 404 — no tenant-existence check here either).', [
   item({
-    name: 'List Rewards',
-    method: 'GET',
-    pathSegments: ['rewards'],
-    opts: { queries: [query('businessId', '{{businessId}}', 'Filter to a single business', true), query('maxPointsCost', 1000, '', true), query('SkipCount', 0), query('MaxResultCount', 20)] },
+    name: 'Browse Reward Catalog',
+    method: 'GET', pathSegments: ['app', 'coupon', 'catalog', ':tenantId'],
+    opts: { pathVars: [pathVar('tenantId', '{{businessId}}', 'Business (tenant) id')], queries: [query('Sorting', 'pointsCost asc', '', true), query('SkipCount', 0), query('MaxResultCount', 20)] },
     auth: 'bearer',
-    success: { status: 'OK', code: 200, body: paged([reward, { ...reward, id: '22222222-4444-4000-8000-000000000001', nameEn: '10% Off Any Purchase', nameAr: 'خصم 10% على أي عملية شراء', type: 'Discount', pointsCost: 200 }], 9) },
+    description: `\`type\` is an int: ${enumDoc('RewardType')}.`,
+    success: {
+      status: 'OK', code: 200,
+      body: paged([{ id: '{{rewardId}}', tenantId: '{{businessId}}', nameAr: 'مشروب غراندي مجاني', nameEn: 'Free Grande Beverage', type: enumVal('RewardType', 'FreeProduct'), pointsCost: 450, stockRemaining: 37, validFrom: '2025-10-01T00:00:00Z', validTo: '2026-03-31T23:59:59Z', imageBlobName: 'rewards/grande-beverage.png', approvalThresholdPoints: null }]),
+    },
   }),
-  item({
-    name: 'Get Reward Detail',
-    method: 'GET',
-    pathSegments: ['rewards', ':id'],
-    opts: { pathVars: [pathVar('id', '{{rewardId}}', 'Reward id')] },
-    auth: 'bearer',
-    success: { status: 'OK', code: 200, body: { ...reward, id: '{{rewardId}}', descriptionEn: 'Any handcrafted Grande beverage, any customization.', descriptionAr: 'أي مشروب غراندي يدوي، مع أي تخصيص.', canAfford: true } },
-    includeNotFound: true, notFoundEntity: 'Rewards.Reward', notFoundIdExpr: '{{rewardId}}',
-  }),
+]);
+
+// =========================================================================================
+// 6. Coupons
+// =========================================================================================
+const couponsFolder = folder('Coupons', '`/api/app/coupon/*` — redeeming debits points and mints a `Coupon`; `my` lists everything you\'ve redeemed. `[Authorize]`, authenticated only. `my` verified live (returns `[]`).', [
   item({
     name: 'Redeem Reward',
-    method: 'POST',
-    pathSegments: ['rewards', ':id', 'redeem'],
-    opts: { pathVars: [pathVar('id', '{{rewardId}}', 'Reward id')] },
-    auth: 'bearer',
-    description: 'Mints a `Coupon` (`Status = Issued`) with a short-lived signed QR token (or a PIN, if `mode` is `Pin`). Points are debited immediately as a `PointsTransaction` of `Type = Redeem`.',
-    body: { membershipId: IDS.membership, mode: 'Qr' },
-    success: { status: 'Created', code: 201, body: { ...coupon, rewardId: '{{rewardId}}' } },
+    method: 'POST', pathSegments: ['app', 'coupon', 'redeem'], auth: 'bearer',
+    body: { tenantId: '{{businessId}}', rewardId: '{{rewardId}}' },
+    success: { status: 'OK', code: 200, body: { id: IDS.coupon, rewardId: '{{rewardId}}', rewardNameAr: 'مشروب غراندي مجاني', rewardNameEn: 'Free Grande Beverage', membershipId: IDS.membership, tenantId: '{{businessId}}', code: 'EKS-9F3K-7QRT', status: enumVal('CouponStatus', 'Issued'), issuedAt: '2025-11-08T10:00:00Z', redeemedAt: null, redeemedByEmployeeId: null, redeemedBranchId: null } },
+    includeValidation: true, validationFields: [{ member: 'rewardId', message: "'rewardId' is required." }],
     errors: [
-      { name: '400 Bad Request - Insufficient points', status: 'Bad Request', code: 400, body: { error: { code: 'Eksabli:InsufficientPoints', message: 'You do not have enough points to redeem this reward.', details: 'Required: 450, available: 210.', data: { required: 450, available: 210 }, validationErrors: null } } },
-      { name: '409 Conflict - Out of stock', status: 'Conflict', code: 409, body: { error: { code: 'Eksabli:RewardOutOfStock', message: 'This reward is out of stock.', details: null, data: {}, validationErrors: null } } },
+      { name: '403 Forbidden - Insufficient points (inferred from confirmed 403-for-business-rules pattern)', status: 'Forbidden', code: 403, body: businessRuleBody('You do not have enough points to redeem this reward.') },
+      { name: '403 Forbidden - Out of stock (inferred)', status: 'Forbidden', code: 403, body: businessRuleBody('This reward is out of stock.') },
     ],
-    includeNotFound: true, notFoundEntity: 'Rewards.Reward', notFoundIdExpr: '{{rewardId}}',
+    includeNotFound: true, notFoundEntity: 'Reward', notFoundIdExpr: '{{rewardId}}',
   }),
-]);
-
-// =========================================================================================
-// 7. Coupons
-// =========================================================================================
-const couponsFolder = folder('Coupons', 'Issued reward instances — redemption history + live QR/PIN for an unredeemed coupon.', [
   item({
     name: 'List My Coupons',
-    method: 'GET',
-    pathSegments: ['coupons'],
-    opts: { queries: [query('status', 'Issued', 'Issued|Redeemed|Expired|Cancelled', true), query('businessId', '{{businessId}}', '', true), query('SkipCount', 0), query('MaxResultCount', 20)] },
+    method: 'GET', pathSegments: ['app', 'coupon', 'my'],
+    opts: { queries: [query('tenantId', '{{businessId}}', 'Optional — omit for coupons across every business', true)] },
     auth: 'bearer',
-    success: { status: 'OK', code: 200, body: paged([coupon, { ...coupon, id: '33333333-5555-4000-8000-000000000001', status: 'Redeemed', redeemedAt: '2025-10-01T13:00:00Z', redeemedByEmployeeId: 'employee-guid', redeemedBranchId: IDS.branch }], 12) },
-  }),
-  item({
-    name: 'Get Coupon Detail',
-    method: 'GET',
-    pathSegments: ['coupons', ':id'],
-    opts: { pathVars: [pathVar('id', IDS.coupon, 'Coupon id')] },
-    auth: 'bearer',
-    description: 'Poll this while showing the redemption screen — `qrToken`/PIN and `expiresAt` refresh countdown until redeemed or expired.',
-    success: { status: 'OK', code: 200, body: coupon },
-    includeNotFound: true, notFoundEntity: 'Rewards.Coupon', notFoundIdExpr: IDS.coupon,
+    description: `Plain array (no paging). \`status\` is an int: ${enumDoc('CouponStatus')}. Verified live.`,
+    success: { status: 'OK', code: 200, body: [{ id: IDS.coupon, rewardId: '{{rewardId}}', rewardNameAr: 'مشروب غراندي مجاني', rewardNameEn: 'Free Grande Beverage', membershipId: IDS.membership, tenantId: '{{businessId}}', code: 'EKS-9F3K-7QRT', status: enumVal('CouponStatus', 'Issued'), issuedAt: '2025-11-08T10:00:00Z', redeemedAt: null, redeemedByEmployeeId: null, redeemedBranchId: null }] },
   }),
 ]);
 
 // =========================================================================================
-// 8. Campaigns
+// 7. Categories (read-only — closest thing to "discovery" that's actually implemented)
 // =========================================================================================
-const campaignsFolder = folder('Campaigns', 'Active promotions feed (customer read side of `/api/campaigns/*`). Creation/activation is Business API only.', [
+const categoriesFolder = folder('Categories', '`[AllowAnonymous]` reads — business category taxonomy. There is currently no store discovery/search/nearby endpoint at all in this API (only `follow`/`business/profile`, both scoped to a specific known `tenantId`), so Categories is the only public "browse" surface today; a future discovery endpoint would likely filter by this. List verified live (200, real data from the seeded DB); detail-by-bad-id verified live (404).', [
   item({
-    name: 'List Active Campaigns',
-    method: 'GET',
-    pathSegments: ['campaigns'],
-    opts: { queries: [query('businessId', '{{businessId}}', '', true), query('SkipCount', 0), query('MaxResultCount', 20)] },
-    auth: 'bearer',
-    success: { status: 'OK', code: 200, body: paged([campaign, { ...campaign, id: '44444444-6666-4000-8000-000000000001', businessId: IDS.businessNike, businessNameEn: 'Nike - Riyadh Park', nameEn: '20% Off Everything', nameAr: 'خصم 20% على كل شيء', type: 'SpendXGetY' }]) },
+    name: 'List Categories',
+    method: 'GET', pathSegments: ['app', 'category'],
+    opts: { queries: [query('ParentCategoryId', '', 'Filter to subcategories of a parent', true), query('FilterText', 'cafe', '', true), query('SkipCount', 0), query('MaxResultCount', 20)] },
+    auth: 'noauth',
+    success: { status: 'OK', code: 200, body: paged([{ id: IDS.category, nameAr: 'مقهى', nameEn: 'Cafe', iconBlobName: 'categories/cafe.png', parentCategoryId: null }]) },
   }),
   item({
-    name: 'Get Campaign Detail',
-    method: 'GET',
-    pathSegments: ['campaigns', ':id'],
-    opts: { pathVars: [pathVar('id', '{{campaignId}}', 'Campaign id')] },
-    auth: 'bearer',
-    success: { status: 'OK', code: 200, body: { ...campaign, id: '{{campaignId}}', descriptionEn: 'Every purchase earns double points, no minimum spend.', descriptionAr: 'كل عملية شراء تحصل على نقاط مضاعفة، بدون حد أدنى للإنفاق.' } },
-    includeNotFound: true, notFoundEntity: 'Campaigns.Campaign', notFoundIdExpr: '{{campaignId}}',
-  }),
-]);
-
-// =========================================================================================
-// 9. Notifications
-// =========================================================================================
-const notificationsFolder = folder('Notifications', 'Delivery records addressed to this customer (`Notification.MembershipId`), plus channel preferences (Host side of `/api/notifications/*`).', [
-  item({
-    name: 'List My Notifications',
-    method: 'GET',
-    pathSegments: ['notifications'],
-    opts: { queries: [query('unreadOnly', 'false', '', true), query('SkipCount', 0), query('MaxResultCount', 20)] },
-    auth: 'bearer',
-    success: { status: 'OK', code: 200, body: paged([notification], 34) },
-  }),
-  item({
-    name: 'Mark Notifications Read',
-    method: 'PUT',
-    pathSegments: ['notifications', 'read'],
-    auth: 'bearer',
-    body: { notificationIds: [IDS.notification], markAll: false },
-    success: { status: 'OK', code: 200, body: { updatedCount: 1 } },
-    includeValidation: true,
-    validationFields: [{ member: 'notificationIds', message: "Provide 'notificationIds' or set 'markAll' to true." }],
-  }),
-  item({
-    name: 'Get Notification Preferences',
-    method: 'GET',
-    pathSegments: ['notifications', 'preferences'],
-    auth: 'bearer',
-    success: { status: 'OK', code: 200, body: { push: true, email: true, sms: false, campaignUpdates: true, transactionAlerts: true } },
-  }),
-  item({
-    name: 'Update Notification Preferences',
-    method: 'PUT',
-    pathSegments: ['notifications', 'preferences'],
-    auth: 'bearer',
-    body: { push: true, email: false, sms: false, campaignUpdates: true, transactionAlerts: true },
-    success: { status: 'OK', code: 200, body: { push: true, email: false, sms: false, campaignUpdates: true, transactionAlerts: true } },
+    name: 'Get Category Detail',
+    method: 'GET', pathSegments: ['app', 'category', ':id'],
+    opts: { pathVars: [pathVar('id', IDS.category, 'Category id')] },
+    auth: 'noauth',
+    success: { status: 'OK', code: 200, body: { id: IDS.category, nameAr: 'مقهى', nameEn: 'Cafe', iconBlobName: 'categories/cafe.png', parentCategoryId: null } },
+    include401: false,
+    includeNotFound: true, notFoundEntity: 'Category', notFoundIdExpr: IDS.category,
   }),
 ]);
 
 // =========================================================================================
-// 10. Wallet
+// 8. Favorites (Follow)
 // =========================================================================================
-const walletFolder = folder('Wallet', 'Cross-business wallet aggregate — mirrors the Home screen\'s wallet carousel. Runs as a Host user with `IMultiTenant` filtering explicitly disabled and replaced with a `CustomerId` filter (see System Architecture > Two identity realms).', [
+const favoritesFolder = folder('Favorites', '`/api/app/follow/*` — `FollowAsync`/`UnfollowAsync`/`GetMyFollowsAsync` are all `[Authorize]` with no specific permission (any authenticated customer, own rows only). The business-side "who follows us" list (`GET follow/followers`, gated by `Eksabli.Followers.View`) lives in the Business API collection instead — same `Follow` entity, different read. Follow/List My Follows verified live (204 and `[]` respectively — no tenant-existence check on Follow either).', [
   item({
-    name: 'List All Wallets',
-    method: 'GET',
-    pathSegments: ['wallet'],
+    name: 'Follow Business',
+    method: 'POST', pathSegments: ['app', 'follow', ':tenantId'],
+    opts: { pathVars: [pathVar('tenantId', '{{businessId}}', 'Business (tenant) id')] },
     auth: 'bearer',
-    success: {
-      status: 'OK', code: 200,
-      body: paged([wallet, { membershipId: '11111111-7777-4000-8000-000000000001', businessId: IDS.businessNike, businessNameEn: 'Nike - Riyadh Park', businessNameAr: 'نايك - رياض بارك', balance: 340, lifetimeEarned: 900, lifetimeRedeemed: 560, currentTier: { nameEn: 'Silver', nameAr: 'فضي', minLifetimePoints: 1000, multiplier: 1.1 }, nextTier: { nameEn: 'Gold', nameAr: 'ذهبي', minLifetimePoints: 5000, pointsToNextTier: 4100 } }]),
-    },
+    description: 'Verified live: 204 No Content, no request body.',
+    success: { status: 'No Content', code: 204, body: null },
   }),
   item({
-    name: 'Get Wallet Detail',
-    method: 'GET',
-    pathSegments: ['wallet', ':businessId'],
-    opts: { pathVars: [pathVar('businessId', '{{businessId}}', 'Business (tenant) id')] },
+    name: 'Unfollow Business',
+    method: 'DELETE', pathSegments: ['app', 'follow', ':tenantId'],
+    opts: { pathVars: [pathVar('tenantId', '{{businessId}}', 'Business (tenant) id')] },
     auth: 'bearer',
-    success: { status: 'OK', code: 200, body: wallet },
-    includeNotFound: true, notFoundEntity: 'Memberships.PointsWallet', notFoundIdExpr: 'customerId={{userId}}, tenantId={{businessId}}',
+    success: { status: 'No Content', code: 204, body: null },
   }),
   item({
-    name: 'Wallet Transactions (per business)',
-    method: 'GET',
-    pathSegments: ['wallet', ':businessId', 'transactions'],
-    opts: { pathVars: [pathVar('businessId', '{{businessId}}', 'Business (tenant) id')], queries: [query('SkipCount', 0), query('MaxResultCount', 20)] },
-    auth: 'bearer',
-    description: 'Matches the architecture doc\'s `/api/wallet/{tenantId}/transactions` resource exactly — points history scoped to one business, filtered server-side by the caller\'s own `CustomerId`.',
-    success: { status: 'OK', code: 200, body: paged([pointsTransaction], 214) },
-    includeNotFound: true, notFoundEntity: 'Memberships.PointsWallet', notFoundIdExpr: 'customerId={{userId}}, tenantId={{businessId}}',
+    name: 'List My Follows',
+    method: 'GET', pathSegments: ['app', 'follow', 'my'], auth: 'bearer',
+    description: 'Plain array (no paging). Verified live.',
+    success: { status: 'OK', code: 200, body: [{ id: '11111111-2222-4000-8000-000000000001', customerId: IDS.customer, tenantId: IDS.tenantStarbucks, followedAt: '2025-09-12T10:00:00Z' }] },
   }),
 ]);
 
 // =========================================================================================
-// 11. Transactions
+// 9. Referrals
 // =========================================================================================
-const transactionsFolder = folder('Transactions', 'Cross-business raw ledger view (union of every wallet\'s `PointsTransaction` rows for this customer) — the "show your work" screen behind the Points summary.', [
+const referralsFolder = folder('Referrals', '`/api/app/referral/*`, `[Authorize]`, authenticated only. `my` verified live (`[]`).', [
   item({
-    name: 'List My Transactions',
-    method: 'GET',
-    pathSegments: ['transactions'],
-    opts: { queries: [query('businessId', '{{businessId}}', '', true), query('type', 'Earn', 'Earn|Redeem|Expire|Adjust|Refund', true), query('dateFrom', '2025-10-01', '', true), query('dateTo', '2025-11-08', '', true), query('SkipCount', 0), query('MaxResultCount', 20)] },
+    name: 'Get My Referral Code',
+    method: 'GET', pathSegments: ['app', 'referral', 'my-code'],
+    opts: { queries: [query('tenantId', '{{businessId}}', 'Business to generate a referral code for')] },
     auth: 'bearer',
-    success: { status: 'OK', code: 200, body: paged([pointsTransaction], 214) },
-  }),
-  item({
-    name: 'Get Transaction Detail',
-    method: 'GET',
-    pathSegments: ['transactions', ':id'],
-    opts: { pathVars: [pathVar('id', '{{transactionId}}', 'PointsTransaction id')] },
-    auth: 'bearer',
-    success: { status: 'OK', code: 200, body: { ...pointsTransaction, id: '{{transactionId}}' } },
-    includeNotFound: true, notFoundEntity: 'Memberships.PointsTransaction', notFoundIdExpr: '{{transactionId}}',
-  }),
-]);
-
-// =========================================================================================
-// 12. Favorites
-// =========================================================================================
-const favoritesFolder = folder('Favorites', 'Businesses this customer has favorited without necessarily being a member. Backed by the same `Follow` entity as the Followers folder below (see Database Design: "Favorites and Followers are the same concept here") — Favorites is the customer-facing read of it.', [
-  item({
-    name: 'List My Favorites',
-    method: 'GET',
-    pathSegments: ['favorites'],
-    opts: { queries: [query('SkipCount', 0), query('MaxResultCount', 20)] },
-    auth: 'bearer',
-    success: { status: 'OK', code: 200, body: paged([{ businessId: IDS.businessNike, businessNameEn: 'Nike - Riyadh Park', businessNameAr: 'نايك - رياض بارك', logoUrl: 'https://cdn.eksabli.com/logos/nike.png', isMember: false, followedAt: '2025-09-12T10:00:00Z' }]) },
-  }),
-]);
-
-// =========================================================================================
-// 13. Followers
-// =========================================================================================
-const followersFolder = folder('Followers', 'Same underlying `Follow` rows as Favorites, read as an activity feed: offers/campaigns from businesses you follow but have not joined yet. (Follow/Unfollow itself lives under Stores > Follow Store / Unfollow Store — this folder is read-only from the mobile side; the businessfacing "convert follower to campaign target" action lives in the Business API.)', [
-  item({
-    name: 'Followed Businesses Feed',
-    method: 'GET',
-    pathSegments: ['followers', 'feed'],
-    opts: { queries: [query('SkipCount', 0), query('MaxResultCount', 20)] },
-    auth: 'bearer',
-    success: {
-      status: 'OK', code: 200,
-      body: paged([
-        { businessId: IDS.businessNike, businessNameEn: 'Nike - Riyadh Park', type: 'Offer', title: 'Weekend Sale - 20% Off', publishedAt: '2025-11-06T09:00:00Z' },
-      ]),
-    },
-  }),
-]);
-
-// =========================================================================================
-// 14. Referrals
-// =========================================================================================
-const referralsFolder = folder('Referrals', '`Referral` tracks one customer inviting another into a specific business; completion pays a bonus to both referrer and referee via the points pipeline (`Source = Referral`).', [
-  item({
-    name: 'Generate Referral Code',
-    method: 'POST',
-    pathSegments: ['referrals'],
-    auth: 'bearer',
-    body: { businessId: '{{businessId}}' },
-    success: { status: 'Created', code: 201, body: { referralCode: 'SARA-REF-8821', shareUrl: 'https://eksabli.app/r/SARA-REF-8821', businessId: '{{businessId}}' } },
-    includeNotFound: true, notFoundEntity: 'Businesses.BusinessProfile', notFoundIdExpr: '{{businessId}}',
+    description: '`code` is itself a uuid (used as the referral token, e.g. embedded in a share link/QR) — not a `MembershipDto`.',
+    success: { status: 'OK', code: 200, body: { code: 'd6274cbb-0000-4000-8000-000000001201' } },
   }),
   item({
     name: 'List My Referrals',
-    method: 'GET',
-    pathSegments: ['referrals'],
-    opts: { queries: [query('status', 'Completed', 'Pending|Completed|Rewarded', true), query('SkipCount', 0), query('MaxResultCount', 20)] },
-    auth: 'bearer',
-    success: { status: 'OK', code: 200, body: paged([referral]) },
+    method: 'GET', pathSegments: ['app', 'referral', 'my'], auth: 'bearer',
+    description: `Plain array (no paging). \`status\` is an int: ${enumDoc('ReferralStatus')}.`,
+    success: { status: 'OK', code: 200, body: [{ id: 'd6274cbb-0000-4000-8000-000000001201', referrerMembershipId: IDS.membership, refereeCustomerId: '22222222-3333-4000-8000-000000000001', tenantId: IDS.tenantStarbucks, status: enumVal('ReferralStatus', 'Completed') }] },
   }),
 ]);
 
 // =========================================================================================
-// 15. Achievements
+// 10. Achievements
 // =========================================================================================
-const achievementsFolder = folder('Achievements', 'Badge definitions (platform-wide or tenant-specific) + which ones this customer has earned. Tenant-level opt-in feature (ABP Feature Management flag) — not every business enables this.', [
+const achievementsFolder = folder('Achievements', '`AchievementsController` is class-level `[Authorize(Eksabli.Achievements)]` — the SAME "Default" permission staff use to manage badges. **Verified live: a plain authenticated customer gets a 403 with an EMPTY body** (this is a policy-attribute rejection, not a thrown business exception, so it does not get the JSON error wrapper). There is no separate, permission-free "browse badges" read for ordinary customers today — likely worth raising with whoever owns the permission grants if badges are meant to be customer-visible by default, rather than working around it client-side.', [
   item({
-    name: 'List My Achievements',
-    method: 'GET',
-    pathSegments: ['achievements'],
-    opts: { queries: [query('businessId', '{{businessId}}', 'Omit for platform-wide achievements', true)] },
+    name: 'List Achievement Definitions',
+    method: 'GET', pathSegments: ['app', 'achievement'],
+    opts: { queries: [query('SkipCount', 0), query('MaxResultCount', 20)] },
     auth: 'bearer',
-    success: {
-      status: 'OK', code: 200,
-      body: paged([
-        { ...achievement, earned: true },
-        { id: '55555555-8888-4000-8000-000000000001', nameEn: 'First Redemption', nameAr: 'أول عملية استبدال', descriptionEn: 'Redeem your first reward', iconUrl: 'https://cdn.eksabli.com/achievements/first-redemption.png', earned: false, awardedAt: null },
-      ]),
-    },
+    include403: true, permission: 'Eksabli.Achievements (Default) — confirmed live: an ordinary customer 403s here',
+    success: { status: 'OK', code: 200, body: paged([{ id: IDS.achievement, tenantId: IDS.tenantStarbucks, name: 'Coffee Enthusiast', criteriaJson: '{"visits":10,"withinDays":30}' }]) },
+  }),
+  item({
+    name: 'Get My Awards for a Membership',
+    method: 'GET', pathSegments: ['app', 'achievement', 'membership', ':membershipId', 'awards'],
+    opts: { pathVars: [pathVar('membershipId', IDS.membership, 'Membership id')] },
+    auth: 'bearer',
+    include403: true, permission: 'Eksabli.Achievements (Default) — see folder note',
+    description: 'Plain array (no paging).',
+    success: { status: 'OK', code: 200, body: [{ id: '33333333-4444-4000-8000-000000000001', membershipId: IDS.membership, achievementId: IDS.achievement, awardedAt: '2025-10-15T00:00:00Z' }] },
   }),
 ]);
 
 // =========================================================================================
-// 16. Leaderboard
+// 11. Support
 // =========================================================================================
-const leaderboardFolder = folder('Leaderboard', 'Per-business ranking by lifetime points, gated by the same tenant-opt-in Feature Management flag as Achievements (see Loyalty Engine > Customer engagement) — treat as an optional gamification surface, not a guaranteed-on core endpoint.', [
-  item({
-    name: 'Get Business Leaderboard',
-    method: 'GET',
-    pathSegments: ['leaderboard'],
-    opts: { queries: [query('businessId', '{{businessId}}'), query('period', 'monthly', 'weekly|monthly|allTime'), query('MaxResultCount', 10)] },
-    auth: 'bearer',
-    success: {
-      status: 'OK', code: 200,
-      body: {
-        businessId: '{{businessId}}', period: 'monthly', myRank: 8, myLifetimePoints: 6420,
-        topEntries: [
-          { rank: 1, displayName: 'Ahmed K.', lifetimePoints: 24800 },
-          { rank: 2, displayName: 'Layla M.', lifetimePoints: 19650 },
-        ],
-      },
-    },
-    errors: [
-      { name: '404 Not Found - Leaderboard not enabled', status: 'Not Found', code: 404, body: { error: { code: 'Eksabli:FeatureNotEnabled', message: 'This business has not enabled the Leaderboard feature.', details: null, data: {}, validationErrors: null } } },
-    ],
-  }),
-]);
-
-// =========================================================================================
-// 17. Settings
-// =========================================================================================
-const settingsFolder = folder('Settings', 'App-level customer settings distinct from Profile (identity fields) — language and display preferences.', [
-  item({
-    name: 'Get My Settings',
-    method: 'GET',
-    pathSegments: ['settings'],
-    auth: 'bearer',
-    success: { status: 'OK', code: 200, body: { language: 'ar', theme: 'system', biometricLoginEnabled: true } },
-  }),
-  item({
-    name: 'Update My Settings',
-    method: 'PUT',
-    pathSegments: ['settings'],
-    auth: 'bearer',
-    body: { language: 'en', theme: 'dark', biometricLoginEnabled: true },
-    success: { status: 'OK', code: 200, body: { language: 'en', theme: 'dark', biometricLoginEnabled: true } },
-    includeValidation: true,
-    validationFields: [{ member: 'language', message: "'language' must be one of: ar, en." }],
-  }),
-]);
-
-// =========================================================================================
-// 18. Support
-// =========================================================================================
-const supportFolder = folder('Support', 'Customer-facing `SupportTicket`/`SupportTicketMessage` — the same tables the Admin API\'s Support Tickets queue reads from.', [
+const supportFolder = folder('Support', '`/api/app/support-ticket/*`, `[Authorize]` for create/get/reply (own ticket only, enforced by `EnsureCanAccessAsync` in code). Note: `GetListAsync` (the full queue) requires `Eksabli.SupportTickets.Manage` and is NOT available to ordinary customers — there is currently no "list all my tickets" endpoint, only get-by-id for a ticket you already know the id of. See the Admin API collection for the queue view.', [
   item({
     name: 'Create Support Ticket',
-    method: 'POST',
-    pathSegments: ['support'],
-    auth: 'bearer',
-    body: { subject: 'Points missing from last purchase', body: 'I made a purchase yesterday but only got half the points I expected.', businessId: '{{businessId}}', priority: 'Normal' },
-    success: { status: 'Created', code: 201, body: supportTicket },
-    includeValidation: true,
-    validationFields: [{ member: 'subject', message: "'subject' is required." }],
+    method: 'POST', pathSegments: ['app', 'support-ticket'], auth: 'bearer',
+    description: `\`priority\` is an int: ${enumDoc('SupportTicketPriority')}.`,
+    body: { subject: 'Points missing from last purchase', body: 'I made a purchase yesterday but only got half the points I expected.', priority: enumVal('SupportTicketPriority', 'Medium') },
+    success: { status: 'OK', code: 200, body: { id: IDS.ticket, tenantId: null, customerId: IDS.customer, subject: 'Points missing from last purchase', status: enumVal('SupportTicketStatus', 'Open'), priority: enumVal('SupportTicketPriority', 'Medium'), messages: [] } },
+    includeValidation: true, validationFields: [{ member: 'subject', message: "'subject' is required." }],
   }),
   item({
-    name: 'List My Support Tickets',
-    method: 'GET',
-    pathSegments: ['support'],
-    opts: { queries: [query('status', 'Open', 'Open|Pending|Resolved|Closed', true), query('SkipCount', 0), query('MaxResultCount', 20)] },
-    auth: 'bearer',
-    success: { status: 'OK', code: 200, body: paged([supportTicket]) },
-  }),
-  item({
-    name: 'Get Support Ticket Thread',
-    method: 'GET',
-    pathSegments: ['support', ':id'],
+    name: 'Get My Support Ticket',
+    method: 'GET', pathSegments: ['app', 'support-ticket', ':id'],
     opts: { pathVars: [pathVar('id', IDS.ticket, 'SupportTicket id')] },
     auth: 'bearer',
-    success: { status: 'OK', code: 200, body: supportTicket },
-    includeNotFound: true, notFoundEntity: 'Platform.SupportTicket', notFoundIdExpr: IDS.ticket,
+    success: {
+      status: 'OK', code: 200,
+      body: { id: IDS.ticket, tenantId: null, customerId: IDS.customer, subject: 'Points missing from last purchase', status: enumVal('SupportTicketStatus', 'Open'), priority: enumVal('SupportTicketPriority', 'Medium'), messages: [{ id: '44444444-5555-4000-8000-000000000001', ticketId: IDS.ticket, senderId: IDS.customer, body: 'I made a purchase yesterday but only got half the points I expected.', createdAt: '2025-11-06T16:40:00Z' }] },
+    },
+    errors: [{ name: '403 Forbidden - Not your ticket', status: 'Forbidden', code: 403, body: businessRuleBody('You are not authorized to view this support ticket.') }],
+    includeNotFound: true, notFoundEntity: 'SupportTicket', notFoundIdExpr: IDS.ticket,
   }),
   item({
     name: 'Reply to Support Ticket',
-    method: 'POST',
-    pathSegments: ['support', ':id', 'messages'],
+    method: 'POST', pathSegments: ['app', 'support-ticket', ':id', 'messages'],
     opts: { pathVars: [pathVar('id', IDS.ticket, 'SupportTicket id')] },
     auth: 'bearer',
-    body: { body: 'Following up - still hasn\'t been resolved.' },
-    success: { status: 'Created', code: 201, body: { id: '66666666-9999-4000-8000-000000000001', ticketId: IDS.ticket, senderType: 'Customer', body: 'Following up - still hasn\'t been resolved.', createdAt: '2025-11-08T11:00:00Z' } },
-    includeNotFound: true, notFoundEntity: 'Platform.SupportTicket', notFoundIdExpr: IDS.ticket,
+    body: { body: "Following up - still hasn't been resolved." },
+    success: { status: 'OK', code: 200, body: { id: '55555555-6666-4000-8000-000000000001', ticketId: IDS.ticket, senderId: IDS.customer, body: "Following up - still hasn't been resolved.", createdAt: '2025-11-08T11:00:00Z' } },
+    errors: [{ name: '403 Forbidden - Not your ticket', status: 'Forbidden', code: 403, body: businessRuleBody('You are not authorized to reply to this support ticket.') }],
+    includeNotFound: true, notFoundEntity: 'SupportTicket', notFoundIdExpr: IDS.ticket,
   }),
 ]);
 
@@ -935,10 +475,21 @@ const collection = {
   info: {
     name: 'Eksabli Mobile API',
     description:
-      'Customer-facing (Host-realm) API for the Eksabli mobile app (Flutter). Customers are a single global identity that can join unlimited businesses (`Tenant`s); each `Membership` + `PointsWallet` is independent per business. See docs/eksabli-loyalty-platform for the full design (System Architecture > Two identity realms is the key thing to read first).\n\n' +
-      'Base URL: `{{baseUrl}}` (default `https://localhost:44330/api/v1`, matches `Eksabli.HttpApi.Host` + URL-segment API versioning).\n\n' +
-      'Auth: Bearer `{{accessToken}}` at the collection level. Run **Authentication > Verify OTP** (or **Login (password)**) first — its Tests script saves `accessToken`/`refreshToken` automatically. A collection-level Pre-request script auto-refreshes the token when it is close to expiry.\n\n' +
-      'Error shape follows ABP\'s standard `{ error: { code, message, details, data, validationErrors } }` wrapper.',
+      'Customer-facing (Host-realm) API, rebuilt directly from the live Swagger doc of `Eksabli.HttpApi.Host`, the real `[Authorize]` attributes in `src/Eksabli.HttpApi/Controllers/` (ABP\'s auto-API-controllers are disabled in this repo — every app service has a hand-written controller instead), and live curl verification with a throwaway registered user against `https://localhost:44330`.\n\n' +
+      '**Base URLs** — two, because token issuance is not an ABP application service: `{{baseUrl}}` = `https://localhost:44330/api` for everything else, `{{issuerUrl}}` = `https://localhost:44330` for `/connect/token`.\n\n' +
+      '**Auth flow**: run **Authentication > Login (password grant)** (or Send OTP -> Login (OTP grant)) first — its Tests script saves `accessToken`/`refreshToken` automatically (note: OAuth2 responses use `access_token`/`refresh_token`, snake_case). A collection-level Pre-request script auto-refreshes when the token is close to expiry. **Verified end-to-end**: Register -> Login (password grant) -> several Bearer-authenticated calls all confirmed working against the live host.\n\n' +
+      '**Two distinct error shapes — do not confuse them:**\n' +
+      '- Missing/invalid Bearer token (401), or a permission-attribute rejection like `[Authorize(SomePermission)]` (403) -> **empty body**, verified live on `/api/app/achievement` and `/api/app/category` (POST).\n' +
+      '- A business rule thrown from inside app-service code (wrong password, entity not found, ownership check) -> ABP\'s JSON `{ error: {...} }` wrapper. Confirmed live: **wrong password change and "email not found" both return 403** (not 400) with `data: null`; entity-not-found (bad id) returns **404** with message `"There is no entity {Type} with id = {id}!"`. Only real input-shape validation failures (missing required fields, bad email format) return 400, with message `"Your request is not valid!"`.\n' +
+      '- `/connect/token` errors follow plain OAuth2 `{ error, error_description }` instead of either ABP shape.\n\n' +
+      '**Known gaps vs. the original design docs — intentionally NOT invented as fake endpoints:**\n' +
+      '- No store discovery/search/nearby/list endpoint exists yet (only `follow/{tenantId}`, `business/profile`, both need an already-known `tenantId`). Categories is the only public browse surface today.\n' +
+      '- No customer notification inbox: `/api/app/notification` GET is the tenant\'s *sent* log, gated by `Eksabli.Notifications.Send` (a marketing-staff permission) — not readable by ordinary customers.\n' +
+      '- No customer-facing Campaigns/Offers read: both controllers require `Eksabli.Campaigns`/`Eksabli.Offers` (Default), which are staff-oriented permissions, not `[AllowAnonymous]`/open-to-customer.\n' +
+      '- No Leaderboard and no app-level Settings (language/theme) endpoint exist at all.\n' +
+      '- Achievements browsing is gated behind the same staff "Default" permission used for badge CRUD (verified live, see folder note).\n' +
+      '- Support ticket "list all my tickets" doesn\'t exist — only get-by-id once you already have one.\n' +
+      '- Several write endpoints (Join Business, Follow, Redeem catalog browse) do not validate that the referenced `tenantId` actually exists — verified live with an all-zero GUID, which was silently accepted.',
     schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
   },
   auth: { type: 'bearer', bearer: [{ key: 'token', value: '{{accessToken}}', type: 'string' }] },
@@ -954,19 +505,23 @@ const collection = {
           'const skewMs = 60 * 1000;',
           'if (expiresAt && (now + skewMs) > expiresAt) {',
           '    const refreshToken = pm.collectionVariables.get("refreshToken");',
-          '    const baseUrl = pm.collectionVariables.get("baseUrl") || pm.environment.get("baseUrl");',
-          '    if (refreshToken && baseUrl) {',
+          '    const issuerUrl = pm.collectionVariables.get("issuerUrl") || pm.environment.get("issuerUrl");',
+          '    if (refreshToken && issuerUrl) {',
           '        pm.sendRequest({',
-          '            url: baseUrl + "/auth/refresh-token",',
+          '            url: issuerUrl + "/connect/token",',
           '            method: "POST",',
-          '            header: { "Content-Type": "application/json" },',
-          '            body: { mode: "raw", raw: JSON.stringify({ refreshToken }) }',
+          '            header: { "Content-Type": "application/x-www-form-urlencoded" },',
+          '            body: { mode: "urlencoded", urlencoded: [',
+          '                { key: "grant_type", value: "refresh_token" },',
+          '                { key: "refresh_token", value: refreshToken },',
+          '                { key: "client_id", value: "Eksabli_App" }',
+          '            ] }',
           '        }, function (err, res) {',
           '            if (!err && res.code === 200) {',
           '                const json = res.json();',
-          '                pm.collectionVariables.set("accessToken", json.accessToken);',
-          '                pm.collectionVariables.set("refreshToken", json.refreshToken);',
-          '                pm.collectionVariables.set("tokenExpiresAt", Date.now() + (json.expiresIn * 1000));',
+          '                pm.collectionVariables.set("accessToken", json.access_token);',
+          '                if (json.refresh_token) { pm.collectionVariables.set("refreshToken", json.refresh_token); }',
+          '                pm.collectionVariables.set("tokenExpiresAt", Date.now() + (json.expires_in * 1000));',
           '            }',
           '        });',
           '    }',
@@ -976,30 +531,27 @@ const collection = {
     },
   ],
   variable: [
-    { key: 'baseUrl', value: 'https://localhost:44330/api/v1', type: 'string' },
+    { key: 'baseUrl', value: 'https://localhost:44330/api', type: 'string' },
+    { key: 'issuerUrl', value: 'https://localhost:44330', type: 'string' },
     { key: 'accessToken', value: '', type: 'string' },
     { key: 'refreshToken', value: '', type: 'string' },
     { key: 'tokenExpiresAt', value: '0', type: 'string' },
-    { key: 'businessId', value: IDS.businessStarbucks, type: 'string' },
-    { key: 'branchId', value: IDS.branch, type: 'string' },
+    { key: 'businessId', value: IDS.tenantStarbucks, type: 'string' },
+    { key: 'branchId', value: '3c8da211-0000-4000-8000-000000000201', type: 'string' },
     { key: 'userId', value: IDS.customer, type: 'string' },
     { key: 'rewardId', value: IDS.reward, type: 'string' },
-    { key: 'campaignId', value: IDS.campaign, type: 'string' },
+    { key: 'campaignId', value: 'a3f41988-0000-4000-8000-000000000901', type: 'string' },
     { key: 'transactionId', value: IDS.transaction, type: 'string' },
   ],
   item: [
-    authFolder, profileFolder, storesFolder, membershipsFolder, pointsFolder, rewardsFolder,
-    couponsFolder, campaignsFolder, notificationsFolder, walletFolder, transactionsFolder,
-    favoritesFolder, followersFolder, referralsFolder, achievementsFolder, leaderboardFolder,
-    settingsFolder, supportFolder,
+    authFolder, profileFolder, membershipsFolder, walletFolder, rewardsFolder, couponsFolder,
+    categoriesFolder, favoritesFolder, referralsFolder, achievementsFolder, supportFolder,
   ],
 };
 
 const outPath = path.join(__dirname, '..', 'Eksabli-Mobile-API.postman_collection.json');
 fs.writeFileSync(outPath, JSON.stringify(collection, null, 2));
 console.log('Wrote', outPath);
-
-// sanity: total request count
 let total = 0;
 for (const f of collection.item) total += f.item.length;
 console.log('Folders:', collection.item.length, 'Requests:', total);

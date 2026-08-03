@@ -41,6 +41,7 @@ using Volo.Abp.Swashbuckle;
 using Volo.Abp.Studio.Client.AspNetCore;
 using Volo.Abp.Security.Claims;
 using Eksabli.OpenIddict;
+using Eksabli.StartupTasks;
 
 namespace Eksabli;
 
@@ -71,6 +72,14 @@ public class EksabliHttpApiHostModule : AbpModule
                 options.UseLocalServer();
                 options.UseAspNetCore();
             });
+        });
+
+        // Registering the handler in ConfigureExtensionGrants() below (AbpOpenIddictExtensionGrantsOptions)
+        // only wires up *what to do* for grant_type=otp — OpenIddict's server still rejects it as
+        // unsupported unless the grant type is also allow-listed here.
+        PreConfigure<OpenIddictServerBuilder>(builder =>
+        {
+            builder.AllowCustomFlow("otp");
         });
 
         if (!hostingEnvironment.IsDevelopment())
@@ -130,6 +139,12 @@ public class EksabliHttpApiHostModule : AbpModule
         ConfigureSwagger(context, configuration);
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
+        ConfigureStartupTasks(context);
+    }
+
+    private void ConfigureStartupTasks(ServiceConfigurationContext context)
+    {
+        context.Services.AddTransient<IStartupTask, CreateDatabaseStartupTask>();
     }
 
     private void ConfigureStudio(IHostEnvironment hostingEnvironment)
