@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scan QR — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-slate-950 text-white">
+    <div data-status-bar></div>
+
+    <div class="flex items-center justify-between px-5 pt-2 pb-4">
+      <a href="home.html" class="btn btn-icon bg-white/10 hover:bg-white/20 text-white" id="back-btn" aria-label="Back"></a>
+      <h1 class="text-sm font-bold">Scan Check-in QR</h1>
+      <a href="qr-code.html" class="btn btn-icon bg-white/10 hover:bg-white/20 text-white" id="mycode-btn" aria-label="My QR"></a>
+    </div>
+
+    <div class="flex-1 flex flex-col items-center justify-center px-8">
+      <div class="relative w-64 h-64 mb-8">
+        <div class="absolute inset-0 border-2 border-white/30 rounded-3xl"></div>
+        <div class="absolute -top-1 -left-1 w-10 h-10 border-t-4 border-l-4 border-primary-400 rounded-tl-2xl"></div>
+        <div class="absolute -top-1 -right-1 w-10 h-10 border-t-4 border-r-4 border-primary-400 rounded-tr-2xl"></div>
+        <div class="absolute -bottom-1 -left-1 w-10 h-10 border-b-4 border-l-4 border-primary-400 rounded-bl-2xl"></div>
+        <div class="absolute -bottom-1 -right-1 w-10 h-10 border-b-4 border-r-4 border-primary-400 rounded-br-2xl"></div>
+        <div class="absolute left-4 right-4 h-0.5 bg-primary-400 rounded-full animate-pulse" style="top:50%"></div>
+      </div>
+      <p class="text-sm text-white/60 text-center max-w-[16rem]">Point your camera at a branch check-in QR code</p>
+    </div>
+
+    <div class="px-8 pb-10">
+      <button id="simulate-scan" class="btn btn-primary btn-lg w-full">Simulate Scan</button>
+    </div>
+
+    <!-- Result sheet -->
+    <div class="sheet-overlay" data-sheet="scan-result">
+      <div class="sheet-panel p-6 text-slate-900 dark:text-slate-50">
+        <div class="w-12 h-1 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-5"></div>
+        <div class="flex items-center gap-4 mb-5">
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-white font-bold flex-shrink-0">CB</div>
+          <div>
+            <p class="font-bold text-base">Cedar & Bean Coffee</p>
+            <p class="text-xs text-slate-400">Downtown Branch check-in</p>
+          </div>
+        </div>
+        <div class="alert alert-success mb-5">
+          <span id="check-icon"></span>
+          <p>Checked in! Staff has been notified you're here.</p>
+        </div>
+        <a href="my-points.html?id=biz_1" class="btn btn-primary btn-lg w-full mb-2" data-sheet-close="scan-result">View My Points</a>
+        <button class="btn btn-secondary btn-lg w-full" data-sheet-close="scan-result">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  document.getElementById('back-btn').innerHTML = Icons.html('arrow-left', { size: 18 });
+  document.getElementById('mycode-btn').innerHTML = Icons.html('qr-code', { size: 18 });
+  document.getElementById('check-icon').innerHTML = Icons.html('check-circle', { size: 18 });
+  document.getElementById('simulate-scan').addEventListener('click', () => Eksabli.openSheet('scan-result'));
+</script>
+</body>
+</html>

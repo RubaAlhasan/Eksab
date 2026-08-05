@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transaction History — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-slate-50 dark:bg-slate-950">
+    <div data-status-bar></div>
+    <div id="top-bar-slot" data-top-bar data-back="my-points.html"></div>
+
+    <div class="px-5 pt-3 pb-1">
+      <div class="flex gap-2 overflow-x-auto no-scrollbar" id="type-chips"></div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-5 py-4">
+      <div id="list" class="space-y-2"></div>
+      <div id="empty-state" class="empty-state hidden">
+        <div class="empty-state-icon" id="empty-icon"></div>
+        <p class="font-bold text-sm mb-1">No transactions</p>
+        <p class="text-xs text-slate-400 max-w-[16rem]">Nothing matches this filter yet.</p>
+      </div>
+    </div>
+
+    <div data-bottom-nav=""></div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  const params = new URLSearchParams(location.search);
+  const biz = data.businesses.find(b => b.id === params.get('id')) || data.businesses[0];
+
+  document.querySelector('[data-bottom-nav]')?.remove();
+  document.getElementById('top-bar-slot').setAttribute('data-title', biz.name + ' History');
+  document.getElementById('top-bar-slot').setAttribute('data-back', `my-points.html?id=${biz.id}`);
+  document.getElementById('empty-icon').innerHTML = Icons.html('clock', { size: 26 });
+
+  const allTxns = data.transactions.filter(t => t.businessId === biz.id);
+  const types = ['All', ...new Set(allTxns.map(t => t.type))];
+  let activeType = 'All';
+
+  const typeMeta = {
+    Earn: { icon: 'plus', color: 'text-success-600 dark:text-success-400', bg: 'bg-success-50 dark:bg-success-500/10' },
+    Redeem: { icon: 'minus', color: 'text-danger-600 dark:text-danger-400', bg: 'bg-danger-50 dark:bg-danger-500/10' },
+    Adjust: { icon: 'pencil-square', color: 'text-info-600 dark:text-info-400', bg: 'bg-info-50 dark:bg-info-500/10' },
+    Expire: { icon: 'clock', color: 'text-slate-500 dark:text-slate-400', bg: 'bg-slate-100 dark:bg-slate-800' },
+    Refund: { icon: 'arrow-path', color: 'text-warning-600 dark:text-warning-400', bg: 'bg-warning-50 dark:bg-warning-500/10' },
+  };
+
+  function renderChips() {
+    document.getElementById('type-chips').innerHTML = types.map(t => `
+      <button data-type="${t}" class="tab-pill-trigger flex-shrink-0 ${t === activeType ? 'active' : ''}">${t}</button>
+    `).join('');
+    document.querySelectorAll('[data-type]').forEach(btn => {
+      btn.addEventListener('click', () => { activeType = btn.getAttribute('data-type'); renderChips(); renderList(); });
+    });
+  }
+
+  function renderList() {
+    const filtered = allTxns.filter(t => activeType === 'All' || t.type === activeType)
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    const list = document.getElementById('list');
+    const empty = document.getElementById('empty-state');
+    if (filtered.length === 0) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+    list.innerHTML = filtered.map(t => {
+      const meta = typeMeta[t.type];
+      return `
+        <div class="card p-3.5 flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl ${meta.bg} ${meta.color} flex items-center justify-center flex-shrink-0">${Icons.html(meta.icon, { size: 16 })}</div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold truncate">${t.description}</p>
+            <p class="text-xs text-slate-400">${t.type} · ${new Date(t.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+          </div>
+          <p class="text-sm font-bold ${t.points > 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'} flex-shrink-0">${t.points > 0 ? '+' : ''}${t.points}</p>
+        </div>`;
+    }).join('');
+  }
+
+  renderChips();
+  renderList();
+</script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Account — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-white dark:bg-slate-950">
+    <div data-status-bar></div>
+
+    <div class="flex items-center gap-3 px-5 pt-2 pb-4">
+      <a href="onboarding.html" class="btn btn-icon btn-ghost -ml-2" aria-label="Back"></a>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 pb-8">
+      <h1 class="text-2xl font-extrabold tracking-tight mb-1">Create your account</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">One account, unlimited businesses. Takes less than a minute.</p>
+
+      <div id="form-alert" class="alert alert-danger mb-4 hidden">
+        <span id="form-alert-icon"></span>
+        <p id="form-alert-text"></p>
+      </div>
+
+      <form id="register-form" novalidate class="space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="field-label" for="firstName">First name</label>
+            <input id="firstName" name="firstName" class="input" placeholder="Layla" required>
+            <p class="field-error hidden" data-error-for="firstName"></p>
+          </div>
+          <div>
+            <label class="field-label" for="lastName">Last name</label>
+            <input id="lastName" name="lastName" class="input" placeholder="Haddad" required>
+            <p class="field-error hidden" data-error-for="lastName"></p>
+          </div>
+        </div>
+
+        <div>
+          <label class="field-label" for="phone">Phone number</label>
+          <input id="phone" name="phone" type="tel" class="input" placeholder="+971 50 123 4567" required>
+          <p class="field-error hidden" data-error-for="phone"></p>
+        </div>
+
+        <div>
+          <label class="field-label" for="email">Email <span class="text-slate-400 font-normal">(optional)</span></label>
+          <input id="email" name="email" type="email" class="input" placeholder="you@example.com">
+          <p class="field-error hidden" data-error-for="email"></p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="field-label" for="dob">Date of birth</label>
+            <input id="dob" name="dob" type="date" class="input" required>
+            <p class="field-error hidden" data-error-for="dob"></p>
+          </div>
+          <div>
+            <label class="field-label" for="gender">Gender</label>
+            <select id="gender" name="gender" class="select">
+              <option value="">Select</option>
+              <option>Female</option>
+              <option>Male</option>
+              <option>Prefer not to say</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="field-label" for="password">Password</label>
+          <div class="relative">
+            <input id="password" name="password" type="password" class="input pr-10" placeholder="At least 8 characters" required>
+            <button type="button" id="toggle-password" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" aria-label="Show password"></button>
+          </div>
+          <p class="field-error hidden" data-error-for="password"></p>
+        </div>
+
+        <label class="flex items-start gap-2.5 pt-1">
+          <input type="checkbox" id="terms" class="checkbox mt-0.5" required>
+          <span class="text-xs text-slate-500 dark:text-slate-400">I agree to the <a class="text-primary-600 dark:text-primary-400 font-semibold" href="#">Terms of Service</a> and <a class="text-primary-600 dark:text-primary-400 font-semibold" href="#">Privacy Policy</a>.</span>
+        </label>
+        <p class="field-error hidden" data-error-for="terms"></p>
+
+        <button type="submit" id="submit-btn" class="btn btn-primary btn-lg w-full mt-2">
+          <span id="submit-label">Create account</span>
+        </button>
+      </form>
+
+      <p class="text-center text-sm text-slate-500 dark:text-slate-400 mt-6">
+        Already have an account? <a href="login.html" class="text-primary-600 dark:text-primary-400 font-semibold">Log in</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  document.querySelector('a[href="onboarding.html"]').innerHTML = Icons.html('arrow-left', { size: 18 });
+  document.getElementById('form-alert-icon').innerHTML = Icons.html('exclamation-circle', { size: 18 });
+
+  const pwToggle = document.getElementById('toggle-password');
+  const pwInput = document.getElementById('password');
+  pwToggle.innerHTML = Icons.html('eye', { size: 18 });
+  pwToggle.addEventListener('click', () => {
+    const showing = pwInput.type === 'text';
+    pwInput.type = showing ? 'password' : 'text';
+    pwToggle.innerHTML = Icons.html(showing ? 'eye' : 'eye-slash', { size: 18 });
+  });
+
+  function setError(field, message) {
+    const el = document.querySelector(`[data-error-for="${field}"]`);
+    const input = document.getElementById(field);
+    if (message) {
+      el.textContent = message;
+      el.classList.remove('hidden');
+      if (input) input.classList.add('input-error');
+    } else {
+      el.classList.add('hidden');
+      if (input) input.classList.remove('input-error');
+    }
+  }
+
+  document.getElementById('register-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const values = {
+      firstName: document.getElementById('firstName').value.trim(),
+      lastName: document.getElementById('lastName').value.trim(),
+      phone: document.getElementById('phone').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      dob: document.getElementById('dob').value,
+      password: document.getElementById('password').value,
+      terms: document.getElementById('terms').checked,
+    };
+    let valid = true;
+    setError('firstName', values.firstName ? '' : 'First name is required.'); valid = valid && !!values.firstName;
+    setError('lastName', values.lastName ? '' : 'Last name is required.'); valid = valid && !!values.lastName;
+    setError('phone', /^[+\d][\d\s]{7,}$/.test(values.phone) ? '' : 'Enter a valid phone number.'); valid = valid && /^[+\d][\d\s]{7,}$/.test(values.phone);
+    setError('email', !values.email || /.+@.+\..+/.test(values.email) ? '' : 'Enter a valid email address.'); valid = valid && (!values.email || /.+@.+\..+/.test(values.email));
+    setError('dob', values.dob ? '' : 'Date of birth is required.'); valid = valid && !!values.dob;
+    setError('password', values.password.length >= 8 ? '' : 'Password must be at least 8 characters.'); valid = valid && values.password.length >= 8;
+    setError('terms', values.terms ? '' : 'You must accept the terms to continue.'); valid = valid && values.terms;
+
+    const alertBox = document.getElementById('form-alert');
+    if (!valid) {
+      document.getElementById('form-alert-text').textContent = 'Please fix the highlighted fields and try again.';
+      alertBox.classList.remove('hidden');
+      return;
+    }
+    alertBox.classList.add('hidden');
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    document.getElementById('submit-label').innerHTML = `<span class="inline-flex items-center gap-2"><svg class="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/><path d="M22 12a10 10 0 00-10-10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>Creating account…</span>`;
+    setTimeout(() => { window.location.href = 'otp-verify.html'; }, 1200);
+  });
+</script>
+</body>
+</html>

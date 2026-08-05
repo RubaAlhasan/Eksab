@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campaigns — Eksabli Business Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="campaigns"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Campaigns" data-subtitle="Time-boxed, rule-driven promotions"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div class="breadcrumbs"><a href="dashboard.html">Business Portal</a><span id="sep1"></span><span class="current">Campaigns</span></div>
+          <button id="new-campaign-btn" class="btn btn-primary btn-sm"><span id="plus-icon"></span>New Campaign</button>
+        </div>
+
+        <div class="grid gap-4" id="campaigns-list"></div>
+        <div id="empty-state" class="empty-state hidden">
+          <div class="empty-state-icon" id="empty-icon"></div>
+          <p class="font-bold text-sm mb-1">No campaigns yet</p>
+          <p class="text-xs text-slate-400 mb-4">Create your first campaign to start driving repeat visits.</p>
+          <button class="btn btn-primary btn-sm" id="empty-new-btn">New Campaign</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Campaign builder modal -->
+<div class="modal-overlay" data-modal="campaign-form">
+  <div class="modal-panel p-6" style="max-width:34rem">
+    <h3 class="font-bold text-base mb-1">New Campaign</h3>
+    <p class="text-xs text-slate-400 mb-4">Step <span id="step-num">1</span> of 3</p>
+
+    <div id="step-1">
+      <div class="space-y-3">
+        <div>
+          <label class="field-label">Campaign name</label>
+          <input class="input" placeholder="e.g. Weekend Double Points">
+        </div>
+        <div>
+          <label class="field-label">Type</label>
+          <select class="select">
+            <option>Double Points</option><option>Birthday</option><option>Win-Back (Inactive)</option>
+            <option>Spend X Get Y</option><option>VIP Customers</option><option>New Customer</option><option>Referral</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="field-label">Start date</label><input type="date" class="input"></div>
+          <div><label class="field-label">End date</label><input type="date" class="input"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="step-2" class="hidden">
+      <div class="space-y-3">
+        <div>
+          <label class="field-label">Target segment</label>
+          <select class="select" id="segment-select">
+            <option value="1200">All active members</option>
+            <option value="340">Gold &amp; Platinum tier</option>
+            <option value="510">Inactive 60+ days</option>
+            <option value="95">Joined in last 7 days</option>
+          </select>
+        </div>
+        <div class="card p-4 bg-primary-50 dark:bg-primary-500/10 border-0 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Estimated audience</p>
+            <p class="text-2xl font-extrabold text-primary-700 dark:text-primary-300" id="segment-preview">1,200</p>
+          </div>
+          <span class="text-primary-500" id="users-icon"></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="step-3" class="hidden">
+      <div class="alert alert-success">
+        <span id="check-icon"></span>
+        <p>Ready to activate. This campaign will notify the selected segment and apply its effect immediately.</p>
+      </div>
+    </div>
+
+    <div class="flex gap-3 mt-5">
+      <button class="btn btn-secondary flex-1" id="back-step" data-modal-close="campaign-form">Cancel</button>
+      <button class="btn btn-primary flex-1" id="next-step">Next</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/business-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+  document.getElementById('plus-icon').innerHTML = Icons.html('plus', { size: 14 });
+  document.getElementById('empty-icon').innerHTML = Icons.html('megaphone', { size: 26 });
+  document.getElementById('users-icon').innerHTML = Icons.html('users', { size: 24 });
+  document.getElementById('check-icon').innerHTML = Icons.html('check-circle', { size: 18 });
+
+  const statusBadge = { Active: 'badge-success', Draft: 'badge-neutral', Ended: 'badge-info' };
+  const campaigns = data.campaigns.filter(c => c.businessId === 'biz_1');
+  const list = document.getElementById('campaigns-list');
+
+  if (campaigns.length === 0) {
+    document.getElementById('empty-state').classList.remove('hidden');
+  } else {
+    list.innerHTML = campaigns.map(c => `
+      <div class="card p-5">
+        <div class="flex items-start justify-between mb-3 flex-wrap gap-2">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <p class="font-bold text-sm">${c.name}</p>
+              <span class="badge ${statusBadge[c.status]}">${c.status}</span>
+            </div>
+            <p class="text-xs text-slate-400">${c.type.replace(/([A-Z])/g, ' $1').trim()} · ${new Date(c.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${new Date(c.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+          </div>
+          <div class="flex gap-2">
+            ${c.status === 'Draft' ? `<button class="btn btn-primary btn-sm activate-btn" data-name="${c.name}">Activate</button>` : ''}
+            <button class="btn btn-icon btn-ghost" aria-label="Edit">${Icons.html('pencil-square', { size: 16 })}</button>
+          </div>
+        </div>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">${c.description}</p>
+        <div class="grid grid-cols-3 gap-3 text-center">
+          <div><p class="text-base font-extrabold">${c.sent.toLocaleString()}</p><p class="text-xs text-slate-400">Sent</p></div>
+          <div><p class="text-base font-extrabold">${c.opened.toLocaleString()}</p><p class="text-xs text-slate-400">Opened</p></div>
+          <div><p class="text-base font-extrabold text-success-600 dark:text-success-400">${c.redeemed.toLocaleString()}</p><p class="text-xs text-slate-400">Redeemed</p></div>
+        </div>
+      </div>`).join('');
+    document.querySelectorAll('.activate-btn').forEach(btn => {
+      btn.addEventListener('click', () => Eksabli.showToast({ type: 'success', title: 'Campaign activated', message: `"${btn.getAttribute('data-name')}" is now live.` }));
+    });
+  }
+
+  // Builder wizard
+  let step = 1;
+  function renderStep() {
+    document.getElementById('step-num').textContent = step;
+    ['step-1', 'step-2', 'step-3'].forEach((id, i) => document.getElementById(id).classList.toggle('hidden', i !== step - 1));
+    document.getElementById('next-step').textContent = step === 3 ? 'Activate Campaign' : 'Next';
+    document.getElementById('back-step').textContent = step === 1 ? 'Cancel' : 'Back';
+  }
+  function openBuilder() { step = 1; renderStep(); Eksabli.openModal('campaign-form'); }
+  document.getElementById('new-campaign-btn').addEventListener('click', openBuilder);
+  document.getElementById('empty-new-btn').addEventListener('click', openBuilder);
+
+  document.getElementById('segment-select').addEventListener('change', (e) => {
+    document.getElementById('segment-preview').textContent = parseInt(e.target.value, 10).toLocaleString();
+  });
+
+  document.getElementById('back-step').addEventListener('click', (e) => {
+    if (step > 1) { e.preventDefault(); step--; renderStep(); }
+  });
+  document.getElementById('next-step').addEventListener('click', () => {
+    if (step < 3) { step++; renderStep(); return; }
+    Eksabli.closeModal('campaign-form');
+    Eksabli.showToast({ type: 'success', title: 'Campaign activated', message: 'Notifications are being queued to the target segment.' });
+  });
+</script>
+</body>
+</html>

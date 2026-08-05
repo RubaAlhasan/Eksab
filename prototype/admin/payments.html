@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payments — Eksabli Admin Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="payments"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Payments" data-subtitle="Reconciliation and manual refunds"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+        <div class="breadcrumbs"><a href="dashboard.html">Admin Portal</a><span id="sep1"></span><span class="current">Payments</span></div>
+
+        <div class="card overflow-hidden">
+          <div class="table-wrap" style="border:none;border-radius:0">
+            <table class="table">
+              <thead><tr><th>Business</th><th>Amount</th><th>Provider</th><th>Reference</th><th>Status</th><th>Date</th><th></th></tr></thead>
+              <tbody id="payments-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="modal-overlay" data-modal="refund">
+  <div class="modal-panel p-6">
+    <h3 class="font-bold text-base mb-2">Issue refund?</h3>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">This reverses the charge via the original payment provider.</p>
+    <div class="mb-2"><label class="field-label">Reason</label><textarea class="textarea" rows="2" placeholder="e.g. Billed in error"></textarea></div>
+    <div class="flex gap-3 mt-4">
+      <button class="btn btn-secondary flex-1" data-modal-close="refund">Cancel</button>
+      <button class="btn btn-danger flex-1" id="confirm-refund">Issue Refund</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/admin-shell.js"></script>
+<script>
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+
+  const payments = [
+    { business: 'Cedar & Bean Coffee', amount: 149, provider: 'Stripe', ref: 'pi_3Nx8...A2f', status: 'Success', date: '2026-08-01' },
+    { business: 'Pulse Fitness Club', amount: 449, provider: 'Stripe', ref: 'pi_3Nw2...B7c', status: 'Success', date: '2026-08-01' },
+    { business: 'Verve Sneaker Co.', amount: 149, provider: 'Stripe', ref: 'pi_3Nv1...C4d', status: 'Failed', date: '2026-07-28' },
+    { business: 'Cornerstone Bookshop', amount: 149, provider: 'Stripe', ref: 'pi_3Nu9...D1e', status: 'Success', date: '2026-07-25' },
+    { business: 'Skyline Electronics', amount: 1200, provider: 'Local Bank Transfer', ref: 'ref_889201', status: 'Refunded', date: '2026-07-20' },
+  ];
+  const statusBadge = { Success: 'badge-success', Failed: 'badge-danger', Refunded: 'badge-neutral' };
+  document.getElementById('payments-body').innerHTML = payments.map(p => `
+    <tr>
+      <td class="font-semibold">${p.business}</td>
+      <td>$${p.amount.toLocaleString()}</td>
+      <td class="text-slate-500 dark:text-slate-400">${p.provider}</td>
+      <td class="text-slate-400 font-mono text-xs">${p.ref}</td>
+      <td><span class="badge ${statusBadge[p.status]}">${p.status}</span></td>
+      <td class="text-slate-400">${new Date(p.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
+      <td>${p.status === 'Success' ? `<button class="text-xs font-semibold text-danger-600 dark:text-danger-400 refund-btn">Refund</button>` : ''}</td>
+    </tr>`).join('');
+  document.querySelectorAll('.refund-btn').forEach(btn => btn.addEventListener('click', () => Eksabli.openModal('refund')));
+  document.getElementById('confirm-refund').addEventListener('click', () => { Eksabli.closeModal('refund'); Eksabli.showToast({ type: 'success', title: 'Refund issued' }); });
+</script>
+</body>
+</html>

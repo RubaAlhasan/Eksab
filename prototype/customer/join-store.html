@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Join Store — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-white dark:bg-slate-950">
+    <div data-status-bar></div>
+    <div data-top-bar data-title="Join Business" data-back="javascript:history.back()"></div>
+
+    <!-- Join form state -->
+    <div id="join-view" class="flex-1 flex flex-col px-6 pt-4">
+      <div class="flex flex-col items-center text-center mb-6">
+        <div class="w-16 h-16 rounded-3xl flex items-center justify-center text-white font-extrabold text-xl mb-4" id="logo"></div>
+        <h1 class="text-lg font-extrabold" id="biz-name"></h1>
+        <p class="text-sm text-slate-400" id="biz-category"></p>
+      </div>
+
+      <div class="tabs-pill mx-auto mb-6" id="join-mode">
+        <span class="tab-pill-trigger active" data-mode="qr">Scan QR</span>
+        <span class="tab-pill-trigger" data-mode="button">Just Join</span>
+      </div>
+
+      <div id="qr-mode" class="flex flex-col items-center mb-6">
+        <div class="w-48 h-48 rounded-2xl bg-slate-900 dark:bg-slate-800 flex items-center justify-center mb-4 relative overflow-hidden">
+          <div class="grid grid-cols-6 gap-1 p-4" id="qr-pattern"></div>
+        </div>
+        <p class="text-xs text-slate-400 text-center max-w-[16rem]">Point your camera at the QR code displayed at any branch counter to join instantly.</p>
+      </div>
+
+      <div id="button-mode" class="hidden">
+        <div class="alert alert-info mb-4">
+          <span id="info-icon"></span>
+          <p>You can also join without scanning — just confirm below.</p>
+        </div>
+      </div>
+
+      <div class="mb-6">
+        <label class="field-label" for="referral">Referral code <span class="text-slate-400 font-normal">(optional)</span></label>
+        <input id="referral" class="input" placeholder="e.g. LAYLA25">
+      </div>
+
+      <button id="join-btn" class="btn btn-primary btn-lg w-full mt-auto mb-8">
+        <span id="join-label">Join Business</span>
+      </button>
+    </div>
+
+    <!-- Success state -->
+    <div id="success-view" class="flex-1 hidden flex-col items-center justify-center text-center px-8">
+      <div class="w-20 h-20 rounded-full bg-success-50 dark:bg-success-500/10 flex items-center justify-center text-success-600 dark:text-success-400 mb-6 animate-scale-in" id="success-icon"></div>
+      <h1 class="text-xl font-extrabold mb-2">You're in!</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-8">You've joined <span id="success-biz-name" class="font-semibold text-slate-700 dark:text-slate-200"></span>. Start earning points on your next visit.</p>
+      <a href="#" id="view-points-btn" class="btn btn-primary btn-lg w-full">View My Points</a>
+    </div>
+
+    <div data-bottom-nav=""></div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  const params = new URLSearchParams(location.search);
+  const biz = data.businesses.find(b => b.id === params.get('id')) || data.businesses[0];
+
+  document.getElementById('logo').className = `w-16 h-16 rounded-3xl flex items-center justify-center text-white font-extrabold text-xl mb-4 bg-gradient-to-br ${biz.color}`;
+  document.getElementById('logo').textContent = biz.initials;
+  document.getElementById('biz-name').textContent = biz.name;
+  document.getElementById('biz-category').textContent = biz.category;
+  document.getElementById('info-icon').innerHTML = Icons.html('information-circle', { size: 18 });
+  document.getElementById('success-icon').innerHTML = Icons.html('check-circle', { size: 40 });
+  // Remove the empty bottom nav placeholder (this screen has no tab bar)
+  document.querySelector('[data-bottom-nav]')?.remove();
+
+  // Fake QR pattern
+  const qrGrid = document.getElementById('qr-pattern');
+  for (let i = 0; i < 36; i++) {
+    const on = Math.random() > 0.45;
+    qrGrid.innerHTML += `<div class="w-5 h-5 rounded-sm ${on ? 'bg-white' : 'bg-transparent'}"></div>`;
+  }
+
+  document.querySelectorAll('#join-mode [data-mode]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#join-mode [data-mode]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const qr = btn.getAttribute('data-mode') === 'qr';
+      document.getElementById('qr-mode').classList.toggle('hidden', !qr);
+      document.getElementById('button-mode').classList.toggle('hidden', qr);
+    });
+  });
+
+  document.getElementById('join-btn').addEventListener('click', () => {
+    const btn = document.getElementById('join-btn');
+    btn.disabled = true;
+    document.getElementById('join-label').innerHTML = `<span class="inline-flex items-center gap-2"><svg class="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/><path d="M22 12a10 10 0 00-10-10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>Joining…</span>`;
+    setTimeout(() => {
+      document.getElementById('join-view').classList.add('hidden');
+      const success = document.getElementById('success-view');
+      success.classList.remove('hidden');
+      success.classList.add('flex');
+      document.getElementById('success-biz-name').textContent = biz.name;
+      document.getElementById('view-points-btn').href = `my-points.html?id=${biz.id}`;
+    }, 1200);
+  });
+</script>
+</body>
+</html>

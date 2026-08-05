@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Birthday Rewards — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-slate-50 dark:bg-slate-950">
+    <div data-status-bar></div>
+    <div data-top-bar data-title="Birthday Rewards" data-back="profile.html"></div>
+
+    <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <div class="card p-5 text-center bg-gradient-to-br from-warning-400 to-warning-600 text-white border-0">
+        <div class="text-3xl mb-2">🎂</div>
+        <p class="text-sm font-bold">Your birthday is March 14</p>
+        <p class="text-xs text-white/80 mt-1">Businesses below are offering a birthday perk this month.</p>
+      </div>
+
+      <div id="list" class="space-y-3"></div>
+      <div id="empty-state" class="empty-state hidden">
+        <div class="empty-state-icon" id="empty-icon"></div>
+        <p class="font-bold text-sm mb-1">No birthday offers yet</p>
+        <p class="text-xs text-slate-400 max-w-[16rem]">Join more businesses to unlock birthday perks throughout the year.</p>
+      </div>
+    </div>
+
+    <div data-bottom-nav=""></div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  document.querySelector('[data-bottom-nav]')?.remove();
+  document.getElementById('empty-icon').innerHTML = Icons.html('gift', { size: 26 });
+
+  const birthdayCampaigns = data.campaigns.filter(c => c.type === 'Birthday' && c.status === 'Active');
+  const list = document.getElementById('list');
+  if (birthdayCampaigns.length === 0) {
+    document.getElementById('empty-state').classList.remove('hidden');
+  } else {
+    list.innerHTML = birthdayCampaigns.map(c => {
+      const biz = data.businesses.find(b => b.id === c.businessId);
+      return `
+        <a href="store-details.html?id=${biz.id}" class="card card-hover p-4 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br ${biz.color} flex items-center justify-center text-white font-bold flex-shrink-0">${biz.initials}</div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-bold truncate">${biz.name}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 truncate">${c.description}</p>
+          </div>
+          <span class="text-2xl flex-shrink-0">🎁</span>
+        </a>`;
+    }).join('');
+  }
+</script>
+</body>
+</html>

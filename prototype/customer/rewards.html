@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rewards — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-slate-50 dark:bg-slate-950">
+    <div data-status-bar></div>
+    <div id="top-bar-slot" data-top-bar data-back="my-points.html"></div>
+
+    <div class="px-5 pt-3 pb-1">
+      <div class="card p-3.5 flex items-center justify-between bg-primary-50 dark:bg-primary-500/10 border-0">
+        <span class="text-xs font-semibold text-primary-700 dark:text-primary-300">Your balance</span>
+        <span class="text-sm font-extrabold text-primary-700 dark:text-primary-300" id="balance-pill"></span>
+      </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-5 py-4">
+      <div id="skeleton" class="grid grid-cols-2 gap-3">
+        <div class="skeleton h-44 rounded-2xl"></div>
+        <div class="skeleton h-44 rounded-2xl"></div>
+        <div class="skeleton h-44 rounded-2xl"></div>
+        <div class="skeleton h-44 rounded-2xl"></div>
+      </div>
+      <div id="grid" class="hidden grid grid-cols-2 gap-3"></div>
+      <div id="empty-state" class="empty-state hidden">
+        <div class="empty-state-icon" id="empty-icon"></div>
+        <p class="font-bold text-sm mb-1">No rewards yet</p>
+        <p class="text-xs text-slate-400 max-w-[16rem]">This business hasn't published a rewards catalog yet.</p>
+      </div>
+    </div>
+
+    <div data-bottom-nav=""></div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  const params = new URLSearchParams(location.search);
+  const biz = data.businesses.find(b => b.id === params.get('id')) || data.businesses[0];
+  const m = data.memberships.find(mm => mm.businessId === biz.id) || data.memberships[0];
+
+  document.querySelector('[data-bottom-nav]')?.remove();
+  document.getElementById('top-bar-slot').setAttribute('data-title', biz.name + ' Rewards');
+  document.getElementById('top-bar-slot').setAttribute('data-back', `my-points.html?id=${biz.id}`);
+  document.getElementById('balance-pill').textContent = m.balance.toLocaleString() + ' pts available';
+  document.getElementById('empty-icon').innerHTML = Icons.html('gift', { size: 26 });
+
+  const rewards = data.rewards.filter(r => r.businessId === biz.id);
+  const grid = document.getElementById('grid');
+
+  if (rewards.length === 0) {
+    document.getElementById('empty-state').classList.remove('hidden');
+  } else {
+    grid.innerHTML = rewards.map(r => {
+      const affordable = m.balance >= r.pointsCost;
+      return `
+        <a href="reward-details.html?id=${r.id}" class="reward-card card ${affordable ? 'card-hover' : 'disabled'} p-4">
+          <div class="text-4xl mb-3 text-center">${r.image}</div>
+          <p class="text-sm font-bold leading-tight mb-1 line-clamp-2">${r.name}</p>
+          <p class="text-xs text-slate-400 mb-3">${r.stock !== null ? r.stock + ' left' : 'Unlimited'}</p>
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-extrabold ${affordable ? 'text-primary-600 dark:text-primary-400' : 'text-slate-400'}">${r.pointsCost} pts</span>
+            ${!affordable ? '<span class="badge badge-neutral">Locked</span>' : ''}
+          </div>
+        </a>`;
+    }).join('');
+  }
+
+  setTimeout(() => {
+    document.getElementById('skeleton').classList.add('hidden');
+    if (rewards.length) grid.classList.remove('hidden');
+  }, 450);
+</script>
+</body>
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In — Eksabli Business Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="min-h-screen grid lg:grid-cols-2">
+
+  <!-- Branding panel -->
+  <div class="hidden lg:flex flex-col justify-between bg-gradient-to-br from-primary-700 via-primary-800 to-slate-950 text-white p-12 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-10" style="background-image:radial-gradient(circle,#fff 1px,transparent 1px);background-size:24px 24px;"></div>
+    <div class="relative flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center font-extrabold text-sm">E</div>
+      <span class="font-extrabold text-lg">Eksabli</span>
+      <span class="badge bg-white/15 text-white ml-1">Business</span>
+    </div>
+    <div class="relative max-w-md">
+      <h1 class="text-3xl font-extrabold tracking-tight mb-4">Run your loyalty program like a growth channel, not a punch card.</h1>
+      <p class="text-white/70 text-sm">Branches, staff, rewards, campaigns and reporting — everything you need to turn repeat customers into your most profitable channel.</p>
+      <div class="flex items-center gap-6 mt-8 text-sm">
+        <div><p class="text-2xl font-extrabold" id="stat-members"></p><p class="text-white/60 text-xs">Active members</p></div>
+        <div><p class="text-2xl font-extrabold" id="stat-redemption"></p><p class="text-white/60 text-xs">Redemption rate</p></div>
+        <div><p class="text-2xl font-extrabold" id="stat-growth"></p><p class="text-white/60 text-xs">Growth (MoM)</p></div>
+      </div>
+    </div>
+    <p class="relative text-xs text-white/40">© 2026 Eksabli. Prototype build — demo data only.</p>
+  </div>
+
+  <!-- Form panel -->
+  <div class="flex flex-col justify-center px-6 sm:px-12 lg:px-16 py-12">
+    <div class="w-full max-w-sm mx-auto">
+      <div class="lg:hidden flex items-center gap-2.5 mb-8">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-extrabold text-sm">E</div>
+        <span class="font-extrabold text-lg">Eksabli Business</span>
+      </div>
+
+      <h2 class="text-2xl font-extrabold tracking-tight mb-1">Welcome back</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Sign in to manage <span class="font-semibold">Cedar &amp; Bean Coffee</span>.</p>
+
+      <div id="form-alert" class="alert alert-danger mb-4 hidden">
+        <span id="alert-icon"></span>
+        <p>Incorrect email or password.</p>
+      </div>
+
+      <form id="login-form" novalidate class="space-y-4">
+        <div>
+          <label class="field-label" for="email">Work email</label>
+          <input id="email" class="input" placeholder="marcus@cedarbean.example" value="marcus@cedarbean.example">
+          <p class="field-error hidden" data-error-for="email"></p>
+        </div>
+        <div>
+          <label class="field-label" for="password">Password</label>
+          <div class="relative">
+            <input id="password" type="password" class="input pr-10" placeholder="Your password" value="demo1234">
+            <button type="button" id="toggle-password" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" aria-label="Show password"></button>
+          </div>
+          <p class="field-error hidden" data-error-for="password"></p>
+          <p class="text-xs text-slate-400 mt-1.5">(Demo: type "wrong" as password to preview the error state)</p>
+        </div>
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+            <input type="checkbox" class="checkbox" checked> Remember me
+          </label>
+          <a href="#" class="text-sm font-semibold text-primary-600 dark:text-primary-400">Forgot password?</a>
+        </div>
+        <button type="submit" id="submit-btn" class="btn btn-primary btn-lg w-full">
+          <span id="submit-label">Sign in</span>
+        </button>
+      </form>
+
+      <p class="text-center text-sm text-slate-500 dark:text-slate-400 mt-6">
+        New business? <a href="#" class="text-primary-600 dark:text-primary-400 font-semibold">Start a free trial</a>
+      </p>
+      <p class="text-center text-xs text-slate-400 mt-8">
+        <a href="../index.html" class="hover:text-primary-600 dark:hover:text-primary-400">← Back to portal picker</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script>
+  const stats = EksabliDemoData.business.stats;
+  document.getElementById('stat-members').textContent = stats.activeMembers.toLocaleString();
+  document.getElementById('stat-redemption').textContent = stats.redemptionRatePct + '%';
+  document.getElementById('stat-growth').textContent = '+' + stats.memberGrowthPct + '%';
+  document.getElementById('alert-icon').innerHTML = Icons.html('exclamation-circle', { size: 18 });
+
+  const pwToggle = document.getElementById('toggle-password');
+  const pwInput = document.getElementById('password');
+  pwToggle.innerHTML = Icons.html('eye', { size: 18 });
+  pwToggle.addEventListener('click', () => {
+    const showing = pwInput.type === 'text';
+    pwInput.type = showing ? 'password' : 'text';
+    pwToggle.innerHTML = Icons.html(showing ? 'eye' : 'eye-slash', { size: 18 });
+  });
+
+  document.getElementById('login-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const alertBox = document.getElementById('form-alert');
+    alertBox.classList.add('hidden');
+    document.getElementById('email').classList.remove('input-error');
+    document.getElementById('password').classList.remove('input-error');
+
+    if (!email || !password) {
+      if (!email) document.getElementById('email').classList.add('input-error');
+      if (!password) document.getElementById('password').classList.add('input-error');
+      return;
+    }
+    if (password === 'wrong') {
+      alertBox.classList.remove('hidden');
+      document.getElementById('email').classList.add('input-error');
+      document.getElementById('password').classList.add('input-error');
+      return;
+    }
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    document.getElementById('submit-label').innerHTML = `<span class="inline-flex items-center gap-2"><svg class="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/><path d="M22 12a10 10 0 00-10-10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>Signing in…</span>`;
+    setTimeout(() => { window.location.href = 'dashboard.html'; }, 1000);
+  });
+</script>
+</body>
+</html>

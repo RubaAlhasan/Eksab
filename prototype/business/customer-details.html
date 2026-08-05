@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Details — Eksabli Business Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="customers"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Customer Details"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+
+        <div class="breadcrumbs"><a href="dashboard.html">Business Portal</a><span id="sep1"></span><a href="customers.html">Customers</a><span id="sep2"></span><span class="current" id="crumb-name"></span></div>
+
+        <div class="grid lg:grid-cols-3 gap-6">
+          <!-- Profile card -->
+          <div class="card p-6 lg:col-span-1 h-fit">
+            <div class="flex flex-col items-center text-center mb-5">
+              <div class="avatar avatar-xl mb-3" id="avatar"></div>
+              <p class="font-bold text-lg" id="name"></p>
+              <p class="text-sm text-slate-400" id="phone"></p>
+              <span class="badge mt-2" id="tier-badge"></span>
+            </div>
+            <div class="grid grid-cols-2 gap-3 text-center mb-5">
+              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+                <p class="text-lg font-extrabold" id="balance"></p>
+                <p class="text-xs text-slate-400">Balance</p>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+                <p class="text-lg font-extrabold" id="status-val"></p>
+                <p class="text-xs text-slate-400">Status</p>
+              </div>
+            </div>
+            <div class="space-y-2 text-sm mb-5">
+              <div class="flex justify-between"><span class="text-slate-400">Joined</span><span class="font-semibold" id="joined"></span></div>
+              <div class="flex justify-between"><span class="text-slate-400">Last active</span><span class="font-semibold" id="last-active"></span></div>
+            </div>
+            <button id="adjust-btn" class="btn btn-primary w-full">
+              <span id="adjust-icon"></span> Manual Point Adjustment
+            </button>
+          </div>
+
+          <!-- Tabs -->
+          <div class="lg:col-span-2 space-y-4">
+            <div class="tabs-list" data-tabs="detail">
+              <span class="tab-trigger active" data-tab-trigger="detail" data-tab-target="transactions">Transactions</span>
+              <span class="tab-trigger" data-tab-trigger="detail" data-tab-target="coupons">Coupons Redeemed</span>
+            </div>
+
+            <div class="tab-panel active" data-tab-panel="detail" data-tab-id="transactions">
+              <div class="card overflow-hidden">
+                <div class="table-wrap" style="border:none;border-radius:0">
+                  <table class="table">
+                    <thead><tr><th>Type</th><th>Points</th><th>Source</th><th>Date</th></tr></thead>
+                    <tbody id="txn-body"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="tab-panel" data-tab-panel="detail" data-tab-id="coupons">
+              <div class="card divide-y divide-slate-100 dark:divide-slate-800" id="coupon-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Manual adjustment modal -->
+<div class="modal-overlay" data-modal="adjust">
+  <div class="modal-panel p-6">
+    <h3 class="font-bold text-base mb-4">Manual Point Adjustment</h3>
+    <div class="space-y-3 mb-2">
+      <div>
+        <label class="field-label">Adjustment type</label>
+        <div class="tabs-pill w-full" id="adjust-type">
+          <span class="tab-pill-trigger active flex-1 text-center" data-type="add">Add Points</span>
+          <span class="tab-pill-trigger flex-1 text-center" data-type="remove">Remove Points</span>
+        </div>
+      </div>
+      <div>
+        <label class="field-label" for="adjust-amount">Amount</label>
+        <input id="adjust-amount" type="number" class="input" placeholder="e.g. 50">
+        <p class="field-error hidden" id="adjust-error"></p>
+      </div>
+      <div>
+        <label class="field-label" for="adjust-reason">Reason (visible in audit log)</label>
+        <textarea id="adjust-reason" class="textarea" rows="2" placeholder="e.g. Goodwill gesture for delayed order"></textarea>
+      </div>
+      <div class="alert alert-info">
+        <span id="cap-icon"></span>
+        <p>Daily adjustment cap: 200 pts per staff member. This action is fully audit-logged.</p>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-4">
+      <button class="btn btn-secondary flex-1" data-modal-close="adjust">Cancel</button>
+      <button class="btn btn-primary flex-1" id="confirm-adjust">Apply Adjustment</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/business-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  const params = new URLSearchParams(location.search);
+  const c = data.business.customers.find(x => x.id === params.get('id')) || data.business.customers[0];
+
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+  document.getElementById('sep2').innerHTML = Icons.html('chevron-right', { size: 14 });
+  document.getElementById('adjust-icon').innerHTML = Icons.html('pencil-square', { size: 16 });
+  document.getElementById('cap-icon').innerHTML = Icons.html('information-circle', { size: 16 });
+
+  document.getElementById('crumb-name').textContent = c.name;
+  document.getElementById('avatar').textContent = c.name.split(' ').map(w => w[0]).join('');
+  document.getElementById('name').textContent = c.name;
+  document.getElementById('phone').textContent = c.phone;
+  const tierBadge = { Bronze: 'badge-neutral', Silver: 'badge-info', Gold: 'badge-warning', Platinum: 'badge-primary' };
+  document.getElementById('tier-badge').className = `badge ${tierBadge[c.tier]} mt-2`;
+  document.getElementById('tier-badge').textContent = c.tier + ' Tier';
+  document.getElementById('balance').textContent = c.balance.toLocaleString();
+  document.getElementById('status-val').textContent = c.status;
+  document.getElementById('joined').textContent = new Date(c.joined).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  document.getElementById('last-active').textContent = new Date(c.lastActive).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+
+  const typeBadge = { Earn: 'badge-success', Redeem: 'badge-danger', Adjust: 'badge-info', Expire: 'badge-neutral', Refund: 'badge-warning' };
+  document.getElementById('txn-body').innerHTML = data.transactions.slice(0, 6).map((t, i) => `
+    <tr>
+      <td><span class="badge ${typeBadge[t.type]}">${t.type}</span></td>
+      <td class="font-semibold ${t.points > 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'}">${t.points > 0 ? '+' : ''}${t.points}</td>
+      <td class="text-slate-500 dark:text-slate-400">${t.source}</td>
+      <td class="text-slate-400">${new Date(Date.now() - i * 3 * 86400000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
+    </tr>`).join('');
+
+  document.getElementById('coupon-list').innerHTML = data.coupons.map(cp => {
+    const reward = data.rewards.find(r => r.id === cp.rewardId) || {};
+    return `
+      <div class="flex items-center gap-3 p-4">
+        <span class="text-2xl">${reward.image || '🎟️'}</span>
+        <div class="flex-1">
+          <p class="text-sm font-semibold">${reward.name || 'Reward'}</p>
+          <p class="text-xs text-slate-400 font-mono">${cp.code}</p>
+        </div>
+        <span class="badge ${cp.status === 'Redeemed' ? 'badge-neutral' : cp.status === 'Issued' ? 'badge-success' : 'badge-danger'}">${cp.status}</span>
+      </div>`;
+  }).join('');
+
+  document.getElementById('adjust-btn').addEventListener('click', () => Eksabli.openModal('adjust'));
+  document.querySelectorAll('#adjust-type [data-type]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#adjust-type [data-type]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+  document.getElementById('confirm-adjust').addEventListener('click', () => {
+    const amount = parseInt(document.getElementById('adjust-amount').value, 10);
+    const errEl = document.getElementById('adjust-error');
+    if (!amount || amount <= 0) {
+      errEl.textContent = 'Enter a valid positive amount.';
+      errEl.classList.remove('hidden');
+      document.getElementById('adjust-amount').classList.add('input-error');
+      return;
+    }
+    if (amount > 200) {
+      errEl.textContent = 'Exceeds your daily adjustment cap of 200 pts.';
+      errEl.classList.remove('hidden');
+      document.getElementById('adjust-amount').classList.add('input-error');
+      return;
+    }
+    errEl.classList.add('hidden');
+    document.getElementById('adjust-amount').classList.remove('input-error');
+    Eksabli.closeModal('adjust');
+    const isAdd = document.querySelector('#adjust-type .active').getAttribute('data-type') === 'add';
+    Eksabli.showToast({ type: 'success', title: 'Adjustment applied', message: `${isAdd ? '+' : '-'}${amount} points for ${c.name}. Logged to audit trail.` });
+  });
+</script>
+</body>
+</html>

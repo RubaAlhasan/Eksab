@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wallet — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-slate-50 dark:bg-slate-950">
+    <div data-status-bar></div>
+    <div data-top-bar data-title="My Wallet" data-action-icon="qr-code" data-action-href="qr-code.html"></div>
+
+    <div class="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+
+      <!-- Total across businesses -->
+      <div class="card p-5 bg-gradient-to-br from-primary-600 to-primary-800 text-white border-0">
+        <p class="text-xs text-white/70 mb-1">Total points across all businesses</p>
+        <p class="text-3xl font-extrabold tracking-tight" id="total-points"></p>
+        <p class="text-xs text-white/60 mt-1" id="total-businesses"></p>
+      </div>
+
+      <!-- Skeleton -->
+      <div id="skeleton" class="space-y-3">
+        <div class="skeleton h-20 rounded-2xl"></div>
+        <div class="skeleton h-20 rounded-2xl"></div>
+        <div class="skeleton h-20 rounded-2xl"></div>
+      </div>
+
+      <!-- List -->
+      <div id="wallet-list" class="hidden space-y-3"></div>
+
+      <!-- Empty state (would show if the customer had zero memberships) -->
+      <div id="empty-state" class="empty-state hidden">
+        <div class="empty-state-icon" id="empty-icon"></div>
+        <p class="font-bold text-sm mb-1">No businesses joined yet</p>
+        <p class="text-xs text-slate-400 max-w-[16rem] mb-4">Join your first business to start earning points.</p>
+        <a href="nearby-stores.html" class="btn btn-primary btn-sm">Discover businesses</a>
+      </div>
+    </div>
+
+    <div data-bottom-nav="wallet"></div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  document.getElementById('empty-icon').innerHTML = Icons.html('wallet', { size: 26 });
+
+  const total = data.memberships.reduce((sum, m) => sum + m.balance, 0);
+  document.getElementById('total-points').textContent = total.toLocaleString() + ' pts';
+  document.getElementById('total-businesses').textContent = `Across ${data.memberships.length} businesses`;
+
+  function businessById(id) { return data.businesses.find(b => b.id === id); }
+
+  const list = document.getElementById('wallet-list');
+  const empty = document.getElementById('empty-state');
+
+  function render() {
+    if (data.memberships.length === 0) {
+      list.classList.add('hidden'); empty.classList.remove('hidden');
+      return;
+    }
+    list.innerHTML = [...data.memberships].sort((a, b) => b.balance - a.balance).map(m => {
+      const biz = businessById(m.businessId);
+      return `
+        <a href="my-points.html?id=${biz.id}" class="card card-hover p-4 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br ${biz.color} flex items-center justify-center text-white font-bold flex-shrink-0">${biz.initials}</div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between mb-1">
+              <p class="text-sm font-bold truncate">${biz.name}</p>
+              <p class="text-sm font-extrabold text-primary-600 dark:text-primary-400 flex-shrink-0 ml-2">${m.balance.toLocaleString()}</p>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="badge badge-neutral">${m.tier}</span>
+              <span class="text-xs text-slate-400">${m.pointsToNextTier} pts to ${m.nextTier}</span>
+            </div>
+            <div class="progress-track mt-2"><div class="progress-fill" style="width:${m.tierProgressPct}%"></div></div>
+          </div>
+        </a>`;
+    }).join('');
+  }
+
+  setTimeout(() => {
+    document.getElementById('skeleton').classList.add('hidden');
+    list.classList.remove('hidden');
+    render();
+  }, 500);
+</script>
+</body>
+</html>

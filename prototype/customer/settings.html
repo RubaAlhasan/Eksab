@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-slate-50 dark:bg-slate-950">
+    <div data-status-bar></div>
+    <div data-top-bar data-title="Settings" data-back="profile.html"></div>
+
+    <div class="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+
+      <section>
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2 px-1">Notifications</p>
+        <div class="card divide-y divide-slate-100 dark:divide-slate-800">
+          <label class="flex items-center justify-between p-4">
+            <span class="text-sm font-semibold">Push notifications</span>
+            <label class="switch"><input type="checkbox" checked><span class="switch-track"></span></label>
+          </label>
+          <label class="flex items-center justify-between p-4">
+            <span class="text-sm font-semibold">Email</span>
+            <label class="switch"><input type="checkbox" checked><span class="switch-track"></span></label>
+          </label>
+          <label class="flex items-center justify-between p-4">
+            <span class="text-sm font-semibold">SMS</span>
+            <label class="switch"><input type="checkbox"><span class="switch-track"></span></label>
+          </label>
+        </div>
+      </section>
+
+      <section>
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2 px-1">Appearance</p>
+        <div class="card divide-y divide-slate-100 dark:divide-slate-800">
+          <label class="flex items-center justify-between p-4">
+            <span class="text-sm font-semibold">Dark mode</span>
+            <label class="switch"><input type="checkbox" data-theme-toggle id="dark-toggle"><span class="switch-track"></span></label>
+          </label>
+          <div class="p-4">
+            <p class="text-sm font-semibold mb-2">Language</p>
+            <div class="tabs-pill w-full" id="lang-toggle">
+              <span class="tab-pill-trigger active flex-1 text-center" data-lang="en">English</span>
+              <span class="tab-pill-trigger flex-1 text-center" data-lang="ar">العربية</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2 px-1">Linked Devices</p>
+        <div class="card divide-y divide-slate-100 dark:divide-slate-800" id="devices-list"></div>
+      </section>
+
+      <section>
+        <p class="text-xs font-bold uppercase tracking-wide text-danger-400 mb-2 px-1">Danger Zone</p>
+        <button id="delete-account-btn" class="card p-4 flex items-center gap-3 w-full text-left">
+          <span class="text-danger-500" id="trash-icon"></span>
+          <span class="text-sm font-semibold text-danger-600 dark:text-danger-400">Delete my account</span>
+        </button>
+      </section>
+    </div>
+
+    <div data-bottom-nav=""></div>
+  </div>
+</div>
+
+<!-- Delete account modal -->
+<div class="modal-overlay" data-modal="delete-account">
+  <div class="modal-panel p-6">
+    <div class="w-10 h-10 rounded-xl bg-danger-100 dark:bg-danger-500/15 text-danger-600 dark:text-danger-400 flex items-center justify-center mb-4" id="warn-icon"></div>
+    <h3 class="font-bold text-base mb-2">Delete your account?</h3>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">This freezes your memberships at every business — your data is retained for 90 days before permanent deletion, per our data retention policy.</p>
+    <div class="flex gap-3">
+      <button class="btn btn-secondary flex-1" data-modal-close="delete-account">Cancel</button>
+      <button class="btn btn-danger flex-1" id="confirm-delete">Delete Account</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  document.getElementById('trash-icon').innerHTML = Icons.html('trash', { size: 18 });
+  document.getElementById('warn-icon').innerHTML = Icons.html('exclamation-triangle', { size: 20 });
+  document.getElementById('dark-toggle').checked = document.documentElement.classList.contains('dark');
+
+  document.querySelectorAll('#lang-toggle [data-lang]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#lang-toggle [data-lang]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      Eksabli.showToast({ type: 'info', title: 'Language updated', message: btn.getAttribute('data-lang') === 'ar' ? 'العربية سيتم تطبيقها (نموذج تجريبي)' : 'English applied' });
+    });
+  });
+
+  const devices = [
+    { name: 'iPhone 15 Pro', location: 'Dubai, UAE', current: true, icon: 'device-phone-mobile' },
+    { name: 'Chrome — Windows', location: 'Dubai, UAE', current: false, icon: 'device-phone-mobile' },
+  ];
+  document.getElementById('devices-list').innerHTML = devices.map((d, i) => `
+    <div class="flex items-center gap-3 p-4">
+      <div class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 device-icon"></div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold">${d.name} ${d.current ? '<span class=\"badge badge-success ml-1\">This device</span>' : ''}</p>
+        <p class="text-xs text-slate-400">${d.location}</p>
+      </div>
+      ${!d.current ? `<button class="text-xs font-semibold text-danger-600 dark:text-danger-400 logout-device" data-idx="${i}">Log out</button>` : ''}
+    </div>`).join('');
+  document.querySelectorAll('.device-icon').forEach((el, i) => el.innerHTML = Icons.html(devices[i].icon, { size: 16 }));
+  document.querySelectorAll('.logout-device').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.closest('.flex').remove();
+      Eksabli.showToast({ type: 'success', title: 'Device logged out' });
+    });
+  });
+
+  document.getElementById('delete-account-btn').addEventListener('click', () => Eksabli.openModal('delete-account'));
+  document.getElementById('confirm-delete').addEventListener('click', () => {
+    Eksabli.closeModal('delete-account');
+    Eksabli.showToast({ type: 'danger', title: 'Account deletion requested', message: 'You will be logged out shortly.' });
+    setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+  });
+</script>
+</body>
+</html>

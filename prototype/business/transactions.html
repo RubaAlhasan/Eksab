@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transactions — Eksabli Business Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="transactions"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Transactions" data-subtitle="Raw points ledger — the detail behind Analytics"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div class="breadcrumbs"><a href="dashboard.html">Business Portal</a><span id="sep1"></span><span class="current">Transactions</span></div>
+          <button id="export-btn" class="btn btn-secondary btn-sm"><span id="export-icon"></span>Export</button>
+        </div>
+
+        <div class="card p-4 flex flex-wrap items-center gap-3">
+          <select id="type-filter" class="select w-40">
+            <option value="">All Types</option><option>Earn</option><option>Redeem</option><option>Adjust</option><option>Expire</option><option>Refund</option>
+          </select>
+          <select id="branch-filter" class="select w-40">
+            <option value="">All Branches</option><option>Downtown</option><option>Marina</option><option>JBR</option><option>Business Bay</option>
+          </select>
+          <select id="staff-filter" class="select w-44">
+            <option value="">All Staff</option><option>Sara Al Mansoori</option><option>Ahmed Farouk</option><option>Karim Youssef</option>
+          </select>
+          <input type="date" class="input w-40">
+        </div>
+
+        <div class="card overflow-hidden">
+          <div class="table-wrap" style="border:none;border-radius:0">
+            <table class="table">
+              <thead><tr><th>Customer</th><th>Type</th><th>Points</th><th>Source</th><th>Branch</th><th>Staff</th><th>Date</th></tr></thead>
+              <tbody id="txn-body"></tbody>
+            </table>
+          </div>
+          <div class="flex items-center justify-between p-4 border-t border-slate-100 dark:border-slate-800">
+            <p class="text-xs text-slate-400">Showing 1–<span id="row-count"></span> of 4,820 transactions</p>
+            <div class="pagination">
+              <span class="page-btn" id="prev"></span>
+              <span class="page-btn active">1</span><span class="page-btn">2</span><span class="page-btn">3</span><span class="page-btn">…</span><span class="page-btn">241</span>
+              <span class="page-btn" id="next"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/business-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+  document.getElementById('export-icon').innerHTML = Icons.html('document-arrow-down', { size: 14 });
+  document.getElementById('prev').innerHTML = Icons.html('chevron-left', { size: 14 });
+  document.getElementById('next').innerHTML = Icons.html('chevron-right', { size: 14 });
+
+  const branches = ['Downtown', 'Marina', 'JBR', 'Business Bay'];
+  const staff = ['Sara Al Mansoori', 'Ahmed Farouk', 'Karim Youssef', '—'];
+  const typeBadge = { Earn: 'badge-success', Redeem: 'badge-danger', Adjust: 'badge-info', Expire: 'badge-neutral', Refund: 'badge-warning' };
+
+  const rows = [];
+  for (let i = 0; i < 20; i++) {
+    const t = data.transactions[i % data.transactions.length];
+    const c = data.business.customers[i % data.business.customers.length];
+    rows.push({ ...t, customer: c.name, branch: branches[i % branches.length], staff: staff[i % staff.length], date: new Date(Date.now() - i * 43200000) });
+  }
+  document.getElementById('row-count').textContent = rows.length;
+  document.getElementById('txn-body').innerHTML = rows.map(r => `
+    <tr>
+      <td class="font-semibold">${r.customer}</td>
+      <td><span class="badge ${typeBadge[r.type]}">${r.type}</span></td>
+      <td class="font-semibold ${r.points > 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'}">${r.points > 0 ? '+' : ''}${r.points}</td>
+      <td class="text-slate-500 dark:text-slate-400">${r.source}</td>
+      <td class="text-slate-400">${r.branch}</td>
+      <td class="text-slate-400">${r.staff}</td>
+      <td class="text-slate-400">${r.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ${r.date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</td>
+    </tr>`).join('');
+
+  document.getElementById('export-btn').addEventListener('click', () => Eksabli.showToast({ type: 'success', title: 'Export started', message: 'Large exports are emailed to you when ready.' }));
+</script>
+</body>
+</html>

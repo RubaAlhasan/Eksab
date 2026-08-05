@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log In — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-white dark:bg-slate-950">
+    <div data-status-bar></div>
+
+    <div class="flex-1 flex flex-col px-6 pt-6">
+      <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-extrabold text-xl mb-6 shadow-soft">E</div>
+      <h1 class="text-2xl font-extrabold tracking-tight mb-1">Welcome back</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Log in to see your points across every business.</p>
+
+      <div id="form-alert" class="alert alert-danger mb-4 hidden">
+        <span id="form-alert-icon"></span>
+        <p>Incorrect phone number or password.</p>
+      </div>
+
+      <form id="login-form" novalidate class="space-y-4">
+        <div>
+          <label class="field-label" for="identifier">Phone or email</label>
+          <input id="identifier" class="input" placeholder="+971 50 123 4567" required>
+          <p class="field-error hidden" data-error-for="identifier"></p>
+        </div>
+        <div>
+          <label class="field-label" for="password">Password</label>
+          <div class="relative">
+            <input id="password" type="password" class="input pr-10" placeholder="Your password" required>
+            <button type="button" id="toggle-password" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" aria-label="Show password"></button>
+          </div>
+          <p class="field-error hidden" data-error-for="password"></p>
+          <p class="text-xs text-slate-400 mt-1.5">(Demo: type "wrong" as password to preview the error state)</p>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+            <input type="checkbox" class="checkbox" checked> Remember me
+          </label>
+          <a href="forgot-password.html" class="text-sm font-semibold text-primary-600 dark:text-primary-400">Forgot password?</a>
+        </div>
+
+        <button type="submit" id="submit-btn" class="btn btn-primary btn-lg w-full">
+          <span id="submit-label">Log in</span>
+        </button>
+      </form>
+
+      <div class="flex items-center gap-3 my-5">
+        <div class="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+        <span class="text-xs text-slate-400">or</span>
+        <div class="flex-1 h-px bg-slate-100 dark:bg-slate-800"></div>
+      </div>
+
+      <button id="otp-login-btn" class="btn btn-secondary btn-lg w-full">
+        <span id="otp-icon"></span> Log in with OTP instead
+      </button>
+
+      <p class="text-center text-sm text-slate-500 dark:text-slate-400 mt-6">
+        New to Eksabli? <a href="register.html" class="text-primary-600 dark:text-primary-400 font-semibold">Create an account</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  document.getElementById('form-alert-icon').innerHTML = Icons.html('exclamation-circle', { size: 18 });
+  document.getElementById('otp-icon').innerHTML = Icons.html('device-phone-mobile', { size: 18 });
+
+  const pwToggle = document.getElementById('toggle-password');
+  const pwInput = document.getElementById('password');
+  pwToggle.innerHTML = Icons.html('eye', { size: 18 });
+  pwToggle.addEventListener('click', () => {
+    const showing = pwInput.type === 'text';
+    pwInput.type = showing ? 'password' : 'text';
+    pwToggle.innerHTML = Icons.html(showing ? 'eye' : 'eye-slash', { size: 18 });
+  });
+
+  document.getElementById('otp-login-btn').addEventListener('click', () => { window.location.href = 'otp-verify.html'; });
+
+  function setError(field, message) {
+    const el = document.querySelector(`[data-error-for="${field}"]`);
+    const input = document.getElementById(field);
+    if (message) { el.textContent = message; el.classList.remove('hidden'); input.classList.add('input-error'); }
+    else { el.classList.add('hidden'); input.classList.remove('input-error'); }
+  }
+
+  document.getElementById('login-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const identifier = document.getElementById('identifier').value.trim();
+    const password = document.getElementById('password').value;
+    const alertBox = document.getElementById('form-alert');
+    alertBox.classList.add('hidden');
+
+    let valid = true;
+    setError('identifier', identifier ? '' : 'Enter your phone or email.'); valid = valid && !!identifier;
+    setError('password', password ? '' : 'Enter your password.'); valid = valid && !!password;
+    if (!valid) return;
+
+    if (password === 'wrong') {
+      alertBox.classList.remove('hidden');
+      document.getElementById('identifier').classList.add('input-error');
+      document.getElementById('password').classList.add('input-error');
+      return;
+    }
+    document.getElementById('identifier').classList.remove('input-error');
+    document.getElementById('password').classList.remove('input-error');
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    document.getElementById('submit-label').innerHTML = `<span class="inline-flex items-center gap-2"><svg class="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/><path d="M22 12a10 10 0 00-10-10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>Logging in…</span>`;
+    setTimeout(() => { window.location.href = 'home.html'; }, 1000);
+  });
+</script>
+</body>
+</html>

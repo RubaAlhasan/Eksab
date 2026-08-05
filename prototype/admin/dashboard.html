@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Eksabli Admin Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="dashboard"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Platform Dashboard" data-subtitle="Eksabli, across every tenant"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+        <div class="breadcrumbs"><a href="dashboard.html">Admin Portal</a><span id="sep1"></span><span class="current">Dashboard</span></div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="stats-grid"></div>
+
+        <div class="grid lg:grid-cols-3 gap-6">
+          <div class="card p-6 lg:col-span-2">
+            <div class="flex items-center justify-between mb-6">
+              <div><h2 class="font-bold text-sm">Platform MRR</h2><p class="text-xs text-slate-400">Last 7 months</p></div>
+              <span class="badge badge-success" id="mrr-badge"></span>
+            </div>
+            <div class="chart-placeholder h-48" id="mrr-chart"></div>
+            <div class="flex justify-between mt-2 text-[10px] text-slate-400" id="mrr-labels"></div>
+          </div>
+
+          <div class="card p-6">
+            <h2 class="font-bold text-sm mb-4">Category Mix</h2>
+            <div class="space-y-3" id="category-bars"></div>
+          </div>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div class="card p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="font-bold text-sm">Pending Approvals</h2>
+              <a href="businesses.html" class="text-xs font-semibold text-primary-600 dark:text-primary-400">View all</a>
+            </div>
+            <div id="pending-list" class="space-y-2"></div>
+          </div>
+
+          <div class="card p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="font-bold text-sm">Recent Support Tickets</h2>
+              <a href="support-tickets.html" class="text-xs font-semibold text-primary-600 dark:text-primary-400">View all</a>
+            </div>
+            <div id="tickets-list" class="space-y-2"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/admin-shell.js"></script>
+<script>
+  const admin = EksabliDemoData.admin;
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+
+  const stats = [
+    { label: 'Total Tenants', value: admin.stats.totalTenants, icon: 'building-storefront', color: 'primary' },
+    { label: 'Platform MRR', value: '$' + admin.stats.mrr.toLocaleString(), icon: 'banknotes', color: 'success' },
+    { label: 'Daily Active Users', value: admin.stats.dau.toLocaleString(), icon: 'users', color: 'info' },
+    { label: 'Open Support Tickets', value: admin.stats.openTickets, icon: 'clipboard-document', color: 'warning' },
+  ];
+  document.getElementById('stats-grid').innerHTML = stats.map(s => `
+    <div class="card stat-card">
+      <div class="stat-icon-wrap bg-${s.color}-50 dark:bg-${s.color}-500/10 text-${s.color}-600 dark:text-${s.color}-300 mb-3">${Icons.html(s.icon, { size: 18 })}</div>
+      <p class="text-2xl font-extrabold tabular-nums">${s.value}</p>
+      <p class="text-xs text-slate-400 mt-1">${s.label}</p>
+    </div>`).join('');
+
+  const trend = admin.mrrTrend;
+  const max = Math.max(...trend.map(t => t.value));
+  document.getElementById('mrr-chart').innerHTML = trend.map(t => `<div class="chart-bar" style="height:${(t.value / max * 100).toFixed(0)}%"></div>`).join('');
+  document.getElementById('mrr-labels').innerHTML = trend.map(t => `<span>${t.label}</span>`).join('');
+  document.getElementById('mrr-badge').textContent = '+' + Math.round((trend[6].value / trend[0].value - 1) * 100) + '% (7mo)';
+
+  const catTotal = admin.categories.reduce((a, c) => a + c.businesses, 0);
+  document.getElementById('category-bars').innerHTML = admin.categories.slice(0, 5).map(c => `
+    <div>
+      <div class="flex items-center justify-between text-xs mb-1"><span class="font-semibold">${c.name}</span><span class="text-slate-400">${c.businesses}</span></div>
+      <div class="progress-track"><div class="progress-fill" style="width:${(c.businesses / catTotal * 100 * 3).toFixed(0)}%"></div></div>
+    </div>`).join('');
+
+  const pending = admin.tenants.filter(t => t.status === 'Pending Approval' || t.status === 'Trialing');
+  document.getElementById('pending-list').innerHTML = pending.map(t => `
+    <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+      <div class="avatar avatar-sm">${t.name.split(' ').map(w => w[0]).join('').slice(0, 2)}</div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold truncate">${t.name}</p>
+        <p class="text-xs text-slate-400">${t.category}</p>
+      </div>
+      <span class="badge ${t.status === 'Pending Approval' ? 'badge-warning' : 'badge-info'}">${t.status}</span>
+    </div>`).join('') || `<p class="text-sm text-slate-400 text-center py-6">No approvals pending.</p>`;
+
+  const statusBadge = { Open: 'badge-danger', Pending: 'badge-warning', Resolved: 'badge-success' };
+  document.getElementById('tickets-list').innerHTML = admin.supportTickets.slice(0, 4).map(t => `
+    <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold truncate">${t.subject}</p>
+        <p class="text-xs text-slate-400">${t.from} · ${t.type}</p>
+      </div>
+      <span class="badge ${statusBadge[t.status]}">${t.status}</span>
+    </div>`).join('');
+</script>
+</body>
+</html>

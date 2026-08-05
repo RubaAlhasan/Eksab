@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My QR Code — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-white dark:bg-slate-950">
+    <div data-status-bar></div>
+    <div data-top-bar data-title="My Wallet QR" data-back="javascript:history.back()" data-action-icon="device-phone-mobile" data-action-href="qr-scanner.html"></div>
+
+    <div class="flex-1 flex flex-col items-center justify-center px-8 text-center">
+      <div class="avatar avatar-lg mb-4" id="avatar"></div>
+      <p class="font-bold text-base mb-1" id="name"></p>
+      <p class="text-xs text-slate-400 mb-6">Show this to staff to identify your account</p>
+
+      <div class="w-60 h-60 rounded-3xl bg-slate-900 flex items-center justify-center mb-6 shadow-soft-lg">
+        <div class="grid grid-cols-8 gap-1 p-5" id="qr-pattern"></div>
+      </div>
+
+      <div class="alert alert-info w-full text-left">
+        <span id="info-icon"></span>
+        <p>This code refreshes automatically and only works when scanned by a business you're a member of.</p>
+      </div>
+    </div>
+
+    <div data-bottom-nav="wallet"></div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  const c = EksabliDemoData.currentCustomer;
+  document.getElementById('avatar').textContent = c.initials;
+  document.getElementById('name').textContent = c.firstName + ' ' + c.lastName;
+  document.getElementById('info-icon').innerHTML = Icons.html('information-circle', { size: 18 });
+
+  const qrGrid = document.getElementById('qr-pattern');
+  for (let i = 0; i < 64; i++) {
+    const on = Math.random() > 0.45;
+    qrGrid.innerHTML += `<div class="w-4 h-4 rounded-sm ${on ? 'bg-white' : 'bg-transparent'}"></div>`;
+  }
+</script>
+</body>
+</html>
