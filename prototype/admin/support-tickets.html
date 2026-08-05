@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Support Tickets — Eksabli Admin Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="support-tickets"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Support Tickets" data-subtitle="Customer and business support queue"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+        <div class="breadcrumbs"><a href="dashboard.html">Admin Portal</a><span id="sep1"></span><span class="current">Support Tickets</span></div>
+
+        <div class="tabs-list" data-tabs="tickets">
+          <span class="tab-trigger active" data-tab-trigger="tickets" data-tab-target="open">Open</span>
+          <span class="tab-trigger" data-tab-trigger="tickets" data-tab-target="pending">Pending</span>
+          <span class="tab-trigger" data-tab-trigger="tickets" data-tab-target="resolved">Resolved</span>
+        </div>
+
+        <div class="tab-panel active space-y-3" data-tab-panel="tickets" data-tab-id="open" id="panel-open"></div>
+        <div class="tab-panel space-y-3" data-tab-panel="tickets" data-tab-id="pending" id="panel-pending"></div>
+        <div class="tab-panel space-y-3" data-tab-panel="tickets" data-tab-id="resolved" id="panel-resolved"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Ticket thread drawer -->
+<div class="drawer-overlay" data-drawer-overlay="ticket">
+  <div class="drawer-panel p-6 flex flex-col">
+    <div class="flex items-center justify-between mb-1">
+      <h3 class="font-bold text-base" id="thread-subject"></h3>
+      <button data-drawer-close="ticket" class="btn btn-icon btn-ghost" aria-label="Close"></button>
+    </div>
+    <p class="text-xs text-slate-400 mb-5" id="thread-meta"></p>
+    <div class="flex-1 overflow-y-auto space-y-3 mb-4" id="thread-messages"></div>
+    <div class="border-t border-slate-100 dark:border-slate-800 pt-4">
+      <textarea class="textarea mb-2" rows="2" placeholder="Write a reply…"></textarea>
+      <div class="flex gap-2">
+        <button class="btn btn-primary btn-sm flex-1" id="reply-btn">Send Reply</button>
+        <button class="btn btn-secondary btn-sm" id="resolve-btn">Mark Resolved</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/admin-shell.js"></script>
+<script>
+  const tickets = EksabliDemoData.admin.supportTickets;
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+
+  const priorityBadge = { High: 'badge-danger', Medium: 'badge-warning', Low: 'badge-neutral' };
+  function ticketCard(t) {
+    return `
+      <button class="card card-hover p-4 w-full text-left flex items-center gap-4 ticket-card" data-subject="${t.subject}" data-from="${t.from}" data-type="${t.type}">
+        <div class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 flex-shrink-0">${Icons.html(t.type === 'Business' ? 'building-storefront' : 'user', { size: 16 })}</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold truncate">${t.subject}</p>
+          <p class="text-xs text-slate-400">${t.from} · ${t.type} · Updated ${new Date(t.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+        </div>
+        <span class="badge ${priorityBadge[t.priority]} flex-shrink-0">${t.priority}</span>
+      </button>`;
+  }
+  document.getElementById('panel-open').innerHTML = tickets.filter(t => t.status === 'Open').map(ticketCard).join('') || `<p class="text-sm text-slate-400 text-center py-8">No open tickets.</p>`;
+  document.getElementById('panel-pending').innerHTML = tickets.filter(t => t.status === 'Pending').map(ticketCard).join('') || `<p class="text-sm text-slate-400 text-center py-8">Nothing pending.</p>`;
+  document.getElementById('panel-resolved').innerHTML = tickets.filter(t => t.status === 'Resolved').map(ticketCard).join('') || `<p class="text-sm text-slate-400 text-center py-8">Nothing resolved yet.</p>`;
+
+  document.getElementById('thread-messages').dataset.init = '1';
+  document.addEventListener('click', (e) => {
+    const card = e.target.closest('.ticket-card');
+    if (!card) return;
+    document.getElementById('thread-subject').textContent = card.getAttribute('data-subject');
+    document.getElementById('thread-meta').textContent = `${card.getAttribute('data-from')} · ${card.getAttribute('data-type')}`;
+    document.getElementById('thread-messages').innerHTML = `
+      <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60"><p class="text-xs font-semibold mb-1">${card.getAttribute('data-from')}</p><p class="text-sm">${card.getAttribute('data-subject')} — could someone take a look at this?</p></div>
+      <div class="p-3 rounded-xl bg-primary-50 dark:bg-primary-500/10 ml-6"><p class="text-xs font-semibold mb-1">Support Agent</p><p class="text-sm">Thanks for reporting — we're looking into it now.</p></div>`;
+    document.querySelector('[data-drawer-overlay="ticket"]').classList.add('open');
+  });
+  document.getElementById('reply-btn').addEventListener('click', () => Eksabli.showToast({ type: 'success', title: 'Reply sent' }));
+  document.getElementById('resolve-btn').addEventListener('click', () => {
+    document.querySelector('[data-drawer-overlay="ticket"]').classList.remove('open');
+    Eksabli.showToast({ type: 'success', title: 'Ticket marked resolved' });
+  });
+</script>
+</body>
+</html>

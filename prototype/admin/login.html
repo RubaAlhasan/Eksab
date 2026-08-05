@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In — Eksabli Admin Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-950 text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="min-h-screen flex items-center justify-center p-6">
+  <div class="w-full max-w-sm">
+    <div class="flex flex-col items-center mb-8">
+      <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-600 to-slate-900 border border-slate-700 flex items-center justify-center font-extrabold mb-3">E</div>
+      <p class="font-extrabold text-lg">Eksabli Admin</p>
+      <p class="text-xs text-slate-500">Platform operations — Host realm</p>
+    </div>
+
+    <!-- Step 1: credentials -->
+    <div id="step-credentials" class="card p-6" style="background:#0F172A;border-color:#1E293B">
+      <div id="form-alert" class="alert alert-danger mb-4 hidden">
+        <span id="alert-icon"></span><p>Incorrect email or password.</p>
+      </div>
+      <form id="login-form" novalidate class="space-y-4">
+        <div>
+          <label class="field-label">Work email</label>
+          <input id="email" class="input" value="platform@eksabli.app">
+        </div>
+        <div>
+          <label class="field-label">Password</label>
+          <div class="relative">
+            <input id="password" type="password" class="input pr-10" value="demo1234">
+            <button type="button" id="toggle-password" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" aria-label="Show password"></button>
+          </div>
+          <p class="text-xs text-slate-500 mt-1.5">(Demo: type "wrong" as password to preview the error state)</p>
+        </div>
+        <button type="submit" id="submit-btn" class="btn btn-primary btn-lg w-full">
+          <span id="submit-label">Continue</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Step 2: MFA -->
+    <div id="step-mfa" class="card p-6 hidden" style="background:#0F172A;border-color:#1E293B">
+      <div class="flex flex-col items-center text-center mb-5">
+        <div class="w-11 h-11 rounded-xl bg-primary-500/15 text-primary-300 flex items-center justify-center mb-3" id="shield-icon"></div>
+        <p class="font-bold text-sm">Two-factor authentication</p>
+        <p class="text-xs text-slate-500 mt-1">Enter the 6-digit code from your authenticator app. (Demo code: <span class="font-mono font-semibold">000000</span>)</p>
+      </div>
+      <div class="flex gap-2 mb-5 justify-center" id="mfa-boxes"></div>
+      <button id="verify-mfa-btn" class="btn btn-primary btn-lg w-full">
+        <span id="verify-label">Verify &amp; Sign In</span>
+      </button>
+    </div>
+
+    <p class="text-center text-xs text-slate-600 mt-8">
+      <a href="../index.html" class="hover:text-slate-300">← Back to portal picker</a>
+    </p>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script>
+  document.getElementById('alert-icon').innerHTML = Icons.html('exclamation-circle', { size: 18 });
+  document.getElementById('shield-icon').innerHTML = Icons.html('shield-check', { size: 22 });
+
+  const pwToggle = document.getElementById('toggle-password');
+  const pwInput = document.getElementById('password');
+  pwToggle.innerHTML = Icons.html('eye', { size: 18 });
+  pwToggle.addEventListener('click', () => {
+    const showing = pwInput.type === 'text';
+    pwInput.type = showing ? 'password' : 'text';
+    pwToggle.innerHTML = Icons.html(showing ? 'eye' : 'eye-slash', { size: 18 });
+  });
+
+  // Build 6 MFA boxes
+  const mfaWrap = document.getElementById('mfa-boxes');
+  for (let i = 0; i < 6; i++) {
+    const input = document.createElement('input');
+    input.maxLength = 1; input.inputMode = 'numeric';
+    input.className = 'input text-center text-lg font-bold h-12 w-11';
+    mfaWrap.appendChild(input);
+  }
+  const mfaBoxes = [...mfaWrap.querySelectorAll('input')];
+  mfaBoxes.forEach((box, i) => {
+    box.addEventListener('input', () => {
+      box.value = box.value.replace(/[^0-9]/g, '');
+      box.classList.remove('input-error');
+      if (box.value && i < mfaBoxes.length - 1) mfaBoxes[i + 1].focus();
+    });
+    box.addEventListener('keydown', (e) => { if (e.key === 'Backspace' && !box.value && i > 0) mfaBoxes[i - 1].focus(); });
+  });
+
+  document.getElementById('login-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const password = document.getElementById('password').value;
+    const alertBox = document.getElementById('form-alert');
+    if (password === 'wrong') {
+      alertBox.classList.remove('hidden');
+      document.getElementById('password').classList.add('input-error');
+      return;
+    }
+    alertBox.classList.add('hidden');
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    document.getElementById('submit-label').innerHTML = `<span class="inline-flex items-center gap-2"><svg class="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/><path d="M22 12a10 10 0 00-10-10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>Checking…</span>`;
+    setTimeout(() => {
+      document.getElementById('step-credentials').classList.add('hidden');
+      document.getElementById('step-mfa').classList.remove('hidden');
+      mfaBoxes[0].focus();
+    }, 800);
+  });
+
+  document.getElementById('verify-mfa-btn').addEventListener('click', () => {
+    const code = mfaBoxes.map(b => b.value).join('');
+    if (code !== '000000') {
+      mfaBoxes.forEach(b => b.classList.add('input-error'));
+      Eksabli.showToast({ type: 'danger', title: 'Incorrect code', message: 'Please check your authenticator app and try again.' });
+      return;
+    }
+    const btn = document.getElementById('verify-mfa-btn');
+    btn.disabled = true;
+    document.getElementById('verify-label').innerHTML = `<span class="inline-flex items-center gap-2"><svg class="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/><path d="M22 12a10 10 0 00-10-10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>Signing in…</span>`;
+    setTimeout(() => { window.location.href = 'dashboard.html'; }, 900);
+  });
+</script>
+</body>
+</html>

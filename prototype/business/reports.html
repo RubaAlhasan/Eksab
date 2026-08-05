@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reports — Eksabli Business Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="reports"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Reports" data-subtitle="Exportable reports for your business"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+        <div class="breadcrumbs"><a href="dashboard.html">Business Portal</a><span id="sep1"></span><span class="current">Reports</span></div>
+
+        <div class="grid sm:grid-cols-2 gap-4" id="reports-grid"></div>
+
+        <div class="card p-6">
+          <h2 class="font-bold text-sm mb-4">Recent Exports</h2>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Report</th><th>Generated</th><th>Format</th><th>Status</th><th></th></tr></thead>
+              <tbody id="exports-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/business-shell.js"></script>
+<script>
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+
+  const reportTypes = [
+    { name: 'Business Report', desc: 'Member growth, points issued vs. redeemed, redemption rate by reward, branch comparison.', icon: 'presentation-chart-line' },
+    { name: 'Customer Report', desc: 'Segment breakdown (new/active/at-risk/churned), tier distribution, top customers by lifetime value.', icon: 'users' },
+    { name: 'Financial Report', desc: 'Your subscription cost, invoice history, plan usage against quota.', icon: 'banknotes' },
+    { name: 'Marketing Report', desc: 'Campaign performance (sent, opened, redeemed), notification delivery rates by channel.', icon: 'megaphone' },
+  ];
+  document.getElementById('reports-grid').innerHTML = reportTypes.map(r => `
+    <div class="card p-5">
+      <div class="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-300 flex items-center justify-center mb-3 report-icon"></div>
+      <p class="font-bold text-sm mb-1">${r.name}</p>
+      <p class="text-xs text-slate-400 mb-4">${r.desc}</p>
+      <div class="flex gap-2">
+        <button class="btn btn-primary btn-sm generate-btn" data-name="${r.name}">Generate</button>
+        <select class="select w-28 !py-1.5 text-xs"><option>Excel</option><option>CSV</option><option>PDF</option></select>
+      </div>
+    </div>`).join('');
+  document.querySelectorAll('.report-icon').forEach((el, i) => el.innerHTML = Icons.html(reportTypes[i].icon, { size: 18 }));
+
+  document.querySelectorAll('.generate-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.innerHTML = `<svg class="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/><path d="M22 12a10 10 0 00-10-10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>`;
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = original;
+        Eksabli.showToast({ type: 'success', title: 'Report ready', message: `${btn.getAttribute('data-name')} has been generated.` });
+      }, 1200);
+    });
+  });
+
+  const exports = [
+    { name: 'Business Report — July 2026', date: '2026-08-01', format: 'Excel', status: 'Ready' },
+    { name: 'Customer Report — July 2026', date: '2026-08-01', format: 'PDF', status: 'Ready' },
+    { name: 'Marketing Report — Double Points Weekend', date: '2026-08-04', format: 'Excel', status: 'Processing' },
+  ];
+  document.getElementById('exports-body').innerHTML = exports.map(e => `
+    <tr>
+      <td class="font-semibold">${e.name}</td>
+      <td class="text-slate-400">${new Date(e.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
+      <td class="text-slate-500 dark:text-slate-400">${e.format}</td>
+      <td>${e.status === 'Ready' ? '<span class="badge badge-success">Ready</span>' : '<span class="badge badge-warning">Processing</span>'}</td>
+      <td>${e.status === 'Ready' ? `<button class="text-primary-600 dark:text-primary-400 font-semibold text-xs">Download</button>` : ''}</td>
+    </tr>`).join('');
+</script>
+</body>
+</html>

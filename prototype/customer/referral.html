@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Referral — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-slate-50 dark:bg-slate-950">
+    <div data-status-bar></div>
+    <div data-top-bar data-title="Invite Friends" data-back="profile.html"></div>
+
+    <div class="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+
+      <div class="card p-6 text-center bg-gradient-to-br from-primary-600 to-primary-800 text-white border-0">
+        <div class="w-12 h-12 mx-auto rounded-2xl bg-white/15 flex items-center justify-center mb-3" id="gift-icon"></div>
+        <h1 class="text-lg font-extrabold mb-1">Give points, get points</h1>
+        <p class="text-xs text-white/70">Invite a friend — you both earn bonus points when they join their first business.</p>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3 text-center">
+        <div class="card p-3">
+          <p class="text-xl font-extrabold" id="stat-invited"></p>
+          <p class="text-xs text-slate-400">Invited</p>
+        </div>
+        <div class="card p-3">
+          <p class="text-xl font-extrabold" id="stat-joined"></p>
+          <p class="text-xs text-slate-400">Joined</p>
+        </div>
+        <div class="card p-3">
+          <p class="text-xl font-extrabold text-primary-600 dark:text-primary-400" id="stat-points"></p>
+          <p class="text-xs text-slate-400">Points earned</p>
+        </div>
+      </div>
+
+      <div class="card p-4">
+        <p class="text-xs font-semibold text-slate-400 mb-2">Your referral code</p>
+        <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-900 rounded-xl px-4 py-3 mb-3">
+          <span class="font-mono font-bold text-lg tracking-wide" id="ref-code"></span>
+          <button id="copy-code" class="btn btn-icon btn-ghost" aria-label="Copy code"></button>
+        </div>
+        <button id="share-btn" class="btn btn-primary w-full">
+          <span id="share-icon"></span> Share Invite Link
+        </button>
+      </div>
+
+      <section>
+        <h2 class="text-sm font-bold mb-3">Invite History</h2>
+        <div id="history-list" class="space-y-2"></div>
+      </section>
+    </div>
+
+    <div data-bottom-nav=""></div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  const r = EksabliDemoData.referral;
+  document.querySelector('[data-bottom-nav]')?.remove();
+  document.getElementById('gift-icon').innerHTML = Icons.html('gift', { size: 22 });
+  document.getElementById('share-icon').innerHTML = Icons.html('share', { size: 16 });
+  document.getElementById('copy-code').innerHTML = Icons.html('clipboard-document', { size: 18 });
+
+  document.getElementById('stat-invited').textContent = r.invited;
+  document.getElementById('stat-joined').textContent = r.joined;
+  document.getElementById('stat-points').textContent = r.pointsEarned;
+  document.getElementById('ref-code').textContent = r.code;
+
+  document.getElementById('copy-code').addEventListener('click', () => {
+    Eksabli.showToast({ type: 'success', title: 'Code copied', message: r.code });
+  });
+  document.getElementById('share-btn').addEventListener('click', () => {
+    Eksabli.showToast({ type: 'info', title: 'Share sheet', message: 'In the real app this opens the native share sheet.' });
+  });
+
+  const statusBadge = { Rewarded: 'badge-success', Completed: 'badge-info', Pending: 'badge-warning' };
+  document.getElementById('history-list').innerHTML = r.history.map(h => `
+    <div class="card p-3.5 flex items-center gap-3">
+      <div class="avatar avatar-sm">${h.name.split(' ').map(w => w[0]).join('')}</div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold">${h.name}</p>
+        <p class="text-xs text-slate-400">${new Date(h.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+      </div>
+      <span class="badge ${statusBadge[h.status]}">${h.status}</span>
+    </div>`).join('');
+</script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eksabli — Prototype</title>
+<meta name="description" content="Eksabli multi-tenant loyalty platform — clickable MVP prototype.">
+
+<script src="assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 min-h-screen antialiased">
+
+<div id="toast-container"></div>
+
+<!-- Top bar -->
+<header class="border-b border-slate-200 dark:border-slate-800">
+  <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-extrabold text-sm shadow-soft">E</div>
+      <span class="font-extrabold text-lg tracking-tight">Eksabli</span>
+      <span class="badge badge-neutral ml-1">Prototype</span>
+    </div>
+    <button data-theme-toggle class="btn btn-icon btn-ghost" aria-label="Toggle dark mode">
+      <span class="block dark:hidden" id="icon-sun"></span>
+      <span class="hidden dark:block" id="icon-moon"></span>
+    </button>
+  </div>
+</header>
+
+<!-- Hero -->
+<main class="max-w-6xl mx-auto px-6 py-16 md:py-24">
+  <div class="max-w-2xl mx-auto text-center animate-fade-up">
+    <span class="badge badge-primary mb-4">MVP UI Prototype · Demo data only</span>
+    <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight mb-4">One loyalty platform.<br>Three ways in.</h1>
+    <p class="text-slate-500 dark:text-slate-400 text-base md:text-lg">
+      Customers collect points across unlimited independent businesses from a single account.
+      Businesses run their own loyalty program. The platform team oversees it all. Pick a surface below to explore.
+    </p>
+  </div>
+
+  <div class="grid md:grid-cols-3 gap-6 mt-14">
+
+    <!-- Customer App -->
+    <a href="customer/splash.html" class="card card-hover card-interactive p-7 flex flex-col animate-fade-up" style="animation-delay:.05s">
+      <div class="w-12 h-12 rounded-2xl bg-primary-100 dark:bg-primary-500/15 flex items-center justify-center text-primary-600 dark:text-primary-300 mb-5"></div>
+      <h2 class="text-lg font-bold mb-1.5">Customer App</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5 flex-1">Join businesses, earn and redeem points, follow campaigns — the mobile experience, shown in a phone frame.</p>
+      <div class="flex items-center justify-between text-sm font-semibold text-primary-600 dark:text-primary-400">
+        <span>Launch app</span>
+        <span class="icon-arrow"></span>
+      </div>
+    </a>
+
+    <!-- Business Portal -->
+    <a href="business/login.html" class="card card-hover card-interactive p-7 flex flex-col animate-fade-up" style="animation-delay:.1s">
+      <div class="w-12 h-12 rounded-2xl bg-success-100 dark:bg-success-500/15 flex items-center justify-center text-success-600 dark:text-success-300 mb-5"></div>
+      <h2 class="text-lg font-bold mb-1.5">Business Portal</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5 flex-1">Manage branches, staff, rewards and campaigns, and see how your loyalty program is performing.</p>
+      <div class="flex items-center justify-between text-sm font-semibold text-success-600 dark:text-success-400">
+        <span>Sign in as Cedar &amp; Bean Coffee</span>
+        <span class="icon-arrow"></span>
+      </div>
+    </a>
+
+    <!-- Admin Portal -->
+    <a href="admin/login.html" class="card card-hover card-interactive p-7 flex flex-col animate-fade-up" style="animation-delay:.15s">
+      <div class="w-12 h-12 rounded-2xl bg-info-100 dark:bg-info-500/15 flex items-center justify-center text-info-600 dark:text-info-300 mb-5"></div>
+      <h2 class="text-lg font-bold mb-1.5">Admin Portal</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5 flex-1">Platform operations: tenant oversight, billing, support tickets, feature flags, audit logs.</p>
+      <div class="flex items-center justify-between text-sm font-semibold text-info-600 dark:text-info-400">
+        <span>Sign in as Super Admin</span>
+        <span class="icon-arrow"></span>
+      </div>
+    </a>
+  </div>
+
+  <div class="mt-16 card p-6 md:p-8 animate-fade-up" style="animation-delay:.2s">
+    <h3 class="font-bold text-sm uppercase tracking-wide text-slate-400 mb-4">What this prototype demonstrates</h3>
+    <div class="grid sm:grid-cols-3 gap-6 text-sm">
+      <div>
+        <p class="font-semibold mb-1">The core loop</p>
+        <p class="text-slate-500 dark:text-slate-400">Join a business → earn points at checkout → redeem a reward via QR/PIN — end to end, in both the customer app and the staff POS view.</p>
+      </div>
+      <div>
+        <p class="font-semibold mb-1">Two identity realms</p>
+        <p class="text-slate-500 dark:text-slate-400">One customer account with independent balances at multiple businesses, vs. tenant staff scoped to a single business — the platform's foundational design decision.</p>
+      </div>
+      <div>
+        <p class="font-semibold mb-1">Every MVP surface</p>
+        <p class="text-slate-500 dark:text-slate-400">30 customer screens, 17 business-portal screens, 14 admin-portal screens — with loading, empty, error and success states throughout.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="max-w-6xl mx-auto px-6 py-10 text-center text-xs text-slate-400 dark:text-slate-600">
+  Eksabli — built on ABP Framework + Angular + Flutter. This prototype uses static demo data; no network calls are made.
+</footer>
+
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/demo-data.js"></script>
+<script src="assets/js/components.js"></script>
+<script>
+  document.getElementById('icon-sun').innerHTML = Icons.html('sun', { size: 20 });
+  document.getElementById('icon-moon').innerHTML = Icons.html('moon', { size: 20 });
+  document.querySelectorAll('.icon-arrow').forEach(el => el.innerHTML = Icons.html('arrow-right', { size: 16 }));
+  // Re-render the three feature icons now that Icons is available
+  document.querySelectorAll('main a.card').forEach((card, i) => {
+    const names = ['device-phone-mobile', 'building-office', 'shield-check'];
+    const wrap = card.querySelector('div.w-12');
+    if (wrap) wrap.innerHTML = Icons.html(names[i], { size: 24 });
+  });
+</script>
+</body>
+</html>

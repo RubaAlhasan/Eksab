@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Billing — Eksabli Business Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="billing"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Billing" data-subtitle="Payment method and invoice history"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+        <div class="breadcrumbs"><a href="dashboard.html">Business Portal</a><span id="sep1"></span><span class="current">Billing</span></div>
+
+        <div class="grid lg:grid-cols-3 gap-6">
+          <div class="card p-6">
+            <h2 class="font-bold text-sm mb-4">Payment Method</h2>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 mb-4">
+              <div class="w-10 h-7 rounded bg-slate-900 dark:bg-slate-700 flex items-center justify-center text-white text-[10px] font-bold">VISA</div>
+              <div class="flex-1">
+                <p class="text-sm font-semibold">•••• •••• •••• 4242</p>
+                <p class="text-xs text-slate-400">Expires 09/28</p>
+              </div>
+            </div>
+            <button class="btn btn-secondary w-full btn-sm" id="update-card-btn">Update Payment Method</button>
+          </div>
+
+          <div class="card p-6 lg:col-span-2">
+            <h2 class="font-bold text-sm mb-1">Next Invoice</h2>
+            <p class="text-xs text-slate-400 mb-4">Due September 1, 2026</p>
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-3xl font-extrabold">$178.00</p>
+                <p class="text-xs text-slate-400 mt-1">$149 base + $29 branch overage</p>
+              </div>
+              <span class="badge badge-warning">Due Soon</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-bold text-sm">Invoice History</h2>
+            <button class="btn btn-secondary btn-sm" id="export-btn"><span id="export-icon"></span>Export All</button>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Period</th><th>Amount</th><th>Status</th><th>Paid</th><th></th></tr></thead>
+              <tbody id="invoices-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/business-shell.js"></script>
+<script>
+  const invoices = EksabliDemoData.business.invoices;
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+  document.getElementById('export-icon').innerHTML = Icons.html('document-arrow-down', { size: 14 });
+
+  const statusBadge = { Paid: 'badge-success', Due: 'badge-warning', Overdue: 'badge-danger' };
+  document.getElementById('invoices-body').innerHTML = invoices.map(i => `
+    <tr>
+      <td class="font-semibold">${i.period}</td>
+      <td>$${i.amount.toFixed(2)}</td>
+      <td><span class="badge ${statusBadge[i.status]}">${i.status}</span></td>
+      <td class="text-slate-400">${i.paidAt ? new Date(i.paidAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</td>
+      <td><button class="text-primary-600 dark:text-primary-400 font-semibold text-xs">Download</button></td>
+    </tr>`).join('');
+
+  document.getElementById('update-card-btn').addEventListener('click', () => Eksabli.showToast({ type: 'info', title: 'Update payment method', message: 'This would open your payment provider\'s secure form.' }));
+  document.getElementById('export-btn').addEventListener('click', () => Eksabli.showToast({ type: 'success', title: 'Exporting all invoices' }));
+</script>
+</body>
+</html>

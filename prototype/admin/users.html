@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Users — Eksabli Admin Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="users"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Users" data-subtitle="Cross-tenant user directory — Host-only"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+        <div class="breadcrumbs"><a href="dashboard.html">Admin Portal</a><span id="sep1"></span><span class="current">Users</span></div>
+
+        <div class="alert alert-warning">
+          <span id="warn-icon"></span>
+          <p>This cross-tenant search is legitimate only for platform staff. Every lookup here is audit-logged — the same view is deliberately unavailable to business-side staff, who can only search their own tenant's members.</p>
+        </div>
+
+        <div class="card p-4 flex flex-wrap items-center gap-3">
+          <div class="relative flex-1 min-w-[220px]">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" id="search-icon"></span>
+            <input id="search-input" class="input pl-9" placeholder="Search by name, phone, or email…">
+          </div>
+          <div class="tabs-pill" id="type-toggle">
+            <span class="tab-pill-trigger active" data-type="all">All</span>
+            <span class="tab-pill-trigger" data-type="customer">Customers</span>
+            <span class="tab-pill-trigger" data-type="staff">Staff</span>
+          </div>
+        </div>
+
+        <div class="card overflow-hidden">
+          <div class="table-wrap" style="border:none;border-radius:0">
+            <table class="table">
+              <thead><tr><th>Name</th><th>Type</th><th>Business</th><th>Contact</th><th>Realm</th><th>Status</th></tr></thead>
+              <tbody id="users-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/admin-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+  document.getElementById('search-icon').innerHTML = Icons.html('search', { size: 16 });
+  document.getElementById('warn-icon').innerHTML = Icons.html('exclamation-triangle', { size: 18 });
+
+  const users = [
+    ...data.business.customers.map(c => ({ name: c.name, type: 'customer', business: '—', contact: c.phone, realm: 'Host', status: c.status === 'Churned' ? 'Inactive' : 'Active' })),
+    ...data.business.employees.map(e => ({ name: e.name, type: 'staff', business: 'Cedar & Bean Coffee', contact: e.email, realm: 'Tenant', status: e.status })),
+  ];
+
+  function render() {
+    const q = document.getElementById('search-input').value.trim().toLowerCase();
+    const type = document.querySelector('#type-toggle .active').getAttribute('data-type');
+    const filtered = users.filter(u => (!q || `${u.name} ${u.contact}`.toLowerCase().includes(q)) && (type === 'all' || u.type === type));
+    document.getElementById('users-body').innerHTML = filtered.map(u => `
+      <tr>
+        <td>
+          <div class="flex items-center gap-3">
+            <div class="avatar avatar-sm">${u.name.split(' ').map(w => w[0]).join('').slice(0, 2)}</div>
+            <span class="font-semibold">${u.name}</span>
+          </div>
+        </td>
+        <td><span class="badge ${u.type === 'customer' ? 'badge-primary' : 'badge-info'}">${u.type === 'customer' ? 'Customer' : 'Staff'}</span></td>
+        <td class="text-slate-500 dark:text-slate-400">${u.business}</td>
+        <td class="text-slate-400">${u.contact}</td>
+        <td class="text-slate-400">${u.realm}</td>
+        <td><span class="badge ${u.status === 'Active' ? 'badge-success' : u.status === 'Invited' ? 'badge-warning' : 'badge-danger'}">${u.status}</span></td>
+      </tr>`).join('');
+  }
+  document.getElementById('search-input').addEventListener('input', render);
+  document.querySelectorAll('#type-toggle [data-type]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#type-toggle [data-type]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    });
+  });
+  render();
+</script>
+</body>
+</html>

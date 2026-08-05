@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Points — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-slate-50 dark:bg-slate-950">
+    <div data-status-bar></div>
+    <div id="top-bar-slot" data-top-bar data-back="wallet.html"></div>
+
+    <div class="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+
+      <!-- Balance card -->
+      <div class="card p-6 text-center" id="balance-card">
+        <div class="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center text-white font-bold mb-3" id="logo"></div>
+        <p class="text-xs text-slate-400 mb-1">Current balance</p>
+        <p class="text-4xl font-extrabold tracking-tight text-primary-600 dark:text-primary-400" id="balance"></p>
+        <div class="flex items-center justify-center gap-2 mt-3">
+          <span class="badge badge-primary" id="tier-badge"></span>
+          <span class="text-xs text-slate-400" id="progress-label"></span>
+        </div>
+        <div class="progress-track mt-3"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+
+      <!-- Quick links -->
+      <div class="grid grid-cols-2 gap-3">
+        <a href="#" id="rewards-link" class="card card-hover p-4 flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-warning-50 dark:bg-warning-500/10 flex items-center justify-center text-warning-600 dark:text-warning-300" id="gift-icon"></div>
+          <span class="text-sm font-semibold">Rewards</span>
+        </a>
+        <a href="#" id="history-link" class="card card-hover p-4 flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-info-50 dark:bg-info-500/10 flex items-center justify-center text-info-600 dark:text-info-300" id="clock-icon"></div>
+          <span class="text-sm font-semibold">History</span>
+        </a>
+      </div>
+
+      <!-- Recent activity -->
+      <section>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-bold">Recent Activity</h2>
+          <a href="#" id="see-all-history" class="text-xs font-semibold text-primary-600 dark:text-primary-400">See all</a>
+        </div>
+        <div id="txn-list" class="space-y-2"></div>
+      </section>
+    </div>
+
+    <div data-bottom-nav=""></div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  const params = new URLSearchParams(location.search);
+  const biz = data.businesses.find(b => b.id === params.get('id')) || data.businesses[0];
+  const m = data.memberships.find(mm => mm.businessId === biz.id) || data.memberships[0];
+
+  document.querySelector('[data-bottom-nav]')?.remove();
+  document.getElementById('top-bar-slot').setAttribute('data-title', biz.name);
+
+  document.getElementById('gift-icon').innerHTML = Icons.html('gift', { size: 18 });
+  document.getElementById('clock-icon').innerHTML = Icons.html('clock', { size: 18 });
+  document.getElementById('rewards-link').href = `rewards.html?id=${biz.id}`;
+  document.getElementById('history-link').href = `transaction-history.html?id=${biz.id}`;
+  document.getElementById('see-all-history').href = `transaction-history.html?id=${biz.id}`;
+
+  document.getElementById('logo').className = `w-12 h-12 rounded-2xl mx-auto flex items-center justify-center text-white font-bold mb-3 bg-gradient-to-br ${biz.color}`;
+  document.getElementById('logo').textContent = biz.initials;
+  document.getElementById('balance').textContent = m.balance.toLocaleString() + ' pts';
+  document.getElementById('tier-badge').textContent = m.tier + ' Tier';
+  document.getElementById('progress-label').textContent = `${m.pointsToNextTier} pts to ${m.nextTier}`;
+  document.getElementById('progress-fill').style.width = m.tierProgressPct + '%';
+
+  const txns = data.transactions.filter(t => t.businessId === biz.id).slice(0, 5);
+  const typeMeta = {
+    Earn: { icon: 'plus', color: 'text-success-600 dark:text-success-400', bg: 'bg-success-50 dark:bg-success-500/10' },
+    Redeem: { icon: 'minus', color: 'text-danger-600 dark:text-danger-400', bg: 'bg-danger-50 dark:bg-danger-500/10' },
+    Adjust: { icon: 'pencil-square', color: 'text-info-600 dark:text-info-400', bg: 'bg-info-50 dark:bg-info-500/10' },
+    Expire: { icon: 'clock', color: 'text-slate-500 dark:text-slate-400', bg: 'bg-slate-100 dark:bg-slate-800' },
+    Refund: { icon: 'arrow-path', color: 'text-warning-600 dark:text-warning-400', bg: 'bg-warning-50 dark:bg-warning-500/10' },
+  };
+  document.getElementById('txn-list').innerHTML = txns.length ? txns.map(t => {
+    const meta = typeMeta[t.type];
+    return `
+      <div class="card p-3.5 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl ${meta.bg} ${meta.color} flex items-center justify-center flex-shrink-0">${Icons.html(meta.icon, { size: 16 })}</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold truncate">${t.description}</p>
+          <p class="text-xs text-slate-400">${new Date(t.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+        </div>
+        <p class="text-sm font-bold ${t.points > 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'} flex-shrink-0">${t.points > 0 ? '+' : ''}${t.points}</p>
+      </div>`;
+  }).join('') : `<p class="text-sm text-slate-400 text-center py-6">No activity yet at ${biz.name}.</p>`;
+</script>
+</body>
+</html>

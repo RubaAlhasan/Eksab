@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Businesses — Eksabli Admin Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="businesses"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Businesses" data-subtitle="Every tenant on the platform"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+        <div class="breadcrumbs"><a href="dashboard.html">Admin Portal</a><span id="sep1"></span><span class="current">Businesses</span></div>
+
+        <div class="card p-4 flex flex-wrap items-center gap-3">
+          <div class="relative flex-1 min-w-[200px]">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" id="search-icon"></span>
+            <input id="search-input" class="input pl-9" placeholder="Search businesses…">
+          </div>
+          <select id="status-filter" class="select w-44">
+            <option value="">All Statuses</option>
+            <option>Active</option><option>Trialing</option><option>Pending Approval</option><option>Suspended</option>
+          </select>
+          <select id="plan-filter" class="select w-40">
+            <option value="">All Plans</option>
+            <option>Starter</option><option>Growth</option><option>Scale</option><option>Enterprise</option>
+          </select>
+        </div>
+
+        <div class="card overflow-hidden">
+          <div class="table-wrap" style="border:none;border-radius:0">
+            <table class="table">
+              <thead><tr><th>Business</th><th>Category</th><th>Plan</th><th>Members</th><th>Signup</th><th>Status</th><th></th></tr></thead>
+              <tbody id="tenants-body"></tbody>
+            </table>
+          </div>
+          <div id="empty-state" class="empty-state hidden">
+            <div class="empty-state-icon" id="empty-icon"></div>
+            <p class="font-bold text-sm mb-1">No businesses match your filters</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Approve modal -->
+<div class="modal-overlay" data-modal="approve">
+  <div class="modal-panel p-6">
+    <h3 class="font-bold text-base mb-2">Approve this business?</h3>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">It will become visible in customer discovery/search once approved.</p>
+    <div class="flex gap-3">
+      <button class="btn btn-secondary flex-1" data-modal-close="approve">Cancel</button>
+      <button class="btn btn-success flex-1" id="confirm-approve">Approve</button>
+    </div>
+  </div>
+</div>
+
+<!-- Suspend modal -->
+<div class="modal-overlay" data-modal="suspend">
+  <div class="modal-panel p-6">
+    <h3 class="font-bold text-base mb-2">Suspend this business?</h3>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Staff will lose dashboard access immediately. Customer memberships are frozen, not deleted.</p>
+    <div class="flex gap-3">
+      <button class="btn btn-secondary flex-1" data-modal-close="suspend">Cancel</button>
+      <button class="btn btn-danger flex-1" id="confirm-suspend">Suspend</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/admin-shell.js"></script>
+<script>
+  const tenants = EksabliDemoData.admin.tenants;
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+  document.getElementById('search-icon').innerHTML = Icons.html('search', { size: 16 });
+  document.getElementById('empty-icon').innerHTML = Icons.html('building-storefront', { size: 26 });
+
+  const statusBadge = { Active: 'badge-success', Trialing: 'badge-info', 'Pending Approval': 'badge-warning', Suspended: 'badge-danger' };
+
+  function render() {
+    const q = document.getElementById('search-input').value.trim().toLowerCase();
+    const status = document.getElementById('status-filter').value;
+    const plan = document.getElementById('plan-filter').value;
+    const filtered = tenants.filter(t => (!q || t.name.toLowerCase().includes(q)) && (!status || t.status === status) && (!plan || t.plan === plan));
+    const body = document.getElementById('tenants-body');
+    const empty = document.getElementById('empty-state');
+    if (filtered.length === 0) { body.innerHTML = ''; empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+    body.innerHTML = filtered.map(t => `
+      <tr>
+        <td>
+          <div class="flex items-center gap-3">
+            <div class="avatar avatar-sm">${t.name.split(' ').map(w => w[0]).join('').slice(0, 2)}</div>
+            <a href="business-details.html?id=${t.id}" class="font-semibold text-slate-900 dark:text-slate-50 hover:text-primary-600 dark:hover:text-primary-400">${t.name}</a>
+          </div>
+        </td>
+        <td class="text-slate-500 dark:text-slate-400">${t.category}</td>
+        <td><span class="badge badge-neutral">${t.plan}</span></td>
+        <td class="font-semibold">${t.members.toLocaleString()}</td>
+        <td class="text-slate-400">${new Date(t.signupDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+        <td><span class="badge ${statusBadge[t.status]}">${t.status}</span></td>
+        <td class="whitespace-nowrap">
+          ${t.status === 'Pending Approval' ? `<button class="text-xs font-semibold text-success-600 dark:text-success-400 approve-btn mr-2">Approve</button>` : ''}
+          ${t.status !== 'Suspended' && t.status !== 'Pending Approval' ? `<button class="text-xs font-semibold text-danger-600 dark:text-danger-400 suspend-btn">Suspend</button>` : ''}
+          ${t.status === 'Suspended' ? `<span class="text-xs text-slate-400">—</span>` : ''}
+        </td>
+      </tr>`).join('');
+    document.querySelectorAll('.approve-btn').forEach(btn => btn.addEventListener('click', (e) => { e.preventDefault(); Eksabli.openModal('approve'); }));
+    document.querySelectorAll('.suspend-btn').forEach(btn => btn.addEventListener('click', (e) => { e.preventDefault(); Eksabli.openModal('suspend'); }));
+  }
+  ['search-input', 'status-filter', 'plan-filter'].forEach(id => {
+    document.getElementById(id).addEventListener(id === 'search-input' ? 'input' : 'change', render);
+  });
+  document.getElementById('confirm-approve').addEventListener('click', () => { Eksabli.closeModal('approve'); Eksabli.showToast({ type: 'success', title: 'Business approved', message: 'It is now visible in customer discovery.' }); });
+  document.getElementById('confirm-suspend').addEventListener('click', () => { Eksabli.closeModal('suspend'); Eksabli.showToast({ type: 'danger', title: 'Business suspended' }); });
+  render();
+</script>
+</body>
+</html>

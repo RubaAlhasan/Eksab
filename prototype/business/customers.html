@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customers — Eksabli Business Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="customers"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Customers" data-subtitle="Every member of your business"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div class="breadcrumbs"><a href="dashboard.html">Business Portal</a><span id="sep1"></span><span class="current">Customers</span></div>
+          <div class="flex gap-2">
+            <button id="export-btn" class="btn btn-secondary btn-sm"><span id="export-icon"></span>Export</button>
+          </div>
+        </div>
+
+        <div class="tabs-list" data-tabs="customers">
+          <span class="tab-trigger active" data-tab-trigger="customers" data-tab-target="members">Members</span>
+          <span class="tab-trigger" data-tab-trigger="customers" data-tab-target="following">Following <span class="badge badge-neutral ml-1">3</span></span>
+        </div>
+
+        <!-- Members panel -->
+        <div class="tab-panel active space-y-4" data-tab-panel="customers" data-tab-id="members">
+          <div class="card p-4 flex flex-wrap items-center gap-3">
+            <div class="relative flex-1 min-w-[200px]">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" id="search-icon"></span>
+              <input id="search-input" class="input pl-9" placeholder="Search by name or phone…">
+            </div>
+            <select id="tier-filter" class="select w-40">
+              <option value="">All Tiers</option>
+              <option>Bronze</option><option>Silver</option><option>Gold</option><option>Platinum</option>
+            </select>
+            <select id="status-filter" class="select w-40">
+              <option value="">All Statuses</option>
+              <option>Active</option><option>At Risk</option><option>Churned</option>
+            </select>
+          </div>
+
+          <div class="card overflow-hidden">
+            <div class="table-wrap" style="border:none;border-radius:0">
+              <table class="table">
+                <thead><tr><th>Customer</th><th>Phone</th><th>Tier</th><th>Balance</th><th>Joined</th><th>Last Active</th><th>Status</th><th></th></tr></thead>
+                <tbody id="customers-body"></tbody>
+              </table>
+            </div>
+            <div id="empty-state" class="empty-state hidden">
+              <div class="empty-state-icon" id="empty-icon"></div>
+              <p class="font-bold text-sm mb-1">No customers found</p>
+              <p class="text-xs text-slate-400">Try a different search or clear your filters.</p>
+            </div>
+            <div class="flex items-center justify-between p-4 border-t border-slate-100 dark:border-slate-800">
+              <p class="text-xs text-slate-400">Showing <span id="result-count"></span> of <span id="total-count"></span> customers</p>
+              <div class="pagination">
+                <span class="page-btn" id="page-prev"></span>
+                <span class="page-btn active">1</span><span class="page-btn">2</span><span class="page-btn">3</span>
+                <span class="page-btn" id="page-next"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Following panel -->
+        <div class="tab-panel space-y-3" data-tab-panel="customers" data-tab-id="following">
+          <p class="text-xs text-slate-400">Customers following your business but not yet members — good campaign-conversion targets.</p>
+          <div class="card divide-y divide-slate-100 dark:divide-slate-800" id="following-list"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/business-shell.js"></script>
+<script>
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+  document.getElementById('search-icon').innerHTML = Icons.html('search', { size: 16 });
+  document.getElementById('export-icon').innerHTML = Icons.html('document-arrow-down', { size: 14 });
+  document.getElementById('empty-icon').innerHTML = Icons.html('users', { size: 26 });
+  document.getElementById('page-prev').innerHTML = Icons.html('chevron-left', { size: 14 });
+  document.getElementById('page-next').innerHTML = Icons.html('chevron-right', { size: 14 });
+
+  const customers = EksabliDemoData.business.customers;
+  const tierBadge = { Bronze: 'badge-neutral', Silver: 'badge-info', Gold: 'badge-warning', Platinum: 'badge-primary' };
+  const statusBadge = { Active: 'badge-success', 'At Risk': 'badge-warning', Churned: 'badge-danger' };
+
+  document.getElementById('customers-body').innerHTML = customers.map(c => `
+    <tr class="customer-row" data-filter-text="${c.name} ${c.phone}">
+      <td>
+        <div class="flex items-center gap-3">
+          <div class="avatar avatar-sm">${c.name.split(' ').map(w => w[0]).join('')}</div>
+          <a href="customer-details.html?id=${c.id}" class="font-semibold text-slate-900 dark:text-slate-50 hover:text-primary-600 dark:hover:text-primary-400">${c.name}</a>
+        </div>
+      </td>
+      <td class="text-slate-500 dark:text-slate-400">${c.phone}</td>
+      <td><span class="badge ${tierBadge[c.tier]}">${c.tier}</span></td>
+      <td class="font-semibold">${c.balance.toLocaleString()}</td>
+      <td class="text-slate-400">${new Date(c.joined).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+      <td class="text-slate-400">${new Date(c.lastActive).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
+      <td><span class="badge ${statusBadge[c.status]}">${c.status}</span></td>
+      <td><a href="customer-details.html?id=${c.id}" class="text-slate-300 hover:text-primary-600">${Icons.html('chevron-right', { size: 16 })}</a></td>
+    </tr>`).join('');
+  document.getElementById('result-count').textContent = customers.length;
+  document.getElementById('total-count').textContent = customers.length;
+
+  const followers = [
+    { name: 'Youssef Karam', phone: '+971 50 111 2233', followedAt: '2026-07-10' },
+    { name: 'Dina Farouk', phone: '+971 50 222 3344', followedAt: '2026-06-28' },
+    { name: 'Bassel Nour', phone: '+971 50 333 4455', followedAt: '2026-06-01' },
+  ];
+  document.getElementById('following-list').innerHTML = followers.map(f => `
+    <div class="flex items-center gap-3 p-4">
+      <div class="avatar avatar-sm">${f.name.split(' ').map(w => w[0]).join('')}</div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold">${f.name}</p>
+        <p class="text-xs text-slate-400">${f.phone} · Following since ${new Date(f.followedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+      </div>
+      <button class="btn btn-outline btn-sm convert-btn">Convert to Campaign Target</button>
+    </div>`).join('');
+  document.querySelectorAll('.convert-btn').forEach(btn => {
+    btn.addEventListener('click', () => Eksabli.showToast({ type: 'success', title: 'Added to campaign audience', message: 'You can now target this segment from Campaigns.' }));
+  });
+
+  document.getElementById('export-btn').addEventListener('click', () => {
+    Eksabli.showToast({ type: 'success', title: 'Export started', message: 'Your customer list is being prepared as an Excel file.' });
+  });
+
+  // Tier/status filters combine with the free-text search already wired by components.js.
+  function applyFilters() {
+    const q = document.getElementById('search-input').value.trim().toLowerCase();
+    const tier = document.getElementById('tier-filter').value;
+    const status = document.getElementById('status-filter').value;
+    let visible = 0;
+    document.querySelectorAll('.customer-row').forEach((row, i) => {
+      const c = customers[i];
+      const matches = (!q || `${c.name} ${c.phone}`.toLowerCase().includes(q)) && (!tier || c.tier === tier) && (!status || c.status === status);
+      row.classList.toggle('hidden', !matches);
+      if (matches) visible++;
+    });
+    document.getElementById('result-count').textContent = visible;
+    document.getElementById('empty-state').classList.toggle('hidden', visible !== 0);
+  }
+  document.getElementById('tier-filter').addEventListener('change', applyFilters);
+  document.getElementById('status-filter').addEventListener('change', applyFilters);
+  document.getElementById('search-input').addEventListener('input', applyFilters);
+</script>
+</body>
+</html>

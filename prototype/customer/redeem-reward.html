@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redeem — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-white dark:bg-slate-950">
+    <div data-status-bar></div>
+    <div data-top-bar data-title="Redemption" data-back="javascript:history.back()"></div>
+
+    <!-- Active token state -->
+    <div id="active-view" class="flex-1 flex flex-col items-center px-8 pt-4">
+      <p class="text-sm text-slate-400 mb-1 text-center">Show this to staff at checkout</p>
+      <h1 class="text-lg font-extrabold text-center mb-6" id="reward-name"></h1>
+
+      <div class="tabs-pill mb-6" id="mode-toggle">
+        <span class="tab-pill-trigger active" data-mode="qr">QR Code</span>
+        <span class="tab-pill-trigger" data-mode="pin">PIN</span>
+      </div>
+
+      <div id="qr-panel" class="flex flex-col items-center">
+        <div class="w-56 h-56 rounded-2xl bg-slate-900 flex items-center justify-center mb-6">
+          <div class="grid grid-cols-7 gap-1 p-4" id="qr-pattern"></div>
+        </div>
+      </div>
+
+      <div id="pin-panel" class="hidden flex-col items-center mb-6">
+        <div class="flex gap-3" id="pin-digits"></div>
+      </div>
+
+      <div class="card px-6 py-3 flex items-center gap-2 mb-8">
+        <span id="timer-icon"></span>
+        <span class="text-sm font-bold" id="countdown">05:00</span>
+        <span class="text-xs text-slate-400">until this token expires</span>
+      </div>
+
+      <button id="cancel-btn" class="btn btn-secondary w-full">Cancel Redemption</button>
+    </div>
+
+    <!-- Expired state -->
+    <div id="expired-view" class="flex-1 hidden flex-col items-center justify-center text-center px-8">
+      <div class="w-16 h-16 rounded-2xl bg-danger-50 dark:bg-danger-500/10 flex items-center justify-center text-danger-500 mb-6" id="expired-icon"></div>
+      <h1 class="text-lg font-extrabold mb-2">Token expired</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-8">For security, redemption codes are single-use and expire quickly. Generate a new one to try again.</p>
+      <button id="retry-btn" class="btn btn-primary btn-lg w-full">Generate New Code</button>
+    </div>
+
+    <!-- Success state (simulated staff confirmation) -->
+    <div id="success-view" class="flex-1 hidden flex-col items-center justify-center text-center px-8">
+      <div class="w-20 h-20 rounded-full bg-success-50 dark:bg-success-500/10 flex items-center justify-center text-success-600 dark:text-success-400 mb-6 animate-scale-in" id="success-icon"></div>
+      <h1 class="text-xl font-extrabold mb-2">Redeemed!</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-8">Staff confirmed your redemption. Enjoy!</p>
+      <a href="coupons.html" class="btn btn-primary btn-lg w-full">View My Coupons</a>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  const params = new URLSearchParams(location.search);
+  const reward = data.rewards.find(r => r.id === params.get('id')) || data.rewards[0];
+  document.getElementById('reward-name').textContent = reward.name;
+  document.getElementById('timer-icon').innerHTML = Icons.html('clock', { size: 16 });
+  document.getElementById('expired-icon').innerHTML = Icons.html('exclamation-triangle', { size: 26 });
+  document.getElementById('success-icon').innerHTML = Icons.html('check-circle', { size: 40 });
+
+  const qrGrid = document.getElementById('qr-pattern');
+  for (let i = 0; i < 49; i++) {
+    const on = Math.random() > 0.45;
+    qrGrid.innerHTML += `<div class="w-4 h-4 rounded-sm ${on ? 'bg-white' : 'bg-transparent'}"></div>`;
+  }
+  const pin = Math.floor(1000 + Math.random() * 9000).toString();
+  document.getElementById('pin-digits').innerHTML = pin.split('').map(d => `<div class="w-12 h-14 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-2xl font-extrabold">${d}</div>`).join('');
+
+  document.querySelectorAll('#mode-toggle [data-mode]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#mode-toggle [data-mode]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const qr = btn.getAttribute('data-mode') === 'qr';
+      document.getElementById('qr-panel').classList.toggle('hidden', !qr);
+      document.getElementById('pin-panel').classList.toggle('hidden', qr);
+      document.getElementById('pin-panel').classList.toggle('flex', !qr);
+    });
+  });
+
+  // Countdown
+  let seconds = 300;
+  const countdownEl = document.getElementById('countdown');
+  const interval = setInterval(() => {
+    seconds--;
+    const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
+    const ss = String(seconds % 60).padStart(2, '0');
+    countdownEl.textContent = `${mm}:${ss}`;
+    if (seconds <= 0) {
+      clearInterval(interval);
+      document.getElementById('active-view').classList.add('hidden');
+      const expired = document.getElementById('expired-view');
+      expired.classList.remove('hidden'); expired.classList.add('flex');
+    }
+  }, 1000);
+
+  // For the prototype: simulate a staff confirming redemption after 6s so the flow is demoable.
+  setTimeout(() => {
+    if (seconds > 0) {
+      clearInterval(interval);
+      document.getElementById('active-view').classList.add('hidden');
+      const success = document.getElementById('success-view');
+      success.classList.remove('hidden'); success.classList.add('flex');
+    }
+  }, 6000);
+
+  document.getElementById('cancel-btn').addEventListener('click', () => { window.location.href = `reward-details.html?id=${reward.id}`; });
+  document.getElementById('retry-btn').addEventListener('click', () => { window.location.reload(); });
+</script>
+</body>
+</html>

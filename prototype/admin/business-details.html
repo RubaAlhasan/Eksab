@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Details — Eksabli Admin Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="businesses"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Business Details"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+        <div class="breadcrumbs"><a href="dashboard.html">Admin Portal</a><span id="sep1"></span><a href="businesses.html">Businesses</a><span id="sep2"></span><span class="current" id="crumb-name"></span></div>
+
+        <div class="grid lg:grid-cols-3 gap-6">
+          <div class="card p-6 lg:col-span-1 h-fit">
+            <div class="flex flex-col items-center text-center mb-5">
+              <div class="avatar avatar-xl mb-3" id="avatar"></div>
+              <p class="font-bold text-lg" id="name"></p>
+              <p class="text-sm text-slate-400" id="category"></p>
+              <span class="badge mt-2" id="status-badge"></span>
+            </div>
+            <div class="grid grid-cols-2 gap-3 text-center mb-5">
+              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60"><p class="text-lg font-extrabold" id="members"></p><p class="text-xs text-slate-400">Members</p></div>
+              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60"><p class="text-lg font-extrabold" id="plan"></p><p class="text-xs text-slate-400">Plan</p></div>
+            </div>
+            <div class="space-y-2 text-sm mb-5">
+              <div class="flex justify-between"><span class="text-slate-400">Signed up</span><span class="font-semibold" id="signup"></span></div>
+              <div class="flex justify-between"><span class="text-slate-400">Owner</span><span class="font-semibold">Marcus Reid</span></div>
+              <div class="flex justify-between"><span class="text-slate-400">Branches</span><span class="font-semibold">6</span></div>
+            </div>
+            <div class="flex flex-col gap-2">
+              <button id="viewas-btn" class="btn btn-secondary w-full"><span id="eye-icon"></span>View as Tenant</button>
+              <button id="approve-btn" class="btn btn-success w-full hidden">Approve Business</button>
+              <button id="suspend-btn" class="btn btn-danger w-full">Suspend Business</button>
+            </div>
+          </div>
+
+          <div class="lg:col-span-2 space-y-4">
+            <div class="alert alert-info">
+              <span id="audit-icon"></span>
+              <p>"View as Tenant" sessions are read-mostly and fully audited — every access is logged with who, what, and when.</p>
+            </div>
+
+            <div class="tabs-list" data-tabs="detail">
+              <span class="tab-trigger active" data-tab-trigger="detail" data-tab-target="overview">Overview</span>
+              <span class="tab-trigger" data-tab-trigger="detail" data-tab-target="billing">Billing</span>
+              <span class="tab-trigger" data-tab-trigger="detail" data-tab-target="activity">Activity Log</span>
+            </div>
+
+            <div class="tab-panel active grid sm:grid-cols-2 gap-4" data-tab-panel="detail" data-tab-id="overview">
+              <div class="card p-5"><p class="text-xs text-slate-400 mb-1">Points Issued (30d)</p><p class="text-xl font-extrabold">84,200</p></div>
+              <div class="card p-5"><p class="text-xs text-slate-400 mb-1">Points Redeemed (30d)</p><p class="text-xl font-extrabold">51,300</p></div>
+              <div class="card p-5"><p class="text-xs text-slate-400 mb-1">Active Campaigns</p><p class="text-xl font-extrabold">2</p></div>
+              <div class="card p-5"><p class="text-xs text-slate-400 mb-1">Support Tickets (open)</p><p class="text-xl font-extrabold">1</p></div>
+            </div>
+
+            <div class="tab-panel" data-tab-panel="detail" data-tab-id="billing">
+              <div class="card overflow-hidden">
+                <div class="table-wrap" style="border:none;border-radius:0">
+                  <table class="table">
+                    <thead><tr><th>Period</th><th>Amount</th><th>Status</th></tr></thead>
+                    <tbody>
+                      <tr><td>Jul 2026</td><td>$149.00</td><td><span class="badge badge-success">Paid</span></td></tr>
+                      <tr><td>Jun 2026</td><td>$149.00</td><td><span class="badge badge-success">Paid</span></td></tr>
+                      <tr><td>May 2026</td><td>$149.00</td><td><span class="badge badge-success">Paid</span></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="tab-panel" data-tab-panel="detail" data-tab-id="activity">
+              <div class="card p-5">
+                <div id="timeline"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/admin-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  const params = new URLSearchParams(location.search);
+  const t = data.admin.tenants.find(x => x.id === params.get('id')) || data.admin.tenants[0];
+
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+  document.getElementById('sep2').innerHTML = Icons.html('chevron-right', { size: 14 });
+  document.getElementById('eye-icon').innerHTML = Icons.html('eye', { size: 16 });
+  document.getElementById('audit-icon').innerHTML = Icons.html('shield-check', { size: 18 });
+
+  document.getElementById('crumb-name').textContent = t.name;
+  document.getElementById('avatar').textContent = t.name.split(' ').map(w => w[0]).join('').slice(0, 2);
+  document.getElementById('name').textContent = t.name;
+  document.getElementById('category').textContent = t.category;
+  const statusBadge = { Active: 'badge-success', Trialing: 'badge-info', 'Pending Approval': 'badge-warning', Suspended: 'badge-danger' };
+  document.getElementById('status-badge').className = `badge ${statusBadge[t.status]} mt-2`;
+  document.getElementById('status-badge').textContent = t.status;
+  document.getElementById('members').textContent = t.members.toLocaleString();
+  document.getElementById('plan').textContent = t.plan;
+  document.getElementById('signup').textContent = new Date(t.signupDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+
+  if (t.status === 'Pending Approval') document.getElementById('approve-btn').classList.remove('hidden');
+
+  document.getElementById('viewas-btn').addEventListener('click', () => Eksabli.showToast({ type: 'info', title: 'View-as-tenant session started', message: 'This action has been logged to the audit trail.' }));
+  document.getElementById('approve-btn').addEventListener('click', () => Eksabli.showToast({ type: 'success', title: 'Business approved' }));
+  document.getElementById('suspend-btn').addEventListener('click', () => Eksabli.showToast({ type: 'danger', title: 'Business suspended' }));
+
+  const events = [
+    { text: 'Tenant signed up', who: 'System', date: t.signupDate },
+    { text: 'Subscription activated (Growth plan)', who: 'Billing System', date: t.signupDate },
+    { text: 'Support ticket opened — POS redemption issue', who: 'Marcus Reid', date: '2026-08-04' },
+    { text: 'View-as-tenant session', who: 'Support Agent Jane', date: '2026-08-01' },
+  ];
+  document.getElementById('timeline').innerHTML = events.map(e => `
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <p class="text-sm font-semibold">${e.text}</p>
+      <p class="text-xs text-slate-400">${e.who} · ${new Date(e.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+    </div>`).join('');
+</script>
+</body>
+</html>

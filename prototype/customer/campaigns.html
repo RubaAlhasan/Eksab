@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campaigns & Offers — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-slate-50 dark:bg-slate-950">
+    <div data-status-bar></div>
+    <div data-top-bar data-title="Campaigns & Offers" data-back="home.html"></div>
+
+    <div class="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+      <div id="skeleton" class="space-y-3">
+        <div class="skeleton h-28 rounded-2xl"></div>
+        <div class="skeleton h-28 rounded-2xl"></div>
+        <div class="skeleton h-28 rounded-2xl"></div>
+      </div>
+      <div id="list" class="hidden space-y-3"></div>
+      <div id="empty-state" class="empty-state hidden">
+        <div class="empty-state-icon" id="empty-icon"></div>
+        <p class="font-bold text-sm mb-1">No active campaigns</p>
+        <p class="text-xs text-slate-400 max-w-[16rem]">Follow more businesses to see their offers here.</p>
+      </div>
+    </div>
+
+    <div data-bottom-nav="home"></div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  document.getElementById('empty-icon').innerHTML = Icons.html('megaphone', { size: 26 });
+
+  const typeBadge = {
+    DoublePoints: 'badge-primary', Birthday: 'badge-warning', WinBack: 'badge-info',
+    NewCustomer: 'badge-success', Discount: 'badge-danger', Referral: 'badge-primary',
+  };
+
+  const active = data.campaigns.filter(c => c.status === 'Active');
+  const list = document.getElementById('list');
+
+  if (active.length === 0) {
+    document.getElementById('empty-state').classList.remove('hidden');
+  } else {
+    list.innerHTML = active.map(c => {
+      const biz = data.businesses.find(b => b.id === c.businessId);
+      return `
+        <a href="store-details.html?id=${biz.id}" class="campaign-card card card-hover p-0 overflow-hidden">
+          <div class="p-4 bg-gradient-to-br ${biz.color} text-white">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold uppercase tracking-wide text-white/70">${biz.name}</span>
+              <span class="badge ${typeBadge[c.type] || 'badge-neutral'}">${c.type.replace(/([A-Z])/g, ' $1').trim()}</span>
+            </div>
+            <p class="text-base font-extrabold">${c.name}</p>
+          </div>
+          <div class="p-4">
+            <p class="text-sm text-slate-500 dark:text-slate-400 mb-2">${c.description}</p>
+            <p class="text-xs text-slate-400">Ends ${new Date(c.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+          </div>
+        </a>`;
+    }).join('');
+  }
+
+  setTimeout(() => {
+    document.getElementById('skeleton').classList.add('hidden');
+    if (active.length) list.classList.remove('hidden');
+  }, 450);
+</script>
+</body>
+</html>

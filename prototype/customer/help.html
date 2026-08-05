@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Help & Support — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-slate-50 dark:bg-slate-950">
+    <div data-status-bar></div>
+    <div data-top-bar data-title="Help & Support" data-back="profile.html"></div>
+
+    <div class="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+
+      <div class="grid grid-cols-2 gap-3">
+        <a href="mailto:support@eksabli.app" class="card card-hover p-4 flex flex-col items-center text-center gap-2">
+          <div class="w-9 h-9 rounded-xl bg-primary-50 dark:bg-primary-500/10 flex items-center justify-center text-primary-600 dark:text-primary-300" id="email-icon"></div>
+          <span class="text-xs font-semibold">Email Support</span>
+        </a>
+        <button id="chat-btn" class="card card-hover p-4 flex flex-col items-center text-center gap-2">
+          <div class="w-9 h-9 rounded-xl bg-success-50 dark:bg-success-500/10 flex items-center justify-center text-success-600 dark:text-success-300" id="chat-icon"></div>
+          <span class="text-xs font-semibold">Submit a Ticket</span>
+        </button>
+      </div>
+
+      <section>
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2 px-1">Frequently Asked Questions</p>
+        <div class="card divide-y divide-slate-100 dark:divide-slate-800" id="faq-list"></div>
+      </section>
+
+      <div class="alert alert-info">
+        <span id="info-icon"></span>
+        <p>Can't find an answer? Reach us at <span class="font-semibold">support@eksabli.app</span> — average response time is under 4 hours.</p>
+      </div>
+    </div>
+
+    <div data-bottom-nav=""></div>
+  </div>
+</div>
+
+<!-- Submit ticket modal -->
+<div class="modal-overlay" data-modal="ticket">
+  <div class="modal-panel p-6">
+    <h3 class="font-bold text-base mb-4">Submit a support ticket</h3>
+    <div class="space-y-3 mb-5">
+      <div>
+        <label class="field-label">Subject</label>
+        <input class="input" placeholder="e.g. Missing points from a purchase">
+      </div>
+      <div>
+        <label class="field-label">Message</label>
+        <textarea class="textarea" rows="3" placeholder="Describe the issue…"></textarea>
+      </div>
+    </div>
+    <div class="flex gap-3">
+      <button class="btn btn-secondary flex-1" data-modal-close="ticket">Cancel</button>
+      <button class="btn btn-primary flex-1" id="submit-ticket">Submit</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  document.getElementById('email-icon').innerHTML = Icons.html('envelope', { size: 18 });
+  document.getElementById('chat-icon').innerHTML = Icons.html('clipboard-document', { size: 18 });
+  document.getElementById('info-icon').innerHTML = Icons.html('information-circle', { size: 18 });
+  document.getElementById('chat-btn').addEventListener('click', () => Eksabli.openModal('ticket'));
+  document.getElementById('submit-ticket').addEventListener('click', () => {
+    Eksabli.closeModal('ticket');
+    Eksabli.showToast({ type: 'success', title: 'Ticket submitted', message: 'We\'ll reply to your email shortly.' });
+  });
+
+  const faqs = [
+    { q: 'How do I earn points?', a: 'Points are awarded automatically by staff at checkout — either by scanning your wallet QR or looking up your phone number.' },
+    { q: 'Do points expire?', a: 'Each business sets its own expiration policy, shown on that business\'s Points page. Expired points appear as a separate line in your transaction history.' },
+    { q: 'Can I transfer points to a friend?', a: 'Not yet — point transfer between customers isn\'t available in this version.' },
+    { q: 'What happens if a business closes?', a: 'Your membership and balance are frozen, not deleted, so your history at other businesses is unaffected.' },
+    { q: 'How do I delete my account?', a: 'Go to Settings → Danger Zone → Delete my account. Your data is retained for 90 days before permanent deletion.' },
+  ];
+  document.getElementById('faq-list').innerHTML = faqs.map((f, i) => `
+    <div>
+      <button class="faq-trigger w-full flex items-center justify-between gap-3 p-4 text-left" data-idx="${i}">
+        <span class="text-sm font-semibold">${f.q}</span>
+        <span class="text-slate-400 flex-shrink-0 faq-chevron transition-transform">${Icons.html('chevron-down', { size: 16 })}</span>
+      </button>
+      <div class="faq-panel hidden px-4 pb-4">
+        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">${f.a}</p>
+      </div>
+    </div>`).join('');
+  document.querySelectorAll('.faq-trigger').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const panel = btn.nextElementSibling;
+      const chevron = btn.querySelector('.faq-chevron');
+      panel.classList.toggle('hidden');
+      chevron.style.transform = panel.classList.contains('hidden') ? '' : 'rotate(180deg)';
+    });
+  });
+</script>
+</body>
+</html>

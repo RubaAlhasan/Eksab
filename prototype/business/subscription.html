@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subscription — Eksabli Business Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="subscription"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Subscription" data-subtitle="Your plan and usage against quota"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+        <div class="breadcrumbs"><a href="dashboard.html">Business Portal</a><span id="sep1"></span><span class="current">Subscription</span></div>
+
+        <div class="grid lg:grid-cols-3 gap-6">
+          <div class="card p-6 lg:col-span-2">
+            <div class="flex items-center justify-between mb-1">
+              <h2 class="font-bold text-base" id="plan-name"></h2>
+              <span class="badge badge-success" id="plan-status"></span>
+            </div>
+            <p class="text-xs text-slate-400 mb-5">Renews <span id="renewal-date"></span> · $<span id="plan-price"></span>/month</p>
+
+            <div class="space-y-4" id="usage-list"></div>
+
+            <div class="flex gap-3 mt-6">
+              <button class="btn btn-primary" id="upgrade-btn">Upgrade Plan</button>
+              <button class="btn btn-secondary" id="downgrade-btn">Change Plan</button>
+            </div>
+          </div>
+
+          <div class="card p-6">
+            <h2 class="font-bold text-sm mb-4">Compare Plans</h2>
+            <div class="space-y-3" id="plans-mini"></div>
+          </div>
+        </div>
+
+        <div class="card p-6 border-danger-200 dark:border-danger-500/20">
+          <h2 class="font-bold text-sm text-danger-600 dark:text-danger-400 mb-2">Danger Zone</h2>
+          <div class="flex items-center justify-between flex-wrap gap-3">
+            <p class="text-sm text-slate-500 dark:text-slate-400 max-w-md">Cancelling freezes your loyalty program — members keep their balances, but can't earn or redeem until you resubscribe.</p>
+            <button class="btn btn-danger btn-sm" id="cancel-btn">Cancel Subscription</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="modal-overlay" data-modal="cancel-sub">
+  <div class="modal-panel p-6">
+    <h3 class="font-bold text-base mb-2">Cancel your subscription?</h3>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Your loyalty program will be frozen at the end of the current billing period. Member data is retained for 90 days.</p>
+    <div class="flex gap-3">
+      <button class="btn btn-secondary flex-1" data-modal-close="cancel-sub">Keep Subscription</button>
+      <button class="btn btn-danger flex-1" id="confirm-cancel">Cancel Subscription</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/business-shell.js"></script>
+<script>
+  const sub = EksabliDemoData.business.subscription;
+  const plans = EksabliDemoData.admin.plans;
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+
+  document.getElementById('plan-name').textContent = sub.plan + ' Plan';
+  document.getElementById('plan-status').textContent = sub.status;
+  document.getElementById('renewal-date').textContent = new Date(sub.renewalDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('plan-price').textContent = sub.monthlyPrice;
+
+  const usageLabels = { branches: 'Branches', activeMembers: 'Active Members', campaigns: 'Campaigns', smsCredits: 'SMS Credits' };
+  document.getElementById('usage-list').innerHTML = Object.entries(sub.usage).map(([key, u]) => {
+    const pct = u.limit ? Math.min(100, Math.round(u.used / u.limit * 100)) : 0;
+    const over = u.limit && u.used > u.limit;
+    return `
+      <div>
+        <div class="flex items-center justify-between text-xs mb-1.5">
+          <span class="font-semibold">${usageLabels[key]}</span>
+          <span class="${over ? 'text-danger-600 dark:text-danger-400 font-semibold' : 'text-slate-400'}">${u.used.toLocaleString()} ${u.limit ? '/ ' + u.limit.toLocaleString() : '(unlimited)'}</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" style="width:${pct}%;${over ? 'background:#DC2626' : ''}"></div></div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('plans-mini').innerHTML = plans.map(p => `
+    <div class="flex items-center justify-between p-3 rounded-xl ${p.name === sub.plan ? 'bg-primary-50 dark:bg-primary-500/10 ring-1 ring-primary-200 dark:ring-primary-500/30' : 'bg-slate-50 dark:bg-slate-800/60'}">
+      <div>
+        <p class="text-sm font-bold">${p.name}</p>
+        <p class="text-xs text-slate-400">${p.price !== null ? '$' + p.price + '/mo' : 'Custom'}</p>
+      </div>
+      ${p.name === sub.plan ? '<span class="badge badge-primary">Current</span>' : '<button class="text-xs font-semibold text-primary-600 dark:text-primary-400 select-plan">Select</button>'}
+    </div>`).join('');
+
+  document.querySelectorAll('.select-plan, #upgrade-btn, #downgrade-btn').forEach(btn => {
+    btn.addEventListener('click', () => Eksabli.showToast({ type: 'info', title: 'Plan change', message: 'This would open the plan checkout flow.' }));
+  });
+  document.getElementById('cancel-btn').addEventListener('click', () => Eksabli.openModal('cancel-sub'));
+  document.getElementById('confirm-cancel').addEventListener('click', () => { Eksabli.closeModal('cancel-sub'); Eksabli.showToast({ type: 'danger', title: 'Cancellation scheduled', message: 'Your program freezes at the end of this billing period.' }); });
+</script>
+</body>
+</html>

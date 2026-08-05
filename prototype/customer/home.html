@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Home — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-slate-50 dark:bg-slate-950">
+    <div data-status-bar></div>
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-5 pt-2 pb-4">
+      <div class="flex items-center gap-3">
+        <a href="profile.html" class="avatar avatar-md" id="avatar"></a>
+        <div>
+          <p class="text-xs text-slate-400">Good afternoon</p>
+          <p class="text-sm font-bold" id="greeting-name"></p>
+        </div>
+      </div>
+      <a href="notifications.html" class="relative btn btn-icon btn-secondary" id="bell-btn" aria-label="Notifications">
+        <span id="bell-icon"></span>
+        <span id="bell-dot" class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-danger-500 hidden"></span>
+      </a>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-5 pb-6 space-y-7">
+
+      <!-- Skeleton -->
+      <div id="skeleton" class="space-y-7">
+        <div class="flex gap-3">
+          <div class="skeleton h-32 w-44 rounded-2xl flex-shrink-0"></div>
+          <div class="skeleton h-32 w-44 rounded-2xl flex-shrink-0"></div>
+        </div>
+        <div class="skeleton h-24 rounded-2xl"></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="skeleton h-36 rounded-2xl"></div>
+          <div class="skeleton h-36 rounded-2xl"></div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div id="content" class="hidden space-y-7">
+
+        <!-- My businesses -->
+        <section>
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold">My Businesses</h2>
+            <a href="wallet.html" class="text-xs font-semibold text-primary-600 dark:text-primary-400">See all</a>
+          </div>
+          <div class="flex gap-3 overflow-x-auto no-scrollbar pb-1" id="my-businesses"></div>
+        </section>
+
+        <!-- Active campaigns -->
+        <section>
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold">Active Campaigns</h2>
+            <a href="campaigns.html" class="text-xs font-semibold text-primary-600 dark:text-primary-400">See all</a>
+          </div>
+          <div class="flex gap-3 overflow-x-auto no-scrollbar pb-1" id="campaign-banners"></div>
+        </section>
+
+        <!-- Quick actions -->
+        <section class="grid grid-cols-2 gap-3">
+          <a href="qr-scanner.html" class="card card-hover p-4 flex flex-col items-center text-center gap-2">
+            <div class="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-500/10 flex items-center justify-center text-primary-600 dark:text-primary-300" id="scan-icon"></div>
+            <span class="text-xs font-semibold">Scan &amp; Check-in</span>
+          </a>
+          <a href="qr-code.html" class="card card-hover p-4 flex flex-col items-center text-center gap-2">
+            <div class="w-10 h-10 rounded-xl bg-success-50 dark:bg-success-500/10 flex items-center justify-center text-success-600 dark:text-success-300" id="mycode-icon"></div>
+            <span class="text-xs font-semibold">My Wallet QR</span>
+          </a>
+        </section>
+
+        <!-- Discover -->
+        <section>
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold">Discover Nearby</h2>
+            <a href="nearby-stores.html" class="text-xs font-semibold text-primary-600 dark:text-primary-400">See all</a>
+          </div>
+          <div class="grid grid-cols-2 gap-3" id="discover-grid"></div>
+        </section>
+      </div>
+    </div>
+
+    <div data-bottom-nav="home"></div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  document.getElementById('avatar').textContent = data.currentCustomer.initials;
+  document.getElementById('greeting-name').textContent = data.currentCustomer.firstName + ' ' + data.currentCustomer.lastName;
+  document.getElementById('bell-icon').innerHTML = Icons.html('bell', { size: 18 });
+  document.getElementById('scan-icon').innerHTML = Icons.html('qr-code', { size: 20 });
+  document.getElementById('mycode-icon').innerHTML = Icons.html('qr-code', { size: 20 });
+  if (data.notifications.some(n => !n.read)) document.getElementById('bell-dot').classList.remove('hidden');
+
+  function businessById(id) { return data.businesses.find(b => b.id === id); }
+
+  // My businesses carousel
+  const bizWrap = document.getElementById('my-businesses');
+  data.memberships.forEach(m => {
+    const biz = businessById(m.businessId);
+    const hasCampaign = data.campaigns.some(c => c.businessId === biz.id && c.status === 'Active');
+    bizWrap.innerHTML += `
+      <a href="my-points.html?id=${biz.id}" class="card card-hover w-44 flex-shrink-0 p-4 relative overflow-hidden">
+        ${hasCampaign ? `<span class="absolute top-3 right-3 badge badge-warning">Campaign</span>` : ''}
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br ${biz.color} flex items-center justify-center text-white font-bold text-sm mb-3">${biz.initials}</div>
+        <p class="text-sm font-bold truncate mb-0.5">${biz.name}</p>
+        <p class="text-xs text-slate-400 mb-3">${m.tier} tier</p>
+        <p class="text-lg font-extrabold text-primary-600 dark:text-primary-400">${m.balance.toLocaleString()} <span class="text-xs font-semibold text-slate-400">pts</span></p>
+      </a>`;
+  });
+
+  // Campaign banners
+  const campWrap = document.getElementById('campaign-banners');
+  data.campaigns.filter(c => c.status === 'Active').slice(0, 4).forEach(c => {
+    const biz = businessById(c.businessId);
+    campWrap.innerHTML += `
+      <a href="campaigns.html" class="card card-hover w-64 flex-shrink-0 p-4 bg-gradient-to-br ${biz.color} border-0 text-white">
+        <p class="text-[10px] font-bold uppercase tracking-wide text-white/70 mb-1">${biz.name}</p>
+        <p class="text-sm font-extrabold mb-1">${c.name}</p>
+        <p class="text-xs text-white/80 line-clamp-2">${c.description}</p>
+      </a>`;
+  });
+
+  // Discover grid — businesses the customer hasn't joined
+  const discoverWrap = document.getElementById('discover-grid');
+  data.businesses.filter(b => !b.member).slice(0, 4).forEach(biz => {
+    discoverWrap.innerHTML += `
+      <a href="store-details.html?id=${biz.id}" class="card card-hover p-4">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br ${biz.color} flex items-center justify-center text-white font-bold text-sm mb-3">${biz.initials}</div>
+        <p class="text-sm font-bold truncate">${biz.name}</p>
+        <p class="text-xs text-slate-400 mb-2">${biz.category}</p>
+        <div class="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+          <span class="text-warning-500">★</span> ${biz.rating} · ${biz.distanceKm} km
+        </div>
+      </a>`;
+  });
+
+  setTimeout(() => {
+    document.getElementById('skeleton').classList.add('hidden');
+    document.getElementById('content').classList.remove('hidden');
+  }, 500);
+</script>
+</body>
+</html>

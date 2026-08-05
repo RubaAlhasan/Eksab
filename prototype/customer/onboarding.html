@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-white dark:bg-slate-950">
+
+    <div class="flex justify-end px-5 pt-5">
+      <a href="register.html" class="text-sm font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">Skip</a>
+    </div>
+
+    <div class="flex-1 flex flex-col" id="slides">
+      <!-- Slide 1 -->
+      <div class="onboard-slide flex-1 flex flex-col items-center justify-center text-center px-8" data-slide="0">
+        <div class="w-40 h-40 rounded-4xl bg-primary-50 dark:bg-primary-500/10 flex items-center justify-center text-primary-600 dark:text-primary-300 mb-8">
+          <span class="onboard-icon"></span>
+        </div>
+        <h2 class="text-2xl font-extrabold tracking-tight mb-3">Join businesses</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400 max-w-xs">Scan a QR code or search to join any business's loyalty program — all from one account.</p>
+      </div>
+      <!-- Slide 2 -->
+      <div class="onboard-slide hidden flex-1 flex-col items-center justify-center text-center px-8" data-slide="1">
+        <div class="w-40 h-40 rounded-4xl bg-success-50 dark:bg-success-500/10 flex items-center justify-center text-success-600 dark:text-success-300 mb-8">
+          <span class="onboard-icon"></span>
+        </div>
+        <h2 class="text-2xl font-extrabold tracking-tight mb-3">Collect points</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400 max-w-xs">Earn points at checkout, from campaigns, and from referrals — every balance tracked independently.</p>
+      </div>
+      <!-- Slide 3 -->
+      <div class="onboard-slide hidden flex-1 flex-col items-center justify-center text-center px-8" data-slide="2">
+        <div class="w-40 h-40 rounded-4xl bg-warning-50 dark:bg-warning-500/10 flex items-center justify-center text-warning-600 dark:text-warning-300 mb-8">
+          <span class="onboard-icon"></span>
+        </div>
+        <h2 class="text-2xl font-extrabold tracking-tight mb-3">Redeem rewards</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400 max-w-xs">Turn points into discounts, free products and gift cards — show a QR or PIN at the counter.</p>
+      </div>
+    </div>
+
+    <div class="px-8 pb-10">
+      <div class="flex items-center justify-center gap-1.5 mb-6" id="dots">
+        <span class="dot w-2 h-2 rounded-full bg-primary-600" data-dot="0"></span>
+        <span class="dot w-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700" data-dot="1"></span>
+        <span class="dot w-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700" data-dot="2"></span>
+      </div>
+      <button id="next-btn" class="btn btn-primary btn-lg w-full">Next</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script>
+  const icons = ['users', 'wallet', 'gift'];
+  document.querySelectorAll('.onboard-icon').forEach((el, i) => { el.innerHTML = Icons.html(icons[i], { size: 56 }); });
+
+  let current = 0;
+  const slides = document.querySelectorAll('.onboard-slide');
+  const dots = document.querySelectorAll('.dot');
+  const nextBtn = document.getElementById('next-btn');
+
+  function render() {
+    slides.forEach((s, i) => {
+      s.classList.toggle('hidden', i !== current);
+      s.classList.toggle('flex', i === current);
+    });
+    dots.forEach((d, i) => {
+      d.className = 'dot w-2 h-2 rounded-full ' + (i === current ? 'bg-primary-600' : 'bg-slate-200 dark:bg-slate-700');
+    });
+    nextBtn.textContent = current === slides.length - 1 ? 'Get Started' : 'Next';
+  }
+  nextBtn.addEventListener('click', () => {
+    if (current < slides.length - 1) { current++; render(); }
+    else { window.location.href = 'register.html'; }
+  });
+  render();
+</script>
+</body>
+</html>

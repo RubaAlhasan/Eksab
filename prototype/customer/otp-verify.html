@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify Phone — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-white dark:bg-slate-950">
+    <div data-status-bar></div>
+
+    <div class="flex items-center gap-3 px-5 pt-2 pb-4">
+      <a href="register.html" class="btn btn-icon btn-ghost -ml-2" aria-label="Back"></a>
+    </div>
+
+    <div class="flex-1 flex flex-col px-6">
+      <div class="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-primary-500/10 flex items-center justify-center text-primary-600 dark:text-primary-300 mb-6" id="otp-icon"></div>
+      <h1 class="text-2xl font-extrabold tracking-tight mb-1">Verify your number</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-1">We sent a 6-digit code to <span class="font-semibold text-slate-700 dark:text-slate-200">+971 50 123 4567</span></p>
+      <p class="text-xs text-slate-400 mb-6">(Demo code: <span class="font-mono font-semibold">123456</span>)</p>
+
+      <div id="form-alert" class="alert alert-danger mb-4 hidden">
+        <span id="form-alert-icon"></span>
+        <p>Incorrect code. Please check and try again.</p>
+      </div>
+
+      <div class="flex items-center justify-between gap-2 mb-6" id="otp-boxes">
+        <input maxlength="1" inputmode="numeric" class="otp-box input text-center text-xl font-bold h-14 w-full">
+        <input maxlength="1" inputmode="numeric" class="otp-box input text-center text-xl font-bold h-14 w-full">
+        <input maxlength="1" inputmode="numeric" class="otp-box input text-center text-xl font-bold h-14 w-full">
+        <input maxlength="1" inputmode="numeric" class="otp-box input text-center text-xl font-bold h-14 w-full">
+        <input maxlength="1" inputmode="numeric" class="otp-box input text-center text-xl font-bold h-14 w-full">
+        <input maxlength="1" inputmode="numeric" class="otp-box input text-center text-xl font-bold h-14 w-full">
+      </div>
+
+      <button id="verify-btn" class="btn btn-primary btn-lg w-full mb-4">
+        <span id="verify-label">Verify</span>
+      </button>
+
+      <p class="text-center text-sm text-slate-500 dark:text-slate-400">
+        Didn't get a code? <span id="resend-wrap"><button id="resend-btn" class="text-primary-600 dark:text-primary-400 font-semibold" disabled>Resend in <span id="timer">30</span>s</button></span>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  document.querySelector('a[href="register.html"]').innerHTML = Icons.html('arrow-left', { size: 18 });
+  document.getElementById('otp-icon').innerHTML = Icons.html('device-phone-mobile', { size: 28 });
+  document.getElementById('form-alert-icon').innerHTML = Icons.html('exclamation-circle', { size: 18 });
+
+  const boxes = [...document.querySelectorAll('.otp-box')];
+  boxes.forEach((box, i) => {
+    box.addEventListener('input', () => {
+      box.value = box.value.replace(/[^0-9]/g, '');
+      box.classList.remove('input-error');
+      if (box.value && i < boxes.length - 1) boxes[i + 1].focus();
+    });
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !box.value && i > 0) boxes[i - 1].focus();
+    });
+  });
+
+  document.getElementById('verify-btn').addEventListener('click', () => {
+    const code = boxes.map(b => b.value).join('');
+    const alertBox = document.getElementById('form-alert');
+    if (code.length < 6) {
+      boxes.forEach(b => { if (!b.value) b.classList.add('input-error'); });
+      return;
+    }
+    if (code !== '123456') {
+      alertBox.classList.remove('hidden');
+      boxes.forEach(b => b.classList.add('input-error'));
+      return;
+    }
+    alertBox.classList.add('hidden');
+    const btn = document.getElementById('verify-btn');
+    btn.disabled = true;
+    document.getElementById('verify-label').innerHTML = `<span class="inline-flex items-center gap-2"><svg class="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/><path d="M22 12a10 10 0 00-10-10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>Verifying…</span>`;
+    setTimeout(() => { window.location.href = 'home.html'; }, 1000);
+  });
+
+  let seconds = 30;
+  const timerEl = document.getElementById('timer');
+  const resendBtn = document.getElementById('resend-btn');
+  const interval = setInterval(() => {
+    seconds--;
+    if (seconds <= 0) {
+      clearInterval(interval);
+      resendBtn.disabled = false;
+      resendBtn.innerHTML = 'Resend code';
+      resendBtn.addEventListener('click', () => {
+        Eksabli.showToast({ type: 'success', title: 'Code resent', message: 'Check your messages for the new code.' });
+        seconds = 30;
+      });
+    } else {
+      timerEl.textContent = seconds;
+    }
+  }, 1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coupons — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-slate-50 dark:bg-slate-950">
+    <div data-status-bar></div>
+    <div data-top-bar data-title="My Coupons" data-back="profile.html"></div>
+
+    <div class="px-5 pt-3">
+      <div class="tabs-list" data-tabs="coupons">
+        <span class="tab-trigger active" data-tab-trigger="coupons" data-tab-target="all">All</span>
+        <span class="tab-trigger" data-tab-trigger="coupons" data-tab-target="issued">Active</span>
+        <span class="tab-trigger" data-tab-trigger="coupons" data-tab-target="redeemed">Used</span>
+        <span class="tab-trigger" data-tab-trigger="coupons" data-tab-target="expired">Expired</span>
+      </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-5 py-4">
+      <div class="tab-panel active space-y-3" data-tab-panel="coupons" data-tab-id="all" id="panel-all"></div>
+      <div class="tab-panel space-y-3" data-tab-panel="coupons" data-tab-id="issued" id="panel-issued"></div>
+      <div class="tab-panel space-y-3" data-tab-panel="coupons" data-tab-id="redeemed" id="panel-redeemed"></div>
+      <div class="tab-panel space-y-3" data-tab-panel="coupons" data-tab-id="expired" id="panel-expired"></div>
+    </div>
+
+    <div data-bottom-nav=""></div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  document.querySelector('[data-bottom-nav]')?.remove();
+
+  const statusMeta = {
+    Issued: { badge: 'badge-success', label: 'Active' },
+    Redeemed: { badge: 'badge-neutral', label: 'Used' },
+    Expired: { badge: 'badge-danger', label: 'Expired' },
+    Cancelled: { badge: 'badge-danger', label: 'Cancelled' },
+  };
+
+  function coupon(c) {
+    const reward = data.rewards.find(r => r.id === c.rewardId) || {};
+    const biz = data.businesses.find(b => b.id === c.businessId);
+    const meta = statusMeta[c.status];
+    const expired = c.status === 'Expired' || c.status === 'Redeemed';
+    return `
+      <div class="coupon-card card p-4 flex items-center gap-4 ${expired ? 'expired' : ''}">
+        <div class="text-3xl flex-shrink-0">${reward.image || '🎟️'}</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-bold truncate">${reward.name || 'Reward'}</p>
+          <p class="text-xs text-slate-400">${biz ? biz.name : ''} · <span class="font-mono">${c.code}</span></p>
+        </div>
+        <span class="badge ${meta.badge} flex-shrink-0">${meta.label}</span>
+      </div>`;
+  }
+
+  document.getElementById('panel-all').innerHTML = data.coupons.length ? data.coupons.map(coupon).join('') : emptyHtml();
+  document.getElementById('panel-issued').innerHTML = renderOrEmpty(data.coupons.filter(c => c.status === 'Issued'));
+  document.getElementById('panel-redeemed').innerHTML = renderOrEmpty(data.coupons.filter(c => c.status === 'Redeemed'));
+  document.getElementById('panel-expired').innerHTML = renderOrEmpty(data.coupons.filter(c => c.status === 'Expired'));
+
+  function renderOrEmpty(list) { return list.length ? list.map(coupon).join('') : emptyHtml(); }
+  function emptyHtml() {
+    return `<div class="empty-state"><div class="empty-state-icon">${Icons.html('ticket', { size: 26 })}</div>
+      <p class="font-bold text-sm mb-1">Nothing here yet</p>
+      <p class="text-xs text-slate-400 max-w-[16rem]">Redeem a reward to see your coupons appear here.</p></div>`;
+  }
+</script>
+</body>
+</html>

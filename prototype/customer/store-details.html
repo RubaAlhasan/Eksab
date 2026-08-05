@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Store Details — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-white dark:bg-slate-950">
+
+    <div class="flex-1 overflow-y-auto pb-6">
+
+      <!-- Cover -->
+      <div class="relative h-40 flex items-end p-5" id="cover">
+        <a href="javascript:history.back()" class="btn btn-icon absolute top-4 left-4 bg-white/20 backdrop-blur text-white hover:bg-white/30" id="back-btn" aria-label="Back"></a>
+        <button class="btn btn-icon absolute top-4 right-4 bg-white/20 backdrop-blur text-white hover:bg-white/30" id="follow-btn" aria-label="Follow"></button>
+      </div>
+
+      <div class="px-5 -mt-8 relative">
+        <div class="w-20 h-20 rounded-3xl flex items-center justify-center text-white font-extrabold text-2xl shadow-soft-lg border-4 border-white dark:border-slate-950" id="logo"></div>
+        <div class="flex items-center justify-between mt-3 mb-1">
+          <h1 class="text-xl font-extrabold tracking-tight" id="biz-name"></h1>
+          <span id="member-badge"></span>
+        </div>
+        <p class="text-sm text-slate-400 mb-3" id="biz-meta"></p>
+        <div class="flex items-center gap-4 text-sm mb-5">
+          <span class="flex items-center gap-1"><span class="text-warning-500">★</span> <span id="rating"></span></span>
+          <span class="text-slate-300 dark:text-slate-700">·</span>
+          <span class="text-slate-500 dark:text-slate-400" id="distance"></span>
+          <span class="text-slate-300 dark:text-slate-700">·</span>
+          <span class="text-slate-500 dark:text-slate-400" id="branch-count"></span>
+        </div>
+
+        <div id="cta-wrap" class="mb-6"></div>
+
+        <div class="tabs-list mb-4" data-tabs="store">
+          <span class="tab-trigger active" data-tab-trigger="store" data-tab-target="about">About</span>
+          <span class="tab-trigger" data-tab-trigger="store" data-tab-target="offers">Offers</span>
+          <span class="tab-trigger" data-tab-trigger="store" data-tab-target="rewards">Rewards</span>
+          <span class="tab-trigger" data-tab-trigger="store" data-tab-target="branches">Branches</span>
+        </div>
+
+        <div class="tab-panel active" data-tab-panel="store" data-tab-id="about">
+          <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed" id="about-text"></p>
+        </div>
+
+        <div class="tab-panel space-y-3" data-tab-panel="store" data-tab-id="offers" id="offers-panel"></div>
+
+        <div class="tab-panel grid grid-cols-2 gap-3" data-tab-panel="store" data-tab-id="rewards" id="rewards-panel"></div>
+
+        <div class="tab-panel space-y-3" data-tab-panel="store" data-tab-id="branches" id="branches-panel"></div>
+      </div>
+    </div>
+
+    <div data-bottom-nav="home"></div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  const params = new URLSearchParams(location.search);
+  const biz = data.businesses.find(b => b.id === params.get('id')) || data.businesses[0];
+  const membership = data.memberships.find(m => m.businessId === biz.id);
+
+  document.getElementById('back-btn').innerHTML = Icons.html('arrow-left', { size: 18 });
+  document.getElementById('cover').className = `relative h-40 flex items-end p-5 bg-gradient-to-br ${biz.color}`;
+  document.getElementById('logo').className = `w-20 h-20 rounded-3xl flex items-center justify-center text-white font-extrabold text-2xl shadow-soft-lg border-4 border-white dark:border-slate-950 bg-gradient-to-br ${biz.color}`;
+  document.getElementById('logo').textContent = biz.initials;
+  document.getElementById('biz-name').textContent = biz.name;
+  document.getElementById('member-badge').innerHTML = biz.member ? '<span class="badge badge-primary">Member</span>' : '';
+  document.getElementById('biz-meta').textContent = biz.category;
+  document.getElementById('rating').textContent = biz.rating;
+  document.getElementById('distance').textContent = biz.distanceKm + ' km away';
+  document.getElementById('branch-count').textContent = biz.branches + ' branches';
+  document.getElementById('about-text').textContent = `${biz.name} is a ${biz.category.toLowerCase()} with ${biz.branches} branches near you. Join the loyalty program to start earning points on every visit, unlock tier perks, and get first access to campaigns and offers.`;
+
+  // Follow toggle
+  let following = biz.following;
+  const followBtn = document.getElementById('follow-btn');
+  function renderFollow() {
+    followBtn.innerHTML = Icons.html(following ? 'heart-solid' : 'heart', { size: 18 });
+    followBtn.classList.toggle('text-danger-300', following);
+  }
+  followBtn.addEventListener('click', () => {
+    following = !following;
+    renderFollow();
+    Eksabli.showToast({ type: 'success', title: following ? 'Added to favorites' : 'Removed from favorites' });
+  });
+  renderFollow();
+
+  // CTA
+  const ctaWrap = document.getElementById('cta-wrap');
+  if (biz.member && membership) {
+    ctaWrap.innerHTML = `
+      <div class="card p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-400">Your balance</p>
+          <p class="text-lg font-extrabold text-primary-600 dark:text-primary-400">${membership.balance.toLocaleString()} pts</p>
+        </div>
+        <a href="my-points.html?id=${biz.id}" class="btn btn-primary btn-md">View My Points</a>
+      </div>`;
+  } else {
+    ctaWrap.innerHTML = `<a href="join-store.html?id=${biz.id}" class="btn btn-primary btn-lg w-full">Join ${biz.name}</a>`;
+  }
+
+  // Offers/Campaigns
+  const offersPanel = document.getElementById('offers-panel');
+  const campaigns = data.campaigns.filter(c => c.businessId === biz.id && c.status === 'Active');
+  offersPanel.innerHTML = campaigns.length ? campaigns.map(c => `
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-1">
+        <p class="text-sm font-bold">${c.name}</p>
+        <span class="badge badge-success">Active</span>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400">${c.description}</p>
+    </div>`).join('') : `<p class="text-sm text-slate-400 text-center py-6">No active offers right now — check back soon.</p>`;
+
+  // Rewards preview
+  const rewardsPanel = document.getElementById('rewards-panel');
+  const rewards = data.rewards.filter(r => r.businessId === biz.id);
+  rewardsPanel.innerHTML = rewards.length ? rewards.map(r => `
+    <a href="reward-details.html?id=${r.id}" class="card card-hover p-3 text-center">
+      <div class="text-3xl mb-2">${r.image}</div>
+      <p class="text-xs font-bold truncate">${r.name}</p>
+      <p class="text-xs text-primary-600 dark:text-primary-400 font-semibold mt-0.5">${r.pointsCost} pts</p>
+    </a>`).join('') : `<p class="text-sm text-slate-400 text-center py-6 col-span-2">No rewards published yet.</p>`;
+
+  // Branches
+  const branchesPanel = document.getElementById('branches-panel');
+  const names = ['Downtown', 'Marina', 'JBR', 'Business Bay', 'Al Ain', 'Sharjah City Centre', 'Deira', 'Al Barsha'];
+  branchesPanel.innerHTML = Array.from({ length: biz.branches }).map((_, i) => `
+    <div class="card p-4 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400" id="pin-${i}"></div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold">${names[i % names.length]}</p>
+        <p class="text-xs text-slate-400">Open until 10:00 PM</p>
+      </div>
+    </div>`).join('');
+  branchesPanel.querySelectorAll('[id^="pin-"]').forEach(el => el.innerHTML = Icons.html('map-pin', { size: 16 }));
+</script>
+</body>
+</html>

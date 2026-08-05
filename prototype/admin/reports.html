@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reports — Eksabli Admin Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="reports"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Platform Reports" data-subtitle="Tenant growth, DAU/MAU, category mix, support volume"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+        <div class="breadcrumbs"><a href="dashboard.html">Admin Portal</a><span id="sep1"></span><span class="current">Reports</span></div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="card stat-card"><p class="text-2xl font-extrabold" id="stat-tenants"></p><p class="text-xs text-slate-400">Total Tenants</p></div>
+          <div class="card stat-card"><p class="text-2xl font-extrabold" id="stat-dau"></p><p class="text-xs text-slate-400">DAU</p></div>
+          <div class="card stat-card"><p class="text-2xl font-extrabold" id="stat-mau"></p><p class="text-xs text-slate-400">MAU</p></div>
+          <div class="card stat-card"><p class="text-2xl font-extrabold" id="stat-stickiness"></p><p class="text-xs text-slate-400">DAU/MAU stickiness</p></div>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div class="card p-6">
+            <h2 class="font-bold text-sm mb-1">Tenant Growth</h2>
+            <p class="text-xs text-slate-400 mb-5">New tenants per month</p>
+            <div class="chart-placeholder h-40" id="tenant-chart"></div>
+            <div class="flex justify-between mt-2 text-[10px] text-slate-400" id="tenant-labels"></div>
+          </div>
+          <div class="card p-6">
+            <h2 class="font-bold text-sm mb-1">Support Ticket Volume</h2>
+            <p class="text-xs text-slate-400 mb-5">Opened per week</p>
+            <div class="chart-placeholder h-40" id="ticket-chart"></div>
+            <div class="flex justify-between mt-2 text-[10px] text-slate-400" id="ticket-labels"></div>
+          </div>
+        </div>
+
+        <div class="card p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-bold text-sm">Export Platform Reports</h2>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <button class="btn btn-secondary btn-sm gen-btn">Tenant Growth (Excel)</button>
+            <button class="btn btn-secondary btn-sm gen-btn">Revenue Report (Excel)</button>
+            <button class="btn btn-secondary btn-sm gen-btn">Support Ticket Log (CSV)</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/admin-shell.js"></script>
+<script>
+  const admin = EksabliDemoData.admin;
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+  document.getElementById('stat-tenants').textContent = admin.stats.totalTenants;
+  document.getElementById('stat-dau').textContent = admin.stats.dau.toLocaleString();
+  document.getElementById('stat-mau').textContent = admin.stats.mau.toLocaleString();
+  document.getElementById('stat-stickiness').textContent = Math.round(admin.stats.dau / admin.stats.mau * 100) + '%';
+
+  const tGrowth = [12, 15, 18, 14, 22, 19, 24].map((v, i) => ({ label: admin.mrrTrend[i].label, value: v }));
+  const tmax = Math.max(...tGrowth.map(t => t.value));
+  document.getElementById('tenant-chart').innerHTML = tGrowth.map(t => `<div class="chart-bar" style="height:${(t.value / tmax * 100).toFixed(0)}%"></div>`).join('');
+  document.getElementById('tenant-labels').innerHTML = tGrowth.map(t => `<span>${t.label}</span>`).join('');
+
+  const tickets = [8, 11, 9, 14, 10, 13, 12];
+  const tkmax = Math.max(...tickets);
+  document.getElementById('ticket-chart').innerHTML = tickets.map((v, i) => `<div class="chart-bar" style="height:${(v / tkmax * 100).toFixed(0)}%"></div>`).join('');
+  document.getElementById('ticket-labels').innerHTML = ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7'].map(l => `<span>${l}</span>`).join('');
+
+  document.querySelectorAll('.gen-btn').forEach(btn => btn.addEventListener('click', () => Eksabli.showToast({ type: 'success', title: 'Report generated', message: btn.textContent })));
+</script>
+</body>
+</html>

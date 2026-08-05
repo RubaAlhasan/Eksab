@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rewards — Eksabli Business Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="rewards"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Rewards" data-subtitle="Manage your redemption catalog"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div class="breadcrumbs"><a href="dashboard.html">Business Portal</a><span id="sep1"></span><span class="current">Rewards</span></div>
+          <button id="new-reward-btn" class="btn btn-primary btn-sm"><span id="plus-icon"></span>New Reward</button>
+        </div>
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" id="rewards-grid"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Create/Edit reward modal -->
+<div class="modal-overlay" data-modal="reward-form">
+  <div class="modal-panel p-6" style="max-width:32rem">
+    <h3 class="font-bold text-base mb-4" id="modal-title">New Reward</h3>
+    <div class="space-y-3">
+      <div>
+        <label class="field-label">Reward name</label>
+        <input class="input" placeholder="e.g. Free Large Latte">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="field-label">Type</label>
+          <select class="select"><option>Discount</option><option>Free Product</option><option>Gift Card</option></select>
+        </div>
+        <div>
+          <label class="field-label">Points cost</label>
+          <input type="number" class="input" placeholder="500">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="field-label">Stock (blank = unlimited)</label>
+          <input type="number" class="input" placeholder="e.g. 50">
+        </div>
+        <div>
+          <label class="field-label">Valid until</label>
+          <input type="date" class="input">
+        </div>
+      </div>
+      <label class="flex items-center gap-2 text-sm pt-1">
+        <input type="checkbox" class="checkbox"> Require manager approval to redeem
+      </label>
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button class="btn btn-secondary flex-1" data-modal-close="reward-form">Cancel</button>
+      <button class="btn btn-primary flex-1" id="save-reward-btn">Save Reward</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/business-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+  document.getElementById('plus-icon').innerHTML = Icons.html('plus', { size: 14 });
+
+  const rewards = data.rewards.filter(r => r.businessId === 'biz_1');
+  document.getElementById('rewards-grid').innerHTML = rewards.map(r => `
+    <div class="card p-5">
+      <div class="flex items-start justify-between mb-3">
+        <div class="text-3xl">${r.image}</div>
+        <button class="text-slate-300 hover:text-primary-600 edit-reward" data-id="${r.id}">${Icons.html('pencil-square', { size: 16 })}</button>
+      </div>
+      <p class="font-bold text-sm mb-1">${r.name}</p>
+      <p class="text-xs text-slate-400 mb-3">${r.type} · ${r.stock !== null ? r.stock + ' in stock' : 'Unlimited'}</p>
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-extrabold text-primary-600 dark:text-primary-400">${r.pointsCost} pts</span>
+        ${r.stock !== null && r.stock < 10 ? '<span class="badge badge-warning">Low stock</span>' : '<span class="badge badge-success">Active</span>'}
+      </div>
+      <div class="progress-track"><div class="progress-fill" style="width:62%"></div></div>
+      <p class="text-xs text-slate-400 mt-1.5">62% redemption rate this month</p>
+    </div>`).join('');
+
+  document.getElementById('new-reward-btn').addEventListener('click', () => {
+    document.getElementById('modal-title').textContent = 'New Reward';
+    Eksabli.openModal('reward-form');
+  });
+  document.querySelectorAll('.edit-reward').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('modal-title').textContent = 'Edit Reward';
+      Eksabli.openModal('reward-form');
+    });
+  });
+  document.getElementById('save-reward-btn').addEventListener('click', () => {
+    Eksabli.closeModal('reward-form');
+    Eksabli.showToast({ type: 'success', title: 'Reward saved', message: 'It is now live in the customer app.' });
+  });
+</script>
+</body>
+</html>

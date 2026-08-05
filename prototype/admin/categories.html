@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Categories — Eksabli Admin Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="categories"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Categories" data-subtitle="Business taxonomy used across discovery and search"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div class="breadcrumbs"><a href="dashboard.html">Admin Portal</a><span id="sep1"></span><span class="current">Categories</span></div>
+          <button class="btn btn-primary btn-sm" id="new-cat-btn"><span id="plus-icon"></span>New Category</button>
+        </div>
+
+        <div class="card overflow-hidden">
+          <div class="table-wrap" style="border:none;border-radius:0">
+            <table class="table">
+              <thead><tr><th>Category</th><th>Businesses</th><th></th></tr></thead>
+              <tbody id="cats-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="modal-overlay" data-modal="cat-form">
+  <div class="modal-panel p-6" style="max-width:26rem">
+    <h3 class="font-bold text-base mb-4" id="cat-modal-title">New Category</h3>
+    <div><label class="field-label">Category name</label><input class="input" id="cat-name-input" placeholder="e.g. Pet Care"></div>
+    <div class="flex gap-3 mt-5">
+      <button class="btn btn-secondary flex-1" data-modal-close="cat-form">Cancel</button>
+      <button class="btn btn-primary flex-1" id="save-cat-btn">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" data-modal="cat-delete">
+  <div class="modal-panel p-6">
+    <h3 class="font-bold text-base mb-2">Delete this category?</h3>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Businesses currently in this category will need to be recategorized.</p>
+    <div class="flex gap-3">
+      <button class="btn btn-secondary flex-1" data-modal-close="cat-delete">Cancel</button>
+      <button class="btn btn-danger flex-1" id="confirm-delete-cat">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/admin-shell.js"></script>
+<script>
+  const categories = EksabliDemoData.admin.categories;
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+  document.getElementById('plus-icon').innerHTML = Icons.html('plus', { size: 14 });
+
+  document.getElementById('cats-body').innerHTML = categories.map(c => `
+    <tr>
+      <td class="font-semibold flex items-center gap-2">${Icons.html('tag', { size: 14 })}${c.name}</td>
+      <td class="text-slate-500 dark:text-slate-400">${c.businesses}</td>
+      <td class="flex gap-3">
+        <button class="text-slate-300 hover:text-primary-600 edit-cat">${Icons.html('pencil-square', { size: 16 })}</button>
+        <button class="text-slate-300 hover:text-danger-600 delete-cat">${Icons.html('trash', { size: 16 })}</button>
+      </td>
+    </tr>`).join('');
+
+  document.getElementById('new-cat-btn').addEventListener('click', () => { document.getElementById('cat-modal-title').textContent = 'New Category'; document.getElementById('cat-name-input').value = ''; Eksabli.openModal('cat-form'); });
+  document.querySelectorAll('.edit-cat').forEach(btn => btn.addEventListener('click', () => { document.getElementById('cat-modal-title').textContent = 'Edit Category'; Eksabli.openModal('cat-form'); }));
+  document.querySelectorAll('.delete-cat').forEach(btn => btn.addEventListener('click', () => Eksabli.openModal('cat-delete')));
+  document.getElementById('save-cat-btn').addEventListener('click', () => { Eksabli.closeModal('cat-form'); Eksabli.showToast({ type: 'success', title: 'Category saved' }); });
+  document.getElementById('confirm-delete-cat').addEventListener('click', () => { Eksabli.closeModal('cat-delete'); Eksabli.showToast({ type: 'danger', title: 'Category deleted' }); });
+</script>
+</body>
+</html>

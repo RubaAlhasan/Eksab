@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coupons — Eksabli Business Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="coupons"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Coupons" data-subtitle="Audit trail of issued and redeemed rewards"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div class="breadcrumbs"><a href="dashboard.html">Business Portal</a><span id="sep1"></span><span class="current">Coupons</span></div>
+          <button id="export-btn" class="btn btn-secondary btn-sm"><span id="export-icon"></span>Export</button>
+        </div>
+
+        <div class="card p-4 flex flex-wrap items-center gap-3">
+          <div class="relative flex-1 min-w-[180px]">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" id="search-icon"></span>
+            <input id="search-input" class="input pl-9" placeholder="Search by code…">
+          </div>
+          <select id="status-filter" class="select w-40">
+            <option value="">All Statuses</option>
+            <option>Issued</option><option>Redeemed</option><option>Expired</option><option>Cancelled</option>
+          </select>
+          <select id="branch-filter" class="select w-40">
+            <option value="">All Branches</option>
+            <option>Downtown</option><option>Marina</option><option>JBR</option><option>Business Bay</option>
+          </select>
+        </div>
+
+        <div class="card overflow-hidden">
+          <div class="table-wrap" style="border:none;border-radius:0">
+            <table class="table">
+              <thead><tr><th>Code</th><th>Reward</th><th>Member</th><th>Status</th><th>Branch</th><th>Redeemed By</th><th>Date</th></tr></thead>
+              <tbody id="coupons-body"></tbody>
+            </table>
+          </div>
+          <div id="empty-state" class="empty-state hidden">
+            <div class="empty-state-icon" id="empty-icon"></div>
+            <p class="font-bold text-sm mb-1">No coupons match your filters</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/business-shell.js"></script>
+<script>
+  const data = EksabliDemoData;
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+  document.getElementById('search-icon').innerHTML = Icons.html('search', { size: 16 });
+  document.getElementById('export-icon').innerHTML = Icons.html('document-arrow-down', { size: 14 });
+  document.getElementById('empty-icon').innerHTML = Icons.html('ticket', { size: 26 });
+
+  // Expand the small demo coupon list into a fuller audit-trail-looking set for this view.
+  const extra = [
+    { id: 'cpn_x1', rewardId: 'rew_2', code: 'CB-3P8W2Z', status: 'Redeemed', branch: 'Marina', staff: 'Karim Youssef', date: '2026-08-03' },
+    { id: 'cpn_x2', rewardId: 'rew_1', code: 'CB-6Q1L9T', status: 'Redeemed', branch: 'Downtown', staff: 'Sara Al Mansoori', date: '2026-08-02' },
+    { id: 'cpn_x3', rewardId: 'rew_3', code: 'CB-8Y4N2K', status: 'Issued', branch: '—', staff: '—', date: '2026-08-04' },
+  ];
+  const rows = [
+    { code: 'CB-8F3K2Q', rewardId: 'rew_1', status: 'Redeemed', branch: 'Downtown', staff: 'Ahmed Farouk', date: '2026-07-29' },
+    { code: 'CB-9L2M7R', rewardId: 'rew_2', status: 'Issued', branch: '—', staff: '—', date: '2026-08-04' },
+    ...extra,
+  ];
+
+  const statusBadge = { Issued: 'badge-success', Redeemed: 'badge-neutral', Expired: 'badge-danger', Cancelled: 'badge-danger' };
+  function member() { const c = data.business.customers[Math.floor(Math.random() * data.business.customers.length)]; return c.name; }
+
+  function render() {
+    const q = document.getElementById('search-input').value.trim().toLowerCase();
+    const status = document.getElementById('status-filter').value;
+    const branch = document.getElementById('branch-filter').value;
+    const filtered = rows.filter(r => (!q || r.code.toLowerCase().includes(q)) && (!status || r.status === status) && (!branch || r.branch === branch));
+    const body = document.getElementById('coupons-body');
+    const empty = document.getElementById('empty-state');
+    if (filtered.length === 0) { body.innerHTML = ''; empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+    body.innerHTML = filtered.map(r => {
+      const reward = data.rewards.find(x => x.id === r.rewardId) || {};
+      return `
+        <tr>
+          <td class="font-mono font-semibold">${r.code}</td>
+          <td>${reward.image || '🎟️'} ${reward.name || 'Reward'}</td>
+          <td class="text-slate-500 dark:text-slate-400">${member()}</td>
+          <td><span class="badge ${statusBadge[r.status]}">${r.status}</span></td>
+          <td class="text-slate-400">${r.branch}</td>
+          <td class="text-slate-400">${r.staff}</td>
+          <td class="text-slate-400">${new Date(r.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
+        </tr>`;
+    }).join('');
+  }
+  document.getElementById('search-input').addEventListener('input', render);
+  document.getElementById('status-filter').addEventListener('change', render);
+  document.getElementById('branch-filter').addEventListener('change', render);
+  document.getElementById('export-btn').addEventListener('click', () => Eksabli.showToast({ type: 'success', title: 'Export started' }));
+  render();
+</script>
+</body>
+</html>

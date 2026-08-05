@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Eksabli Business Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="dashboard"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="Dashboard" data-subtitle="Cedar & Bean Coffee — at a glance"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+
+        <div class="breadcrumbs">
+          <a href="dashboard.html">Business Portal</a>
+          <span id="crumb-sep-1"></span>
+          <span class="current">Dashboard</span>
+        </div>
+
+        <!-- Low stock alert -->
+        <div id="stock-alert" class="alert alert-warning hidden">
+          <span id="warn-icon"></span>
+          <p><span class="font-semibold">1 reward is low on stock</span> — $25 Gift Card has only 8 left. <a href="rewards.html" class="underline font-semibold">Review rewards</a></p>
+        </div>
+
+        <!-- Stat cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="stats-skeleton">
+          <div class="skeleton h-28 rounded-2xl"></div>
+          <div class="skeleton h-28 rounded-2xl"></div>
+          <div class="skeleton h-28 rounded-2xl"></div>
+          <div class="skeleton h-28 rounded-2xl"></div>
+        </div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 hidden" id="stats-grid"></div>
+
+        <div class="grid lg:grid-cols-3 gap-6">
+          <!-- Growth chart -->
+          <div class="card p-6 lg:col-span-2">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h2 class="font-bold text-sm">Member Growth</h2>
+                <p class="text-xs text-slate-400">Last 7 months</p>
+              </div>
+              <span class="badge badge-success" id="growth-badge"></span>
+            </div>
+            <div class="chart-placeholder h-48" id="growth-chart"></div>
+            <div class="flex justify-between mt-2 text-[10px] text-slate-400" id="growth-labels"></div>
+          </div>
+
+          <!-- Quick links -->
+          <div class="card p-6">
+            <h2 class="font-bold text-sm mb-4">Quick Actions</h2>
+            <div class="space-y-2" id="quick-links"></div>
+          </div>
+        </div>
+
+        <!-- Recent activity -->
+        <div class="card p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-bold text-sm">Recent Activity</h2>
+            <a href="transactions.html" class="text-xs font-semibold text-primary-600 dark:text-primary-400">View all transactions</a>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Customer</th><th>Type</th><th>Points</th><th>Date</th></tr></thead>
+              <tbody id="activity-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/business-shell.js"></script>
+<script>
+  const biz = EksabliDemoData.business;
+  document.getElementById('crumb-sep-1').innerHTML = Icons.html('chevron-right', { size: 14 });
+  document.getElementById('warn-icon').innerHTML = Icons.html('exclamation-triangle', { size: 18 });
+
+  if (biz.stats.lowStockRewards > 0) document.getElementById('stock-alert').classList.remove('hidden');
+
+  const stats = [
+    { label: 'Active Members', value: biz.stats.activeMembers.toLocaleString(), delta: `+${biz.stats.memberGrowthPct}%`, icon: 'users', color: 'primary' },
+    { label: 'Points Issued', value: biz.stats.pointsIssued.toLocaleString(), delta: 'this period', icon: 'plus', color: 'success' },
+    { label: 'Points Redeemed', value: biz.stats.pointsRedeemed.toLocaleString(), delta: `${biz.stats.redemptionRatePct}% rate`, icon: 'gift', color: 'warning' },
+    { label: 'Active Campaigns', value: biz.stats.activeCampaigns, delta: 'running now', icon: 'megaphone', color: 'info' },
+  ];
+  document.getElementById('stats-grid').innerHTML = stats.map(s => `
+    <div class="card stat-card">
+      <div class="flex items-start justify-between mb-3">
+        <div class="stat-icon-wrap bg-${s.color}-50 dark:bg-${s.color}-500/10 text-${s.color}-600 dark:text-${s.color}-300">${Icons.html(s.icon, { size: 18 })}</div>
+      </div>
+      <p class="text-2xl font-extrabold tabular-nums">${s.value}</p>
+      <p class="text-xs text-slate-400 mt-1">${s.label} <span class="text-success-600 dark:text-success-400 font-semibold">${s.delta}</span></p>
+    </div>`).join('');
+
+  const growth = biz.monthlyGrowth;
+  const max = Math.max(...growth.map(g => g.value));
+  document.getElementById('growth-chart').innerHTML = growth.map(g => `<div class="chart-bar" style="height:${(g.value / max * 100).toFixed(0)}%" title="${g.label}: ${g.value}"></div>`).join('');
+  document.getElementById('growth-labels').innerHTML = growth.map(g => `<span>${g.label}</span>`).join('');
+  document.getElementById('growth-badge').textContent = `+${biz.stats.memberGrowthPct}% MoM`;
+
+  const quickLinks = [
+    { label: 'Award points (POS)', icon: 'qr-code', href: 'points-management.html' },
+    { label: 'Create a campaign', icon: 'megaphone', href: 'campaigns.html' },
+    { label: 'Invite a staff member', icon: 'users', href: 'employees.html' },
+    { label: 'Add a branch', icon: 'building-storefront', href: 'branches.html' },
+  ];
+  document.getElementById('quick-links').innerHTML = quickLinks.map(q => `
+    <a href="${q.href}" class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+      <div class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-300 flex items-center justify-center flex-shrink-0">${Icons.html(q.icon, { size: 16 })}</div>
+      <span class="text-sm font-semibold flex-1">${q.label}</span>
+      <span class="text-slate-300">${Icons.html('chevron-right', { size: 14 })}</span>
+    </a>`).join('');
+
+  const typeBadge = { Earn: 'badge-success', Redeem: 'badge-danger', Adjust: 'badge-info', Expire: 'badge-neutral', Refund: 'badge-warning' };
+  document.getElementById('activity-body').innerHTML = biz.customers.slice(0, 5).map((c, i) => {
+    const types = ['Earn', 'Redeem', 'Adjust'];
+    const type = types[i % types.length];
+    const pts = type === 'Redeem' ? -(150 + i * 40) : (30 + i * 15);
+    return `
+      <tr>
+        <td class="font-semibold text-slate-900 dark:text-slate-50">${c.name}</td>
+        <td><span class="badge ${typeBadge[type]}">${type}</span></td>
+        <td class="font-semibold ${pts > 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'}">${pts > 0 ? '+' : ''}${pts}</td>
+        <td class="text-slate-400">${new Date(Date.now() - i * 86400000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
+      </tr>`;
+  }).join('');
+
+  setTimeout(() => {
+    document.getElementById('stats-skeleton').classList.add('hidden');
+    document.getElementById('stats-grid').classList.remove('hidden');
+  }, 500);
+</script>
+</body>
+</html>

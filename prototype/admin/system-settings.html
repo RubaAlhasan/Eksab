@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System Settings — Eksabli Admin Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased">
+<div id="toast-container"></div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside data-sidebar="system-settings"></aside>
+  <div class="drawer-overlay" data-sidebar-drawer-overlay></div>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header data-topbar data-title="System Settings" data-subtitle="Global platform configuration"></header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-screen-2xl mx-auto space-y-6">
+        <div class="breadcrumbs"><a href="dashboard.html">Admin Portal</a><span id="sep1"></span><span class="current">System Settings</span></div>
+
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div class="card p-6 space-y-4">
+            <h2 class="font-bold text-sm">Notification Providers</h2>
+            <div><label class="field-label">Push (Firebase Server Key)</label><input class="input" type="password" value="••••••••••••••••"></div>
+            <div><label class="field-label">Transactional Email API Key</label><input class="input" type="password" value="••••••••••••••••"></div>
+            <div><label class="field-label">SMS Aggregator API Key</label><input class="input" type="password" value="••••••••••••••••"></div>
+            <button class="btn btn-primary btn-sm" id="save-providers-btn">Save</button>
+          </div>
+
+          <div class="card p-6 space-y-4">
+            <h2 class="font-bold text-sm">Platform Defaults</h2>
+            <div>
+              <label class="field-label">Default plan for new signups</label>
+              <select class="select"><option>Starter</option><option selected>Growth</option><option>Scale</option></select>
+            </div>
+            <div>
+              <label class="field-label">Trial length (days)</label>
+              <input type="number" class="input" value="14">
+            </div>
+            <label class="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+              <div><span class="text-sm font-semibold block">Self-serve tenant signup</span><span class="text-xs text-slate-400">Requires manual approval until moderation tooling is live</span></div>
+              <label class="switch"><input type="checkbox"><span class="switch-track"></span></label>
+            </label>
+            <label class="flex items-center justify-between p-3 rounded-xl bg-warning-50 dark:bg-warning-500/10">
+              <div><span class="text-sm font-semibold block">Maintenance mode</span><span class="text-xs text-slate-500 dark:text-slate-400">Shows a maintenance page to all portals</span></div>
+              <label class="switch"><input type="checkbox" id="maintenance-toggle"><span class="switch-track"></span></label>
+            </label>
+            <button class="btn btn-primary btn-sm" id="save-defaults-btn">Save</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/admin-shell.js"></script>
+<script>
+  document.getElementById('sep1').innerHTML = Icons.html('chevron-right', { size: 14 });
+  document.getElementById('save-providers-btn').addEventListener('click', () => Eksabli.showToast({ type: 'success', title: 'Provider settings saved' }));
+  document.getElementById('save-defaults-btn').addEventListener('click', () => Eksabli.showToast({ type: 'success', title: 'Platform defaults saved' }));
+  document.getElementById('maintenance-toggle').addEventListener('change', (e) => {
+    if (e.target.checked) Eksabli.showToast({ type: 'warning', title: 'Maintenance mode enabled', message: 'All portals will show a maintenance page.' });
+  });
+</script>
+</body>
+</html>
