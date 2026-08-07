@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eksabli — Sales Enablement Kit</title>
+<meta name="description" content="Internal sales enablement kit for the Eksabli loyalty platform: the pitch, the commercial case, feature-by-feature explanations and the demo runbook.">
+<meta name="robots" content="noindex, nofollow">
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="stylesheet" href="assets/sales-kit.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="kit bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 min-h-screen antialiased">
+
+<div id="toast-container"></div>
+<header data-kit-header="hub"></header>
+
+<main class="max-w-7xl mx-auto px-5 py-10">
+
+  <!-- ================= HERO ================= -->
+  <section class="mb-12 animate-fade-up">
+    <span class="badge badge-danger mb-3">
+      <span data-lang="en">Internal · Sales enablement</span><span data-lang="ar">داخلي · تمكين المبيعات</span>
+    </span>
+    <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight mb-3 max-w-3xl">
+      <span data-lang="en">Everything you need to explain Eksabli, and prove it on screen.</span>
+      <span data-lang="ar">كل ما تحتاجه لشرح «إكسبلي» وإثباته على الشاشة.</span>
+    </h1>
+    <p class="text-slate-500 dark:text-slate-400 max-w-3xl text-base leading-relaxed">
+      <span data-lang="en">This kit turns the product into a sales conversation: the pitch, the commercial case, every feature in plain language, and a scripted demo through 61 real product screens. Read this page once. Run the <a href="demo-script.html" class="text-primary-600 dark:text-primary-400 font-semibold underline">Demo Runbook</a> in every meeting.</span>
+      <span data-lang="ar">يحوّل هذا الدليل المنتج إلى محادثة بيعية: العرض التقديمي، والجدوى التجارية، وكل ميزة بلغة واضحة، وسيناريو عرض عملي عبر ٦١ شاشة حقيقية من المنتج. اقرأ هذه الصفحة مرة واحدة، ثم شغّل <a href="demo-script.html" class="text-primary-600 dark:text-primary-400 font-semibold underline">سيناريو العرض</a> في كل اجتماع.</span>
+    </p>
+
+    <div class="alert-info card mt-6 p-4 flex gap-3 items-start" style="border-color:#BAE6FD">
+      <span class="text-info-600 dark:text-info-400 flex-shrink-0" data-icon="information-circle" data-icon-size="20"></span>
+      <div class="text-sm">
+        <p class="font-bold mb-1">
+          <span data-lang="en">Read this before your first meeting</span><span data-lang="ar">اقرأ هذا قبل اجتماعك الأول</span>
+        </p>
+        <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+          <span data-lang="en">Eksabli is <strong>pre-launch</strong>. What exists today is a complete product design and a fully clickable 61-screen prototype — not shipping software. Every feature below carries a status label, and the <a href="#honesty" class="underline font-semibold">What's real today</a> panel tells you exactly what you may and may not promise. Use this kit for discovery calls, design-partner conversations and pilot sign-ups — not for a "live next week" close.</span>
+          <span data-lang="ar">«إكسبلي» في مرحلة ما قبل الإطلاق. المتوفّر اليوم هو تصميم منتج متكامل ونموذج أوّلي تفاعلي من ٦١ شاشة — وليس برنامجًا جاهزًا للتشغيل. كل ميزة أدناه تحمل بطاقة حالة، ولوحة <a href="#honesty" class="underline font-semibold">ما هو جاهز فعليًا</a> توضّح بدقة ما يمكنك وما لا يمكنك الوعد به. استخدم هذا الدليل لمكالمات الاستكشاف ومحادثات الشركاء التأسيسيين والتسجيل في البرنامج التجريبي — لا لإغلاق صفقة «سنطلق الأسبوع القادم».</span>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid lg:grid-cols-[200px_1fr] gap-10">
+
+    <!-- ================= SECTION RAIL ================= -->
+    <aside class="kit-rail hidden lg:block no-print">
+      <p class="kit-eyebrow mb-3"><span data-lang="en">On this page</span><span data-lang="ar">في هذه الصفحة</span></p>
+      <nav>
+        <a href="#howto"><span data-lang="en">1 · How to use this</span><span data-lang="ar">١ · كيف تستخدمه</span></a>
+        <a href="#pitch"><span data-lang="en">2 · The pitch</span><span data-lang="ar">٢ · العرض التقديمي</span></a>
+        <a href="#need"><span data-lang="en">3 · Why they need it</span><span data-lang="ar">٣ · لماذا يحتاجونه</span></a>
+        <a href="#gainlose"><span data-lang="en">4 · Gain vs. lose</span><span data-lang="ar">٤ · المكسب مقابل الخسارة</span></a>
+        <a href="#users"><span data-lang="en">5 · What users gain</span><span data-lang="ar">٥ · ما يكسبه المستخدمون</span></a>
+        <a href="#value"><span data-lang="en">6 · Why it's valuable</span><span data-lang="ar">٦ · لماذا هو ذو قيمة</span></a>
+        <a href="#personas"><span data-lang="en">7 · Who you're selling to</span><span data-lang="ar">٧ · لمن تبيع</span></a>
+        <a href="#features"><span data-lang="en">8 · Feature by feature</span><span data-lang="ar">٨ · ميزة بميزة</span></a>
+        <a href="#pricing"><span data-lang="en">9 · Pricing conversation</span><span data-lang="ar">٩ · حديث التسعير</span></a>
+        <a href="#objections"><span data-lang="en">10 · Objections</span><span data-lang="ar">١٠ · الاعتراضات</span></a>
+        <a href="#glossary"><span data-lang="en">11 · Glossary</span><span data-lang="ar">١١ · المصطلحات</span></a>
+        <a href="#honesty"><span data-lang="en">12 · What's real today</span><span data-lang="ar">١٢ · ما هو جاهز فعليًا</span></a>
+      </nav>
+    </aside>
+
+    <div class="min-w-0 space-y-16">
+
+      <!-- ================= 1. HOW TO USE ================= -->
+      <section id="howto" class="kit-section">
+        <p class="kit-eyebrow mb-2">01</p>
+        <h2 class="text-2xl font-extrabold tracking-tight mb-4">
+          <span data-lang="en">How to use this kit</span><span data-lang="ar">كيف تستخدم هذا الدليل</span>
+        </h2>
+
+        <div class="grid md:grid-cols-3 gap-5">
+          <div class="card p-5">
+            <div class="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-500/15 text-primary-600 dark:text-primary-300 flex items-center justify-center mb-3" data-icon="clock" data-icon-size="20"></div>
+            <p class="font-bold text-sm mb-1"><span data-lang="en">5 minutes — the hook</span><span data-lang="ar">٥ دقائق — جذب الانتباه</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              <span data-lang="en">Customer app only. One account, three businesses, three separate balances — then the cashier awarding points. Stop there and ask a question.</span>
+              <span data-lang="ar">تطبيق العميل فقط. حساب واحد، ثلاث شركات، ثلاثة أرصدة منفصلة — ثم منح النقاط من الكاشير. توقّف هنا واطرح سؤالًا.</span>
+            </p>
+          </div>
+          <div class="card p-5">
+            <div class="w-10 h-10 rounded-xl bg-success-100 dark:bg-success-500/15 text-success-600 dark:text-success-300 flex items-center justify-center mb-3" data-icon="presentation-chart-line" data-icon-size="20"></div>
+            <p class="font-bold text-sm mb-1"><span data-lang="en">15 minutes — the standard demo</span><span data-lang="ar">١٥ دقيقة — العرض القياسي</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              <span data-lang="en">All three acts of the Runbook: customer joins and earns, staff redeems at the counter, owner sees the result on the dashboard.</span>
+              <span data-lang="ar">فصول السيناريو الثلاثة: العميل ينضم ويجمع النقاط، والموظف يصرف المكافأة عند الكاشير، والمالك يرى النتيجة على لوحة التحكم.</span>
+            </p>
+          </div>
+          <div class="card p-5">
+            <div class="w-10 h-10 rounded-xl bg-info-100 dark:bg-info-500/15 text-info-600 dark:text-info-300 flex items-center justify-center mb-3" data-icon="building-office" data-icon-size="20"></div>
+            <p class="font-bold text-sm mb-1"><span data-lang="en">30 minutes — the chain / enterprise</span><span data-lang="ar">٣٠ دقيقة — السلاسل والمؤسسات</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              <span data-lang="en">Adds branches, staff roles and permissions, per-branch reporting, plan limits, and the platform admin oversight view.</span>
+              <span data-lang="ar">يضيف الفروع وأدوار الموظفين والصلاحيات والتقارير لكل فرع وحدود الباقة ولوحة إشراف مشغّل المنصة.</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="card p-5 mt-5">
+          <p class="font-bold text-sm mb-3"><span data-lang="en">Before every meeting</span><span data-lang="ar">قبل كل اجتماع</span></p>
+          <ul class="tick-list">
+            <li><span class="text-success-600 dark:text-success-400" data-icon="check-circle" data-icon-size="16"></span><span data-lang="en">Open the <a href="demo-script.html" class="text-primary-600 dark:text-primary-400 font-semibold">Demo Runbook</a> on your own screen, and the <a href="../customer/splash.html" target="_blank" rel="noopener" class="text-primary-600 dark:text-primary-400 font-semibold">customer app</a> on the screen you share.</span><span data-lang="ar">افتح <a href="demo-script.html" class="text-primary-600 dark:text-primary-400 font-semibold">سيناريو العرض</a> على شاشتك، و<a href="../customer/splash.html" target="_blank" rel="noopener" class="text-primary-600 dark:text-primary-400 font-semibold">تطبيق العميل</a> على الشاشة التي تشاركها.</span></li>
+            <li><span class="text-success-600 dark:text-success-400" data-icon="check-circle" data-icon-size="16"></span><span data-lang="en">Know the prospect's category. A gym, a café and a bookshop each need a different reward example — use the <a href="screens.html" class="text-primary-600 dark:text-primary-400 font-semibold">Screen Catalog</a> to pick.</span><span data-lang="ar">اعرف نشاط العميل المحتمل. النادي الرياضي والمقهى والمكتبة يحتاج كلٌّ منها مثال مكافأة مختلفًا — استخدم <a href="screens.html" class="text-primary-600 dark:text-primary-400 font-semibold">دليل الشاشات</a> للاختيار.</span></li>
+            <li><span class="text-success-600 dark:text-success-400" data-icon="check-circle" data-icon-size="16"></span><span data-lang="en">Never quote a price. Read the <a href="#pricing" class="text-primary-600 dark:text-primary-400 font-semibold">pricing conversation</a> section first — pricing is not approved yet.</span><span data-lang="ar">لا تذكر سعرًا أبدًا. اقرأ قسم <a href="#pricing" class="text-primary-600 dark:text-primary-400 font-semibold">حديث التسعير</a> أولًا — فالتسعير لم يُعتمد بعد.</span></li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ================= 2. THE PITCH ================= -->
+      <section id="pitch" class="kit-section">
+        <p class="kit-eyebrow mb-2">02</p>
+        <h2 class="text-2xl font-extrabold tracking-tight mb-2">
+          <span data-lang="en">The pitch</span><span data-lang="ar">العرض التقديمي</span>
+        </h2>
+        <p class="text-slate-500 dark:text-slate-400 mb-6 max-w-3xl">
+          <span data-lang="en">One idea carries this product. Everything else is detail. Learn the 30-second version word for word.</span>
+          <span data-lang="ar">فكرة واحدة تحمل هذا المنتج، وما عداها تفاصيل. احفظ نسخة الثلاثين ثانية حرفيًا.</span>
+        </p>
+
+        <div class="space-y-4">
+          <div class="card p-6">
+            <span class="badge badge-primary mb-3"><span data-lang="en">30 seconds</span><span data-lang="ar">٣٠ ثانية</span></span>
+            <div class="say-block">
+              <span data-lang="en">"Your customers already carry a dozen loyalty cards they never use. Eksabli gives them one app for all of them — and gives you your own loyalty program inside it. They collect points at your shop, completely separately from every other business on the platform. You see exactly who's coming back, who stopped, and what brings them in. And when someone already has the app because of the shop next door, joining yours takes one scan."</span>
+              <span data-lang="ar">«عملاؤك يحملون بالفعل عشرات بطاقات الولاء التي لا يستخدمونها. «إكسبلي» يمنحهم تطبيقًا واحدًا لها جميعًا — ويمنحك برنامج ولاء خاصًا بك بداخله. يجمعون النقاط في متجرك بشكل مستقل تمامًا عن أي نشاط آخر على المنصة. وأنت ترى بدقة من يعود، ومن توقّف، وما الذي يجذبهم. وحين يكون التطبيق موجودًا لدى العميل بسبب المتجر المجاور، فإن الانضمام إليك يستغرق مسحًا ضوئيًا واحدًا.»</span>
+            </div>
+          </div>
+
+          <div class="card p-6">
+            <span class="badge badge-primary mb-3"><span data-lang="en">2 minutes — add these three beats</span><span data-lang="ar">دقيقتان — أضِف هذه النقاط الثلاث</span></span>
+            <ol class="space-y-4 mt-2">
+              <li class="flex gap-3">
+                <span class="step-num">1</span>
+                <p class="text-sm leading-relaxed">
+                  <span data-lang="en"><strong>The problem is measurement, not discounts.</strong> Most shops already give regulars something. What they don't have is a record: who those regulars are, how often they come, and which of them quietly stopped coming last month. A paper punch card can't tell you any of that.</span>
+                  <span data-lang="ar"><strong>المشكلة في القياس لا في الخصومات.</strong> معظم المتاجر تمنح زبائنها الدائمين شيئًا بالفعل، لكن ما ينقصها هو السجل: من هم هؤلاء الزبائن، وكم مرة يأتون، ومن منهم توقّف عن المجيء الشهر الماضي بصمت. البطاقة الورقية لا تخبرك بأي من ذلك.</span>
+                </p>
+              </li>
+              <li class="flex gap-3">
+                <span class="step-num">2</span>
+                <p class="text-sm leading-relaxed">
+                  <span data-lang="en"><strong>Your program is yours.</strong> Your points, your rewards, your rules, your branding, your customer list. Another business on Eksabli cannot see your customers, and you cannot see theirs. What's shared is the app they've already installed — not the data.</span>
+                  <span data-lang="ar"><strong>برنامجك ملكك.</strong> نقاطك، ومكافآتك، وقواعدك، وهويتك البصرية، وقائمة عملائك. لا يمكن لأي نشاط آخر على «إكسبلي» رؤية عملائك، ولا يمكنك رؤية عملائه. المشترك هو التطبيق الذي ثبّتوه بالفعل — وليس البيانات.</span>
+                </p>
+              </li>
+              <li class="flex gap-3">
+                <span class="step-num">3</span>
+                <p class="text-sm leading-relaxed">
+                  <span data-lang="en"><strong>Points are money, so we treat them like money.</strong> Every point is a permanent ledger entry — earned, spent, expired, adjusted — with the staff member's name on it. Rewards are redeemed with a code that expires in seconds and can only be used once. Nobody can quietly hand out free coffee.</span>
+                  <span data-lang="ar"><strong>النقاط أموال، ونتعامل معها كذلك.</strong> كل نقطة قيد دائم في السجل — مكتسبة أو مصروفة أو منتهية أو معدّلة — يحمل اسم الموظف المسؤول. وتُصرف المكافآت برمز ينتهي خلال ثوانٍ ولا يُستخدم إلا مرة واحدة. لا أحد يستطيع توزيع قهوة مجانية بصمت.</span>
+                </p>
+              </li>
+            </ol>
+          </div>
+
+          <div class="card p-6">
+            <span class="badge badge-neutral mb-3"><span data-lang="en">The whiteboard version</span><span data-lang="ar">نسخة السبّورة</span></span>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">
+              <span data-lang="en">Draw this. It lands harder than any slide, because it is the single design decision the whole platform is built on.</span>
+              <span data-lang="ar">ارسم هذا. تأثيره أقوى من أي شريحة، لأنه القرار التصميمي الوحيد الذي بُنيت عليه المنصة بأكملها.</span>
+            </p>
+            <div class="grid sm:grid-cols-[1fr_auto_1fr] gap-4 items-center">
+              <div class="card p-4 text-center bg-primary-50 dark:bg-primary-500/10 border-primary-200 dark:border-primary-500/30">
+                <div class="avatar avatar-md mx-auto mb-2">LH</div>
+                <p class="font-bold text-sm"><span data-lang="en">One customer account</span><span data-lang="ar">حساب عميل واحد</span></p>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1"><span data-lang="en">Installed once. Belongs to the customer, not to any shop.</span><span data-lang="ar">يُثبّت مرة واحدة، ويخصّ العميل لا أي متجر.</span></p>
+              </div>
+              <div class="text-slate-300 dark:text-slate-700 flex justify-center flip-x" data-icon="arrow-right" data-icon-size="28"></div>
+              <div class="space-y-2">
+                <div class="card p-3 flex items-center justify-between gap-3">
+                  <span class="text-sm font-semibold">Cedar &amp; Bean Coffee</span>
+                  <span class="badge badge-primary">1,250 pts · Gold</span>
+                </div>
+                <div class="card p-3 flex items-center justify-between gap-3">
+                  <span class="text-sm font-semibold">Pulse Fitness Club</span>
+                  <span class="badge badge-neutral">420 pts · Silver</span>
+                </div>
+                <div class="card p-3 flex items-center justify-between gap-3">
+                  <span class="text-sm font-semibold">Cornerstone Bookshop</span>
+                  <span class="badge badge-neutral">95 pts · Bronze</span>
+                </div>
+                <p class="text-xs text-slate-400 pt-1">
+                  <span data-lang="en">Three balances. Completely independent. None of these businesses can see the other two.</span>
+                  <span data-lang="ar">ثلاثة أرصدة مستقلة تمامًا. ولا يرى أيٌّ من هذه الأنشطة الاثنين الآخرين.</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 3. WHY THEY NEED IT ================= -->
+      <section id="need" class="kit-section">
+        <p class="kit-eyebrow mb-2">03</p>
+        <h2 class="text-2xl font-extrabold tracking-tight mb-2">
+          <span data-lang="en">Why does a business need this app?</span><span data-lang="ar">لماذا يحتاج النشاط التجاري إلى هذا التطبيق؟</span>
+        </h2>
+        <p class="text-slate-500 dark:text-slate-400 mb-6 max-w-3xl">
+          <span data-lang="en">Start every discovery call here. Don't pitch until the prospect has said one of these out loud themselves.</span>
+          <span data-lang="ar">ابدأ كل مكالمة استكشاف من هنا. لا تعرض المنتج قبل أن ينطق العميل المحتمل بأحد هذه الأمور بنفسه.</span>
+        </p>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width:34%"><span data-lang="en">What they say today</span><span data-lang="ar">ما يقولونه اليوم</span></th>
+                <th style="width:33%"><span data-lang="en">What it actually costs them</span><span data-lang="ar">ما يكلّفهم فعليًا</span></th>
+                <th style="width:33%"><span data-lang="en">Your follow-up question</span><span data-lang="ar">سؤال المتابعة</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span data-lang="en">"We use paper punch cards."</span><span data-lang="ar">«نستخدم بطاقات ورقية مثقّبة.»</span></td>
+                <td><span data-lang="en">Lost cards, forged stamps, and zero record of who the customer is once they walk out.</span><span data-lang="ar">بطاقات ضائعة، وأختام مزوّرة، ولا سجلّ إطلاقًا عن هوية العميل بعد خروجه.</span></td>
+                <td><span data-lang="en">"How many customers finished a card last month?"</span><span data-lang="ar">«كم عميلًا أكمل بطاقة الشهر الماضي؟»</span></td>
+              </tr>
+              <tr>
+                <td><span data-lang="en">"We know our regulars by face."</span><span data-lang="ar">«نعرف زبائننا الدائمين بوجوههم.»</span></td>
+                <td><span data-lang="en">That knowledge lives with one staff member and leaves when they do. It also can't be counted, segmented or messaged.</span><span data-lang="ar">هذه المعرفة محصورة في موظف واحد وتغادر معه، ولا يمكن عدّها ولا تقسيمها ولا مراسلتها.</span></td>
+                <td><span data-lang="en">"Who came in every week last year and hasn't come at all this month?"</span><span data-lang="ar">«من كان يأتي أسبوعيًا العام الماضي ولم يأتِ إطلاقًا هذا الشهر؟»</span></td>
+              </tr>
+              <tr>
+                <td><span data-lang="en">"We post offers on Instagram / WhatsApp."</span><span data-lang="ar">«ننشر العروض على إنستغرام أو واتساب.»</span></td>
+                <td><span data-lang="en">You reach followers, not customers — and you can't tell which post actually brought someone through the door.</span><span data-lang="ar">تصل إلى المتابعين لا إلى العملاء — ولا يمكنك معرفة أي منشور جلب زبونًا فعليًا.</span></td>
+                <td><span data-lang="en">"Of the people who saw your last offer, how many bought?"</span><span data-lang="ar">«من بين من شاهدوا عرضك الأخير، كم شخصًا اشترى؟»</span></td>
+              </tr>
+              <tr>
+                <td><span data-lang="en">"Our POS has a loyalty feature."</span><span data-lang="ar">«نظام نقاط البيع لدينا فيه ميزة ولاء.»</span></td>
+                <td><span data-lang="en">It usually stops at the till: no customer-facing app, no campaigns, no reason for the customer to think about you between visits — and switching POS means losing the program.</span><span data-lang="ar">غالبًا تتوقّف عند الصندوق: لا تطبيق للعميل، ولا حملات، ولا سبب يجعله يفكّر فيك بين الزيارات — وتغيير نظام نقاط البيع يعني فقدان البرنامج.</span></td>
+                <td><span data-lang="en">"Can your customer see their balance without asking a cashier?"</span><span data-lang="ar">«هل يستطيع عميلك رؤية رصيده دون سؤال الكاشير؟»</span></td>
+              </tr>
+              <tr>
+                <td><span data-lang="en">"We tried an app once, nobody downloaded it."</span><span data-lang="ar">«جرّبنا تطبيقًا من قبل ولم يحمّله أحد.»</span></td>
+                <td><span data-lang="en">Correct — nobody downloads an app for one coffee shop. That's exactly the problem a shared platform removes.</span><span data-lang="ar">صحيح — لا أحد يحمّل تطبيقًا من أجل مقهى واحد. وهذه بالضبط المشكلة التي تزيلها المنصة المشتركة.</span></td>
+                <td><span data-lang="en">"What if they already had it installed before they walked in?"</span><span data-lang="ar">«وماذا لو كان التطبيق مثبّتًا لديهم قبل دخولهم أصلًا؟»</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= 4. GAIN VS LOSE ================= -->
+      <section id="gainlose" class="kit-section">
+        <p class="kit-eyebrow mb-2">04</p>
+        <h2 class="text-2xl font-extrabold tracking-tight mb-2">
+          <span data-lang="en">What they gain by subscribing — and what they lose by not</span>
+          <span data-lang="ar">ما يكسبونه بالاشتراك — وما يخسرونه بعدمه</span>
+        </h2>
+        <p class="text-slate-500 dark:text-slate-400 mb-6 max-w-3xl">
+          <span data-lang="en">The right-hand column is the one competitors can't copy. It only exists because this is a shared platform, not a per-business app.</span>
+          <span data-lang="ar">العمود الأيمن هو ما لا يستطيع المنافسون نسخه، وهو موجود فقط لأن هذه منصة مشتركة لا تطبيقًا لكل نشاط على حدة.</span>
+        </p>
+
+        <div class="grid md:grid-cols-2 gap-5">
+          <div class="value-col value-gain">
+            <p class="font-extrabold text-sm mb-4 text-success-700 dark:text-success-200 flex items-center gap-2">
+              <span data-icon="check-circle" data-icon-size="18"></span>
+              <span data-lang="en">What you gain when you subscribe</span><span data-lang="ar">ما تكسبه عند الاشتراك</span>
+            </p>
+            <ul class="tick-list">
+              <li><span class="text-success-600 dark:text-success-400" data-icon="check" data-icon-size="16"></span><span data-lang="en"><strong>A named customer list</strong> instead of anonymous footfall — who they are, when they joined, what they buy, when they last came.</span><span data-lang="ar"><strong>قائمة عملاء بالأسماء</strong> بدل حركة مجهولة — من هم، ومتى انضمّوا، وماذا يشترون، ومتى آخر زيارة.</span></li>
+              <li><span class="text-success-600 dark:text-success-400" data-icon="check" data-icon-size="16"></span><span data-lang="en"><strong>A reason to come back</strong> that you control: your point rate, your rewards, your tiers, your birthday perk.</span><span data-lang="ar"><strong>سببٌ للعودة</strong> تتحكّم فيه أنت: معدّل نقاطك، ومكافآتك، ومستوياتك، وهديّة عيد الميلاد.</span></li>
+              <li><span class="text-success-600 dark:text-success-400" data-icon="check" data-icon-size="16"></span><span data-lang="en"><strong>A direct channel</strong> to those customers — push, email, SMS and in-app — without renting attention from a social feed.</span><span data-lang="ar"><strong>قناة مباشرة</strong> إلى هؤلاء العملاء — إشعارات وبريد ورسائل نصية وداخل التطبيق — دون استئجار الانتباه من منصات التواصل.</span></li>
+              <li><span class="text-success-600 dark:text-success-400" data-icon="check" data-icon-size="16"></span><span data-lang="en"><strong>Win-back that runs itself</strong> — the system finds members who stopped coming and targets them, instead of you noticing six months late.</span><span data-lang="ar"><strong>استعادة تلقائية للعملاء</strong> — يحدّد النظام الأعضاء الذين توقّفوا ويستهدفهم، بدل أن تنتبه أنت بعد ستة أشهر.</span></li>
+              <li><span class="text-success-600 dark:text-success-400" data-icon="check" data-icon-size="16"></span><span data-lang="en"><strong>Branch-level truth</strong> — which location grows, which one issues points but never converts them into a return visit.</span><span data-lang="ar"><strong>حقيقة على مستوى كل فرع</strong> — أي موقع ينمو، وأيّهم يمنح النقاط دون أن تتحوّل إلى زيارة عائدة.</span></li>
+              <li><span class="text-success-600 dark:text-success-400" data-icon="check" data-icon-size="16"></span><span data-lang="en"><strong>Redemption you can trust</strong> — single-use expiring codes and a full audit trail of which employee redeemed what, at which branch.</span><span data-lang="ar"><strong>صرف مكافآت موثوق</strong> — رموز أحادية الاستخدام تنتهي صلاحيتها، وسجلّ تدقيق كامل لمن صرف ماذا وفي أي فرع.</span></li>
+              <li><span class="text-success-600 dark:text-success-400" data-icon="check" data-icon-size="16"></span><span data-lang="en"><strong>Discovery</strong> — you appear in search and nearby-store listings for customers already using the app for someone else.</span><span data-lang="ar"><strong>الاكتشاف</strong> — تظهر في البحث وقوائم «المتاجر القريبة» لعملاء يستخدمون التطبيق أصلًا لدى غيرك.</span></li>
+            </ul>
+          </div>
+
+          <div class="value-col value-lose">
+            <p class="font-extrabold text-sm mb-4 text-danger-700 dark:text-danger-200 flex items-center gap-2">
+              <span data-icon="exclamation-triangle" data-icon-size="18"></span>
+              <span data-lang="en">What you lose if your competitor subscribes and you don't</span><span data-lang="ar">ما تخسره إذا اشترك منافسك ولم تشترك أنت</span>
+            </p>
+            <ul class="tick-list">
+              <li><span class="text-danger-600 dark:text-danger-400" data-icon="x-mark" data-icon-size="16"></span><span data-lang="en"><strong>You're invisible on a screen your own customers already have open.</strong> They search the app for coffee nearby; the shop two doors down is listed with an active offer, and you are not there at all.</span><span data-lang="ar"><strong>أنت غير مرئي على شاشة يفتحها عملاؤك أصلًا.</strong> يبحثون في التطبيق عن قهوة قريبة، فيظهر المتجر المجاور بعرض نشط، ولا تظهر أنت إطلاقًا.</span></li>
+              <li><span class="text-danger-600 dark:text-danger-400" data-icon="x-mark" data-icon-size="16"></span><span data-lang="en"><strong>Points create a reason to walk past you.</strong> A customer 200 points from a free item will choose the shop where the balance is sitting — even when yours is closer or cheaper.</span><span data-lang="ar"><strong>النقاط تخلق سببًا لتجاوزك.</strong> العميل الذي تفصله ٢٠٠ نقطة عن مكافأة مجانية سيختار المتجر الذي يحتفظ برصيده — حتى لو كنت أقرب أو أرخص.</span></li>
+              <li><span class="text-danger-600 dark:text-danger-400" data-icon="x-mark" data-icon-size="16"></span><span data-lang="en"><strong>Whoever gets the balance first, keeps it.</strong> Loyalty accrues to the business already holding the points. Being second means asking a customer to start over from zero.</span><span data-lang="ar"><strong>من يحصل على الرصيد أولًا يحتفظ به.</strong> الولاء يتراكم لصالح من يملك النقاط بالفعل، والقدوم ثانيًا يعني مطالبة العميل بالبدء من الصفر.</span></li>
+              <li><span class="text-danger-600 dark:text-danger-400" data-icon="x-mark" data-icon-size="16"></span><span data-lang="en"><strong>Your competitor can target your customers; you can't target theirs.</strong> Campaigns reach members. If your regulars are members somewhere else and nowhere with you, the messaging flows one way.</span><span data-lang="ar"><strong>منافسك يستطيع استهداف عملائك، وأنت لا تستطيع استهداف عملائه.</strong> الحملات تصل إلى الأعضاء. وإذا كان زبائنك الدائمون أعضاء عند غيرك ولا أحد عندك، فالرسائل تسير في اتجاه واحد.</span></li>
+              <li><span class="text-danger-600 dark:text-danger-400" data-icon="x-mark" data-icon-size="16"></span><span data-lang="en"><strong>You keep guessing while they measure.</strong> They know their repeat rate and their at-risk list by name. You still know "business felt slow in July."</span><span data-lang="ar"><strong>تبقى تخمّن بينما هم يقيسون.</strong> هم يعرفون معدّل التكرار وقائمة العملاء المعرّضين للفقد بالاسم، وأنت ما زلت تعرف أن «يوليو كان هادئًا».</span></li>
+            </ul>
+            <p class="text-xs text-danger-700 dark:text-danger-300 mt-4 pt-3 border-t border-danger-200 dark:border-danger-500/30">
+              <span data-lang="en"><strong>Say it as a question, not a threat:</strong> "If the shop across the street joins first and your regulars start collecting points there — how do you get them back?"</span>
+              <span data-lang="ar"><strong>اطرحها كسؤال لا كتهديد:</strong> «لو انضمّ المتجر المقابل أولًا وبدأ زبائنك الدائمون بجمع النقاط لديه — كيف ستستعيدهم؟»</span>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 5. WHAT USERS GAIN ================= -->
+      <section id="users" class="kit-section">
+        <p class="kit-eyebrow mb-2">05</p>
+        <h2 class="text-2xl font-extrabold tracking-tight mb-2">
+          <span data-lang="en">What the end customer gains</span><span data-lang="ar">ما يكسبه العميل النهائي</span>
+        </h2>
+        <p class="text-slate-500 dark:text-slate-400 mb-6 max-w-3xl">
+          <span data-lang="en">This matters commercially: a business only benefits if their customers actually use it. Lead with this when the prospect asks "will people bother?"</span>
+          <span data-lang="ar">لهذا أهمية تجارية: النشاط لا يستفيد إلا إذا استخدم عملاؤه التطبيق فعلًا. ابدأ من هنا حين يسأل العميل المحتمل: «هل سيكلّف الناس أنفسهم عناء ذلك؟»</span>
+        </p>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div class="card p-5">
+            <p class="font-bold text-sm mb-1.5"><span data-lang="en">One app, not twelve cards</span><span data-lang="ar">تطبيق واحد بدل اثنتي عشرة بطاقة</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"><span data-lang="en">Every business they've joined sits on one screen with its balance. Nothing to carry, nothing to lose.</span><span data-lang="ar">كل نشاط انضمّوا إليه يظهر في شاشة واحدة مع رصيده. لا شيء يُحمل، ولا شيء يُفقد.</span></p>
+          </div>
+          <div class="card p-5">
+            <p class="font-bold text-sm mb-1.5"><span data-lang="en">The balance is never in dispute</span><span data-lang="ar">الرصيد لا يقبل الجدال</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"><span data-lang="en">Full history of every point earned, spent or expired — visible to them, not only to the shop.</span><span data-lang="ar">سجل كامل لكل نقطة اكتُسبت أو صُرفت أو انتهت — مرئي لهم لا للمتجر وحده.</span></p>
+          </div>
+          <div class="card p-5">
+            <p class="font-bold text-sm mb-1.5"><span data-lang="en">Rewards worth waiting for</span><span data-lang="ar">مكافآت تستحق الانتظار</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"><span data-lang="en">A catalog with clear point costs and a progress bar to the next tier — they can see what they're working toward.</span><span data-lang="ar">قائمة مكافآت بتكلفة نقاط واضحة وشريط تقدّم نحو المستوى التالي — يرون ما يسعون إليه.</span></p>
+          </div>
+          <div class="card p-5">
+            <p class="font-bold text-sm mb-1.5"><span data-lang="en">Redeeming takes seconds</span><span data-lang="ar">الصرف يستغرق ثوانٍ</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"><span data-lang="en">Show a QR code — or read out a PIN if the counter has no camera. No app-store detour, no queue held up.</span><span data-lang="ar">يعرضون رمز استجابة سريعة — أو يقرؤون رمزًا رقميًا إن لم تتوفّر كاميرا. دون تعطيل الطابور.</span></p>
+          </div>
+          <div class="card p-5">
+            <p class="font-bold text-sm mb-1.5"><span data-lang="en">Offers that are actually nearby</span><span data-lang="ar">عروض قريبة فعلًا</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"><span data-lang="en">Nearby stores, search by category, and a feed of live campaigns from businesses they've joined or followed.</span><span data-lang="ar">متاجر قريبة، وبحث حسب الفئة، وتدفّق للحملات النشطة من الأنشطة التي انضمّوا إليها أو تابعوها.</span></p>
+          </div>
+          <div class="card p-5">
+            <p class="font-bold text-sm mb-1.5"><span data-lang="en">Birthdays, tiers and referrals</span><span data-lang="ar">أعياد الميلاد والمستويات والإحالات</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"><span data-lang="en">Bonus points on their birthday month, better rates as they climb tiers, and points for bringing a friend.</span><span data-lang="ar">نقاط إضافية في شهر ميلادهم، ومعدّلات أفضل كلما ارتقوا في المستويات، ونقاط عند دعوة صديق.</span></p>
+          </div>
+        </div>
+
+        <div class="card p-5 mt-5 flex flex-col sm:flex-row gap-5 items-center">
+          <div data-screen="../customer/wallet.html" data-screen-kind="phone" data-screen-label="Customer wallet"></div>
+          <div data-screen="../customer/my-points.html" data-screen-kind="phone" data-screen-label="My points"></div>
+          <div class="flex-1">
+            <p class="font-bold text-sm mb-1.5"><span data-lang="en">Show, don't describe</span><span data-lang="ar">اعرض ولا تصف</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              <span data-lang="en">These two screens carry the whole customer-side argument. Click either to open it full size. Everything above is visible in under ten seconds of scrolling.</span>
+              <span data-lang="ar">هاتان الشاشتان تحملان الحجّة كاملة من جانب العميل. انقر أيًّا منهما لفتحها بالحجم الكامل. كل ما سبق يظهر خلال أقل من عشر ثوانٍ من التمرير.</span>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 6. WHY VALUABLE ================= -->
+      <section id="value" class="kit-section">
+        <p class="kit-eyebrow mb-2">06</p>
+        <h2 class="text-2xl font-extrabold tracking-tight mb-2">
+          <span data-lang="en">Why the system itself is valuable</span><span data-lang="ar">لماذا يُعدّ النظام نفسه ذا قيمة</span>
+        </h2>
+        <p class="text-slate-500 dark:text-slate-400 mb-6 max-w-3xl">
+          <span data-lang="en">Six engineering decisions, translated into what they mean commercially. Use these when a technical buyer or a franchise head office is in the room.</span>
+          <span data-lang="ar">ستة قرارات هندسية مترجَمة إلى معناها التجاري. استخدمها حين يكون في الاجتماع مشترٍ تقني أو إدارة امتياز.</span>
+        </p>
+
+        <div class="grid md:grid-cols-2 gap-5">
+          <div class="card p-5">
+            <p class="font-bold text-sm mb-1.5"><span data-lang="en">Each business is fully isolated</span><span data-lang="ar">كل نشاط معزول تمامًا</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"><span data-lang="en">Your staff, your data, your branding, your settings — separated at the platform level, not by a filter someone could forget to apply. Business staff have no way to search customers outside their own business. Even a phone-number lookup at the till only matches your own members, and every lookup is logged.</span><span data-lang="ar">موظفوك وبياناتك وهويتك وإعداداتك — مفصولة على مستوى المنصة لا عبر مرشّح قد يُنسى تطبيقه. لا يملك موظفو النشاط أي وسيلة للبحث عن عملاء خارج نشاطهم. وحتى البحث برقم الهاتف عند الصندوق لا يطابق إلا أعضاءك أنت، ويُسجَّل كل بحث.</span></p>
+          </div>
+          <div class="card p-5">
+            <p class="font-bold text-sm mb-1.5"><span data-lang="en">Points are an audited ledger, not a number in a box</span><span data-lang="ar">النقاط سجلّ مُدقَّق لا رقم في خانة</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"><span data-lang="en">Nobody edits a balance. Every change — earn, redeem, expire, refund, manual adjustment — is a permanent entry with a reason and, where a human did it, that employee's name. A balance can always be recomputed from history.</span><span data-lang="ar">لا أحد يعدّل رصيدًا. كل تغيير — اكتساب أو صرف أو انتهاء أو استرداد أو تعديل يدوي — قيد دائم بسبب واضح، وباسم الموظف إن كان بشريًا. ويمكن دائمًا إعادة احتساب الرصيد من السجل.</span></p>
+          </div>
+          <div class="card p-5">
+            <p class="font-bold text-sm mb-1.5"><span data-lang="en">Fraud was designed against, not patched later</span><span data-lang="ar">الاحتيال روعي في التصميم لا رُقِّع لاحقًا</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"><span data-lang="en">Redemption codes are short-lived and single-use. High-value rewards can require a manager, not just any cashier. Manual point adjustments are capped per staff member per day, so a mistake or an abuse has a ceiling.</span><span data-lang="ar">رموز الصرف قصيرة الأجل وأحادية الاستخدام. والمكافآت عالية القيمة يمكن أن تتطلّب موافقة مدير لا أي كاشير. والتعديلات اليدوية محدودة لكل موظف يوميًا، فيبقى للخطأ أو التجاوز سقف.</span></p>
+          </div>
+          <div class="card p-5">
+            <p class="font-bold text-sm mb-1.5"><span data-lang="en">Arabic and English from day one</span><span data-lang="ar">العربية والإنجليزية من اليوم الأول</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"><span data-lang="en">Bilingual and right-to-left aware is a baseline requirement in the product design, not a translation project added at the end. Business content — reward names, campaign copy — is bilingual too, so customers see their own language.</span><span data-lang="ar">ثنائية اللغة ودعم الاتجاه من اليمين لليسار متطلَّب أساسي في تصميم المنتج لا مشروع ترجمة يُضاف في النهاية. ومحتوى النشاط — أسماء المكافآت ونصوص الحملات — ثنائي اللغة أيضًا، فيرى العميل لغته.</span></p>
+          </div>
+          <div class="card p-5">
+            <p class="font-bold text-sm mb-1.5"><span data-lang="en">Roles match how a shop actually runs</span><span data-lang="ar">الأدوار تطابق طريقة عمل المتجر فعلًا</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"><span data-lang="en">An owner sees everything. A branch manager sees their branch. A cashier gets a stripped-down screen that awards and redeems and nothing else — no campaigns, no billing, no customer list on a shared device.</span><span data-lang="ar">المالك يرى كل شيء، ومدير الفرع يرى فرعه، والكاشير يحصل على شاشة مبسّطة تمنح النقاط وتصرف المكافآت فقط — دون حملات أو فوترة أو قائمة عملاء على جهاز مشترك.</span></p>
+          </div>
+          <div class="card p-5">
+            <p class="font-bold text-sm mb-1.5"><span data-lang="en">Growing costs a plan change, not a project</span><span data-lang="ar">النمو يكلّف تغيير باقة لا مشروعًا</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"><span data-lang="en">Branch counts, member volumes, campaign limits and messaging channels are plan settings enforced by the platform. Opening a fifth branch is a switch, not an implementation.</span><span data-lang="ar">عدد الفروع وحجم الأعضاء وحدود الحملات وقنوات المراسلة كلها إعدادات باقة تفرضها المنصة. وفتح الفرع الخامس تبديلٌ لا تنفيذ مشروع.</span></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 7. PERSONAS ================= -->
+      <section id="personas" class="kit-section">
+        <p class="kit-eyebrow mb-2">07</p>
+        <h2 class="text-2xl font-extrabold tracking-tight mb-2">
+          <span data-lang="en">Who you're actually selling to</span><span data-lang="ar">لمن تبيع فعليًا</span>
+        </h2>
+        <p class="text-slate-500 dark:text-slate-400 mb-6 max-w-3xl">
+          <span data-lang="en">The owner signs, but the cashier decides whether it survives contact with a real queue. Address both.</span>
+          <span data-lang="ar">المالك يوقّع، لكن الكاشير هو من يحدّد إن كان النظام سينجو أمام طابور حقيقي. خاطب الطرفين.</span>
+        </p>
+
+        <div class="grid md:grid-cols-2 gap-5">
+          <div class="card p-5">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="avatar avatar-sm">1</div>
+              <div><p class="font-bold text-sm"><span data-lang="en">Business Owner</span><span data-lang="ar">مالك النشاط</span></p><p class="text-xs text-slate-400"><span data-lang="en">The signature</span><span data-lang="ar">صاحب القرار</span></p></div>
+            </div>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mb-3 leading-relaxed"><span data-lang="en">Cares about repeat business and cost. Suspicious of anything that adds work for staff.</span><span data-lang="ar">يهتم بتكرار الشراء والتكلفة، ويتوجّس من أي شيء يزيد عبء الموظفين.</span></p>
+            <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1"><span data-lang="en">The line that lands</span><span data-lang="ar">العبارة المؤثّرة</span></p>
+            <p class="text-sm mb-3"><span data-lang="en">"You'll know by name which customers stopped coming — before the month closes."</span><span data-lang="ar">«ستعرف بالاسم من توقّف عن المجيء — قبل انتهاء الشهر.»</span></p>
+            <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1"><span data-lang="en">Their objection</span><span data-lang="ar">اعتراضه</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400"><span data-lang="en">"Another monthly subscription." → Show the plan limits screen; the smallest tier is sized for a single-location shop.</span><span data-lang="ar">«اشتراك شهري إضافي.» ← اعرض شاشة حدود الباقات؛ فأصغر باقة مصمّمة لمتجر بموقع واحد.</span></p>
+          </div>
+
+          <div class="card p-5">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="avatar avatar-sm">2</div>
+              <div><p class="font-bold text-sm"><span data-lang="en">Marketing Manager</span><span data-lang="ar">مدير التسويق</span></p><p class="text-xs text-slate-400"><span data-lang="en">The champion</span><span data-lang="ar">المؤيّد الداخلي</span></p></div>
+            </div>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mb-3 leading-relaxed"><span data-lang="en">Usually your strongest internal ally. Currently doing segmentation by hand in a spreadsheet, if at all.</span><span data-lang="ar">غالبًا أقوى حليف داخلي لك. يقوم حاليًا بالتقسيم يدويًا في جدول بيانات، إن كان يفعل ذلك أصلًا.</span></p>
+            <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1"><span data-lang="en">The line that lands</span><span data-lang="ar">العبارة المؤثّرة</span></p>
+            <p class="text-sm mb-3"><span data-lang="en">"Pick a segment — inactive 60 days — and see how many people that is before you send anything."</span><span data-lang="ar">«اختر شريحة — غير نشطين منذ ٦٠ يومًا — وشاهد عددهم قبل أن ترسل أي شيء.»</span></p>
+            <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1"><span data-lang="en">Their objection</span><span data-lang="ar">اعتراضه</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400"><span data-lang="en">"Can I prove a campaign worked?" → Campaign performance is tracked per campaign: sent, opened, redeemed.</span><span data-lang="ar">«هل يمكنني إثبات نجاح الحملة؟» ← يُقاس أداء كل حملة: المُرسَل والمفتوح والمُستبدَل.</span></p>
+          </div>
+
+          <div class="card p-5">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="avatar avatar-sm">3</div>
+              <div><p class="font-bold text-sm"><span data-lang="en">Branch Manager</span><span data-lang="ar">مدير الفرع</span></p><p class="text-xs text-slate-400"><span data-lang="en">The multi-site unlock</span><span data-lang="ar">مفتاح تعدّد المواقع</span></p></div>
+            </div>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mb-3 leading-relaxed"><span data-lang="en">Judged on their own branch's numbers, and tired of head-office reports that blend all branches together.</span><span data-lang="ar">يُقيَّم بأرقام فرعه، وسئم تقارير الإدارة التي تخلط الفروع كلها معًا.</span></p>
+            <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1"><span data-lang="en">The line that lands</span><span data-lang="ar">العبارة المؤثّرة</span></p>
+            <p class="text-sm mb-3"><span data-lang="en">"Your branch has its own numbers and its own QR code — and you only see and manage your own staff."</span><span data-lang="ar">«لفرعك أرقامه ورمزه الخاص — ولا ترى ولا تدير إلا موظفيك أنت.»</span></p>
+            <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1"><span data-lang="en">Their objection</span><span data-lang="ar">اعتراضه</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400"><span data-lang="en">"Head office will use this against me." → Show that branch comparison exists for coaching, and the ledger explains every number.</span><span data-lang="ar">«ستستخدمه الإدارة ضدّي.» ← أظهر أن مقارنة الفروع أداة تطوير، وأن السجل يفسّر كل رقم.</span></p>
+          </div>
+
+          <div class="card p-5">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="avatar avatar-sm">4</div>
+              <div><p class="font-bold text-sm"><span data-lang="en">Cashier / counter staff</span><span data-lang="ar">الكاشير وموظفو الصندوق</span></p><p class="text-xs text-slate-400"><span data-lang="en">The silent veto</span><span data-lang="ar">صاحب حق النقض الصامت</span></p></div>
+            </div>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mb-3 leading-relaxed"><span data-lang="en">Will abandon anything that slows a queue. If they stop using it, the whole program dies quietly within a month.</span><span data-lang="ar">سيهجر أي شيء يبطئ الطابور. وإن توقّف عن استخدامه، مات البرنامج بأكمله بهدوء خلال شهر.</span></p>
+            <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1"><span data-lang="en">The line that lands</span><span data-lang="ar">العبارة المؤثّرة</span></p>
+            <p class="text-sm mb-3"><span data-lang="en">"Scan, confirm, done — and this is the only screen they ever see." (Then show the POS view.)</span><span data-lang="ar">«مسح، ثم تأكيد، وانتهى — وهذه الشاشة الوحيدة التي يراها.» (ثم اعرض شاشة نقطة البيع.)</span></p>
+            <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1"><span data-lang="en">Their objection</span><span data-lang="ar">اعتراضه</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400"><span data-lang="en">"What if the customer's phone is dead?" → Exact phone-number lookup, and PIN redemption when there's no camera.</span><span data-lang="ar">«وماذا لو نفدت بطارية هاتف العميل؟» ← بحث بالمطابقة التامة لرقم الهاتف، وصرف برمز رقمي عند غياب الكاميرا.</span></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 8. FEATURES ================= -->
+      <section id="features" class="kit-section">
+        <p class="kit-eyebrow mb-2">08</p>
+        <h2 class="text-2xl font-extrabold tracking-tight mb-2">
+          <span data-lang="en">Feature by feature</span><span data-lang="ar">ميزة بميزة</span>
+        </h2>
+        <p class="text-slate-500 dark:text-slate-400 mb-4 max-w-3xl">
+          <span data-lang="en">Eight feature areas, each with what it does for the business, what it does for the customer, the screen that proves it, and its build status.</span>
+          <span data-lang="ar">ثماني مجموعات من الميزات، لكل منها ما تقدّمه للنشاط، وما تقدّمه للعميل، والشاشة التي تثبتها، وحالة تنفيذها.</span>
+        </p>
+
+        <div class="flex flex-wrap gap-2 mb-6 text-xs">
+          <span class="status-pill status-built"><span data-lang="en">Built</span><span data-lang="ar">مُنفَّذ</span></span>
+          <span class="text-slate-400 self-center"><span data-lang="en">= running code you can open right now</span><span data-lang="ar">= شفرة عاملة يمكنك فتحها الآن</span></span>
+          <span class="status-pill status-designed ms-3"><span data-lang="en">Designed</span><span data-lang="ar">مُصمَّم</span></span>
+          <span class="text-slate-400 self-center"><span data-lang="en">= full spec + working screens in the prototype, not yet built</span><span data-lang="ar">= مواصفات كاملة وشاشات عاملة في النموذج، لم تُنفَّذ بعد</span></span>
+          <span class="status-pill status-planned ms-3"><span data-lang="en">Planned</span><span data-lang="ar">مُخطَّط</span></span>
+          <span class="text-slate-400 self-center"><span data-lang="en">= scheduled for a later phase</span><span data-lang="ar">= مجدول لمرحلة لاحقة</span></span>
+        </div>
+
+        <div class="space-y-5">
+
+          <!-- F01 -->
+          <article class="card p-5">
+            <div class="flex flex-col lg:flex-row gap-5">
+              <div class="flex gap-3 flex-shrink-0">
+                <div data-screen="../customer/wallet.html" data-screen-kind="phone" data-screen-label="Wallet — all businesses"></div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-3 mb-2 flex-wrap">
+                  <h3 class="font-extrabold text-base"><span data-lang="en">01 · One account, many businesses</span><span data-lang="ar">٠١ · حساب واحد لأنشطة متعدّدة</span></h3>
+                  <span class="status-pill status-designed"><span data-lang="en">Designed</span><span data-lang="ar">مُصمَّم</span></span>
+                </div>
+                <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-3"><span data-lang="en">The customer registers once, on the platform — not with your shop. They then join any number of businesses, each with a completely separate points balance, tier and history. Your business is a self-contained account with its own staff, branding and settings.</span><span data-lang="ar">يسجّل العميل مرة واحدة على المنصة — لا لدى متجرك. ثم ينضم إلى أي عدد من الأنشطة، ولكل منها رصيد نقاط ومستوى وسجل منفصل تمامًا. ونشاطك حساب قائم بذاته بموظفيه وهويته وإعداداته.</span></p>
+                <div class="grid sm:grid-cols-2 gap-3 text-sm">
+                  <div><p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1"><span data-lang="en">For the business</span><span data-lang="ar">للنشاط</span></p><p class="text-slate-600 dark:text-slate-300"><span data-lang="en">Zero-friction sign-up for customers who already have the app; total isolation from every other business.</span><span data-lang="ar">تسجيل بلا عوائق لعملاء يملكون التطبيق أصلًا، وعزل تام عن كل نشاط آخر.</span></p></div>
+                  <div><p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1"><span data-lang="en">For the customer</span><span data-lang="ar">للعميل</span></p><p class="text-slate-600 dark:text-slate-300"><span data-lang="en">One login, one profile, unlimited memberships. Leaving one business doesn't touch the others.</span><span data-lang="ar">دخول واحد وملف واحد وعضويات بلا حد. ومغادرة نشاط لا تمسّ البقية.</span></p></div>
+                </div>
+                <p class="text-xs mt-3 text-slate-400"><span data-lang="en"><strong>Answers the objection:</strong> "Why would my customer download yet another app?"</span><span data-lang="ar"><strong>يجيب عن الاعتراض:</strong> «لماذا يحمّل عميلي تطبيقًا آخر؟»</span></p>
+              </div>
+            </div>
+          </article>
+
+          <!-- F02 -->
+          <article class="card p-5">
+            <div class="flex flex-col lg:flex-row gap-5">
+              <div class="flex gap-3 flex-shrink-0">
+                <div data-screen="../customer/my-points.html" data-screen-kind="phone" data-screen-label="My points"></div>
+                <div data-screen="../business/points-management.html" data-screen-kind="desk" data-screen-label="Points management"></div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-3 mb-2 flex-wrap">
+                  <h3 class="font-extrabold text-base"><span data-lang="en">02 · Membership &amp; the points wallet</span><span data-lang="ar">٠٢ · العضوية ومحفظة النقاط</span></h3>
+                  <span class="status-pill status-designed"><span data-lang="en">Designed</span><span data-lang="ar">مُصمَّم</span></span>
+                </div>
+                <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-3"><span data-lang="en">The core loop. You set how points are earned — per amount spent, or a flat rate per visit. Staff award them at the counter by scanning the customer's code or looking up their exact phone number. Tier multipliers and any running campaign are applied automatically. Points can be set to expire, and expiry is itself a visible ledger entry — never a silent deduction.</span><span data-lang="ar">هذه هي الحلقة الأساسية. أنت تحدّد طريقة كسب النقاط — بحسب قيمة الشراء أو بمعدّل ثابت لكل زيارة. ويمنحها الموظفون عند الصندوق بمسح رمز العميل أو بالبحث عن رقم هاتفه بالمطابقة التامة. وتُطبَّق مضاعفات المستوى وأي حملة نشطة تلقائيًا. ويمكن ضبط انتهاء صلاحية النقاط، ويظهر الانتهاء نفسه كقيد في السجل — لا كخصم صامت.</span></p>
+                <div class="grid sm:grid-cols-2 gap-3 text-sm">
+                  <div><p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1"><span data-lang="en">For the business</span><span data-lang="ar">للنشاط</span></p><p class="text-slate-600 dark:text-slate-300"><span data-lang="en">Earning rules you control, an auditable ledger, and manual adjustments that always carry the employee's name and a daily cap.</span><span data-lang="ar">قواعد كسب تتحكّم فيها، وسجل قابل للتدقيق، وتعديلات يدوية تحمل دائمًا اسم الموظف وسقفًا يوميًا.</span></p></div>
+                  <div><p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1"><span data-lang="en">For the customer</span><span data-lang="ar">للعميل</span></p><p class="text-slate-600 dark:text-slate-300"><span data-lang="en">A live balance, tier progress, and a full history explaining every single change.</span><span data-lang="ar">رصيد فوري، وتقدّم في المستوى، وسجل كامل يفسّر كل تغيير.</span></p></div>
+                </div>
+                <p class="text-xs mt-3 text-slate-400"><span data-lang="en"><strong>Answers the objection:</strong> "How do I know staff aren't giving points to friends?"</span><span data-lang="ar"><strong>يجيب عن الاعتراض:</strong> «كيف أضمن أن الموظفين لا يمنحون النقاط لأصدقائهم؟»</span></p>
+              </div>
+            </div>
+          </article>
+
+          <!-- F03 -->
+          <article class="card p-5">
+            <div class="flex flex-col lg:flex-row gap-5">
+              <div class="flex gap-3 flex-shrink-0">
+                <div data-screen="../customer/redeem-reward.html" data-screen-kind="phone" data-screen-label="Redeem reward"></div>
+                <div data-screen="../business/coupons.html" data-screen-kind="desk" data-screen-label="Coupons audit trail"></div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-3 mb-2 flex-wrap">
+                  <h3 class="font-extrabold text-base"><span data-lang="en">03 · Rewards &amp; redemption</span><span data-lang="ar">٠٣ · المكافآت والاستبدال</span></h3>
+                  <span class="status-pill status-designed"><span data-lang="en">Designed</span><span data-lang="ar">مُصمَّم</span></span>
+                </div>
+                <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-3"><span data-lang="en">Your reward catalog: discounts, free products or gift cards, each with a points cost, optional stock limit and validity dates. The customer redeems in the app and shows a QR code — or a PIN if the counter has no camera. The code expires in seconds and works exactly once. High-value rewards can be set to require a manager's confirmation instead of any cashier.</span><span data-lang="ar">قائمة مكافآتك: خصومات أو منتجات مجانية أو بطاقات هدايا، ولكل منها تكلفة بالنقاط وحد مخزون اختياري وتواريخ صلاحية. يستبدل العميل داخل التطبيق ويعرض رمز استجابة سريعة — أو رمزًا رقميًا إن لم تتوفّر كاميرا. وينتهي الرمز خلال ثوانٍ ويعمل مرة واحدة فقط. ويمكن ضبط المكافآت عالية القيمة لتتطلّب تأكيد مدير بدل أي كاشير.</span></p>
+                <div class="grid sm:grid-cols-2 gap-3 text-sm">
+                  <div><p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1"><span data-lang="en">For the business</span><span data-lang="ar">للنشاط</span></p><p class="text-slate-600 dark:text-slate-300"><span data-lang="en">Nothing forgeable, nothing reusable, and a coupon audit table showing which employee redeemed what, where and when.</span><span data-lang="ar">لا شيء قابل للتزوير أو إعادة الاستخدام، وجدول تدقيق يوضّح من صرف ماذا وأين ومتى.</span></p></div>
+                  <div><p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1"><span data-lang="en">For the customer</span><span data-lang="ar">للعميل</span></p><p class="text-slate-600 dark:text-slate-300"><span data-lang="en">Sees exactly what's affordable now, what's close, and redeems without holding up the queue.</span><span data-lang="ar">يرى ما يستطيع استبداله الآن وما اقترب منه، ويستبدل دون تعطيل الطابور.</span></p></div>
+                </div>
+                <p class="text-xs mt-3 text-slate-400"><span data-lang="en"><strong>Answers the objection:</strong> "Someone will screenshot the code and reuse it."</span><span data-lang="ar"><strong>يجيب عن الاعتراض:</strong> «سيلتقط أحدهم صورة للرمز ويعيد استخدامه.»</span></p>
+              </div>
+            </div>
+          </article>
+
+          <!-- F04 -->
+          <article class="card p-5">
+            <div class="flex flex-col lg:flex-row gap-5">
+              <div class="flex gap-3 flex-shrink-0">
+                <div data-screen="../business/subscription.html" data-screen-kind="desk" data-screen-label="Subscription &amp; plan limits"></div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-3 mb-2 flex-wrap">
+                  <h3 class="font-extrabold text-base"><span data-lang="en">04 · Plans, billing &amp; limits</span><span data-lang="ar">٠٤ · الباقات والفوترة والحدود</span></h3>
+                  <span class="status-pill status-designed"><span data-lang="en">Designed</span><span data-lang="ar">مُصمَّم</span></span>
+                </div>
+                <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-3"><span data-lang="en">Four tiers sized by branches, active members, campaigns and messaging channels. Limits are enforced by the platform itself, so the business always sees its usage against its plan and can upgrade without an implementation project. A time-boxed free trial with full features, rather than a permanent free tier.</span><span data-lang="ar">أربع باقات تُحدَّد بعدد الفروع والأعضاء النشطين والحملات وقنوات المراسلة. تفرض المنصة الحدود بنفسها، فيرى النشاط استهلاكه مقابل باقته ويمكنه الترقية دون مشروع تنفيذ. مع فترة تجريبية مجانية محدّدة المدة بكامل الميزات، بدلًا من باقة مجانية دائمة.</span></p>
+                <p class="text-xs mt-1 text-slate-400"><span data-lang="en"><strong>Do not quote amounts.</strong> See the <a href="#pricing" class="underline">pricing conversation</a> section.</span><span data-lang="ar"><strong>لا تذكر مبالغ.</strong> راجع قسم <a href="#pricing" class="underline">حديث التسعير</a>.</span></p>
+              </div>
+            </div>
+          </article>
+
+          <!-- F05 -->
+          <article class="card p-5">
+            <div class="flex flex-col lg:flex-row gap-5">
+              <div class="flex gap-3 flex-shrink-0">
+                <div data-screen="../business/campaigns.html" data-screen-kind="desk" data-screen-label="Campaigns"></div>
+                <div data-screen="../customer/campaigns.html" data-screen-kind="phone" data-screen-label="Customer offers feed"></div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-3 mb-2 flex-wrap">
+                  <h3 class="font-extrabold text-base"><span data-lang="en">05 · Campaigns &amp; notifications</span><span data-lang="ar">٠٥ · الحملات والإشعارات</span></h3>
+                  <span class="status-pill status-designed"><span data-lang="en">Designed</span><span data-lang="ar">مُصمَّم</span></span>
+                </div>
+                <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-3"><span data-lang="en">Birthday bonuses, double-points weekends, spend-X-get-Y, VIP offers, welcome bonuses for new members, and win-back campaigns aimed at members who've gone quiet. You choose the segment and see how many people it covers <em>before</em> activating. Messages go out by push, email, SMS or in-app, and every send is logged with its delivery result.</span><span data-lang="ar">هدايا أعياد الميلاد، وعطلات النقاط المضاعفة، وعروض «أنفق كذا واحصل على كذا»، وعروض كبار العملاء، ومكافآت ترحيب للأعضاء الجدد، وحملات استعادة تستهدف من توقّف عن التفاعل. تختار الشريحة وترى عدد المشمولين بها <em>قبل</em> التفعيل. وتُرسل الرسائل عبر الإشعارات أو البريد أو الرسائل النصية أو داخل التطبيق، ويُسجَّل كل إرسال بنتيجة تسليمه.</span></p>
+                <p class="text-xs mt-1 text-slate-400"><span data-lang="en"><strong>Worth stressing:</strong> a double-points weekend actually doubles the points at the register — it isn't just an announcement about doubling them.</span><span data-lang="ar"><strong>يستحق التأكيد:</strong> عطلة النقاط المضاعفة تضاعف النقاط فعليًا عند الصندوق — وليست مجرد إعلان عن المضاعفة.</span></p>
+              </div>
+            </div>
+          </article>
+
+          <!-- F06 -->
+          <article class="card p-5">
+            <div class="flex flex-col lg:flex-row gap-5">
+              <div class="flex gap-3 flex-shrink-0">
+                <div data-screen="../customer/referral.html" data-screen-kind="phone" data-screen-label="Referral"></div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-3 mb-2 flex-wrap">
+                  <h3 class="font-extrabold text-base"><span data-lang="en">06 · Referrals, tiers &amp; engagement</span><span data-lang="ar">٠٦ · الإحالات والمستويات والتفاعل</span></h3>
+                  <span class="status-pill status-planned"><span data-lang="en">Planned · later phase</span><span data-lang="ar">مُخطَّط · مرحلة لاحقة</span></span>
+                </div>
+                <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-3"><span data-lang="en">Customers invite friends with a personal code and both sides earn points once the friend joins. Tiers (Bronze/Silver/Gold and up) give better earning rates to your best customers. Customers can also follow a business before joining it — which gives you a warm list to target. Badges and similar game mechanics are optional per business, because they suit a café far better than a clinic.</span><span data-lang="ar">يدعو العملاء أصدقاءهم برمز شخصي، ويكسب الطرفان نقاطًا عند انضمام الصديق. وتمنح المستويات (برونزي وفضي وذهبي وما فوق) معدّلات كسب أفضل لأفضل عملائك. ويمكن للعملاء متابعة نشاط قبل الانضمام إليه، فتحصل على قائمة مهيّأة للاستهداف. أما الشارات وآليات التلعيب المشابهة فهي اختيارية لكل نشاط، لأنها تناسب المقهى أكثر بكثير من العيادة.</span></p>
+                <p class="text-xs mt-1 text-slate-400"><span data-lang="en"><strong>Sequencing note:</strong> referrals come before badges. Do not promise a specific launch date for either.</span><span data-lang="ar"><strong>ملاحظة ترتيب:</strong> الإحالات تسبق الشارات. لا تعِد بتاريخ إطلاق محدّد لأيٍّ منهما.</span></p>
+              </div>
+            </div>
+          </article>
+
+          <!-- F07 -->
+          <article class="card p-5">
+            <div class="flex flex-col lg:flex-row gap-5">
+              <div class="flex gap-3 flex-shrink-0">
+                <div data-screen="../business/dashboard.html" data-screen-kind="desk" data-screen-label="Business dashboard"></div>
+                <div data-screen="../business/analytics.html" data-screen-kind="desk" data-screen-label="Analytics"></div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-3 mb-2 flex-wrap">
+                  <h3 class="font-extrabold text-base"><span data-lang="en">07 · Dashboard, analytics &amp; reports</span><span data-lang="ar">٠٧ · لوحة التحكم والتحليلات والتقارير</span></h3>
+                  <span class="status-pill status-designed"><span data-lang="en">Designed</span><span data-lang="ar">مُصمَّم</span></span>
+                </div>
+                <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-3"><span data-lang="en">Active members and how they're growing, points issued versus redeemed, running campaigns, low-stock reward alerts, branch-by-branch comparison and tier distribution — plus the raw transaction ledger behind every chart, and exportable reports. Terms are defined precisely: an "active member" is one with at least one points transaction in the trailing period, so the number always means the same thing.</span><span data-lang="ar">الأعضاء النشطون ونموّهم، والنقاط الممنوحة مقابل المصروفة، والحملات الجارية، وتنبيهات نفاد مخزون المكافآت، ومقارنة الفروع، وتوزيع المستويات — إضافة إلى سجل المعاملات الخام خلف كل رسم بياني، وتقارير قابلة للتصدير. والمصطلحات معرَّفة بدقة: «العضو النشط» هو من له معاملة نقاط واحدة على الأقل خلال الفترة المحدَّدة، فيبقى معنى الرقم ثابتًا دائمًا.</span></p>
+                <p class="text-xs mt-1 text-slate-400"><span data-lang="en"><strong>Demo tip:</strong> the numbers on screen (3,248 active members, 60.9% redemption rate) are fictional demo data — say so before anyone asks.</span><span data-lang="ar"><strong>نصيحة عرض:</strong> الأرقام الظاهرة (٣٬٢٤٨ عضوًا نشطًا، ومعدل استبدال ٦٠٫٩٪) بيانات تجريبية خيالية — صرّح بذلك قبل أن يسأل أحد.</span></p>
+              </div>
+            </div>
+          </article>
+
+          <!-- F08 -->
+          <article class="card p-5">
+            <div class="flex flex-col lg:flex-row gap-5">
+              <div class="flex gap-3 flex-shrink-0">
+                <div data-screen="../admin/dashboard.html" data-screen-kind="desk" data-screen-label="Admin dashboard"></div>
+                <div data-screen="../admin/audit-logs.html" data-screen-kind="desk" data-screen-label="Audit logs"></div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-3 mb-2 flex-wrap">
+                  <h3 class="font-extrabold text-base"><span data-lang="en">08 · Platform administration</span><span data-lang="ar">٠٨ · إدارة المنصة</span></h3>
+                  <span class="status-pill status-designed"><span data-lang="en">Designed</span><span data-lang="ar">مُصمَّم</span></span>
+                </div>
+                <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-3"><span data-lang="en">Our own operations console: approving and suspending businesses, subscriptions and payments, support tickets, business categories, feature flags and a complete audit log. Support staff can look at a business's account to help them — and that access is always recorded, never silent.</span><span data-lang="ar">لوحة تشغيل خاصة بنا: اعتماد الأنشطة وتعليقها، والاشتراكات والمدفوعات، وتذاكر الدعم، وفئات الأنشطة، ومفاتيح الميزات، وسجل تدقيق كامل. ويستطيع فريق الدعم الاطّلاع على حساب النشاط لمساعدته — ويُسجَّل هذا الاطّلاع دائمًا ولا يتم بصمت.</span></p>
+                <div class="presenter-note">
+                  <span class="flex-shrink-0" data-icon="exclamation-triangle" data-icon-size="16"></span>
+                  <span><span data-lang="en"><strong>Don't demo this to a café owner.</strong> It is our internal console, not theirs — showing it invites the question "so you can see my customers?" Use it only with enterprise or franchise buyers who ask about governance, and lead with the audit trail.</span><span data-lang="ar"><strong>لا تعرض هذا على صاحب مقهى.</strong> فهي لوحتنا الداخلية لا لوحته، وعرضها يثير سؤال «إذن يمكنكم رؤية عملائي؟». استخدمها فقط مع مشتري المؤسسات والامتيازات الذين يسألون عن الحوكمة، وابدأ بسجل التدقيق.</span></span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Cross-cutting -->
+          <article class="card p-5">
+            <div class="flex items-start justify-between gap-3 mb-2 flex-wrap">
+              <h3 class="font-extrabold text-base"><span data-lang="en">Across everything · Arabic + English, and the marketing site</span><span data-lang="ar">عبر كل ما سبق · العربية والإنجليزية والموقع التعريفي</span></h3>
+              <div class="flex gap-2">
+                <span class="status-pill status-designed"><span data-lang="en">Bilingual: designed</span><span data-lang="ar">ثنائية اللغة: مُصمَّمة</span></span>
+                <span class="status-pill status-built"><span data-lang="en">Landing page: built</span><span data-lang="ar">الصفحة التعريفية: مُنفَّذة</span></span>
+              </div>
+            </div>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"><span data-lang="en">Arabic and English with full right-to-left support is a baseline requirement across every screen of the product, including business-authored content like reward names and campaign text. The public marketing landing page is the one piece of the platform that is real, running code today — everything else on this page is design plus prototype.</span><span data-lang="ar">العربية والإنجليزية مع دعم كامل للاتجاه من اليمين لليسار متطلَّب أساسي في كل شاشة من المنتج، بما في ذلك المحتوى الذي يكتبه النشاط مثل أسماء المكافآت ونصوص الحملات. والصفحة التعريفية العامة هي الجزء الوحيد من المنصة الذي يمثّل شفرة عاملة اليوم — وكل ما عداه في هذه الصفحة تصميم ونموذج أوّلي.</span></p>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- ================= 9. PRICING ================= -->
+      <section id="pricing" class="kit-section">
+        <p class="kit-eyebrow mb-2">09</p>
+        <h2 class="text-2xl font-extrabold tracking-tight mb-2">
+          <span data-lang="en">The pricing conversation</span><span data-lang="ar">حديث التسعير</span>
+        </h2>
+
+        <div class="internal-only mb-5">
+          <p class="font-extrabold text-sm text-danger-700 dark:text-danger-300 mb-2 flex items-center gap-2">
+            <span data-icon="exclamation-octagon" data-icon-size="18"></span>
+            <span data-lang="en">No prices are approved. Do not invent one.</span><span data-lang="ar">لا توجد أسعار معتمدة. لا تخترع سعرًا.</span>
+          </p>
+          <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-3">
+            <span data-lang="en">The product documentation states plainly that the tier structure is illustrative and must be validated against the real target market before publishing. A number you say in a meeting becomes the number the customer remembers. Sell the shape of the plans, not the amount.</span>
+            <span data-lang="ar">تنصّ وثائق المنتج صراحةً على أن هيكل الباقات توضيحي ويجب التحقّق منه أمام السوق المستهدف الفعلي قبل النشر. والرقم الذي تنطق به في اجتماع يصبح الرقم الذي يتذكّره العميل. بِع شكل الباقات لا مبلغها.</span>
+          </p>
+          <p class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1"><span data-lang="en">Say this, word for word</span><span data-lang="ar">قل هذا حرفيًا</span></p>
+          <div class="say-block">
+            <span data-lang="en">"Pricing is tied to the size of your program, not to your revenue — number of branches, how many members are active each month, and which messaging channels you use. I'd rather size the right tier with you now and come back with the exact figure than guess at a number today. Which of these four looks like you?"</span>
+            <span data-lang="ar">«التسعير مرتبط بحجم برنامجك لا بإيراداتك — عدد الفروع، وكم عضوًا نشطًا لديك شهريًا، وأي قنوات مراسلة تستخدم. أفضّل أن نحدّد الباقة المناسبة معك الآن وأعود إليك بالرقم الدقيق، بدل أن أخمّن رقمًا اليوم. أيٌّ من هذه الأربع يشبه وضعك؟»</span>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th><span data-lang="en">Tier</span><span data-lang="ar">الباقة</span></th>
+                <th><span data-lang="en">Who it's for</span><span data-lang="ar">لمن</span></th>
+                <th><span data-lang="en">Branches</span><span data-lang="ar">الفروع</span></th>
+                <th><span data-lang="en">Active members / month</span><span data-lang="ar">الأعضاء النشطون شهريًا</span></th>
+                <th><span data-lang="en">Campaigns</span><span data-lang="ar">الحملات</span></th>
+                <th><span data-lang="en">Messaging</span><span data-lang="ar">المراسلة</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-bold">Starter</td>
+                <td><span data-lang="en">Single-location shop</span><span data-lang="ar">متجر بموقع واحد</span></td>
+                <td>1</td>
+                <td><span data-lang="en">up to 500</span><span data-lang="ar">حتى ٥٠٠</span></td>
+                <td><span data-lang="en">1 active</span><span data-lang="ar">حملة نشطة واحدة</span></td>
+                <td><span data-lang="en">In-app + email</span><span data-lang="ar">داخل التطبيق + بريد</span></td>
+              </tr>
+              <tr>
+                <td class="font-bold">Growth</td>
+                <td><span data-lang="en">Small chain</span><span data-lang="ar">سلسلة صغيرة</span></td>
+                <td><span data-lang="en">up to 5</span><span data-lang="ar">حتى ٥</span></td>
+                <td><span data-lang="en">up to 5,000</span><span data-lang="ar">حتى ٥٬٠٠٠</span></td>
+                <td><span data-lang="en">Unlimited</span><span data-lang="ar">غير محدودة</span></td>
+                <td><span data-lang="en">+ Push, limited SMS</span><span data-lang="ar">+ إشعارات ورسائل نصية محدودة</span></td>
+              </tr>
+              <tr>
+                <td class="font-bold">Scale</td>
+                <td><span data-lang="en">Regional chain</span><span data-lang="ar">سلسلة إقليمية</span></td>
+                <td><span data-lang="en">up to 25</span><span data-lang="ar">حتى ٢٥</span></td>
+                <td><span data-lang="en">up to 50,000</span><span data-lang="ar">حتى ٥٠٬٠٠٠</span></td>
+                <td><span data-lang="en">Unlimited + segmentation</span><span data-lang="ar">غير محدودة + تقسيم الشرائح</span></td>
+                <td><span data-lang="en">+ SMS, API access</span><span data-lang="ar">+ رسائل نصية ووصول برمجي</span></td>
+              </tr>
+              <tr>
+                <td class="font-bold">Enterprise</td>
+                <td><span data-lang="en">National chain / franchise</span><span data-lang="ar">سلسلة وطنية أو امتياز</span></td>
+                <td><span data-lang="en">Unlimited</span><span data-lang="ar">غير محدودة</span></td>
+                <td><span data-lang="en">Custom</span><span data-lang="ar">حسب الاتفاق</span></td>
+                <td><span data-lang="en">Custom, white-label</span><span data-lang="ar">حسب الاتفاق، بعلامة خاصة</span></td>
+                <td><span data-lang="en">Dedicated sender IDs, custom domain</span><span data-lang="ar">معرّفات إرسال مخصّصة ونطاق خاص</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-xs text-slate-400 mt-3">
+          <span data-lang="en">Shape of the pricing: a flat fee per tier covering a bundled quota, plus metered charges for usage beyond it (extra active members, SMS credits). Trial is time-boxed with full features — there is no permanent free tier, deliberately.</span>
+          <span data-lang="ar">شكل التسعير: رسم ثابت لكل باقة يغطي حصة مجمّعة، إضافة إلى رسوم مقاسة لما يتجاوزها (أعضاء نشطون إضافيون ورصيد رسائل نصية). والفترة التجريبية محدّدة المدة بكامل الميزات — ولا توجد باقة مجانية دائمة، وذلك عن قصد.</span>
+        </p>
+      </section>
+
+      <!-- ================= 10. OBJECTIONS ================= -->
+      <section id="objections" class="kit-section">
+        <p class="kit-eyebrow mb-2">10</p>
+        <h2 class="text-2xl font-extrabold tracking-tight mb-4">
+          <span data-lang="en">Objection handling</span><span data-lang="ar">التعامل مع الاعتراضات</span>
+        </h2>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width:28%"><span data-lang="en">They say</span><span data-lang="ar">يقولون</span></th>
+                <th style="width:48%"><span data-lang="en">You say</span><span data-lang="ar">تقول</span></th>
+                <th style="width:24%"><span data-lang="en">Then show</span><span data-lang="ar">ثم اعرض</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span data-lang="en">"Nobody will download another app."</span><span data-lang="ar">«لن يحمّل أحد تطبيقًا آخر.»</span></td>
+                <td><span data-lang="en">"Agreed — nobody downloads an app for one shop. They download one app for all their shops, and most of your customers will already have it before they walk in. Joining you is one scan."</span><span data-lang="ar">«أتفق معك — لا أحد يحمّل تطبيقًا لمتجر واحد، بل يحمّل تطبيقًا واحدًا لكل متاجره. ومعظم عملائك سيكون التطبيق لديهم قبل دخولهم أصلًا، والانضمام إليك مسحة واحدة.»</span></td>
+                <td><a href="../customer/join-store.html" target="_blank" rel="noopener" class="text-primary-600 dark:text-primary-400 font-semibold">Join store</a></td>
+              </tr>
+              <tr>
+                <td><span data-lang="en">"Our POS already has loyalty."</span><span data-lang="ar">«نظام نقاط البيع لدينا فيه ولاء بالفعل.»</span></td>
+                <td><span data-lang="en">"Then you already believe in the idea — good. Can your customer see their balance at home, get a birthday offer, or be told they're 200 points from a free item? And if you change POS next year, does the program survive?"</span><span data-lang="ar">«إذن أنت مؤمن بالفكرة أصلًا، وهذا جيد. لكن هل يستطيع عميلك رؤية رصيده في بيته، أو تلقّي عرض عيد ميلاد، أو معرفة أنه يبعد ٢٠٠ نقطة عن مكافأة؟ وإن غيّرت نظام نقاط البيع العام القادم، هل ينجو البرنامج؟»</span></td>
+                <td><a href="../customer/home.html" target="_blank" rel="noopener" class="text-primary-600 dark:text-primary-400 font-semibold">Customer home</a></td>
+              </tr>
+              <tr>
+                <td><span data-lang="en">"Will other businesses see my customers?"</span><span data-lang="ar">«هل ترى الأنشطة الأخرى عملائي؟»</span></td>
+                <td><span data-lang="en">"No. Your data is isolated at the platform level. Your staff cannot search for anyone who isn't your member — even a phone-number lookup at the till only matches your own members, and it's logged. The only thing shared is the app itself."</span><span data-lang="ar">«لا. بياناتك معزولة على مستوى المنصة، ولا يستطيع موظفوك البحث عن أي شخص ليس عضوًا لديك — وحتى البحث برقم الهاتف عند الصندوق لا يطابق إلا أعضاءك، ويُسجَّل. المشترك هو التطبيق نفسه فقط.»</span></td>
+                <td><a href="../business/customers.html" target="_blank" rel="noopener" class="text-primary-600 dark:text-primary-400 font-semibold">Customer list</a></td>
+              </tr>
+              <tr>
+                <td><span data-lang="en">"My cashiers won't use it."</span><span data-lang="ar">«لن يستخدمه موظفو الصندوق.»</span></td>
+                <td><span data-lang="en">"They get one screen: scan or type a phone number, confirm, done. No campaigns, no reports, no billing — nothing else is even visible to them on a shared device."</span><span data-lang="ar">«يحصلون على شاشة واحدة: مسح أو إدخال رقم هاتف، ثم تأكيد، وانتهى. لا حملات ولا تقارير ولا فوترة — ولا شيء آخر ظاهر لهم أصلًا على جهاز مشترك.»</span></td>
+                <td><a href="../business/points-management.html" target="_blank" rel="noopener" class="text-primary-600 dark:text-primary-400 font-semibold">Award points</a></td>
+              </tr>
+              <tr>
+                <td><span data-lang="en">"What if we cancel later?"</span><span data-lang="ar">«وماذا لو ألغينا لاحقًا؟»</span></td>
+                <td><span data-lang="en">"Memberships freeze, they aren't deleted, and you can export your data. Your customers' accounts and their balances at other businesses are untouched — which also means nothing of yours leaks anywhere else."</span><span data-lang="ar">«تُجمَّد العضويات ولا تُحذف، ويمكنك تصدير بياناتك. وحسابات عملائك وأرصدتهم لدى الأنشطة الأخرى لا تتأثّر — وهذا يعني أيضًا أن لا شيء من بياناتك يتسرّب إلى مكان آخر.»</span></td>
+                <td><a href="../business/settings.html" target="_blank" rel="noopener" class="text-primary-600 dark:text-primary-400 font-semibold">Settings</a></td>
+              </tr>
+              <tr>
+                <td><span data-lang="en">"Points are a liability — what if everyone redeems at once?"</span><span data-lang="ar">«النقاط التزام مالي — ماذا لو استبدل الجميع دفعة واحدة؟»</span></td>
+                <td><span data-lang="en">"You set the earning rate, the reward costs, optional stock limits and an expiry policy — and you watch issued-versus-redeemed on the dashboard. Expiry is a visible ledger entry, so customers are never surprised and you're never exposed."</span><span data-lang="ar">«أنت تحدّد معدّل الكسب وتكاليف المكافآت وحدود المخزون الاختيارية وسياسة الانتهاء — وتراقب الممنوح مقابل المصروف على لوحة التحكم. والانتهاء قيد ظاهر في السجل، فلا يُفاجأ العميل ولا تتعرّض أنت لمخاطرة.»</span></td>
+                <td><a href="../business/analytics.html" target="_blank" rel="noopener" class="text-primary-600 dark:text-primary-400 font-semibold">Analytics</a></td>
+              </tr>
+              <tr>
+                <td><span data-lang="en">"Is it in Arabic?"</span><span data-lang="ar">«هل هو بالعربية؟»</span></td>
+                <td><span data-lang="en">"Arabic and English, right-to-left included, is a baseline requirement across every screen — including the reward names and campaign text you write yourself. It isn't a translation added at the end."</span><span data-lang="ar">«العربية والإنجليزية، مع دعم الاتجاه من اليمين لليسار، متطلَّب أساسي في كل شاشة — بما في ذلك أسماء المكافآت ونصوص الحملات التي تكتبها بنفسك. وليست ترجمة تُضاف في النهاية.»</span></td>
+                <td><span class="text-slate-400"><span data-lang="en">Toggle this kit to ع</span><span data-lang="ar">بدّل هذا الدليل إلى EN</span></span></td>
+              </tr>
+              <tr>
+                <td><span data-lang="en">"When can we start?"</span><span data-lang="ar">«متى يمكننا البدء؟»</span></td>
+                <td><span data-lang="en">"Be honest: the platform is in build. What I can offer today is a design-partner slot — you shape the rollout and get first access. I'll confirm the timeline with the product team rather than guess it here."</span><span data-lang="ar">«كن صريحًا: المنصة قيد التطوير. ما أستطيع تقديمه اليوم هو مقعد شريك تأسيسي — تشارك في تشكيل الإطلاق وتحصل على أولوية الوصول. وسأؤكّد الجدول الزمني مع فريق المنتج بدل تخمينه هنا.»</span></td>
+                <td><a href="#honesty" class="text-primary-600 dark:text-primary-400 font-semibold"><span data-lang="en">Read §12 first</span><span data-lang="ar">اقرأ القسم ١٢ أولًا</span></a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= 11. GLOSSARY ================= -->
+      <section id="glossary" class="kit-section">
+        <p class="kit-eyebrow mb-2">11</p>
+        <h2 class="text-2xl font-extrabold tracking-tight mb-2">
+          <span data-lang="en">Glossary</span><span data-lang="ar">المصطلحات</span>
+        </h2>
+        <p class="text-slate-500 dark:text-slate-400 mb-5 max-w-3xl">
+          <span data-lang="en">Terms you'll hear from the product team, and the customer-safe way to say each one.</span>
+          <span data-lang="ar">مصطلحات ستسمعها من فريق المنتج، والصياغة المناسبة لقولها أمام العميل.</span>
+        </p>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width:22%"><span data-lang="en">Internal term</span><span data-lang="ar">المصطلح الداخلي</span></th>
+                <th><span data-lang="en">Say it like this</span><span data-lang="ar">قلها هكذا</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="font-bold">Tenant</td><td><span data-lang="en">A business account on the platform. Say "your business account", never "tenant".</span><span data-lang="ar">حساب نشاط تجاري على المنصة. قل «حساب نشاطك»، ولا تقل «مستأجر».</span></td></tr>
+              <tr><td class="font-bold">Host realm</td><td><span data-lang="en">The platform-wide side where customer accounts and our own team live. Never say this to a customer.</span><span data-lang="ar">الجانب العام للمنصة حيث توجد حسابات العملاء وفريقنا. لا تذكره أمام العميل إطلاقًا.</span></td></tr>
+              <tr><td class="font-bold">Membership</td><td><span data-lang="en">One customer's relationship with one business. "Being a member of your program."</span><span data-lang="ar">علاقة عميل واحد بنشاط واحد. «كونه عضوًا في برنامجك».</span></td></tr>
+              <tr><td class="font-bold">Wallet</td><td><span data-lang="en">Their points balance at one business, plus lifetime earned and redeemed.</span><span data-lang="ar">رصيد نقاطه لدى نشاط واحد، مع إجمالي ما كسبه وما صرفه.</span></td></tr>
+              <tr><td class="font-bold">Ledger / transaction</td><td><span data-lang="en">The permanent record of every point movement. Say "points history".</span><span data-lang="ar">السجل الدائم لكل حركة نقاط. قل «سجل النقاط».</span></td></tr>
+              <tr><td class="font-bold"><span data-lang="en">Reward vs. Offer</span><span data-lang="ar">مكافأة مقابل عرض</span></td><td><span data-lang="en">A <strong>reward</strong> costs points. An <strong>offer</strong> is a deal shown to customers that costs nothing to claim. Don't mix them up in a demo.</span><span data-lang="ar"><strong>المكافأة</strong> تُشترى بالنقاط، أما <strong>العرض</strong> فهو صفقة تُعرض على العملاء دون تكلفة نقاط. لا تخلط بينهما في العرض.</span></td></tr>
+              <tr><td class="font-bold">Coupon</td><td><span data-lang="en">The single-use code issued when a customer redeems a reward.</span><span data-lang="ar">الرمز أحادي الاستخدام الصادر عند استبدال العميل لمكافأة.</span></td></tr>
+              <tr><td class="font-bold">Tier</td><td><span data-lang="en">A loyalty level (Bronze/Silver/Gold) with a better earning rate. It's a marketing idea, not a login permission.</span><span data-lang="ar">مستوى ولاء (برونزي/فضي/ذهبي) بمعدّل كسب أفضل. فكرة تسويقية لا صلاحية دخول.</span></td></tr>
+              <tr><td class="font-bold"><span data-lang="en">Active member</span><span data-lang="ar">عضو نشط</span></td><td><span data-lang="en">A member with at least one points transaction in the trailing period. Always state the period when you quote the number.</span><span data-lang="ar">عضو له معاملة نقاط واحدة على الأقل خلال الفترة المحدّدة. اذكر الفترة دائمًا عند ذكر الرقم.</span></td></tr>
+              <tr><td class="font-bold"><span data-lang="en">Redemption rate</span><span data-lang="ar">معدل الاستبدال</span></td><td><span data-lang="en">Points redeemed ÷ points issued, for one business. Never compare it across different businesses.</span><span data-lang="ar">النقاط المصروفة ÷ النقاط الممنوحة، لنشاط واحد. ولا تقارنه أبدًا بين أنشطة مختلفة.</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= 12. HONESTY ================= -->
+      <section id="honesty" class="kit-section">
+        <p class="kit-eyebrow mb-2">12</p>
+        <h2 class="text-2xl font-extrabold tracking-tight mb-4">
+          <span data-lang="en">What's real today — internal only</span><span data-lang="ar">ما هو جاهز فعليًا — للاستخدام الداخلي فقط</span>
+        </h2>
+
+        <div class="internal-only">
+          <div class="grid md:grid-cols-3 gap-5">
+            <div>
+              <p class="font-bold text-sm mb-2 flex items-center gap-2"><span class="status-pill status-built"><span data-lang="en">Built</span><span data-lang="ar">مُنفَّذ</span></span></p>
+              <ul class="text-sm space-y-1.5 text-slate-700 dark:text-slate-300">
+                <li><span data-lang="en">The public marketing landing page (real Angular code, bilingual).</span><span data-lang="ar">الصفحة التعريفية العامة (شفرة Angular حقيقية وثنائية اللغة).</span></li>
+                <li><span data-lang="en">This 61-screen clickable prototype.</span><span data-lang="ar">هذا النموذج الأوّلي التفاعلي المكوّن من ٦١ شاشة.</span></li>
+                <li><span data-lang="en">The complete product and technical design.</span><span data-lang="ar">التصميم الكامل للمنتج والجانب التقني.</span></li>
+              </ul>
+            </div>
+            <div>
+              <p class="font-bold text-sm mb-2 flex items-center gap-2"><span class="status-pill status-designed"><span data-lang="en">Designed, not built</span><span data-lang="ar">مُصمَّم لا مُنفَّذ</span></span></p>
+              <ul class="text-sm space-y-1.5 text-slate-700 dark:text-slate-300">
+                <li><span data-lang="en">Everything in section 8 except the landing page: accounts, points, rewards, campaigns, dashboards, billing, admin.</span><span data-lang="ar">كل ما ورد في القسم ٨ عدا الصفحة التعريفية: الحسابات والنقاط والمكافآت والحملات ولوحات التحكم والفوترة والإدارة.</span></li>
+                <li><span data-lang="en">The customer mobile app is being built separately and does not exist yet.</span><span data-lang="ar">تطبيق العميل للهاتف يُبنى بشكل منفصل ولم يوجد بعد.</span></li>
+                <li><span data-lang="en">Payment and SMS providers are not yet chosen.</span><span data-lang="ar">لم يُختَر بعد مزوّدو الدفع والرسائل النصية.</span></li>
+              </ul>
+            </div>
+            <div>
+              <p class="font-bold text-sm mb-2"><span data-lang="en">Rules for reps</span><span data-lang="ar">قواعد لمندوبي المبيعات</span></p>
+              <ul class="text-sm space-y-1.5 text-slate-700 dark:text-slate-300">
+                <li><span data-lang="en"><strong>Never</strong> commit to a launch date, a price, or a custom integration.</span><span data-lang="ar"><strong>لا</strong> تلتزم أبدًا بتاريخ إطلاق أو سعر أو تكامل مخصّص.</span></li>
+                <li><span data-lang="en"><strong>Always</strong> say the screens are a prototype with demo data if you're asked directly.</span><span data-lang="ar"><strong>دائمًا</strong> صرّح بأن الشاشات نموذج أوّلي ببيانات تجريبية إذا سُئلت مباشرة.</span></li>
+                <li><span data-lang="en"><strong>Do</strong> sell the design-partner slot: early access in exchange for shaping the rollout.</span><span data-lang="ar"><strong>ركّز</strong> على مقعد الشريك التأسيسي: وصول مبكر مقابل المشاركة في تشكيل الإطلاق.</span></li>
+                <li><span data-lang="en"><strong>Escalate</strong> anything about dates, contracts or data residency to the product team.</span><span data-lang="ar"><strong>حوّل</strong> أي سؤال عن التواريخ أو العقود أو موقع تخزين البيانات إلى فريق المنتج.</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="card p-5 mt-5 flex flex-col sm:flex-row items-center gap-4">
+          <div class="flex-1">
+            <p class="font-bold text-sm mb-1"><span data-lang="en">Next: learn the demo</span><span data-lang="ar">التالي: تعلّم العرض</span></p>
+            <p class="text-sm text-slate-500 dark:text-slate-400"><span data-lang="en">The Runbook is the part you actually perform. Run it once end to end before your first real meeting.</span><span data-lang="ar">السيناريو هو الجزء الذي تؤدّيه فعليًا. شغّله كاملًا مرة واحدة قبل اجتماعك الحقيقي الأول.</span></p>
+          </div>
+          <a href="demo-script.html" class="btn btn-primary btn-md flex-shrink-0">
+            <span data-lang="en">Open the Demo Runbook</span><span data-lang="ar">افتح سيناريو العرض</span>
+            <span class="flip-x" data-icon="arrow-right" data-icon-size="16"></span>
+          </a>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer data-kit-footer></footer>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="assets/sales-kit.js"></script>
+</body>
+</html>

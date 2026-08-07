@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eksabli — Demo Runbook</title>
+<meta name="description" content="The scripted three-act Eksabli demo: what to click, what to say, and what not to show.">
+<meta name="robots" content="noindex, nofollow">
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="stylesheet" href="assets/sales-kit.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="kit bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 min-h-screen antialiased">
+
+<div id="toast-container"></div>
+<header data-kit-header="script"></header>
+
+<main class="max-w-5xl mx-auto px-5 py-10">
+
+  <!-- ================= INTRO ================= -->
+  <section class="mb-10 animate-fade-up">
+    <span class="badge badge-primary mb-3"><span data-lang="en">The demo you perform</span><span data-lang="ar">العرض الذي تؤدّيه</span></span>
+    <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight mb-3">
+      <span data-lang="en">Demo Runbook — three acts, one story</span><span data-lang="ar">سيناريو العرض — ثلاثة فصول وقصة واحدة</span>
+    </h1>
+    <p class="text-slate-500 dark:text-slate-400 max-w-3xl leading-relaxed">
+      <span data-lang="en">One customer, <strong>Layla</strong>, joins a coffee shop, earns points, and redeems a reward. Then the owner sees it happen. Follow the steps in order — the story only works in sequence. Each step tells you what to click, what to say, and where the trap is.</span>
+      <span data-lang="ar">عميلة واحدة، <strong>ليلى</strong>، تنضم إلى مقهى وتجمع النقاط وتستبدل مكافأة، ثم يرى المالك ذلك يحدث. اتبع الخطوات بالترتيب — فالقصة لا تعمل إلا متسلسلة. وكل خطوة تخبرك بما تنقر عليه، وما تقوله، وأين المزلق.</span>
+    </p>
+  </section>
+
+  <!-- ================= SETUP ================= -->
+  <div class="grid md:grid-cols-3 gap-5 mb-10">
+    <div class="card p-5 md:col-span-2">
+      <p class="font-bold text-sm mb-3"><span data-lang="en">Set up before you share your screen</span><span data-lang="ar">جهّز قبل مشاركة الشاشة</span></p>
+      <ul class="tick-list">
+        <li><span class="text-primary-600 dark:text-primary-400" data-icon="check" data-icon-size="16"></span><span data-lang="en">Open <a href="../customer/splash.html" target="_blank" rel="noopener" class="text-primary-600 dark:text-primary-400 font-semibold">the customer app</a> and <a href="../business/dashboard.html" target="_blank" rel="noopener" class="text-primary-600 dark:text-primary-400 font-semibold">the business portal</a> in two tabs, already loaded.</span><span data-lang="ar">افتح <a href="../customer/splash.html" target="_blank" rel="noopener" class="text-primary-600 dark:text-primary-400 font-semibold">تطبيق العميل</a> و<a href="../business/dashboard.html" target="_blank" rel="noopener" class="text-primary-600 dark:text-primary-400 font-semibold">بوابة النشاط</a> في تبويبين محمّلين مسبقًا.</span></li>
+        <li><span class="text-primary-600 dark:text-primary-400" data-icon="check" data-icon-size="16"></span><span data-lang="en">Keep this runbook on your own second screen. Never share the tab it's in — it says "prototype" and "internal" all over it.</span><span data-lang="ar">أبقِ هذا السيناريو على شاشتك الثانية، ولا تشارك تبويبه أبدًا — فهو مليء بكلمتي «نموذج أوّلي» و«داخلي».</span></li>
+        <li><span class="text-primary-600 dark:text-primary-400" data-icon="check" data-icon-size="16"></span><span data-lang="en">Say once, at the start: "These are real product screens with sample data — the names and numbers are made up."</span><span data-lang="ar">قل مرة واحدة في البداية: «هذه شاشات منتج حقيقية ببيانات تجريبية — الأسماء والأرقام مُفترضة.»</span></li>
+      </ul>
+    </div>
+    <div class="card p-5">
+      <p class="font-bold text-sm mb-3"><span data-lang="en">Pick a length</span><span data-lang="ar">اختر المدة</span></p>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-3 leading-relaxed"><span data-lang="en">Each step below is tagged with the demo lengths it belongs to. Skip anything not tagged for your slot.</span><span data-lang="ar">كل خطوة أدناه موسومة بالمدد التي تنتمي إليها. تجاوز ما لا يحمل وسم مدّتك.</span></p>
+      <div class="flex flex-wrap gap-1.5">
+        <span class="badge badge-primary">5m</span><span class="text-xs text-slate-400 self-center"><span data-lang="en">the hook</span><span data-lang="ar">الجذب</span></span>
+      </div>
+      <div class="flex flex-wrap gap-1.5 mt-1.5">
+        <span class="badge badge-primary">15m</span><span class="text-xs text-slate-400 self-center"><span data-lang="en">the standard demo</span><span data-lang="ar">العرض القياسي</span></span>
+      </div>
+      <div class="flex flex-wrap gap-1.5 mt-1.5">
+        <span class="badge badge-primary">30m</span><span class="text-xs text-slate-400 self-center"><span data-lang="en">chain / enterprise</span><span data-lang="ar">السلاسل والمؤسسات</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- ACT 1                                                         -->
+  <!-- ============================================================ -->
+  <section class="kit-section mb-14" id="act1">
+    <div class="flex items-center gap-3 mb-1">
+      <span class="badge badge-primary"><span data-lang="en">Act 1</span><span data-lang="ar">الفصل الأول</span></span>
+      <span class="text-xs text-slate-400" dir="ltr">≈ 5 min</span>
+    </div>
+    <h2 class="text-2xl font-extrabold tracking-tight mb-2"><span data-lang="en">The customer</span><span data-lang="ar">العميل</span></h2>
+    <p class="text-slate-500 dark:text-slate-400 max-w-3xl mb-2">
+      <span data-lang="en">Goal of this act: the prospect understands that their customer already has this app, and that their program lives inside it, separate from everyone else's.</span>
+      <span data-lang="ar">هدف هذا الفصل: أن يدرك العميل المحتمل أن زبونه يملك هذا التطبيق أصلًا، وأن برنامجه يعيش بداخله منفصلًا عن الجميع.</span>
+    </p>
+
+    <!-- step 1 -->
+    <div class="script-step">
+      <div class="flex flex-col items-center gap-2">
+        <span class="step-num">1</span>
+        <div data-screen="../customer/onboarding.html" data-screen-kind="phone" data-screen-label="Onboarding"></div>
+      </div>
+      <div class="space-y-3 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h3 class="font-bold text-base"><span data-lang="en">Onboarding — the promise in three slides</span><span data-lang="ar">التعريف — الوعد في ثلاث شرائح</span></h3>
+          <span class="flex gap-1"><span class="badge badge-neutral opacity-40">5m</span><span class="badge badge-primary">15m</span><span class="badge badge-primary">30m</span></span>
+        </div>
+        <div class="say-block"><span data-lang="en">"This is the first thing a customer sees. Three slides, then they're in. Join businesses, collect points, redeem rewards — that's the whole product from their side."</span><span data-lang="ar">«هذا أول ما يراه العميل: ثلاث شرائح ثم يدخل. انضم إلى الأنشطة، اجمع النقاط، استبدل المكافآت — هذا هو المنتج بأكمله من جانبه.»</span></div>
+        <p class="text-sm text-slate-500 dark:text-slate-400"><strong><span data-lang="en">Click:</span><span data-lang="ar">انقر:</span></strong> <span data-lang="en">swipe through the slides, then Get Started.</span><span data-lang="ar">مرّر بين الشرائح ثم «ابدأ».</span></p>
+      </div>
+    </div>
+
+    <!-- step 2 -->
+    <div class="script-step">
+      <div class="flex flex-col items-center gap-2">
+        <span class="step-num">2</span>
+        <div data-screen="../customer/join-store.html" data-screen-kind="phone" data-screen-label="Join a business"></div>
+      </div>
+      <div class="space-y-3 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h3 class="font-bold text-base"><span data-lang="en">Joining your shop takes one scan</span><span data-lang="ar">الانضمام إلى متجرك بمسحة واحدة</span></h3>
+          <span class="flex gap-1"><span class="badge badge-primary">5m</span><span class="badge badge-primary">15m</span><span class="badge badge-primary">30m</span></span>
+        </div>
+        <div class="say-block"><span data-lang="en">"Your customer scans the code on your counter. No form, no download at the till, no email confirmation. They're a member of your program before their coffee is ready — and they get a welcome bonus you set."</span><span data-lang="ar">«يمسح عميلك الرمز الموجود على طاولتك. بلا نموذج، وبلا تحميل عند الصندوق، وبلا رسالة تأكيد. يصبح عضوًا في برنامجك قبل أن تجهز قهوته — ويحصل على مكافأة ترحيب تحدّدها أنت.»</span></div>
+        <p class="text-sm text-slate-500 dark:text-slate-400"><strong><span data-lang="en">Click:</span><span data-lang="ar">انقر:</span></strong> <span data-lang="en">the join confirmation, then Continue.</span><span data-lang="ar">تأكيد الانضمام ثم «متابعة».</span></p>
+        <div class="presenter-note">
+          <span class="flex-shrink-0" data-icon="information-circle" data-icon-size="16"></span>
+          <span><span data-lang="en">This is where the "nobody downloads another app" objection dies. Land it here, not later.</span><span data-lang="ar">هنا يسقط اعتراض «لن يحمّل أحد تطبيقًا آخر». احسمه هنا لا لاحقًا.</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- step 3 -->
+    <div class="script-step">
+      <div class="flex flex-col items-center gap-2">
+        <span class="step-num">3</span>
+        <div data-screen="../customer/home.html" data-screen-kind="phone" data-screen-lg data-screen-label="Customer home"></div>
+      </div>
+      <div class="space-y-3 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h3 class="font-bold text-base"><span data-lang="en">Home — the moment the whole demo turns on</span><span data-lang="ar">الرئيسية — اللحظة التي يتحوّل عندها العرض بأكمله</span></h3>
+          <span class="flex gap-1"><span class="badge badge-primary">5m</span><span class="badge badge-primary">15m</span><span class="badge badge-primary">30m</span></span>
+        </div>
+        <div class="say-block"><span data-lang="en">"Look at 'My Businesses'. Layla has a balance at a coffee shop, a gym and a bookshop — three completely separate programs in one app. That coffee shop cannot see the gym's points, and the gym cannot see yours. What's shared is the app. Nothing else is."</span><span data-lang="ar">«انظر إلى «أنشطتي». لدى ليلى رصيد في مقهى ونادٍ رياضي ومكتبة — ثلاثة برامج منفصلة تمامًا في تطبيق واحد. لا يرى المقهى نقاط النادي، ولا يرى النادي نقاطك. المشترك هو التطبيق، ولا شيء غيره.»</span></div>
+        <p class="text-sm text-slate-500 dark:text-slate-400"><strong><span data-lang="en">Click:</span><span data-lang="ar">انقر:</span></strong> <span data-lang="en">scroll slowly past the businesses carousel, the active campaign banners, then "Discover Nearby".</span><span data-lang="ar">مرّر ببطء عبر شريط الأنشطة، ثم لافتات الحملات النشطة، ثم «اكتشف القريب».</span></p>
+        <div class="presenter-note">
+          <span class="flex-shrink-0" data-icon="exclamation-triangle" data-icon-size="16"></span>
+          <span><span data-lang="en"><strong>Stop talking here and let them look.</strong> This one screen carries both the differentiator and the "what you lose if you're not on it" argument — if they say "so I'd show up in that nearby list too?", you've won the meeting. Don't step on the silence.</span><span data-lang="ar"><strong>توقّف عن الكلام هنا ودعه ينظر.</strong> هذه الشاشة وحدها تحمل عنصر التميّز وحجّة «ما تخسره إن لم تكن موجودًا». وإن قال: «إذن سأظهر أنا أيضًا في قائمة القريب؟» فقد كسبت الاجتماع. لا تقطع الصمت.</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- step 4 -->
+    <div class="script-step">
+      <div class="flex flex-col items-center gap-2">
+        <span class="step-num">4</span>
+        <div data-screen="../customer/wallet.html" data-screen-kind="phone" data-screen-label="Wallet"></div>
+      </div>
+      <div class="space-y-3 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h3 class="font-bold text-base"><span data-lang="en">Wallet — every balance in one list</span><span data-lang="ar">المحفظة — كل الأرصدة في قائمة واحدة</span></h3>
+          <span class="flex gap-1"><span class="badge badge-primary">5m</span><span class="badge badge-primary">15m</span><span class="badge badge-primary">30m</span></span>
+        </div>
+        <div class="say-block"><span data-lang="en">"1,250 points at the coffee shop, 420 at the gym, 95 at the bookshop. Three wallets, one login. The customer never loses a card again, and never has to ask a cashier what their balance is."</span><span data-lang="ar">«١٬٢٥٠ نقطة في المقهى، و٤٢٠ في النادي، و٩٥ في المكتبة. ثلاث محافظ ودخول واحد. لا يفقد العميل بطاقة بعد اليوم، ولا يحتاج لسؤال الكاشير عن رصيده.»</span></div>
+      </div>
+    </div>
+
+    <!-- step 5 -->
+    <div class="script-step">
+      <div class="flex flex-col items-center gap-2">
+        <span class="step-num">5</span>
+        <div data-screen="../customer/my-points.html" data-screen-kind="phone" data-screen-label="My points"></div>
+      </div>
+      <div class="space-y-3 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h3 class="font-bold text-base"><span data-lang="en">Tier progress — the reason they come back this week</span><span data-lang="ar">التقدّم في المستوى — سبب عودته هذا الأسبوع</span></h3>
+          <span class="flex gap-1"><span class="badge badge-neutral opacity-40">5m</span><span class="badge badge-primary">15m</span><span class="badge badge-primary">30m</span></span>
+        </div>
+        <div class="say-block"><span data-lang="en">"She's Gold, and there's a progress bar to the next tier. That bar is the whole psychology of loyalty: a customer who can see how close they are behaves differently from one who can't. And every single point movement is listed underneath — earned, redeemed, expired — so a balance is never a mystery."</span><span data-lang="ar">«هي في المستوى الذهبي، وهناك شريط تقدّم نحو المستوى التالي. هذا الشريط هو جوهر سيكولوجيا الولاء: من يرى قربه من الهدف يتصرّف بشكل مختلف عمّن لا يراه. وكل حركة نقاط مدرجة أدناه — مكتسبة أو مصروفة أو منتهية — فلا يكون الرصيد لغزًا أبدًا.»</span></div>
+        <p class="text-sm text-slate-500 dark:text-slate-400"><strong><span data-lang="en">Click:</span><span data-lang="ar">انقر:</span></strong> <span data-lang="en">scroll to the transaction history and point at the "Points expired" and "Goodwill adjustment" rows.</span><span data-lang="ar">مرّر إلى سجل المعاملات وأشِر إلى سطري «انتهاء النقاط» و«تعديل حسن نية».</span></p>
+      </div>
+    </div>
+
+    <!-- step 6 -->
+    <div class="script-step">
+      <div class="flex flex-col items-center gap-2">
+        <span class="step-num">6</span>
+        <div data-screen="../customer/qr-code.html" data-screen-kind="phone" data-screen-label="Wallet QR"></div>
+      </div>
+      <div class="space-y-3 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h3 class="font-bold text-base"><span data-lang="en">The customer's code — hand-off to Act 2</span><span data-lang="ar">رمز العميل — التسليم إلى الفصل الثاني</span></h3>
+          <span class="flex gap-1"><span class="badge badge-primary">5m</span><span class="badge badge-primary">15m</span><span class="badge badge-primary">30m</span></span>
+        </div>
+        <div class="say-block"><span data-lang="en">"This is what she shows at your counter. Let's switch sides and be the cashier."</span><span data-lang="ar">«هذا ما تعرضه عند صندوقك. لننتقل إلى الجهة الأخرى ونكون نحن الكاشير.»</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- ACT 2                                                         -->
+  <!-- ============================================================ -->
+  <section class="kit-section mb-14" id="act2">
+    <div class="flex items-center gap-3 mb-1">
+      <span class="badge badge-success"><span data-lang="en">Act 2</span><span data-lang="ar">الفصل الثاني</span></span>
+      <span class="text-xs text-slate-400" dir="ltr">≈ 4 min</span>
+    </div>
+    <h2 class="text-2xl font-extrabold tracking-tight mb-2"><span data-lang="en">The counter</span><span data-lang="ar">الصندوق</span></h2>
+    <p class="text-slate-500 dark:text-slate-400 max-w-3xl mb-2">
+      <span data-lang="en">Goal of this act: prove it's fast enough for a real queue, and impossible to cheat. This is where owners decide whether it's serious software.</span>
+      <span data-lang="ar">هدف هذا الفصل: إثبات أنه سريع بما يكفي لطابور حقيقي، ويستحيل التحايل عليه. وهنا يقرّر المالك إن كان هذا برنامجًا جادًّا.</span>
+    </p>
+
+    <!-- step 7 -->
+    <div class="script-step">
+      <div class="flex flex-col items-center gap-2">
+        <span class="step-num">7</span>
+        <div data-screen="../business/points-management.html" data-screen-kind="desk" data-screen-lg data-screen-label="Award points"></div>
+      </div>
+      <div class="space-y-3 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h3 class="font-bold text-base"><span data-lang="en">Awarding points — two steps, nothing else on screen</span><span data-lang="ar">منح النقاط — خطوتان ولا شيء آخر على الشاشة</span></h3>
+          <span class="flex gap-1"><span class="badge badge-primary">5m</span><span class="badge badge-primary">15m</span><span class="badge badge-primary">30m</span></span>
+        </div>
+        <div class="say-block"><span data-lang="en">"Step one: identify the customer — scan their code, or type their phone number if their battery's dead. Step two: enter the sale amount, and the points are calculated for you from your own rules, including any tier multiplier and any campaign running right now. Confirm. Done. Your cashier sees these two boxes and nothing else — no reports, no campaigns, no billing on a shared device."</span><span data-lang="ar">«الخطوة الأولى: تحديد العميل — امسح رمزه، أو أدخل رقم هاتفه إن نفدت بطاريته. الخطوة الثانية: أدخل قيمة الشراء، فتُحتسب النقاط تلقائيًا من قواعدك أنت، بما في ذلك مضاعف المستوى وأي حملة نشطة الآن. ثم تأكيد. انتهى. ولا يرى الكاشير سوى هذين الحقلين — لا تقارير ولا حملات ولا فوترة على جهاز مشترك.»</span></div>
+        <p class="text-sm text-slate-500 dark:text-slate-400"><strong><span data-lang="en">Click:</span><span data-lang="ar">انقر:</span></strong> <span data-lang="en">toggle between QR scan and phone lookup, enter an amount, then scroll down to "Earning Rules" and "Loyalty Tiers" to show it's configurable.</span><span data-lang="ar">بدّل بين مسح الرمز والبحث بالهاتف، وأدخل مبلغًا، ثم مرّر لأسفل إلى «قواعد الكسب» و«مستويات الولاء» لتبيّن أنها قابلة للضبط.</span></p>
+        <div class="presenter-note">
+          <span class="flex-shrink-0" data-icon="shield-check" data-icon-size="16"></span>
+          <span><span data-lang="en">If they ask about staff cheating: the phone lookup is exact-match only and scoped to their own members — a cashier can't browse or search anyone else's customers — and every lookup and every manual adjustment is logged against that employee, with a daily cap.</span><span data-lang="ar">إن سألوا عن تحايل الموظفين: البحث بالهاتف بالمطابقة التامة فقط ومحصور بأعضائهم — فلا يستطيع الكاشير تصفّح أو البحث عن عملاء غيرهم — ويُسجَّل كل بحث وكل تعديل يدوي باسم الموظف، مع سقف يومي.</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- step 8 -->
+    <div class="script-step">
+      <div class="flex flex-col items-center gap-2">
+        <span class="step-num">8</span>
+        <div data-screen="../customer/rewards.html" data-screen-kind="phone" data-screen-label="Rewards catalog"></div>
+      </div>
+      <div class="space-y-3 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h3 class="font-bold text-base"><span data-lang="en">Back to the customer — the reward catalog</span><span data-lang="ar">عودة إلى العميل — قائمة المكافآت</span></h3>
+          <span class="flex gap-1"><span class="badge badge-neutral opacity-40">5m</span><span class="badge badge-primary">15m</span><span class="badge badge-primary">30m</span></span>
+        </div>
+        <div class="say-block"><span data-lang="en">"These are your rewards, your points prices, your stock limits. Anything she can't afford yet is dimmed — which is deliberate: she can see what she's saving toward. You decide what's on this list; we don't."</span><span data-lang="ar">«هذه مكافآتك أنت، وأسعارها بالنقاط، وحدود مخزونها. وما لا تستطيع شراءه بعد يظهر باهتًا — وهذا مقصود: لترى ما تدّخر من أجله. أنت من يقرّر ما في هذه القائمة، لا نحن.»</span></div>
+      </div>
+    </div>
+
+    <!-- step 9 -->
+    <div class="script-step">
+      <div class="flex flex-col items-center gap-2">
+        <span class="step-num">9</span>
+        <div data-screen="../customer/redeem-reward.html" data-screen-kind="phone" data-screen-lg data-screen-label="Redeem"></div>
+      </div>
+      <div class="space-y-3 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h3 class="font-bold text-base"><span data-lang="en">Redemption — a code that dies in seconds</span><span data-lang="ar">الاستبدال — رمز ينتهي خلال ثوانٍ</span></h3>
+          <span class="flex gap-1"><span class="badge badge-primary">5m</span><span class="badge badge-primary">15m</span><span class="badge badge-primary">30m</span></span>
+        </div>
+        <div class="say-block"><span data-lang="en">"She taps redeem, and gets a code with a countdown. Your staff scans it — or she reads out the PIN if the counter has no camera. It works exactly once, and then it's dead. Screenshot it, share it, try it twice: it won't work. And for an expensive reward you can require a manager to confirm, not just any cashier."</span><span data-lang="ar">«تنقر على الاستبدال فيظهر رمز بعدّاد تنازلي. يمسحه موظفك — أو تقرأ هي الرمز الرقمي إن لم تتوفّر كاميرا. يعمل مرة واحدة فقط ثم يموت. صوّره أو شاركه أو جرّبه مرتين: لن يعمل. وللمكافآت المرتفعة القيمة يمكنك اشتراط تأكيد مدير لا أي كاشير.»</span></div>
+        <p class="text-sm text-slate-500 dark:text-slate-400"><strong><span data-lang="en">Click:</span><span data-lang="ar">انقر:</span></strong> <span data-lang="en">let the countdown run down so they see the expired state, then reload for the success state. Watching the code expire is more convincing than describing it.</span><span data-lang="ar">دع العدّاد ينتهي ليروا حالة انتهاء الصلاحية، ثم أعد التحميل لحالة النجاح. مشاهدة الرمز وهو ينتهي أقنع من وصفه.</span></p>
+      </div>
+    </div>
+
+    <!-- step 10 -->
+    <div class="script-step">
+      <div class="flex flex-col items-center gap-2">
+        <span class="step-num">10</span>
+        <div data-screen="../business/coupons.html" data-screen-kind="desk" data-screen-label="Coupon audit"></div>
+      </div>
+      <div class="space-y-3 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h3 class="font-bold text-base"><span data-lang="en">The audit trail — closing the fraud conversation</span><span data-lang="ar">سجل التدقيق — إغلاق حديث الاحتيال</span></h3>
+          <span class="flex gap-1"><span class="badge badge-neutral opacity-40">5m</span><span class="badge badge-primary">15m</span><span class="badge badge-primary">30m</span></span>
+        </div>
+        <div class="say-block"><span data-lang="en">"And here's that same redemption on your side: which reward, which branch, which employee, what time. If free coffees start going out on one shift, this table is where you see it — not the P&amp;L three months later."</span><span data-lang="ar">«وها هو الاستبدال نفسه من جهتك: أي مكافأة، وأي فرع، وأي موظف، وفي أي وقت. وإن بدأت القهوة المجانية تخرج في وردية بعينها، فهذا الجدول هو ما يكشفها — لا قائمة الأرباح بعد ثلاثة أشهر.»</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- ACT 3                                                         -->
+  <!-- ============================================================ -->
+  <section class="kit-section mb-14" id="act3">
+    <div class="flex items-center gap-3 mb-1">
+      <span class="badge badge-info"><span data-lang="en">Act 3</span><span data-lang="ar">الفصل الثالث</span></span>
+      <span class="text-xs text-slate-400" dir="ltr">≈ 6 min</span>
+    </div>
+    <h2 class="text-2xl font-extrabold tracking-tight mb-2"><span data-lang="en">The owner</span><span data-lang="ar">المالك</span></h2>
+    <p class="text-slate-500 dark:text-slate-400 max-w-3xl mb-2">
+      <span data-lang="en">Goal of this act: turn "nice app" into "I can run my business on this". Everything here answers a question they already have.</span>
+      <span data-lang="ar">هدف هذا الفصل: تحويل «تطبيق جميل» إلى «أستطيع إدارة نشاطي به». وكل ما هنا يجيب عن سؤال يدور في ذهنه بالفعل.</span>
+    </p>
+
+    <!-- step 11 -->
+    <div class="script-step">
+      <div class="flex flex-col items-center gap-2">
+        <span class="step-num">11</span>
+        <div data-screen="../business/dashboard.html" data-screen-kind="desk" data-screen-lg data-screen-label="Business dashboard"></div>
+      </div>
+      <div class="space-y-3 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h3 class="font-bold text-base"><span data-lang="en">The dashboard — the Monday-morning screen</span><span data-lang="ar">لوحة التحكم — شاشة صباح الاثنين</span></h3>
+          <span class="flex gap-1"><span class="badge badge-neutral opacity-40">5m</span><span class="badge badge-primary">15m</span><span class="badge badge-primary">30m</span></span>
+        </div>
+        <div class="say-block"><span data-lang="en">"Active members and whether that's growing. Points issued versus points redeemed. What campaigns are live. Which reward is about to run out of stock. This is the screen an owner opens with their first coffee — and none of it existed when the loyalty program was a paper card."</span><span data-lang="ar">«الأعضاء النشطون وهل عددهم ينمو. والنقاط الممنوحة مقابل المصروفة. والحملات الجارية. والمكافأة التي أوشك مخزونها على النفاد. هذه هي الشاشة التي يفتحها المالك مع قهوته الأولى — ولم يكن شيء منها موجودًا حين كان برنامج الولاء بطاقة ورقية.»</span></div>
+        <div class="presenter-note">
+          <span class="flex-shrink-0" data-icon="information-circle" data-icon-size="16"></span>
+          <span><span data-lang="en">Say "sample data" once here if you haven't already. Someone always asks whether 3,248 members is a real customer.</span><span data-lang="ar">قل «بيانات تجريبية» هنا إن لم تكن قلتها. دائمًا يسأل أحدهم إن كان الرقم ٣٬٢٤٨ عضوًا يخصّ عميلًا حقيقيًا.</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- step 12 -->
+    <div class="script-step">
+      <div class="flex flex-col items-center gap-2">
+        <span class="step-num">12</span>
+        <div data-screen="../business/analytics.html" data-screen-kind="desk" data-screen-label="Analytics"></div>
+      </div>
+      <div class="space-y-3 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h3 class="font-bold text-base"><span data-lang="en">Analytics — issued vs. redeemed, branch by branch</span><span data-lang="ar">التحليلات — الممنوح مقابل المصروف، فرعًا بفرع</span></h3>
+          <span class="flex gap-1"><span class="badge badge-neutral opacity-40">5m</span><span class="badge badge-primary">15m</span><span class="badge badge-primary">30m</span></span>
+        </div>
+        <div class="say-block"><span data-lang="en">"Issuing points is easy; getting them redeemed is what actually brings someone back. That ratio, per branch, is the health of your program. And every number here has a raw transaction list behind it — nothing is a black box."</span><span data-lang="ar">«منح النقاط سهل، أما صرفها فهو ما يعيد الزبون فعلًا. وهذه النسبة، لكل فرع، هي صحة برنامجك. وخلف كل رقم هنا قائمة معاملات خام — لا شيء صندوقًا أسود.»</span></div>
+      </div>
+    </div>
+
+    <!-- step 13 -->
+    <div class="script-step">
+      <div class="flex flex-col items-center gap-2">
+        <span class="step-num">13</span>
+        <div data-screen="../business/campaigns.html" data-screen-kind="desk" data-screen-lg data-screen-label="Campaigns"></div>
+      </div>
+      <div class="space-y-3 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h3 class="font-bold text-base"><span data-lang="en">Campaigns — the win-back that pays for the subscription</span><span data-lang="ar">الحملات — حملة الاستعادة التي تسدّد قيمة الاشتراك</span></h3>
+          <span class="flex gap-1"><span class="badge badge-neutral opacity-40">5m</span><span class="badge badge-primary">15m</span><span class="badge badge-primary">30m</span></span>
+        </div>
+        <div class="say-block"><span data-lang="en">"Look at the draft one — 'We Miss You', targeting members who haven't been in for 60 days. You pick the segment, you see how many people that is before you send anything, and afterwards you see how many came back. Birthday bonuses and double-points weekends work the same way — and a double-points weekend genuinely doubles the points at the register, it isn't just an announcement."</span><span data-lang="ar">«انظر إلى المسوّدة — «نشتاق إليك»، وتستهدف الأعضاء الذين لم يزوروا منذ ٦٠ يومًا. تختار الشريحة، وترى عددهم قبل الإرسال، ثم ترى بعدها كم شخصًا عاد. وهدايا أعياد الميلاد وعطلات النقاط المضاعفة تعمل بالطريقة نفسها — وعطلة النقاط المضاعفة تضاعف النقاط فعليًا عند الصندوق، وليست مجرد إعلان.»</span></div>
+        <p class="text-sm text-slate-500 dark:text-slate-400"><strong><span data-lang="en">Click:</span><span data-lang="ar">انقر:</span></strong> <span data-lang="en">open the draft win-back campaign and show the segment preview before activating.</span><span data-lang="ar">افتح مسوّدة حملة الاستعادة واعرض معاينة الشريحة قبل التفعيل.</span></p>
+        <div class="presenter-note">
+          <span class="flex-shrink-0" data-icon="megaphone" data-icon-size="16"></span>
+          <span><span data-lang="en">This is the highest-value 60 seconds of the whole demo for an owner. If you're running short on time, cut Act 3 step 12 — never this one.</span><span data-lang="ar">هذه أثمن ستين ثانية في العرض كله بالنسبة للمالك. وإن ضاق الوقت فاحذف الخطوة ١٢ — لا هذه أبدًا.</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- step 14 -->
+    <div class="script-step">
+      <div class="flex flex-col items-center gap-2">
+        <span class="step-num">14</span>
+        <div data-screen="../business/customers.html" data-screen-kind="desk" data-screen-label="Customer list"></div>
+      </div>
+      <div class="space-y-3 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h3 class="font-bold text-base"><span data-lang="en">The customer list — "at risk" and "churned", by name</span><span data-lang="ar">قائمة العملاء — «معرّض للفقد» و«مفقود»، بالاسم</span></h3>
+          <span class="flex gap-1"><span class="badge badge-neutral opacity-40">5m</span><span class="badge badge-neutral opacity-40">15m</span><span class="badge badge-primary">30m</span></span>
+        </div>
+        <div class="say-block"><span data-lang="en">"Every member, their tier, their balance, when they last came in — and a status. 'At risk' and 'churned' are the two words most owners have never been able to attach to an actual name before. That list is what a win-back campaign is aimed at."</span><span data-lang="ar">«كل عضو، ومستواه، ورصيده، وتاريخ آخر زيارة — وحالته. و«معرّض للفقد» و«مفقود» كلمتان لم يستطع معظم الملّاك ربطهما باسم حقيقي من قبل. وهذه القائمة هي هدف حملة الاستعادة.»</span></div>
+      </div>
+    </div>
+
+    <!-- step 15 -->
+    <div class="script-step">
+      <div class="flex flex-col items-center gap-2">
+        <span class="step-num">15</span>
+        <div class="flex flex-col gap-2">
+          <div data-screen="../business/branches.html" data-screen-kind="desk" data-screen-label="Branches"></div>
+          <div data-screen="../business/employees.html" data-screen-kind="desk" data-screen-label="Employees"></div>
+        </div>
+      </div>
+      <div class="space-y-3 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h3 class="font-bold text-base"><span data-lang="en">Branches &amp; staff roles — the multi-site answer</span><span data-lang="ar">الفروع وأدوار الموظفين — إجابة تعدّد المواقع</span></h3>
+          <span class="flex gap-1"><span class="badge badge-neutral opacity-40">5m</span><span class="badge badge-neutral opacity-40">15m</span><span class="badge badge-primary">30m</span></span>
+        </div>
+        <div class="say-block"><span data-lang="en">"Each branch has its own address, its own QR code and its own numbers. And staff get roles: an owner sees everything, a branch manager sees their branch, a cashier sees only the award-and-redeem screen. Nobody has more access than their job needs."</span><span data-lang="ar">«لكل فرع عنوانه ورمزه وأرقامه الخاصة. وللموظفين أدوار: المالك يرى كل شيء، ومدير الفرع يرى فرعه، والكاشير لا يرى إلا شاشة المنح والاستبدال. ولا أحد يملك صلاحية أكثر مما تتطلّبه وظيفته.»</span></div>
+      </div>
+    </div>
+
+    <!-- step 16 -->
+    <div class="script-step">
+      <div class="flex flex-col items-center gap-2">
+        <span class="step-num">16</span>
+        <div data-screen="../business/subscription.html" data-screen-kind="desk" data-screen-label="Subscription"></div>
+      </div>
+      <div class="space-y-3 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h3 class="font-bold text-base"><span data-lang="en">Plan &amp; limits — and how to survive the price question</span><span data-lang="ar">الباقة والحدود — وكيف تتجاوز سؤال السعر</span></h3>
+          <span class="flex gap-1"><span class="badge badge-neutral opacity-40">5m</span><span class="badge badge-neutral opacity-40">15m</span><span class="badge badge-primary">30m</span></span>
+        </div>
+        <div class="say-block"><span data-lang="en">"Your plan is sized by branches, active members and messaging channels — and you can always see your usage against it. Growing is a plan change, not a project."</span><span data-lang="ar">«باقتك محدَّدة بعدد الفروع والأعضاء النشطين وقنوات المراسلة — وترى استهلاكك مقابلها دائمًا. والنمو تغيير باقة لا مشروع تنفيذ.»</span></div>
+        <div class="presenter-note">
+          <span class="flex-shrink-0" data-icon="exclamation-octagon" data-icon-size="16"></span>
+          <span><span data-lang="en"><strong>Do not say a number.</strong> Pricing is not approved. Use the scripted answer in <a href="index.html#pricing" class="underline font-semibold">Hub §9</a> and take the exact figure away as a follow-up.</span><span data-lang="ar"><strong>لا تذكر رقمًا.</strong> فالتسعير غير معتمد. استخدم الإجابة المكتوبة في <a href="index.html#pricing" class="underline font-semibold">القسم ٩ من الدليل</a> واجعل الرقم الدقيق بندًا للمتابعة.</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- step 17 -->
+    <div class="script-step">
+      <div class="flex flex-col items-center gap-2">
+        <span class="step-num">17</span>
+        <div data-screen="../admin/audit-logs.html" data-screen-kind="desk" data-screen-label="Audit logs"></div>
+      </div>
+      <div class="space-y-3 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h3 class="font-bold text-base"><span data-lang="en">Governance — enterprise and franchise buyers only</span><span data-lang="ar">الحوكمة — لمشتري المؤسسات والامتيازات فقط</span></h3>
+          <span class="flex gap-1"><span class="badge badge-neutral opacity-40">5m</span><span class="badge badge-neutral opacity-40">15m</span><span class="badge badge-primary">30m</span></span>
+        </div>
+        <div class="say-block"><span data-lang="en">"On our side there's a full audit log. If our support team ever looks at your account to help you, that's recorded — it never happens silently. Business approvals, plan changes and payments all sit behind separate roles, so no single person can quietly change your billing."</span><span data-lang="ar">«لدينا سجل تدقيق كامل. وإن اطّلع فريق الدعم على حسابك لمساعدتك، فإن ذلك يُسجَّل — ولا يحدث بصمت أبدًا. واعتماد الأنشطة وتغييرات الباقات والمدفوعات كلها خلف أدوار منفصلة، فلا يستطيع شخص واحد تغيير فوترتك بهدوء.»</span></div>
+        <div class="presenter-note">
+          <span class="flex-shrink-0" data-icon="exclamation-triangle" data-icon-size="16"></span>
+          <span><span data-lang="en"><strong>Skip this entirely for a small shop.</strong> Showing our internal console to a café owner invites "so you can see my customers?" — a question you didn't need to create. Only open it when governance was asked about first.</span><span data-lang="ar"><strong>تجاوز هذا تمامًا مع متجر صغير.</strong> فعرض لوحتنا الداخلية على صاحب مقهى يثير سؤال «إذن يمكنكم رؤية عملائي؟» — وهو سؤال لم تكن بحاجة لخلقه. لا تفتحها إلا إذا سُئلت عن الحوكمة أولًا.</span></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CLOSE ================= -->
+  <section class="kit-section">
+    <h2 class="text-2xl font-extrabold tracking-tight mb-4"><span data-lang="en">How to close</span><span data-lang="ar">كيف تُنهي الاجتماع</span></h2>
+    <div class="grid md:grid-cols-2 gap-5">
+      <div class="card p-5">
+        <p class="font-bold text-sm mb-2"><span data-lang="en">The closing line</span><span data-lang="ar">عبارة الإغلاق</span></p>
+        <div class="say-block"><span data-lang="en">"You've now seen the whole loop: someone joins in one scan, earns at your counter, and comes back to spend what they've collected — and you can see all of it. What I'd like to do next is size the right plan for your branches, and put you on the design-partner list so your rollout is one of the first."</span><span data-lang="ar">«رأيت الآن الحلقة كاملة: شخص ينضم بمسحة واحدة، ويجمع النقاط عند صندوقك، ويعود لينفق ما جمعه — وأنت ترى ذلك كله. وما أودّ فعله تاليًا هو تحديد الباقة المناسبة لفروعك، ووضعك على قائمة الشركاء التأسيسيين ليكون إطلاقك من الأوائل.»</span></div>
+      </div>
+      <div class="card p-5">
+        <p class="font-bold text-sm mb-2"><span data-lang="en">Send within the hour</span><span data-lang="ar">أرسل خلال ساعة</span></p>
+        <ul class="tick-list">
+          <li><span class="text-primary-600 dark:text-primary-400" data-icon="check" data-icon-size="16"></span><span data-lang="en">The two or three screens that got a reaction — nothing more.</span><span data-lang="ar">الشاشتان أو الثلاث التي أثارت تفاعلًا — لا أكثر.</span></li>
+          <li><span class="text-primary-600 dark:text-primary-400" data-icon="check" data-icon-size="16"></span><span data-lang="en">The plan tier you agreed fits them, described by what's included.</span><span data-lang="ar">الباقة التي اتفقتما على مناسبتها، موصوفة بما تتضمّنه.</span></li>
+          <li><span class="text-primary-600 dark:text-primary-400" data-icon="check" data-icon-size="16"></span><span data-lang="en">Any question you took away — and the date you'll answer it.</span><span data-lang="ar">أي سؤال أخذته للمتابعة — وموعد إجابتك عنه.</span></li>
+          <li><span class="text-danger-600 dark:text-danger-400" data-icon="x-mark" data-icon-size="16"></span><span data-lang="en">Never a price, never a launch date, never a link to this kit.</span><span data-lang="ar">لا سعر أبدًا، ولا تاريخ إطلاق، ولا رابط لهذا الدليل.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card p-5 mt-5 flex flex-col sm:flex-row items-center gap-4">
+      <div class="flex-1">
+        <p class="font-bold text-sm mb-1"><span data-lang="en">Need a different screen?</span><span data-lang="ar">تحتاج شاشة مختلفة؟</span></p>
+        <p class="text-sm text-slate-500 dark:text-slate-400"><span data-lang="en">All 61 screens are in the catalog, each with a line on what it's good for — build a custom path for an unusual prospect.</span><span data-lang="ar">جميع الشاشات الـ٦١ في الدليل، ولكل منها سطر يوضّح فائدتها — ابنِ مسارًا مخصّصًا لعميل غير اعتيادي.</span></p>
+      </div>
+      <a href="screens.html" class="btn btn-secondary btn-md flex-shrink-0">
+        <span data-lang="en">Open the Screen Catalog</span><span data-lang="ar">افتح دليل الشاشات</span>
+        <span class="flip-x" data-icon="arrow-right" data-icon-size="16"></span>
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<footer data-kit-footer></footer>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="assets/sales-kit.js"></script>
+</body>
+</html>

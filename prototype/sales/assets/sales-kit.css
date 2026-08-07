@@ -1,0 +1,185 @@
+/* ==========================================================================
+   Eksabli — Sales Enablement & Demo Kit
+   Kit-only styles layered on top of ../../assets/css/design-system.css.
+   Adds ONLY what the product design system doesn't already provide:
+     1. EN/AR language visibility + RTL corrections for the kit's own chrome
+     2. Scaled live-preview frames for embedded prototype screens
+     3. Presenter-note / script-row / internal-only blocks
+     4. Print styles (reps print the battlecard + objection table)
+   Everything else (cards, badges, tables, tabs, buttons, avatars) is reused.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------- */
+/* 1. Bilingual — both languages live in the HTML, CSS shows one           */
+/* ---------------------------------------------------------------------- */
+html[lang="en"] [data-lang="ar"] { display: none !important; }
+html[lang="ar"] [data-lang="en"] { display: none !important; }
+
+html[lang="ar"] body {
+  font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, 'Inter', sans-serif;
+}
+/* Arabic runs visually larger at the same px size in Latin-tuned scales. */
+html[lang="ar"] .kit { letter-spacing: 0; }
+
+/* Directional glyphs (arrows, chevrons) must mirror; logos and QR must not. */
+[dir="rtl"] .flip-x { transform: scaleX(-1); }
+
+/* The kit is authored with logical alignment so RTL needs few overrides. */
+.kit, .kit p, .kit li, .kit td, .kit th { text-align: start; }
+[dir="rtl"] .kit .text-center,
+[dir="rtl"] .kit .text-center p { text-align: center; }
+
+/* Tailwind's physical utilities used sparingly in the kit — mirrored here. */
+[dir="rtl"] .kit .border-l-4 { border-left-width: 0; border-right-width: 4px; }
+[dir="rtl"] .kit .pl-4 { padding-left: 0; padding-right: 1rem; }
+[dir="rtl"] .kit .timeline-item { padding-left: 0; padding-right: 1.75rem; }
+[dir="rtl"] .kit .timeline-item::before { left: auto; right: .3125rem; }
+[dir="rtl"] .kit .timeline-dot { left: auto; right: 0; }
+[dir="rtl"] #toast-container { right: auto; left: 1rem; }
+
+/* ---------------------------------------------------------------------- */
+/* 2. Kit chrome — sticky header + section nav                             */
+/* ---------------------------------------------------------------------- */
+.kit-header {
+  position: sticky; top: 0; z-index: 40; background: rgba(255, 255, 255, .88);
+  backdrop-filter: blur(12px); border-bottom: 1px solid #E2E8F0;
+}
+html.dark .kit-header { background: rgba(2, 6, 23, .88); border-color: #1E293B; }
+
+.kit-tabs { display: flex; gap: .25rem; overflow-x: auto; }
+.kit-tab {
+  display: inline-flex; align-items: center; gap: .5rem; padding: .5rem .875rem; border-radius: .75rem;
+  font-size: .8125rem; font-weight: 600; color: #64748B; white-space: nowrap; transition: all .15s;
+}
+.kit-tab:hover { background: #F1F5F9; color: #1E293B; }
+.kit-tab.active { background: #6248E3; color: #fff; box-shadow: var(--shadow-soft); }
+html.dark .kit-tab { color: #94A3B8; }
+html.dark .kit-tab:hover { background: #1E293B; color: #F1F5F9; }
+html.dark .kit-tab.active { background: #6248E3; color: #fff; }
+
+/* In-page section rail */
+.kit-rail { position: sticky; top: 7.5rem; align-self: start; }
+.kit-rail a {
+  display: block; padding: .375rem .75rem; border-inline-start: 2px solid #E2E8F0;
+  font-size: .8125rem; font-weight: 500; color: #64748B; transition: all .15s;
+}
+.kit-rail a:hover { color: #6248E3; border-color: #BEB8FB; }
+html.dark .kit-rail a { border-color: #1E293B; color: #94A3B8; }
+
+.kit-section { scroll-margin-top: 8.5rem; }
+.kit-eyebrow {
+  font-size: .6875rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: #6248E3;
+}
+html.dark .kit-eyebrow { color: #9D8FF8; }
+
+/* ---------------------------------------------------------------------- */
+/* 3. Scaled live previews of real prototype screens                       */
+/*    --sw/--sh = source viewport, --tw = rendered width (all unitless)    */
+/* ---------------------------------------------------------------------- */
+.screen-frame {
+  position: relative; overflow: hidden; flex-shrink: 0; background: #fff;
+  width: calc(var(--tw) * 1px);
+  height: calc(var(--sh) * var(--tw) / var(--sw) * 1px);
+  border-radius: .875rem; border: 1px solid #E2E8F0; box-shadow: var(--shadow-soft);
+}
+html.dark .screen-frame { background: #020617; border-color: #1E293B; }
+
+.screen-frame iframe {
+  position: absolute; top: 0; inset-inline-start: 0; border: 0;
+  width: calc(var(--sw) * 1px); height: calc(var(--sh) * 1px);
+  transform-origin: top left; transform: scale(calc(var(--tw) / var(--sw)));
+  /* Previews are for looking at — clicking opens the real screen full size. */
+  pointer-events: none;
+}
+[dir="rtl"] .screen-frame iframe { transform-origin: top right; }
+
+.screen-frame--phone { --sw: 390; --sh: 844; --tw: 168; border-radius: 1.5rem; }
+.screen-frame--desk  { --sw: 1440; --sh: 900; --tw: 300; }
+.screen-frame.is-lg.screen-frame--phone { --tw: 260; }
+.screen-frame.is-lg.screen-frame--desk  { --tw: 520; }
+
+@media (max-width: 767px) {
+  .screen-frame.is-lg.screen-frame--desk { --tw: 300; }
+  .screen-frame.is-lg.screen-frame--phone { --tw: 190; }
+}
+
+/* Hover affordance: the whole card is a link to the full-size screen. */
+.screen-link { position: relative; display: block; }
+.screen-link::after {
+  content: attr(data-open-label);
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(36, 26, 82, .78); color: #fff; font-size: .75rem; font-weight: 700;
+  border-radius: inherit; opacity: 0; transition: opacity .18s;
+}
+.screen-link:hover::after, .screen-link:focus-visible::after { opacity: 1; }
+
+/* ---------------------------------------------------------------------- */
+/* 4. Demo-script rows, presenter notes, internal-only blocks              */
+/* ---------------------------------------------------------------------- */
+.script-step {
+  display: grid; gap: 1.25rem; grid-template-columns: auto 1fr; align-items: start;
+  padding: 1.25rem 0; border-bottom: 1px dashed #E2E8F0;
+}
+html.dark .script-step { border-color: #1E293B; }
+.script-step:last-child { border-bottom: 0; }
+@media (max-width: 767px) { .script-step { grid-template-columns: 1fr; } }
+
+.step-num {
+  width: 1.75rem; height: 1.75rem; border-radius: 999px; background: #EBE9FE; color: #4F37C4;
+  display: inline-flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 800;
+  flex-shrink: 0;
+}
+html.dark .step-num { background: rgba(98, 72, 227, .18); color: #BEB8FB; }
+
+.say-block {
+  border-inline-start: 4px solid #6248E3; background: #F4F3FF; border-radius: 0 .75rem .75rem 0;
+  padding: .75rem 1rem; font-size: .875rem; line-height: 1.65; color: #392A7D;
+}
+[dir="rtl"] .say-block { border-radius: .75rem 0 0 .75rem; }
+html.dark .say-block { background: rgba(98, 72, 227, .12); color: #D9D6FD; }
+
+.presenter-note {
+  display: flex; gap: .625rem; align-items: flex-start; background: #FFFBEB; border: 1px solid #FDE68A;
+  border-radius: .75rem; padding: .625rem .875rem; font-size: .8125rem; color: #B45309;
+}
+html.dark .presenter-note { background: rgba(245, 158, 11, .1); border-color: rgba(245, 158, 11, .3); color: #FDE68A; }
+
+.internal-only {
+  border: 1px dashed #DC2626; background: #FEF2F2; border-radius: 1rem; padding: 1.25rem;
+}
+html.dark .internal-only { background: rgba(220, 38, 38, .08); border-color: rgba(220, 38, 38, .45); }
+
+/* Status pills — Built / Designed / Planned. Kept visually distinct from
+   product badges so nobody mistakes a roadmap label for product UI. */
+.status-pill {
+  display: inline-flex; align-items: center; gap: .375rem; padding: .1875rem .5rem; border-radius: .5rem;
+  font-size: .6875rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
+}
+.status-built    { background: #D1FAE5; color: #047857; }
+.status-designed { background: #E0F2FE; color: #0369A1; }
+.status-planned  { background: #F1F5F9; color: #475569; }
+html.dark .status-built    { background: rgba(5, 150, 105, .18);  color: #A7F3D0; }
+html.dark .status-designed { background: rgba(2, 132, 199, .18);  color: #BAE6FD; }
+html.dark .status-planned  { background: rgba(148, 163, 184, .16); color: #CBD5E1; }
+
+/* Gain / Lose columns in the commercial-answers section */
+.value-col { border-radius: 1rem; padding: 1.25rem; height: 100%; }
+.value-gain { background: #ECFDF5; border: 1px solid #A7F3D0; }
+.value-lose { background: #FEF2F2; border: 1px solid #FECACA; }
+html.dark .value-gain { background: rgba(16, 185, 129, .08); border-color: rgba(16, 185, 129, .28); }
+html.dark .value-lose { background: rgba(239, 68, 68, .08);  border-color: rgba(239, 68, 68, .28); }
+
+.tick-list { display: flex; flex-direction: column; gap: .625rem; }
+.tick-list li { display: flex; gap: .625rem; align-items: flex-start; font-size: .875rem; line-height: 1.6; }
+.tick-list li > span:first-child { flex-shrink: 0; margin-top: .125rem; }
+
+/* ---------------------------------------------------------------------- */
+/* 5. Print — reps print the value grid, objections and the script         */
+/* ---------------------------------------------------------------------- */
+@media print {
+  .kit-header, .kit-rail, .no-print, .screen-frame { display: none !important; }
+  .kit-section { break-inside: avoid; page-break-inside: avoid; }
+  .card { box-shadow: none !important; border: 1px solid #CBD5E1 !important; }
+  a[href]::after { content: ""; }
+  body { background: #fff !important; color: #000 !important; }
+}

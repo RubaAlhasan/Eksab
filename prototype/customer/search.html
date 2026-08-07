@@ -24,7 +24,10 @@
       <h1 class="text-xl font-extrabold tracking-tight mb-3">Search</h1>
       <div class="relative">
         <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" id="search-icon"></span>
-        <input id="search-input" class="input pl-10" placeholder="Search businesses, categories…" autofocus>
+        <!-- No autofocus: this page is also embedded as a preview in the sales-kit
+             screen catalog, and an autofocused field inside an iframe scrolls the
+             host page to it on load. -->
+        <input id="search-input" class="input pl-10" placeholder="Search businesses, categories…">
       </div>
     </div>
 

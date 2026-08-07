@@ -382,6 +382,12 @@ html.dark .phone-frame-wrap { background: #020617; }
   overflow: hidden; display: flex; flex-direction: column;
 }
 html.dark .phone-frame { background: #020617; border-color: #1E293B; }
+/* Customer-app pages use <body class="phone-frame-wrap"> with no text colour, so any
+   element without an explicit text-* class inherits the browser default black — which
+   disappears against the dark phone background. Anchor the inherited colour here so
+   bare headings stay readable in both themes; explicit text-* classes still win. */
+.phone-frame { color: #0F172A; }
+html.dark .phone-frame { color: #F1F5F9; }
 .phone-notch {
   position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 8rem; height: 1.5rem;
   background: #0F172A; border-radius: 0 0 1rem 1rem; z-index: 50;

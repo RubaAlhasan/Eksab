@@ -44,7 +44,7 @@
     </p>
   </div>
 
-  <div class="grid md:grid-cols-3 gap-6 mt-14">
+  <div class="grid md:grid-cols-3 gap-6 mt-14" id="surface-cards">
 
     <!-- Customer App -->
     <a href="customer/splash.html" class="card card-hover card-interactive p-7 flex flex-col animate-fade-up" style="animation-delay:.05s">
@@ -80,7 +80,20 @@
     </a>
   </div>
 
-  <div class="mt-16 card p-6 md:p-8 animate-fade-up" style="animation-delay:.2s">
+  <!-- Sales Enablement Kit — internal, sits apart from the three product surfaces above -->
+  <a href="sales/index.html" class="card card-hover card-interactive p-6 mt-6 flex items-center gap-5 animate-fade-up" style="animation-delay:.2s">
+    <div class="w-12 h-12 rounded-2xl bg-warning-100 dark:bg-warning-500/15 flex items-center justify-center text-warning-600 dark:text-warning-300 flex-shrink-0" id="sales-kit-icon"></div>
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-2 mb-1">
+        <h2 class="text-lg font-bold">Sales Enablement Kit</h2>
+        <span class="badge badge-danger">Internal</span>
+      </div>
+      <p class="text-sm text-slate-500 dark:text-slate-400">The pitch, the commercial case, every feature explained for sales, and a scripted three-act demo through the screens above. Bilingual EN/AR.</p>
+    </div>
+    <span class="icon-arrow text-warning-600 dark:text-warning-400 flex-shrink-0"></span>
+  </a>
+
+  <div class="mt-16 card p-6 md:p-8 animate-fade-up" style="animation-delay:.25s">
     <h3 class="font-bold text-sm uppercase tracking-wide text-slate-400 mb-4">What this prototype demonstrates</h3>
     <div class="grid sm:grid-cols-3 gap-6 text-sm">
       <div>
@@ -110,12 +123,14 @@
   document.getElementById('icon-sun').innerHTML = Icons.html('sun', { size: 20 });
   document.getElementById('icon-moon').innerHTML = Icons.html('moon', { size: 20 });
   document.querySelectorAll('.icon-arrow').forEach(el => el.innerHTML = Icons.html('arrow-right', { size: 16 }));
-  // Re-render the three feature icons now that Icons is available
-  document.querySelectorAll('main a.card').forEach((card, i) => {
+  // Re-render the three surface icons now that Icons is available. Scoped to
+  // #surface-cards so the Sales Kit card below it (a 4th main a.card) is untouched.
+  document.querySelectorAll('#surface-cards a.card').forEach((card, i) => {
     const names = ['device-phone-mobile', 'building-office', 'shield-check'];
     const wrap = card.querySelector('div.w-12');
     if (wrap) wrap.innerHTML = Icons.html(names[i], { size: 24 });
   });
+  document.getElementById('sales-kit-icon').innerHTML = Icons.html('presentation-chart-line', { size: 24 });
 </script>
 </body>
 </html>

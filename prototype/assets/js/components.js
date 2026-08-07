@@ -249,3 +249,8 @@ const Eksabli = (() => {
   // double-fire click handlers on modals/tabs/search-filters that existed since page load).
   return { toggleTheme, openModal, closeModal, openSheet, closeSheet, showToast, init, initSidebar, initDropdowns };
 })();
+
+// `const` at top level creates a global binding but NOT a window property, so the
+// `if (window.Eksabli)` guards in business-shell.js / admin-shell.js / sales-kit.js
+// would silently skip re-binding the injected sidebar and topbar. Publish it.
+window.Eksabli = Eksabli;
