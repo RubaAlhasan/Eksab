@@ -1,9 +1,26 @@
 import type { FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
+import type { AdminUserType } from './admin-user-type.enum';
 import type { SupportTicketPriority } from './support-ticket-priority.enum';
 import type { SupportTicketStatus } from './support-ticket-status.enum';
 
 export interface AddSupportTicketMessageDto {
   body: string;
+}
+
+export interface AdminUserDto {
+  id?: string;
+  type?: AdminUserType;
+  firstName?: string | null;
+  lastName?: string | null;
+  businessName?: string | null;
+  contact?: string | null;
+  isActive: boolean;
+  creationTime?: string;
+}
+
+export interface AdminUserFilterDto extends PagedAndSortedResultRequestDto {
+  filterText?: string | null;
+  type?: AdminUserType | null;
 }
 
 export interface CategoryDto extends FullAuditedEntityDto<string> {

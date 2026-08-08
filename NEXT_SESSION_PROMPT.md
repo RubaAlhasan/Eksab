@@ -19,16 +19,17 @@ backend never changes" or "the backend has everything."
 
 **Current work: building the Angular UI for ONE portal shell (`/admin/*`) serving TWO realms**, on
 branch `MD/admin-portal-frontend`, feature by feature, backend-verified, build-verified at every step.
-`AdminLayoutComponent`/`/admin` is used by both Host-realm platform staff (Businesses, Categories,
-Plans, Subscriptions, Support Tickets, System group — gated on Host-only permissions like
-`Eksabli.Tenants.View`) AND tenant-realm business staff (Customers — gated on `Eksabli.Memberships
-.View`, a real per-tenant permission, NOT `Eksabli.Tenants.View`). This was a **separate `/business/*`
+`AdminLayoutComponent`/`/admin` is used by both Host-realm platform staff (Businesses, Users,
+Categories, Plans, Subscriptions, Support Tickets, System group — gated on Host-only permissions like
+`Eksabli.Tenants.View`/`Eksabli.Users.View`) AND tenant-realm business staff (Customers — gated on
+`Eksabli.Memberships.View`, a real per-tenant permission, NOT `Eksabli.Tenants.View`). This was a **separate `/business/*`
 route tree with its own `BusinessLayoutComponent` shell earlier this session** — merged back into
 `/admin` after the user pointed out the two-portal split was unnecessary; see the "Customers" section
 below for the full reasoning and what changed. Don't recreate a separate `/business` shell — add any
 future tenant-realm-staff page as another `/admin/*` child instead, gated on its own real permission
 (never `Eksabli.Tenants.View`, which tenant-realm staff don't hold).
-Admin Portal is otherwise MVP-complete (only Dashboard left, see "What's NOT done" below).
+Admin Portal MVP scope is now fully built (Dashboard shipped this session, see "What's NOT done"
+below for the few remaining backend-blocked items) plus Users, an explicit beyond-MVP addition.
 
 ## Source-of-truth priority (in order) — never violate this
 
@@ -183,8 +184,37 @@ everything as modified/untracked working-tree changes. Review before committing.
   N+1 — against a permission a Support Agent may not hold) — shown as a generic "Customer" label
   instead. No backend changes needed for this feature — it was already fully READY per the gap
   analysis.
+- **Users** (`admin/users/`) — cross-tenant/cross-realm user directory, matching
+  `prototype/admin/users.html`. Backed by a **brand-new endpoint**,
+  `AdminUserAppService.GetListAsync` (`GET /api/app/admin-users`, new permission
+  `Eksabli.Users.View`, its own dedicated permission — not reused as `Tenants.View`, since it exposes
+  contact info across every tenant, a more sensitive scope worth auditing independently) — no existing
+  endpoint combined Host-realm customers with cross-tenant business staff. Combines two genuinely
+  different sources in-memory (same "acceptable at this scale" approach every other cross-cutting
+  admin list here uses):
+  - **Customers**: Host-realm `CustomerProfile` (name) + `IdentityUser.PhoneNumber` (contact). Every
+    real registered customer — a customer isn't owned by one business, so there's no tenant filter.
+  - **Staff**: cross-tenant `EmployeeAssignment` (`IDataFilter.Disable<IMultiTenant>()`) + each
+    assignment's own tenant-scoped `IdentityUser.Email` (contact) + that assignment's real
+    `Tenant.Name` (business) — a genuine per-row lookup, unlike the prototype's own demo data, which
+    hardcodes "Cedar & Bean Coffee" for every employee.
+  - `Realm` (Host/Tenant) is derived client-side from `Type`, not a stored field — architecturally
+    fixed by construction (a customer is always Host-realm, staff always tenant-realm).
+  - **Real gap found and NOT reproduced**: the prototype shows an "Invited" status for some employees
+    — searched every place an employee `IdentityUser` is created
+    (`EmployeeAssignmentAppService.InviteAsync`, the owner-creation path in `BusinessAppService
+    .RegisterAsync`) and confirmed accounts are created **active immediately**, no pending-invite
+    state exists in the domain. Status is real `IdentityUser.IsActive` only — Active/Inactive.
+  - **Real gap found and NOT reproduced**: `IdentityUser.Name`/`.Surname` are never populated
+    anywhere in this codebase for either realm (confirmed by searching every `new IdentityUser(...)`
+    call) — a Staff row's name is always null; the template falls back to showing their email instead
+    of a placeholder name (misleading) or the customer-style "Unnamed customer" text (also wrong —
+    staff genuinely have no name field, customers just might not have filled theirs in yet; these are
+    different situations, not the same fallback).
+  - Platform-staff accounts (seeded Host admin, Support Agent, etc.) are deliberately excluded, same
+    scope as the prototype — they belong on the stock Identity > Users page, not this directory.
 - **Sidebar nav is grouped** (`AdminLayoutComponent`'s `ADMIN_NAV: AdminNavGroup[]`) — "Business"
-  (Customers — tenant-realm, see its own section below), "Platform" (Businesses, Categories),
+  (Customers — tenant-realm, see its own section below), "Platform" (Businesses, Users, Categories),
   "Billing" (Plans, Subscriptions), "Operations" (Support Tickets). Only groups with ≥1 real, built
   page exist — no placeholder/disabled nav entries for unbuilt features.
 - **Customers** (`admin/customers/`, tenant-realm data — Members + Following tabs) — see the dedicated
@@ -306,6 +336,18 @@ everything as modified/untracked working-tree changes. Review before committing.
 8. **MVP scope exclusions** (explicit, don't reintroduce): no Campaigns / Campaign Details /
    Reports / Payment Refunds / standalone Notifications pages. "Payments" is rescoped to
    "Invoices" terminology throughout.
+9. **`maxResultCount: 0` is NOT a valid way to get "just the totalCount, no items" — it 400s.**
+   Every ABP list endpoint's filter DTO inherits `LimitedResultRequestDto.MaxResultCount`, which
+   carries `[Range(1, int.MaxValue)]` (confirmed by reflecting the actual compiled
+   `Volo.Abp.Ddd.Application.Contracts.dll`, not guessed) — combined with `[ApiController]`'s
+   automatic model validation, `maxResultCount: 0` fails with an HTTP 400 before the app service
+   method even runs. This shipped broken in two places before the user caught it live by hitting
+   `/api/app/support-ticket?...&maxResultCount=0` directly: `admin-business-details.component.ts`'s
+   "Open Support Tickets" stat and `admin-dashboard.component.ts`'s Open Tickets tile — both fixed to
+   `maxResultCount: 1` (the lowest accepted value; still reads `totalCount` correctly, the one
+   returned item is simply ignored). **Always use `1`, never `0`, for a filtered-count-only call** —
+   grep `maxResultCount:\s*0` before shipping any new stat tile that reuses this "count via a filtered
+   list call" pattern.
 
 ## Customers page (tenant-realm data, inside the Admin Portal shell)
 
@@ -413,27 +455,43 @@ unchanged from when it was first built; only the **routing/shell** changed, twic
 
 ## What's NOT done — pick up here, in this order
 
-Per the backend-readiness doc's Angular Implementation Order and the user's stated MVP scope, **for
-the Admin Portal**:
+**Dashboard (`admin/dashboard/`) is now built** — was the last Admin Portal MVP page on the original
+plan, mirrors `prototype/admin/dashboard.html`, mounted at `/admin/dashboard` with a bare `/admin` ->
+`dashboard` redirect (so `redirectAuthenticatedToHomeGuard`'s existing `/admin` destination for
+platform admins now actually lands somewhere) and a new "Overview" nav group listed first in
+`ADMIN_NAV`. Gated on `Eksabli.Tenants.View`, same as most other admin routes (no dedicated `Dashboard`
+permission exists). Built **entirely from existing endpoints — no backend changes needed this time**:
+- **Real, shown**: Total Businesses + Pending Approvals (count and list) from one
+  `AdminTenantsService.getList` call (`maxResultCount: 500`, same bounded-batch assumption as this
+  page's own bulk lookups elsewhere); Platform MRR from `AdminSubscriptionsService.getStats()` (added
+  earlier this session for the Subscriptions page — the old plan below predates that endpoint and was
+  wrong to rule an MRR tile out); Open Support Tickets count + Recent Support Tickets list from two
+  `SupportTicketsService.getList` calls (same two-calls-one-endpoint shape `admin-business-details
+  .component.ts`'s Overview tab already established as fine); Category Mix (top 5 by the real
+  `CategoryDto.BusinessCount`, added earlier this session for the Categories page) from
+  `CategoriesService.getList`.
+- **`[MISSING BACKEND CAPABILITY]`, deliberately not built**: Daily Active Users (no login/session
+  tracking exists anywhere in this codebase) and the MRR trend chart / "+X% (7mo)" growth badge (no
+  historical/time-series MRR snapshot exists — `GetStatsAsync()` only gives one current-point figure).
+  Both omitted entirely, not faked.
+- MRR tile and the whole Recent Support Tickets widget are hidden (API calls skipped) for a viewer
+  without `Eksabli.Billing.ManagePlatform` / `Eksabli.SupportTickets.Manage` respectively — same
+  hide-the-tile-not-the-page pattern used elsewhere (e.g. Businesses' Plan column).
+- `.eks-stat-card` (value/label stat tile) was promoted from `admin-subscriptions.component.scss` to
+  a global `styles.scss` utility since Dashboard needed the identical rule — same "promote on the
+  second use" pattern as `.btn-icon`/`.eks-filter-search`.
 
-1. **Dashboard** — the last Admin Portal MVP page. Deliberately saved for last since it composes
-   widgets from pages that need to exist first — Businesses, Support Tickets, and the System nav are
-   now all built, so Dashboard is unblocked. Per the implementation plan §02: 2-tile stat row (Total
-   Businesses, Pending Approvals — both real, reuse `AdminTenantsService.getList` with
-   `maxResultCount: 1`/filtered `totalCount`) + two "recent activity" list widgets (Pending Approvals,
-   Recent Support Tickets — both real, both link out to their full pages). Do **not** build an
-   MRR tile, DAU/MAU tile, category-mix chart, or growth chart — no real endpoint backs any of them
-   (see the plan's own §02 API table) — omit them entirely rather than showing placeholder/fake
-   numbers. Gate the route on `Eksabli.Tenants.View` (closest real "you're platform staff" signal —
-   no dedicated `Dashboard` permission exists) and hide the Support Tickets widget specifically for a
-   viewer without `SupportTickets.Manage`.
-2. **Backend-blocked, do not build yet**: Audit Logs (no `AbpAuditLogging` HttpApi module
+Per the backend-readiness doc's Angular Implementation Order and the user's stated MVP scope, **for
+the Admin Portal**, what's left:
+
+1. **Backend-blocked, do not build yet**: Audit Logs (no `AbpAuditLogging` HttpApi module
    reference exists), full Payments (only the manual-record-payment flow Subscriptions already has
    exists), Business Details' Billing tab (needs `AdminSubscriptionFilterDto.TenantId`) — revisit
    only once/if the corresponding backend work lands.
-3. Once Dashboard ships, re-check the implementation plan's Angular Implementation Order table for
-   anything else still marked MVP that this file hasn't tracked — at that point every page in the
-   user's originally stated MVP scope should be built.
+2. Re-check the implementation plan's Angular Implementation Order table for anything else still
+   marked MVP that this file hasn't tracked — with Dashboard shipped, every page in the user's
+   originally stated MVP scope should now be built; Users (`admin/users/`) was also added this session
+   as an explicit user request beyond the original plan, matching `prototype/admin/users.html`.
 
 **For tenant-realm-staff pages beyond Customers** (still mounted under `/admin/*` — see the "Customers
 page" section above for why there's no separate portal shell anymore) — no equivalent

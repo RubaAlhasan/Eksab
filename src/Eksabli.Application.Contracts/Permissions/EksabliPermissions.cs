@@ -128,6 +128,15 @@ public static class EksabliPermissions
         public const string Suspend = Default + ".Suspend";
     }
 
+    // Cross-tenant "Users" directory (Admin Portal) — deliberately its own permission, not reused as
+    // Tenants.View, so it can be granted/audited independently (it exposes customer phone numbers and
+    // business-staff emails across every tenant, a more sensitive scope than the Businesses list).
+    public static class Users
+    {
+        public const string Default = GroupName + ".Users";
+        public const string View = Default + ".View";
+    }
+
     public static class Categories
     {
         public const string Default = GroupName + ".Categories";

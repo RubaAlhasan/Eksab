@@ -31,9 +31,11 @@ type DetailTab = 'overview' | 'billing' | 'tickets';
  * Real API surface, nothing invented:
  * - Overview: `AdminTenantsController.GetAsync` (`AdminTenantDto` — the same fields the list page
  *   already shows) + category name (best-effort `CategoriesService.get`, read is `[AllowAnonymous]`)
- *   + one genuinely real stat, "Open Support Tickets", via a `status=Open, maxResultCount:0` filtered
- *   `SupportTicketsService.getList` (server counts, no items transferred) — omitted entirely for a
- *   viewer without `SupportTickets.Manage` rather than erroring.
+ *   + one genuinely real stat, "Open Support Tickets", via a `status=Open, maxResultCount:1` filtered
+ *   `SupportTicketsService.getList` (reads `totalCount`, ignores the single returned item — `1` is the
+ *   lowest value ABP's own `LimitedResultRequestDto.MaxResultCount` accepts; `[Range(1, ...)]` on that
+ *   base class rejects `0` with a 400, confirmed by reflecting the actual compiled DTO after this was
+ *   caught live) — omitted entirely for a viewer without `SupportTickets.Manage` rather than erroring.
  * - Billing tab: `[MISSING BACKEND CAPABILITY]` — `AdminSubscriptionFilterDto` has no `tenantId`
  *   field, so there's no way to fetch just this business's subscription server-side. Per the doc's own
  *   recommendation, this shows a "not available" empty state rather than the unscalable workaround
@@ -266,7 +268,7 @@ export class AdminBusinessDetailsComponent implements OnInit {
 
   private loadOpenTicketsCount(tenantId: string): void {
     this.ticketsService
-      .getList({ tenantId, status: SupportTicketStatus.Open, priority: null, sorting: undefined, skipCount: 0, maxResultCount: 0 })
+      .getList({ tenantId, status: SupportTicketStatus.Open, priority: null, sorting: undefined, skipCount: 0, maxResultCount: 1 })
       .subscribe({
         next: (result) => this.openTicketsCount.set(result.totalCount ?? 0),
         // Supplementary stat — stays null (hidden in the template) rather than showing an error.

@@ -2,18 +2,5 @@
   cursor: pointer;
 }
 
-.eks-stat-card {
-  min-width: 140px;
-  flex: 1 1 140px;
-
-  &__value {
-    font-size: 1.5rem;
-    font-weight: 800;
-    line-height: 1.2;
-  }
-
-  &__label {
-    font-size: 0.8125rem;
-    color: var(--bs-secondary-color, #6c757d);
-  }
-}
+// .eks-stat-card is a global utility now (see styles.scss) — promoted out of this component's scoped
+// styles when Dashboard needed the identical stat-tile rule too.

@@ -65,6 +65,26 @@
   }
 }
 
+// Small stat tile (`.card.eks-stat-card` — value + label), originally scoped inside
+// admin-subscriptions.component.scss before Dashboard needed the identical rule too — promoted here
+// rather than duplicated a second time, same "promote on the second use" pattern as the filter-row
+// utilities above.
+.eks-stat-card {
+  min-width: 140px;
+  flex: 1 1 140px;
+
+  &__value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  &__label {
+    font-size: 0.8125rem;
+    color: var(--bs-secondary-color, #6c757d);
+  }
+}
+
 // Portal-shell topbar icon button (lang switcher, dark mode, mobile nav toggle) used by
 // AdminLayoutComponent's topbar. Kept as a global utility (originally promoted out of
 // admin-layout.component.scss when a since-deleted, near-duplicate Business Portal shell briefly

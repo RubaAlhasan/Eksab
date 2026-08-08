@@ -1,6 +1,7 @@
 export * from './achievements.service';
 export * from './admin-subscriptions.service';
 export * from './admin-tenants.service';
+export * from './admin-users.service';
 export * from './billing.service';
 export * from './branches.service';
 export * from './business.service';

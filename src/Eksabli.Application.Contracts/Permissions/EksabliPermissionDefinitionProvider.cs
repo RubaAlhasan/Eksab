@@ -80,6 +80,9 @@ public class EksabliPermissionDefinitionProvider : PermissionDefinitionProvider
         tenantsPermission.AddChild(EksabliPermissions.Tenants.Approve, L("Permission:Tenants.Approve"));
         tenantsPermission.AddChild(EksabliPermissions.Tenants.Suspend, L("Permission:Tenants.Suspend"));
 
+        var usersPermission = myGroup.AddPermission(EksabliPermissions.Users.Default, L("Permission:Users"));
+        usersPermission.AddChild(EksabliPermissions.Users.View, L("Permission:Users.View"));
+
         var categoriesPermission = myGroup.AddPermission(EksabliPermissions.Categories.Default, L("Permission:Categories"));
         categoriesPermission.AddChild(EksabliPermissions.Categories.Create, L("Permission:Categories.Create"));
         categoriesPermission.AddChild(EksabliPermissions.Categories.Edit, L("Permission:Categories.Edit"));

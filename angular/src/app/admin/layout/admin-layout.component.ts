@@ -33,9 +33,10 @@ interface AdminNavGroup {
  *  but ONLY groups that already have at least one real, built page — no placeholder/disabled entries
  *  for features that don't exist yet (Audit Logs, "Feature Flags" as a standalone page — see below).
  *  Add each new group/entry here the same turn its page is build-verified, not before — an empty
- *  group would just be visual noise pointing at nothing. Dashboard (would-be "Overview" group) is
- *  deliberately not built yet per the backend readiness doc's implementation order (it composes
- *  widgets from pages that need to exist first).
+ *  group would just be visual noise pointing at nothing. Dashboard ("Overview" group) was built last,
+ *  per the backend readiness doc's implementation order — it composes widgets from pages that needed
+ *  to exist first (Businesses, Support Tickets), and see admin-dashboard.component.ts's own file
+ *  comment for exactly which of the prototype's stat tiles/charts are real vs. skipped.
  *
  *  The "System" group's Users/Roles/Settings/My Profile items point at **stock ABP pages**
  *  (`@abp/ng.identity`/`@abp/ng.setting-management`/`@abp/ng.account`), but nested under `/admin/...`
@@ -68,11 +69,22 @@ interface AdminNavGroup {
  *  System group, and the app's own `Menu:*`/`AdminPanel:*` keys for everything else. */
 const ADMIN_NAV: AdminNavGroup[] = [
   {
-    // Tenant-realm data (Memberships/Followers), listed first — it's the group most likely to be the
-    // ONLY visible group for a business-staff account, since every other group below is gated on
-    // Host-only permissions (Tenants.View, Billing.ManagePlatform, etc.) they don't hold. Reuses the
-    // real, already-shipped `BusinessPanel:Layout:NavCustomers` key (previously the now-deleted
-    // BusinessLayoutComponent's own nav label) rather than minting a duplicate.
+    // Host-only (Eksabli.Tenants.View) — listed first to match the prototype's own IA (Dashboard is
+    // the landing page for platform staff, see app.routes.ts's bare '/admin' -> 'dashboard' redirect).
+    // Doesn't affect business-staff accounts either way — they're filtered out of this group by
+    // permission regardless of position, same as every other Host-only group below.
+    groupKey: '::AdminPanel:Layout:GroupOverview',
+    items: [
+      { labelKey: '::AdminPanel:Dashboard:Title', icon: 'fa-gauge-high', link: '/admin/dashboard', permission: 'Eksabli.Tenants.View' },
+    ],
+  },
+  {
+    // Tenant-realm data (Memberships/Followers) — it's the group most likely to be the ONLY visible
+    // group for a business-staff account (the Overview group above is Host-only and filtered out for
+    // them), since every other group below is also gated on Host-only permissions (Tenants.View,
+    // Billing.ManagePlatform, etc.) they don't hold. Reuses the real, already-shipped
+    // `BusinessPanel:Layout:NavCustomers` key (previously the now-deleted BusinessLayoutComponent's
+    // own nav label) rather than minting a duplicate.
     groupKey: '::AdminPanel:Layout:GroupBusiness',
     items: [
       {
@@ -88,6 +100,10 @@ const ADMIN_NAV: AdminNavGroup[] = [
     groupKey: '::AdminPanel:Layout:GroupPlatform',
     items: [
       { labelKey: '::Menu:AdminTenants', icon: 'fa-building', link: '/admin/businesses', permission: 'Eksabli.Tenants.View' },
+      // Cross-tenant user directory — a genuinely different permission from Tenants.View (see
+      // EksabliPermissions.Users' own comment: it exposes contact info across every tenant, audited
+      // separately). Not `businessOnly` like Customers — this page is Host-only by design.
+      { labelKey: '::Menu:AdminUsers', icon: 'fa-address-book', link: '/admin/users', permission: 'Eksabli.Users.View' },
       { labelKey: '::Menu:Categories', icon: 'fa-tags', link: '/admin/categories', permission: 'Eksabli.Tenants.View' },
     ],
   },

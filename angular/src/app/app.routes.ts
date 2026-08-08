@@ -60,6 +60,24 @@ export const APP_ROUTES: Routes = [
     canActivate: [authGuard],
     children: [
       {
+        // Bare '/admin' lands here — matches redirectAuthenticatedToHomeGuard's own destination for a
+        // platform admin (see the guard's comment in this file) and the prototype's own IA (Dashboard
+        // is the first thing platform staff see).
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'dashboard',
+      },
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./admin/dashboard/admin-dashboard.component').then(c => c.AdminDashboardComponent),
+        canActivate: [permissionGuard],
+        // Same "closest real platform-staff signal" reasoning as every other admin route — no
+        // dedicated Dashboard permission exists (see admin-dashboard.component.ts's file comment for
+        // what's actually shown/hidden per-permission within the page itself).
+        data: { requiredPolicy: 'Eksabli.Tenants.View' },
+      },
+      {
         path: 'businesses',
         loadComponent: () =>
           import('./admin/businesses/admin-tenants.component').then(c => c.AdminTenantsComponent),
@@ -75,6 +93,15 @@ export const APP_ROUTES: Routes = [
           import('./admin/businesses/admin-business-details.component').then(c => c.AdminBusinessDetailsComponent),
         canActivate: [permissionGuard],
         data: { requiredPolicy: 'Eksabli.Tenants.View' },
+      },
+      {
+        // Cross-tenant/cross-realm user directory — genuinely Host-only (see prototype/admin/
+        // users.html's own subtitle), so this is the one child route gated on `Eksabli.Users.View`
+        // rather than the `businessOnly`-style treatment Customers needed.
+        path: 'users',
+        loadComponent: () => import('./admin/users/admin-users.component').then(c => c.AdminUsersComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Users.View' },
       },
       {
         path: 'categories',
