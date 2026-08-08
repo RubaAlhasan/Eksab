@@ -4,3 +4,7 @@
     vertical-align: middle;
   }
 }
+
+// .eks-filter-search / .eks-filter-select are global utilities now (see styles.scss) — Subscriptions
+// needed the identical rule, so it was promoted out of this component's scoped styles rather than
+// duplicated a second time.

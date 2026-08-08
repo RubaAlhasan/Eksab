@@ -1,0 +1,187 @@
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::AdminPanel:Businesses:Loading' | abpLocalization"></app-loading-spinner>
+} @else if (notFound()) {
+  <app-empty-state icon="fa-building" [title]="'::AdminPanel:Businesses:NotFoundTitle' | abpLocalization" [description]="'::AdminPanel:Businesses:NotFoundMessage' | abpLocalization">
+    <a routerLink="/admin/businesses" class="btn btn-sm btn-outline-secondary">
+      {{ '::AdminPanel:Businesses:BackToList' | abpLocalization }}
+    </a>
+  </app-empty-state>
+} @else if (loadFailed()) {
+  <app-error-state
+    [message]="'::AdminPanel:Businesses:LoadErrorMessage' | abpLocalization"
+    [retryLabel]="'::AdminPanel:Businesses:TryAgain' | abpLocalization"
+    (retry)="retry()"
+  >
+  </app-error-state>
+} @else if (tenant(); as tenant) {
+  <app-page-header
+    [title]="tenant.tenantName ?? ''"
+    [breadcrumbs]="[
+      { label: 'Admin Portal', link: '/admin/businesses' },
+      { label: ('::Menu:AdminTenants' | abpLocalization), link: '/admin/businesses' },
+      { label: tenant.tenantName ?? '' }
+    ]"
+  >
+  </app-page-header>
+
+  <div class="row g-4">
+    <div class="col-12 col-lg-4">
+      <div class="card">
+        <div class="card-body text-center">
+          <div class="eks-avatar mx-auto mb-3">{{ (tenant.tenantName ?? '?').charAt(0).toUpperCase() }}</div>
+          <p class="fw-bold mb-1">{{ tenant.tenantName }}</p>
+          <p class="text-muted small mb-2">{{ categoryName() ?? '—' }}</p>
+          <app-status-badge [label]="statusLabelKey(tenant.approvalStatus) | abpLocalization" [variant]="statusVariant(tenant.approvalStatus)"></app-status-badge>
+
+          <div class="text-start mt-4">
+            <div class="eks-detail-row">
+              <span class="text-muted small">{{ '::AdminPanel:Businesses:ColumnSignedUp' | abpLocalization }}</span>
+              <span class="fw-semibold small">{{ tenant.creationTime | date: 'mediumDate' }}</span>
+            </div>
+            <div class="eks-detail-row">
+              <span class="text-muted small">{{ '::AdminPanel:Businesses:BusinessIdLabel' | abpLocalization }}</span>
+              <span class="fw-semibold small font-monospace">{{ tenant.businessProfileId }}</span>
+            </div>
+          </div>
+
+          @if (canApprove() || canSuspend()) {
+            <div class="d-flex flex-column gap-2 mt-4">
+              @if (canApprove() && tenant.approvalStatus !== ApprovalStatus.Approved) {
+                <button type="button" class="btn btn-outline-success btn-sm" (click)="approve()">
+                  {{ '::AdminPanel:Businesses:Approve' | abpLocalization }}
+                </button>
+              }
+              @if (canSuspend() && tenant.approvalStatus !== ApprovalStatus.Suspended) {
+                <button type="button" class="btn btn-outline-danger btn-sm" (click)="suspend()">
+                  {{ '::AdminPanel:Businesses:Suspend' | abpLocalization }}
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-8">
+      <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+          <button type="button" class="nav-link" [class.active]="activeTab() === 'overview'" (click)="selectTab('overview')">
+            {{ '::AdminPanel:Businesses:TabOverview' | abpLocalization }}
+          </button>
+        </li>
+        @if (canViewBilling()) {
+          <li class="nav-item">
+            <button type="button" class="nav-link" [class.active]="activeTab() === 'billing'" (click)="selectTab('billing')">
+              {{ '::AdminPanel:Businesses:TabBilling' | abpLocalization }}
+            </button>
+          </li>
+        }
+        @if (canViewTickets()) {
+          <li class="nav-item">
+            <button type="button" class="nav-link" [class.active]="activeTab() === 'tickets'" (click)="selectTab('tickets')">
+              {{ '::AdminPanel:Businesses:TabTickets' | abpLocalization }}
+            </button>
+          </li>
+        }
+      </ul>
+
+      @if (activeTab() === 'overview') {
+        @if (openTicketsCount() !== null) {
+          <div class="card eks-stat-tile d-inline-block">
+            <div class="card-body">
+              <div class="eks-stat-tile__value">{{ openTicketsCount() }}</div>
+              <div class="eks-stat-tile__label">{{ '::AdminPanel:Businesses:OpenTicketsLabel' | abpLocalization }}</div>
+            </div>
+          </div>
+        } @else {
+          <p class="text-muted small">{{ '::AdminPanel:Businesses:OverviewEmpty' | abpLocalization }}</p>
+        }
+      }
+
+      @if (activeTab() === 'billing') {
+        <div class="card">
+          <div class="card-body">
+            <app-empty-state
+              icon="fa-file-invoice-dollar"
+              [title]="'::AdminPanel:Businesses:BillingUnavailableTitle' | abpLocalization"
+              [description]="'::AdminPanel:Businesses:BillingUnavailableMessage' | abpLocalization"
+            >
+              <a routerLink="/admin/subscriptions" class="btn btn-sm btn-outline-secondary">
+                {{ '::AdminPanel:Subscriptions:Title' | abpLocalization }}
+              </a>
+            </app-empty-state>
+          </div>
+        </div>
+      }
+
+      @if (activeTab() === 'tickets') {
+        <div class="card">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>{{ '::AdminPanel:SupportTickets:ColumnSubject' | abpLocalization }}</th>
+                  <th>{{ '::AdminPanel:SupportTickets:ColumnPriority' | abpLocalization }}</th>
+                  <th>{{ '::AdminPanel:SupportTickets:ColumnStatus' | abpLocalization }}</th>
+                  <th>{{ '::AdminPanel:SupportTickets:ColumnUpdated' | abpLocalization }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (ticketsLoading()) {
+                  <tr>
+                    <td colspan="4">
+                      <app-loading-spinner [label]="'::AdminPanel:SupportTickets:Loading' | abpLocalization"></app-loading-spinner>
+                    </td>
+                  </tr>
+                } @else if (ticketsFailed()) {
+                  <tr>
+                    <td colspan="4">
+                      <app-error-state
+                        [message]="'::AdminPanel:SupportTickets:LoadErrorMessage' | abpLocalization"
+                        [retryLabel]="'::AdminPanel:SupportTickets:TryAgain' | abpLocalization"
+                        (retry)="retryTickets()"
+                      >
+                      </app-error-state>
+                    </td>
+                  </tr>
+                } @else if (tickets().length === 0) {
+                  <tr>
+                    <td colspan="4">
+                      <app-empty-state icon="fa-life-ring" [title]="'::AdminPanel:SupportTickets:EmptyTitle' | abpLocalization"></app-empty-state>
+                    </td>
+                  </tr>
+                } @else {
+                  @for (ticket of tickets(); track ticket.id) {
+                    <tr>
+                      <td class="fw-semibold">{{ ticket.subject }}</td>
+                      <td>
+                        <app-status-badge
+                          [label]="ticketPriorityLabelKey(ticket.priority) | abpLocalization"
+                          [variant]="ticketPriorityVariant(ticket.priority)"
+                        >
+                        </app-status-badge>
+                      </td>
+                      <td>
+                        <app-status-badge
+                          [label]="ticketStatusLabelKey(ticket.status) | abpLocalization"
+                          [variant]="ticketStatusVariant(ticket.status)"
+                        >
+                        </app-status-badge>
+                      </td>
+                      <td class="text-muted">{{ (ticket.lastModificationTime ?? ticket.creationTime) | date: 'medium' }}</td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+          @if (!ticketsLoading() && !ticketsFailed()) {
+            <div class="card-footer">
+              <app-pagination [pageIndex]="ticketsPageIndex()" [totalPages]="ticketsTotalPages()" (pageChange)="goToTicketsPage($event)"></app-pagination>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}

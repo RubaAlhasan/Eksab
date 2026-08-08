@@ -1,129 +1,218 @@
 # Paste this to start the next Claude Code session
 
-I'm continuing work on **Eksabli**, a loyalty platform (customers install one app, join
-unlimited businesses, each with an independent points balance) built on top of an ABP Framework
-10.5 (.NET 10) + Angular 21 solution currently scaffolded with a tutorial Book/Author domain.
-Product/target market is confirmed **bilingual Arabic + English (RTL)**. Read
-[`CLAUDE.md`](CLAUDE.md) at the repo root first — it has the real dev commands and architecture
-notes. Then read this whole file before doing anything — it exists specifically so you don't
-repeat mistakes I already got corrected on last session.
+I'm continuing work on **Eksabli**, a bilingual (Arabic + English, RTL) loyalty platform built on
+ABP Framework 10.5 (.NET 10) + Angular 21, PostgreSQL. Read [`CLAUDE.md`](CLAUDE.md) at the repo
+root first (real dev commands, architecture, Mapperly mapping convention, Excel-export pattern).
+Then read this whole file before doing anything — it exists so you don't repeat mistakes/rediscover
+things already settled.
 
-## What already exists
+**Backend status: done.** Features 01-08 (identity/multi-tenancy, businesses, loyalty engine,
+billing/subscriptions, categories, support tickets, etc.) are fully implemented — don't assume the
+backend needs building; verify capabilities by reading the actual code, not the docs (the docs
+under `docs/eksabli-loyalty-platform/` describe the target design and can be stale vs. what's
+actually implemented).
 
-**Planning docs** — `docs/eksabli-loyalty-platform/`: 8 documents (business strategy, system
-architecture, database design, product experience, Flutter architecture, dashboards/admin,
-loyalty engine) plus `features/` — the same decisions re-sliced into 8 implementation-ready
-vertical feature folders (`01-identity-multi-tenancy` through `08-admin-panel`), each with domain
-model, API surface, screens, permissions, and a build checklist. Start any real feature work by
-reading the matching folder there, not by re-deriving the design.
+**Current work: building the Admin Portal Angular UI**, on branch `MD/admin-portal-frontend`,
+feature by feature, backend-verified, build-verified at every step. This is what the rest of this
+file is about.
 
-**Working mockup artifacts** (published, viewable, may or may not still be live depending on
-session):
-- `https://claude.ai/code/artifact/1bd0c7e1-9f64-4530-b4a1-fa694accd049` — customer app Home
-  screen (wallet carousel, campaign banners with a live countdown-free badge), the cashier
-  "Award Points" POS screen (QR-scan/phone-lookup toggle), and Rewards & Redemption (catalog →
-  QR + live countdown). All phone-frame mockups, EN/AR toggle included.
-- `https://claude.ai/code/artifact/5e9dc98f-d771-4454-b0e2-fc06f8c7fa8e` — marketing landing page
-  mockup ("digital passbook" visual concept — perforated dividers, rubber-stamp badges, monospace
-  ledger numerals). Superseded by the REAL Angular implementation below, kept for reference.
+## Source-of-truth priority (in order) — never violate this
 
-**Real Angular implementation** (this is live code, not a mockup):
-- `angular/src/app/landing/` — `LandingComponent`, the actual marketing landing page, now serving
-  at the app's root route `/`.
-- `angular/src/app/home/home.component.*` — trimmed down to an honest placeholder (was the full
-  ABP "Getting Started" tutorial page; now just a welcome message + links to Books/Authors). Lives
-  at `/home`, behind `authGuard`. This is where a logged-in user lands — it is NOT a real dashboard
-  yet (Feature 07 in the docs is the real one).
-- `angular/src/app/footer/footer.component.ts` — was "Lepton Theme by Volosoft" boilerplate, now
-  says Eksabli, localized.
-- Bilingual copy for all of the above lives in `src/Eksabli.Domain.Shared/Localization/Eksabli/en.json`
-  and `ar.json`, under a `Landing:`/`Dashboard:` key namespace, loaded through ABP's real
-  `abpLocalization` pipe — **not** local component strings (see gotcha below).
+1. The actual backend codebase (controllers, app services, DTOs, permissions — read the real
+   files, don't guess).
+2. [`docs/eksabli-loyalty-platform/admin-portal-backend-readiness.md`](docs/eksabli-loyalty-platform/admin-portal-backend-readiness.md)
+   — gap analysis of what the backend actually supports per Admin Portal feature.
+3. [`docs/eksabli-loyalty-platform/admin-portal-implementation-plan.md`](docs/eksabli-loyalty-platform/admin-portal-implementation-plan.md)
+   — the approved Angular implementation plan.
+4. `prototype/admin/*.html` — a static Tailwind mockup with **demo data**. It is a visual/UX
+   reference only, lowest priority. It contains fields/stats that don't exist in the real backend
+   (see "Prototype vs. real backend" gotcha below) — never copy it uncritically.
 
-## Conventions and gotchas learned the hard way last session — don't rediscover these
+## Hard rules — do not violate
 
-1. **Angular i18n must go through ABP's actual localization pipeline.** Add keys to
-   `en.json`/`ar.json` in `src/Eksabli.Domain.Shared/Localization/Eksabli/`, reference them in
-   templates as `{{ '::Namespace:Key' | abpLocalization }}` (import `LocalizationPipe`). Language
-   switching calls `RouteBasedCultureUrlService.applyLanguageSelection(lang)` (the actual method
-   Lepton-X's own toolbar picker uses — confirmed via the package's `.d.ts`, not the compiled
-   bundle, which can be misleading). Current active language/direction: `SessionStateService.getLanguage$()`
-   converted to a signal via `toSignal()`, direction via `getLocaleDirection()`. Do not invent a
-   local `signal<'en'|'ar'>` + hardcoded string maps — I did that once and got corrected.
+- **Never invent APIs or fake data.** If a capability the UI wants doesn't exist on the backend,
+  either (a) add the real backend capability (domain → contracts → app service → mapper, see
+  gotcha #6 below) if it's small and clearly justified, and say so explicitly, or (b) mark it
+  `[MISSING BACKEND CAPABILITY]` in a code comment and skip it. Never mock/hardcode data to make a
+  screen look complete, and never silently drop a stat that can't be computed (e.g. "Churn" — no
+  time-series endpoint exists for it — just don't show it, don't fabricate a number).
+- **Never disable tenant filters from Angular; multi-tenancy is backend-authoritative.** When a
+  platform-wide admin view legitimately needs cross-tenant data (e.g. Categories' business count,
+  Subscriptions, Businesses list), that's a *backend* change using
+  `IDataFilter.Disable<IMultiTenant>()` inside the app service — see `AdminTenantAppService.cs` and
+  the now-similarly-patterned `CategoryAppService.cs` for the reference shape. Angular just calls
+  the resulting endpoint.
+- **Classify every API before wiring it**: Host-only / Tenant-scoped / Cross-tenant admin /
+  platform-level — and route-guard + permission-check accordingly (see `app.routes.ts` — note
+  Subscriptions is deliberately gated on `Eksabli.Billing.ManagePlatform`, not the `Tenants.View`
+  every other admin route uses, because that controller has no anonymous/lesser read).
+- **Reuse, never duplicate**: `AdminLayoutComponent` (`angular/src/app/admin/layout/`), and the
+  shared component library in `angular/src/app/shared/components/` — `PageHeaderComponent`,
+  `SearchInputComponent`, `StatusBadgeComponent`, `LoadingSpinnerComponent`, `ErrorStateComponent`,
+  `EmptyStateComponent`, `PaginationComponent`, `ModalComponent`. Also reuse the established action-
+  button convention (`btn btn-sm btn-outline-secondary`/`btn-outline-danger` icon buttons) across
+  every table — don't switch one page to the prototype's borderless icon style while others keep
+  the bordered one; that was a deliberate consistency call, not an oversight.
+- **Work incrementally, one feature at a time, build-verified before moving on** — this is the
+  explicit standing instruction. Never implement multiple features in one uninterrupted pass.
 
-2. **Layout/chrome (sidebar+topbar vs. chrome-free) is NOT controlled by a route's own
-   `data.layout` alone.** `DynamicLayoutComponent` (`@abp/ng.core`) calls `getExtractedLayout()`,
-   which starts from `route.snapshot.data['layout']` but then calls `findRoute()` against the
-   `RoutesService` menu tree (populated in `angular/src/app/route.provider.ts`) and lets an
-   ancestor menu entry's `.layout` **override** it. `findRoute` recursively trims path segments
-   and falls back to `/` if nothing else matches — so an unregistered route silently inherits
-   whatever `/` resolves to. Any route needing a specific layout (`eLayoutType.empty`/`application`/`account`)
-   should be registered in `route.provider.ts` with an exact-matching `path`, not just given
-   `data.layout` in `app.routes.ts`. If a route isn't in the menu tree AND has no route-level
-   `data.layout`, `DynamicLayoutComponent` defaults it to `empty` (this is how account/login pages
-   get chrome-free rendering without any special registration).
+## Verification checklist — run this for every feature/change, every time
 
-3. **Dark mode in this app is `:host-context(.lpx-theme-dark)`**, a class Lepton-X toggles
-   somewhere up the DOM — not the `prefers-color-scheme` media query. Check `home.component.scss`
-   (original, pre-cleanup version if you need a reference) for the pattern.
+1. Inspect the real backend (controller, app service, DTOs, permission names) before writing any
+   Angular code.
+2. Implement (standalone component, signals, `OnPush`, Reactive Forms, `input()`/`output()`,
+   `inject()`, native control flow — full list in `.claude/CLAUDE.md`'s Angular section).
+3. If you touched `en.json`/`ar.json`
+   (`src/Eksabli.Domain.Shared/Localization/Eksabli/`), validate both parse:
+   `node -e "JSON.parse(require('fs').readFileSync('src/Eksabli.Domain.Shared/Localization/Eksabli/en.json','utf8'))"`
+   (and same for `ar.json`) — an empty-string value for a key makes ABP's pipe render the raw key
+   instead of falling back sensibly; don't add empty-string localization values, ever.
+4. `cd angular && npx ng build --configuration development` — must be clean, zero errors.
+5. `npm run lint` — must show only the one pre-existing unrelated `footer.component.ts`
+   selector-prefix error, nothing new.
+6. If you touched backend C#: `dotnet build src/Eksabli.Application/Eksabli.Application.csproj`
+   (or the specific project you touched) — **do not run a full solution build if
+   `Eksabli.HttpApi.Host` might be running locally** (IIS Express/Kestrel dev server) — its DLL
+   will be locked and the copy step fails with `MSB3027`/`MSB3021`, which is a false-alarm lock
+   error, not a compile error. Build the specific library project instead to get a clean signal.
+7. Verify: routes wired in both `app.routes.ts` (lazy load + `permissionGuard` +
+   `data.requiredPolicy`) and `route.provider.ts` (menu entry, `layout: eLayoutType.empty` for
+   admin pages, correct `requiredPolicy`); permissions match the real backend attribute, not a
+   guess; localization keys all exist in both `en.json` and `ar.json`; responsive at narrow
+   viewports (no inline `style="min-width/max-width"`, no fixed-width grid columns without a
+   `col-12 col-sm-*` mobile fallback); every prior admin page still builds/works.
+8. Summarize what changed and what's still `[MISSING BACKEND CAPABILITY]`, if anything.
 
-4. **OAuth `redirectUri` is fixed** (`environment.ts` → `baseUrl`, i.e. `/`) — you can't make login
-   redirect straight to `/home` by changing it without also touching the OpenIddict client's
-   registered redirect URIs on the backend. Instead, `/` has a `canActivate` guard
-   (`redirectAuthenticatedToHomeGuard` in `app.routes.ts`) that bounces already-authenticated
-   visitors on to `/home` — landing page for anonymous visitors, dashboard placeholder for
-   authenticated ones.
+## What already exists (Angular Admin Portal, uncommitted on `MD/admin-portal-frontend`)
 
-5. **Never put real trademarked brand names/logos on public-facing marketing material** as if
-   they're customers/partners (no real ones exist pre-launch) — use fictional businesses (already
-   established: Bloom & Brew, FitLine Sports, Crust & Co.). Real brand names (Starbucks, Nike,
-   Pizza Shop) are fine as illustrative example data *inside internal product/app-screen mockups*
-   only, because that's what the original product brief itself used as its own example — the
-   distinction is "internal design tool" vs. "public collateral," not the names themselves. Also:
-   no fabricated stats, testimonials, or dollar-figure pricing — pricing tiers show what's
-   included, not invented amounts, since real pricing is explicitly unvalidated in the docs.
+All of the below is implemented and build-verified, but **not yet committed** — `git status` shows
+everything as modified/untracked working-tree changes. Review before committing.
 
-6. **Verify Angular changes with an actual build**, not just reading the diff:
-   `cd angular && npx ng build --configuration development`. I was wrong twice last session about
-   framework internals (the localization mechanism, the layout mechanism) before I started tracing
-   actual `.d.ts`/bundle source instead of guessing from memory — trust the compiler and the real
-   package source over recollection.
+- **Phase 1 foundation**: `angular/src/app/core/guards/admin.guard.ts` (`adminGuard`,
+  `isPlatformAdmin()`, `ADMIN_REALM_PERMISSION = 'Eksabli.Tenants.View'`);
+  `redirectAuthenticatedToHomeGuard` in `app.routes.ts` routes platform admins to `/admin`;
+  `AdminLayoutComponent` (custom shell — sidebar, topbar, language switcher, dark mode, logout —
+  registered as `eLayoutType.empty` so ABP's own Lepton-X layout doesn't also wrap it); shared
+  component library (8 components, listed above).
+- **Businesses** (`admin/businesses/`) — tenant list, approve/suspend actions.
+- **Categories** (`admin/categories/`) — full CRUD. Just extended with a real **`businessCount`**
+  column (backend change: `CategoryDto.BusinessCount`, computed in `CategoryAppService` via
+  `IDataFilter.Disable<IMultiTenant>()` over `BusinessProfile.CategoryId`, Mapperly
+  `[MapperIgnoreTarget]` for the manually-set field — see gotcha #6). Counts every `BusinessProfile`
+  regardless of `ApprovalStatus` (pending/approved/suspended all count) — flagged to the user as a
+  possible follow-up if they want approved-only.
+- **Plans** (`admin/plans/`) — card-grid CRUD, feature-limits JSON editor.
+- **Subscriptions** (`admin/subscriptions/`) — table with expandable-row invoice sub-list (no
+  routed details page — backend has no `GetAsync(id)`), Record Payment modal, and a real-data stat
+  row (Active count / Trialing count / approx. MRR — all from real endpoints, see gotcha #7).
+- **Support Tickets** (`admin/support-tickets/`) — queue table (status + priority filters, no
+  search — `SupportTicketFilterDto` has no `filterText`) with a modal-based thread/detail view
+  (reply form + Mark Resolved), matching the implementation plan's own recommendation that ticket
+  detail be a drawer/panel, not a routed page. `[MISSING BACKEND CAPABILITY]`: no reopen/explicit
+  in-progress transition — only `ResolveAsync` is exposed (`SupportTicket.Reopen()`/`.Close()` exist
+  on the domain entity but aren't wired through `ISupportTicketAppService`), so "Mark Resolved" is
+  the only status-changing action. "From" column resolves `tenantId` to a business name via the same
+  bulk `AdminTenantsService` lookup Subscriptions uses; a customer ticket's `customerId` is
+  deliberately NOT resolved to a user name (would need one `IdentityUserService.get()` call per row —
+  N+1 — against a permission a Support Agent may not hold) — shown as a generic "Customer" label
+  instead. No backend changes needed for this feature — it was already fully READY per the gap
+  analysis.
+- **Sidebar nav is grouped** (`AdminLayoutComponent`'s `ADMIN_NAV: AdminNavGroup[]`) — "Platform"
+  (Businesses, Categories), "Billing" (Plans, Subscriptions), "Operations" (Support Tickets). Only
+  groups with ≥1 real, built page exist — no placeholder/disabled nav entries for unbuilt features.
+- **Business Details** (`admin/businesses/admin-business-details.component.*`,
+  `/admin/businesses/:tenantId`) — routed drill-down from the Businesses list (row's name is now a
+  link). Left profile card (avatar-initial, name, category — best-effort `CategoriesService.get`,
+  status badge, Signed up date, Business ID, Approve/Suspend) + right-side tabs: **Overview** (one
+  real stat, "Open Support Tickets" via a `status=Open, maxResultCount:0` filtered count, hidden for
+  a viewer without `SupportTickets.Manage`), **Billing** (`[MISSING BACKEND CAPABILITY]` —
+  `AdminSubscriptionFilterDto` has no `tenantId` filter, so this tab shows a "not available yet" empty
+  state + a link to the full Subscriptions page rather than the unscalable "fetch every subscription
+  and filter client-side" workaround), **Support Tickets** (real, `SupportTicketFilterDto.TenantId`-
+  filtered table, same column shape as the full queue but **read-only** here — no reply/resolve, per
+  the implementation plan's own Forms/Actions sections for this page; use the full Support Tickets
+  page for triage). No Activity Log tab — no audit log API exists. 404 (invalid `tenantId`) is
+  handled as a distinct "not found" state, not the generic error state. Route needed **no** new
+  `route.provider.ts` entry — confirmed `findRoute()` (abp-ng.core) walks a path up by segment until
+  it hits an exact match, so `/admin/businesses/:tenantId` inherits `/admin/businesses`'s own
+  `eLayoutType.empty` entry automatically. Worth knowing for any future detail/:id route.
 
-7. **I (the user) strongly prefer direct execution over being asked to confirm process/workflow
-   questions** — if something like plan-mode state or a similar internal mechanism is ambiguous,
-   just proceed with the obviously-intended work rather than pausing to ask about it. Reserve
-   actual questions for genuine product/design forks where there's no clearly-correct default.
+## Conventions and gotchas learned the hard way — don't rediscover these
 
-## What's NOT done — pick up here
+1. **Angular i18n must go through ABP's actual localization pipeline.** Keys live in
+   `en.json`/`ar.json` under `AdminPanel:<Feature>:*` / `Menu:*` namespaces, referenced as
+   `{{ '::Namespace:Key' | abpLocalization }}` (`LocalizationPipe`). Reuse real framework keys
+   where they exist instead of inventing duplicates (e.g. `'AbpUi::Logout'`, found in Lepton-X's
+   own source, not guessed). Language switching:
+   `RouteBasedCultureUrlService.applyLanguageSelection(cultureName)`. Current language as a signal:
+   `toSignal(sessionState.getLanguage$(), { initialValue: sessionState.getLanguage() })`; direction
+   via `getLocaleDirection()`, bound to `[attr.dir]` on the shell root.
+2. **Layout/chrome is resolved via `route.provider.ts`'s menu tree, not just a route's own
+   `data.layout`.** `DynamicLayoutComponent` calls `findRoute()` against the `RoutesService` tree;
+   an ancestor menu entry's `.layout` can override the route's own. Every admin leaf route needs an
+   exact-path entry in `route.provider.ts` with `layout: eLayoutType.empty`, even though
+   `AdminLayoutComponent`'s own sidebar is built from a separate plain array
+   (`ADMIN_NAV`/`AdminNavGroup[]`), not from this menu tree — the two lists currently have to be
+   kept in sync by hand.
+3. **RTL**: use CSS logical properties (`inset-inline-start`, `border-inline-end`) not physical
+   ones. `translateX()` has **no logical equivalent** — flip its sign explicitly under `:dir(rtl)`
+   (a real CSS pseudo-class driven by the `dir` attribute, not an Angular binding) — see
+   `admin-layout.component.scss`'s sidebar drawer transform for the pattern.
+4. **Verify with an actual build, not just reading the diff** — trust the compiler/real package
+   source over recollection of framework internals.
+5. **I (the user) strongly prefer direct execution over being asked to confirm process/workflow
+   questions.** Proceed with the obviously-intended work; reserve actual questions
+   (`AskUserQuestion`) for genuine product/design forks with no clearly-correct default — e.g.
+   "restyle the sidebar into grouped sections now or later" was a legitimate ask; "should I run
+   `ng build`" is not.
+6. **Adding a small, justified backend capability the Angular layer needs is fine** — it doesn't
+   violate "don't invent APIs" as long as it's a real, server-computed field wired through the real
+   layers (Domain-Shared consts → Contracts DTO → Application service → HttpApi controller if
+   needed → Mapperly mapper), not a shortcut. Reference shape: adding `CategoryDto.BusinessCount`
+   this session — cross-aggregate fields not present on the source entity need
+   `[MapperIgnoreTarget(nameof(Dto.Field))]` on **both** mapper overloads (see
+   `EksabliTenantSubscriptionToTenantSubscriptionDtoMapper`'s `PlanName` for the existing pattern),
+   then the app service sets the field manually after `ObjectMapper.Map(...)`. After any such
+   change, the Angular proxy model (`angular/src/app/proxy/**/models.ts`) needs the matching field
+   added by hand if you can't run `abp generate-proxy -t ng` against a live, freshly-restarted Host
+   — tell the user to run it themselves once they restart the Host, to confirm the shape matches.
+7. **Prototype vs. real backend**: the static prototype (`prototype/admin/*.html`) contains
+   aspirational/demo-only stats that don't correspond to any real endpoint — e.g. Subscriptions'
+   "Churn (30d)" (no time-series data exists to compute it; don't fabricate it) and status values
+   like "Pending Approval"/"Suspended" shown in a *subscription* status column (that's actually
+   `BusinessProfile.ApprovalStatus`, a different concept, already shown correctly on the
+   Businesses page — don't conflate the two). Where a prototype stat genuinely IS computable from
+   real data (e.g. Subscriptions' Active/Trialing counts via a `maxResultCount: 0` filtered
+   `totalCount`, or an *approximate* MRR by summing real `SubscriptionPlanDto.monthlyPrice` across
+   active subscriptions), build it for real and label estimates as estimates (tooltip/hint text)
+   rather than presenting them as precise. "Payments" and "Reports" as separate nav items are out
+   of MVP scope per an earlier explicit descoping decision — don't reintroduce them because the
+   prototype has them.
+8. **MVP scope exclusions** (explicit, don't reintroduce): no Campaigns / Campaign Details /
+   Reports / Payment Refunds / standalone Notifications pages. "Payments" is rescoped to
+   "Invoices" terminology throughout.
 
-**Top priority: the backend identity-realm spike was researched but never written.** This is the
-single most important unstarted piece — see
-[`docs/eksabli-loyalty-platform/features/01-identity-multi-tenancy/README.md`](docs/eksabli-loyalty-platform/features/01-identity-multi-tenancy/README.md)'s
-"Open questions" section. The goal: prove one Host-realm (`TenantId = null`) customer identity can
-hold independent point balances across two ABP Tenants, with `IMultiTenant` filtering behaving
-correctly in both directions. Research already done (don't redo it, just implement):
-- No tenant-creation code exists anywhere in the repo yet — `EksabliDbMigrationService` only reads
-  existing tenants. Use ABP's `TenantManager.CreateAsync(name)` + `ITenantRepository.InsertAsync(...)`
-  (both already resolvable via DI, `Volo.Abp.TenantManagement` already referenced).
-- `EksabliEntityFrameworkCoreModule.cs` currently has `AddDefaultRepositories(includeAllEntities: true)`
-  — the comment right above it says to remove that flag per DDD best practice (matches this repo's
-  own `.cursor/rules/framework/data/ef-core.mdc`). Worth fixing alongside the new entity.
-- New `Membership` entity should be rich-model (private setters, `AuditedAggregateRoot<Guid>` like
-  `Book`, not anemic like `Book`/`Author` currently are — those are tutorial scaffolding being
-  deleted anyway, not a pattern to propagate) with a `TenantId` that's framework-populated via
-  `CurrentTenant.Change()` around inserts, never set explicitly in the constructor.
-- Test belongs in `test/Eksabli.EntityFrameworkCore.Tests/EntityFrameworkCore/`, mirroring
-  `SampleRepositoryTests.cs`'s direct-inheritance shape (not the abstract-generic-class pattern
-  used elsewhere in this repo — that's for DB-agnostic tests, this one is inherently about the
-  relational `IMultiTenant` filter).
+## What's NOT done — pick up here, in this order
 
-**Also open:**
-- No real business dashboard yet (Feature 07) — `/home` is a placeholder on purpose.
-- Mockups only cover Home/POS/Rewards — Store Profile, full Wallet list, Search, Notifications,
-  etc. aren't designed yet.
-- Payment provider (Feature 04) and push/SMS/email provider (Feature 05) aren't chosen — flagged
-  as open questions in those feature docs, and both should probably account for the confirmed
-  Arabic/English market when decided.
-- Flutter app doesn't exist in this repo — it's being built by someone else, separately (last I
-  knew, they were still setting up the project). Coordinate before assuming backend API contracts
-  are final.
+Per the backend-readiness doc's Angular Implementation Order and the user's stated MVP scope:
+
+1. Menu/route wiring for stock ABP modules already available via installed packages: Users
+   (`@abp/ng.identity`), Roles, Feature Flags, Settings, Admin Profile — these are pre-built ABP UI,
+   just need permission-gated nav entries added to `ADMIN_NAV`/`route.provider.ts`, matching the
+   grouped-sidebar pattern (a "System" group, alongside the now-existing Platform/Billing/Operations
+   groups).
+2. **Dashboard last** — deliberately not built yet; it composes widgets from pages that need to
+   exist first (Businesses + Support Tickets, both now built — Dashboard is unblocked but still
+   explicitly saved for last). Do not start with Dashboard before #1 above.
+3. **Backend-blocked, do not build yet**: Audit Logs (no `AbpAuditLogging` HttpApi module
+   reference exists), full Payments (only the manual-record-payment flow Subscriptions already has
+   exists), Business Details' Billing tab (needs `AdminSubscriptionFilterDto.TenantId`) — revisit
+   only once/if the corresponding backend work lands.
+
+## Useful memory
+
+This project also has persistent cross-session memory (separate from this file) with notes like
+"repo's own status docs are stale, verify backend status via git log + src/" and the user's
+preference for direct execution without process check-ins — those are already reflected in the
+rules above, just noting they exist in case you're wondering why certain phrasing shows up as
+settled fact.

@@ -218,8 +218,13 @@ public partial class EksabliFollowToFollowDtoMapper : MapperBase<Follow, FollowD
 [Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
 public partial class EksabliCategoryToCategoryDtoMapper : MapperBase<Category, CategoryDto>
 {
+    // BusinessCount isn't a Category property — it's a cross-aggregate count (BusinessProfiles
+    // referencing this category, across every tenant) computed and set by CategoryAppService after
+    // mapping, same pattern as TenantSubscriptionDto.PlanName above.
+    [MapperIgnoreTarget(nameof(CategoryDto.BusinessCount))]
     public override partial CategoryDto Map(Category source);
 
+    [MapperIgnoreTarget(nameof(CategoryDto.BusinessCount))]
     public override partial void Map(Category source, CategoryDto destination);
 }
 

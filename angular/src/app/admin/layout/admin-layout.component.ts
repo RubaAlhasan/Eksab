@@ -18,15 +18,51 @@ interface AdminNavItem {
   permission: string;
 }
 
-/** Flat for now (Businesses, Categories, Plans) — Dashboard is deliberately not built yet per the
- *  backend readiness doc's implementation order (it composes widgets from pages that need to exist
- *  first). Add entries here as each Admin feature ships. Labels are localization keys, not literal
- *  text — reuses the same `Menu:*` keys each page's own sidebar/menu entry already uses in
+interface AdminNavGroup {
+  groupKey: string;
+  items: AdminNavItem[];
+}
+
+/** Grouped to match the prototype's sidebar structure (Overview/Platform/Billing/Operations/System),
+ *  but ONLY groups that already have at least one real, built page — no placeholder/disabled entries
+ *  for features that don't exist yet (Feature Flags, Audit Logs, stock ABP Users/Roles/Settings). Add
+ *  each new group/entry here the same turn its page is build-verified, not before — an empty "System"
+ *  section would just be visual noise pointing at nothing. Dashboard (would-be "Overview" group) is
+ *  deliberately not built yet per the backend readiness doc's implementation order (it composes
+ *  widgets from pages that need to exist first). Labels are localization keys, not literal text —
+ *  reuses the same `Menu:*` keys each page's own sidebar/menu entry already uses in
  *  route.provider.ts, so there's one translated string per feature, not two. */
-const ADMIN_NAV: AdminNavItem[] = [
-  { labelKey: '::Menu:AdminTenants', icon: 'fa-building', link: '/admin/businesses', permission: 'Eksabli.Tenants.View' },
-  { labelKey: '::Menu:Categories', icon: 'fa-tags', link: '/admin/categories', permission: 'Eksabli.Tenants.View' },
-  { labelKey: '::Menu:SubscriptionPlans', icon: 'fa-receipt', link: '/admin/plans', permission: 'Eksabli.Tenants.View' },
+const ADMIN_NAV: AdminNavGroup[] = [
+  {
+    groupKey: '::AdminPanel:Layout:GroupPlatform',
+    items: [
+      { labelKey: '::Menu:AdminTenants', icon: 'fa-building', link: '/admin/businesses', permission: 'Eksabli.Tenants.View' },
+      { labelKey: '::Menu:Categories', icon: 'fa-tags', link: '/admin/categories', permission: 'Eksabli.Tenants.View' },
+    ],
+  },
+  {
+    groupKey: '::AdminPanel:Layout:GroupBilling',
+    items: [
+      { labelKey: '::Menu:SubscriptionPlans', icon: 'fa-receipt', link: '/admin/plans', permission: 'Eksabli.Tenants.View' },
+      {
+        labelKey: '::AdminPanel:Subscriptions:Title',
+        icon: 'fa-credit-card',
+        link: '/admin/subscriptions',
+        permission: 'Eksabli.Billing.ManagePlatform',
+      },
+    ],
+  },
+  {
+    groupKey: '::AdminPanel:Layout:GroupOperations',
+    items: [
+      {
+        labelKey: '::Menu:SupportTickets',
+        icon: 'fa-life-ring',
+        link: '/admin/support-tickets',
+        permission: 'Eksabli.SupportTickets.Manage',
+      },
+    ],
+  },
 ];
 
 @Component({
@@ -47,8 +83,14 @@ export class AdminLayoutComponent {
   protected readonly darkMode = signal(false);
   protected readonly langMenuOpen = signal(false);
 
-  protected readonly navItems = computed(() =>
-    ADMIN_NAV.filter((item) => this.permissionService.getGrantedPolicy(item.permission)),
+  /** Per-group permission filter, then drop any group left with zero visible items (e.g. a
+   *  tenant-realm-scoped admin who lacks Billing.ManagePlatform shouldn't see an empty "Billing"
+   *  header). */
+  protected readonly navGroups = computed<AdminNavGroup[]>(() =>
+    ADMIN_NAV.map((group) => ({
+      groupKey: group.groupKey,
+      items: group.items.filter((item) => this.permissionService.getGrantedPolicy(item.permission)),
+    })).filter((group) => group.items.length > 0),
   );
 
   protected readonly currentUserName = computed(() => {

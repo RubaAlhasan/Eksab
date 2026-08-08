@@ -11,6 +11,7 @@ export interface CategoryDto extends FullAuditedEntityDto<string> {
   nameEn?: string;
   iconBlobName?: string | null;
   parentCategoryId?: string | null;
+  businessCount: number;
 }
 
 export interface CategoryListFilterDto extends PagedAndSortedResultRequestDto {

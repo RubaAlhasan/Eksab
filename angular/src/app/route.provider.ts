@@ -46,5 +46,21 @@ function configureRoutes() {
         layout: eLayoutType.empty,
         requiredPolicy: 'Eksabli.Tenants.View',
       },
+      {
+        path: '/admin/subscriptions',
+        name: '::AdminPanel:Subscriptions:Title',
+        iconClass: 'fas fa-credit-card',
+        order: 5,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.Billing.ManagePlatform',
+      },
+      {
+        path: '/admin/support-tickets',
+        name: '::Menu:SupportTickets',
+        iconClass: 'fas fa-life-ring',
+        order: 6,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.SupportTickets.Manage',
+      },
   ]);
 }

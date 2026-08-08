@@ -1,0 +1,198 @@
+<app-page-header
+  [title]="'::AdminPanel:Subscriptions:Title' | abpLocalization"
+  [subtitle]="'::AdminPanel:Subscriptions:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Admin Portal', link: '/admin/businesses' }, { label: ('::AdminPanel:Subscriptions:Title' | abpLocalization) }]"
+>
+</app-page-header>
+
+@if (!statsLoading() && activeCount() !== null) {
+  <div class="d-flex flex-wrap gap-3 mb-4">
+    <div class="card eks-stat-card">
+      <div class="card-body">
+        <div class="eks-stat-card__value">{{ activeCount() }}</div>
+        <div class="eks-stat-card__label">{{ '::AdminPanel:Subscriptions:StatActiveLabel' | abpLocalization }}</div>
+      </div>
+    </div>
+    <div class="card eks-stat-card">
+      <div class="card-body">
+        <div class="eks-stat-card__value">{{ trialingCount() }}</div>
+        <div class="eks-stat-card__label">{{ '::AdminPanel:Subscriptions:StatTrialingLabel' | abpLocalization }}</div>
+      </div>
+    </div>
+    <div class="card eks-stat-card" [title]="'::AdminPanel:Subscriptions:StatMrrHint' | abpLocalization">
+      <div class="card-body">
+        <div class="eks-stat-card__value">${{ approxMrr() | number: '1.0-0' }}</div>
+        <div class="eks-stat-card__label">{{ '::AdminPanel:Subscriptions:StatMrrLabel' | abpLocalization }}</div>
+      </div>
+    </div>
+  </div>
+}
+
+<div class="card mb-4">
+  <div class="card-body d-flex flex-wrap gap-3 align-items-center">
+    <select class="form-select eks-filter-select" (change)="onStatusFilterChange($event)">
+      <option value="">{{ '::AdminPanel:Subscriptions:AllStatuses' | abpLocalization }}</option>
+      <option value="0">{{ '::AdminPanel:Subscriptions:StatusTrialing' | abpLocalization }}</option>
+      <option value="1">{{ '::AdminPanel:Subscriptions:StatusActive' | abpLocalization }}</option>
+      <option value="2">{{ '::AdminPanel:Subscriptions:StatusPastDue' | abpLocalization }}</option>
+      <option value="3">{{ '::AdminPanel:Subscriptions:StatusCancelled' | abpLocalization }}</option>
+    </select>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{{ '::AdminPanel:Subscriptions:ColumnBusiness' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:Subscriptions:ColumnPlan' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:Subscriptions:ColumnStatus' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:Subscriptions:ColumnRenewal' | abpLocalization }}</th>
+          <th class="text-end"><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (isLoading()) {
+          <tr>
+            <td colspan="5">
+              <app-loading-spinner [label]="'::AdminPanel:Subscriptions:Loading' | abpLocalization"></app-loading-spinner>
+            </td>
+          </tr>
+        } @else if (loadFailed()) {
+          <tr>
+            <td colspan="5">
+              <app-error-state
+                [message]="'::AdminPanel:Subscriptions:LoadErrorMessage' | abpLocalization"
+                [retryLabel]="'::AdminPanel:Subscriptions:TryAgain' | abpLocalization"
+                (retry)="retry()"
+              >
+              </app-error-state>
+            </td>
+          </tr>
+        } @else if (subscriptions().length === 0) {
+          <tr>
+            <td colspan="5">
+              <app-empty-state icon="fa-credit-card" [title]="'::AdminPanel:Subscriptions:EmptyTitle' | abpLocalization"></app-empty-state>
+            </td>
+          </tr>
+        } @else {
+          @for (subscription of subscriptions(); track subscription.id) {
+            <tr class="eks-clickable-row" (click)="toggleExpand(subscription)">
+              <td class="fw-semibold">{{ tenantName(subscription.tenantId) }}</td>
+              <td class="text-muted">{{ subscription.planName ?? '—' }}</td>
+              <td>
+                <app-status-badge
+                  [label]="subStatusLabelKey(subscription.status) | abpLocalization"
+                  [variant]="subStatusVariant(subscription.status)"
+                >
+                </app-status-badge>
+              </td>
+              <td class="text-muted">{{ subscription.renewalDate | date: 'mediumDate' }}</td>
+              <td class="text-end">
+                <i class="fas" [class.fa-chevron-down]="expandedId() !== subscription.id" [class.fa-chevron-up]="expandedId() === subscription.id"></i>
+              </td>
+            </tr>
+            @if (expandedId() === subscription.id) {
+              <tr>
+                <td colspan="5" class="bg-body-tertiary">
+                  <p class="fw-semibold small text-uppercase text-muted mb-2 mt-1">
+                    {{ '::AdminPanel:Subscriptions:InvoicesHeading' | abpLocalization }}
+                  </p>
+                  @if (invoicesLoading()) {
+                    <app-loading-spinner [label]="'::AdminPanel:Subscriptions:Loading' | abpLocalization"></app-loading-spinner>
+                  } @else if (invoicesFailed()) {
+                    <app-error-state
+                      [message]="'::AdminPanel:Subscriptions:LoadErrorMessage' | abpLocalization"
+                      [retryLabel]="'::AdminPanel:Subscriptions:TryAgain' | abpLocalization"
+                      (retry)="retryInvoices(subscription)"
+                    >
+                    </app-error-state>
+                  } @else if (invoices().length === 0) {
+                    <p class="text-muted small mb-2">{{ '::AdminPanel:Subscriptions:NoInvoices' | abpLocalization }}</p>
+                  } @else {
+                    <div class="table-responsive">
+                      <table class="table table-sm mb-2">
+                        <thead>
+                          <tr>
+                            <th>{{ '::AdminPanel:Subscriptions:ColumnAmount' | abpLocalization }}</th>
+                            <th>{{ '::AdminPanel:Subscriptions:ColumnInvoiceStatus' | abpLocalization }}</th>
+                            <th>{{ '::AdminPanel:Subscriptions:ColumnDueDate' | abpLocalization }}</th>
+                            <th>{{ '::AdminPanel:Subscriptions:ColumnPaidDate' | abpLocalization }}</th>
+                            <th class="text-end"><span class="visually-hidden">Actions</span></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (invoice of invoices(); track invoice.id) {
+                            <tr>
+                              <td>${{ invoice.amount }}</td>
+                              <td>
+                                <app-status-badge
+                                  [label]="invStatusLabelKey(invoice.status) | abpLocalization"
+                                  [variant]="invStatusVariant(invoice.status)"
+                                >
+                                </app-status-badge>
+                              </td>
+                              <td class="text-muted">{{ invoice.dueDate | date: 'mediumDate' }}</td>
+                              <td class="text-muted">{{ invoice.paidAt ? (invoice.paidAt | date: 'mediumDate') : '—' }}</td>
+                              <td class="text-end">
+                                @if (canManage() && invoice.status !== InvStatus.Paid) {
+                                  <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-success"
+                                    (click)="openRecordPaymentModal(invoice)"
+                                  >
+                                    {{ '::AdminPanel:Subscriptions:RecordPayment' | abpLocalization }}
+                                  </button>
+                                }
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (!isLoading() && !loadFailed()) {
+    <div class="card-footer">
+      <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)"></app-pagination>
+    </div>
+  }
+</div>
+
+<app-modal
+  [open]="paymentModalOpen()"
+  [title]="'::AdminPanel:Subscriptions:RecordPaymentTitle' | abpLocalization"
+  (closed)="closePaymentModal()"
+>
+  <form [formGroup]="paymentForm" (ngSubmit)="submitPayment()">
+    <p class="text-muted small">{{ '::AdminPanel:Subscriptions:RecordPaymentHint' | abpLocalization }}</p>
+    <label class="form-label" for="payment-ref">{{ '::AdminPanel:Subscriptions:FieldTransactionRef' | abpLocalization }}</label>
+    <input
+      id="payment-ref"
+      type="text"
+      class="form-control"
+      formControlName="providerTransactionRef"
+      placeholder="e.g. bank-transfer-4471"
+    />
+  </form>
+
+  <div slot="footer" class="d-flex gap-2 justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closePaymentModal()">
+      {{ '::AdminPanel:Subscriptions:Cancel' | abpLocalization }}
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="isSavingPayment()" (click)="submitPayment()">
+      @if (isSavingPayment()) {
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+      }
+      {{ '::AdminPanel:Subscriptions:RecordPayment' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

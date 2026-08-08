@@ -10,16 +10,19 @@
       <span class="eks-admin-brand__text">Eksabli <small>{{ '::AdminPanel:Layout:AdminBadge' | abpLocalization }}</small></span>
     </div>
     <nav class="eks-admin-nav">
-      @for (item of navItems(); track item.link) {
-        <a
-          [routerLink]="item.link"
-          routerLinkActive="active"
-          class="eks-admin-nav__link"
-          (click)="closeMobileNav()"
-        >
-          <i class="fas {{ item.icon }}"></i>
-          <span>{{ item.labelKey | abpLocalization }}</span>
-        </a>
+      @for (group of navGroups(); track group.groupKey) {
+        <span class="eks-admin-nav__group">{{ group.groupKey | abpLocalization }}</span>
+        @for (item of group.items; track item.link) {
+          <a
+            [routerLink]="item.link"
+            routerLinkActive="active"
+            class="eks-admin-nav__link"
+            (click)="closeMobileNav()"
+          >
+            <i class="fas {{ item.icon }}"></i>
+            <span>{{ item.labelKey | abpLocalization }}</span>
+          </a>
+        }
       }
     </nav>
   </aside>

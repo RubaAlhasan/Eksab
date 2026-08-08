@@ -26,6 +26,7 @@
       <thead>
         <tr>
           <th>{{ '::AdminPanel:Categories:ColumnCategory' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:Categories:ColumnBusinesses' | abpLocalization }}</th>
           <th>{{ '::AdminPanel:Categories:ColumnParent' | abpLocalization }}</th>
           <th class="text-end"><span class="visually-hidden">Actions</span></th>
         </tr>
@@ -33,13 +34,13 @@
       <tbody>
         @if (isLoading()) {
           <tr>
-            <td colspan="3">
+            <td colspan="4">
               <app-loading-spinner [label]="'::AdminPanel:Categories:Loading' | abpLocalization"></app-loading-spinner>
             </td>
           </tr>
         } @else if (loadFailed()) {
           <tr>
-            <td colspan="3">
+            <td colspan="4">
               <app-error-state
                 [message]="'::AdminPanel:Categories:LoadErrorMessage' | abpLocalization"
                 [retryLabel]="'::AdminPanel:Categories:TryAgain' | abpLocalization"
@@ -50,7 +51,7 @@
           </tr>
         } @else if (categories().length === 0) {
           <tr>
-            <td colspan="3">
+            <td colspan="4">
               <app-empty-state icon="fa-tags" [title]="'::AdminPanel:Categories:EmptyTitle' | abpLocalization"></app-empty-state>
             </td>
           </tr>
@@ -58,9 +59,10 @@
           @for (category of categories(); track category.id) {
             <tr>
               <td>
-                <div class="fw-semibold">{{ category.nameEn }}</div>
+                <div class="fw-semibold"><i class="fas fa-tag text-muted me-2"></i>{{ category.nameEn }}</div>
                 <div class="text-muted small">{{ category.nameAr }}</div>
               </td>
+              <td class="text-muted">{{ category.businessCount }}</td>
               <td class="text-muted">{{ parentName(category) ?? '—' }}</td>
               <td class="text-end">
                 @if (canEdit()) {

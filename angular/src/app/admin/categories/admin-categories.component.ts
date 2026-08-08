@@ -25,8 +25,13 @@ interface CategoryFormValue {
  * `CategoriesController` (`GetListAsync`/`GetAsync` are `[AllowAnonymous]` — public taxonomy read, per
  * admin-portal-backend-readiness.md §9 — `CreateAsync`/`UpdateAsync`/`DeleteAsync` require
  * `Eksabli.Categories.Create/.Edit/.Delete` respectively). No fields or actions here that the backend
- * doesn't actually support — no "business count" column (no such field on `CategoryDto`), no soft
- * delete/deactivate toggle (only a real `DELETE`, no status field on the entity to deactivate).
+ * doesn't actually support — no soft delete/deactivate toggle (only a real `DELETE`, no status field
+ * on the entity to deactivate).
+ *
+ * `businessCount` (shown per-row, matching the prototype's design) required a real backend change —
+ * `CategoryDto.BusinessCount` is now computed server-side by `CategoryAppService` from
+ * `BusinessProfile.CategoryId` across every tenant (`IDataFilter.Disable<IMultiTenant>()`, same
+ * pattern `AdminTenantAppService` uses), not invented client-side. See `CategoryAppService.cs`.
  */
 @Component({
   selector: 'app-admin-categories',

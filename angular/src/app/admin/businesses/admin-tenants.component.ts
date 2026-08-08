@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
 import { Confirmation, ConfirmationService, ToasterService } from '@abp/ng.theme.shared';
 import { AdminTenantsService } from '../../proxy/controllers/admin-tenants.service';
@@ -31,6 +32,7 @@ import { PaginationComponent } from '../../shared/components/pagination/paginati
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
+    RouterLink,
     LocalizationPipe,
     PageHeaderComponent,
     SearchInputComponent,

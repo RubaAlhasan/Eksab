@@ -51,6 +51,16 @@ export const APP_ROUTES: Routes = [
         data: { requiredPolicy: 'Eksabli.Tenants.View' },
       },
       {
+        // No separate route.provider.ts entry needed — RoutesService's findRoute() walks up the path
+        // by segment until it hits an exact match (see abp-ng.core's findRoute()), so this inherits
+        // '/admin/businesses' own eLayoutType.empty entry automatically.
+        path: 'businesses/:tenantId',
+        loadComponent: () =>
+          import('./admin/businesses/admin-business-details.component').then(c => c.AdminBusinessDetailsComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Tenants.View' },
+      },
+      {
         path: 'categories',
         loadComponent: () =>
           import('./admin/categories/admin-categories.component').then(c => c.AdminCategoriesComponent),
@@ -70,6 +80,28 @@ export const APP_ROUTES: Routes = [
         // per-action inside the component against the real single permission that covers all three
         // (Eksabli.Billing.ManagePlatform — SubscriptionPlansController has no granular per-action split).
         data: { requiredPolicy: 'Eksabli.Tenants.View' },
+      },
+      {
+        path: 'subscriptions',
+        loadComponent: () =>
+          import('./admin/subscriptions/admin-subscriptions.component').then(c => c.AdminSubscriptionsComponent),
+        canActivate: [permissionGuard],
+        // Unlike Categories/Plans, AdminSubscriptionsController has NO [AllowAnonymous] read at all —
+        // Eksabli.Billing.ManagePlatform gates the whole controller, view included, with no separate
+        // read-only permission to fall back to. Gating this route on Tenants.View (like every other
+        // admin route) would let a viewer past the guard only to have the actual list call 403 — a
+        // broken-looking load-error state instead of being blocked cleanly. Gate on the permission the
+        // page actually needs instead.
+        data: { requiredPolicy: 'Eksabli.Billing.ManagePlatform' },
+      },
+      {
+        path: 'support-tickets',
+        loadComponent: () =>
+          import('./admin/support-tickets/admin-support-tickets.component').then(c => c.AdminSupportTicketsComponent),
+        canActivate: [permissionGuard],
+        // Whole controller queue (GetListAsync) is gated on SupportTickets.Manage, no lesser read to
+        // fall back to — same shape as Subscriptions above, not Tenants.View.
+        data: { requiredPolicy: 'Eksabli.SupportTickets.Manage' },
       },
     ],
   },
