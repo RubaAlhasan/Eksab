@@ -1,0 +1,69 @@
+<div class="eks-admin-shell d-flex" [class.dark]="darkMode()">
+  <!-- Mobile drawer backdrop -->
+  @if (mobileNavOpen()) {
+    <div class="eks-admin-backdrop d-lg-none" (click)="closeMobileNav()"></div>
+  }
+
+  <aside class="eks-admin-sidebar" [class.eks-admin-sidebar--open]="mobileNavOpen()">
+    <div class="eks-admin-brand">
+      <span class="eks-admin-brand__mark">E</span>
+      <span class="eks-admin-brand__text">Eksabli <small>Admin</small></span>
+    </div>
+    <nav class="eks-admin-nav">
+      @for (item of navItems(); track item.link) {
+        <a
+          [routerLink]="item.link"
+          routerLinkActive="active"
+          class="eks-admin-nav__link"
+          (click)="closeMobileNav()"
+        >
+          <i class="fas {{ item.icon }}"></i>
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+  </aside>
+
+  <div class="eks-admin-main flex-grow-1">
+    <header class="eks-admin-topbar">
+      <button
+        type="button"
+        class="btn btn-icon d-lg-none"
+        aria-label="Toggle menu"
+        (click)="toggleMobileNav()"
+      >
+        <i class="fas fa-bars"></i>
+      </button>
+
+      <div class="flex-grow-1"></div>
+
+      <button
+        type="button"
+        class="btn btn-icon"
+        aria-label="Toggle dark mode"
+        (click)="toggleDarkMode()"
+      >
+        <i class="fas" [class.fa-moon]="!darkMode()" [class.fa-sun]="darkMode()"></i>
+      </button>
+
+      <div class="dropdown">
+        <button
+          type="button"
+          class="btn btn-icon dropdown-toggle"
+          data-bs-toggle="dropdown"
+          aria-expanded="false"
+        >
+          <i class="fas fa-user-circle"></i>
+          <span class="d-none d-sm-inline ms-1">{{ currentUserName() }}</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><button type="button" class="dropdown-item" (click)="logout()">Log out</button></li>
+        </ul>
+      </div>
+    </header>
+
+    <main class="eks-admin-content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

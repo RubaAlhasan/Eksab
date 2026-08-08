@@ -42,7 +42,8 @@
     <div class="space-y-3">
       <div>
         <label class="field-label">Reward name</label>
-        <input class="input" placeholder="e.g. Free Large Latte">
+        <input id="reward-name-input" class="input" placeholder="e.g. Free Large Latte">
+        <p class="field-error hidden" id="reward-name-error"></p>
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div>
@@ -51,7 +52,8 @@
         </div>
         <div>
           <label class="field-label">Points cost</label>
-          <input type="number" class="input" placeholder="500">
+          <input id="reward-points-input" type="number" class="input" placeholder="500">
+          <p class="field-error hidden" id="reward-points-error"></p>
         </div>
       </div>
       <div class="grid grid-cols-2 gap-3">
@@ -101,17 +103,50 @@
       <p class="text-xs text-slate-400 mt-1.5">62% redemption rate this month</p>
     </div>`).join('');
 
+  function resetRewardForm() {
+    document.getElementById('reward-name-input').value = '';
+    document.getElementById('reward-points-input').value = '';
+    ['reward-name-error', 'reward-points-error'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    ['reward-name-input', 'reward-points-input'].forEach(id => document.getElementById(id).classList.remove('input-error'));
+  }
   document.getElementById('new-reward-btn').addEventListener('click', () => {
     document.getElementById('modal-title').textContent = 'New Reward';
+    resetRewardForm();
     Eksabli.openModal('reward-form');
   });
   document.querySelectorAll('.edit-reward').forEach(btn => {
     btn.addEventListener('click', () => {
       document.getElementById('modal-title').textContent = 'Edit Reward';
+      resetRewardForm();
       Eksabli.openModal('reward-form');
     });
   });
   document.getElementById('save-reward-btn').addEventListener('click', () => {
+    const nameInput = document.getElementById('reward-name-input');
+    const pointsInput = document.getElementById('reward-points-input');
+    const nameError = document.getElementById('reward-name-error');
+    const pointsError = document.getElementById('reward-points-error');
+    let valid = true;
+    if (!nameInput.value.trim()) {
+      nameError.textContent = 'Reward name is required.';
+      nameError.classList.remove('hidden');
+      nameInput.classList.add('input-error');
+      valid = false;
+    } else {
+      nameError.classList.add('hidden');
+      nameInput.classList.remove('input-error');
+    }
+    const points = parseInt(pointsInput.value, 10);
+    if (!pointsInput.value || isNaN(points) || points <= 0) {
+      pointsError.textContent = 'Enter a points cost greater than 0.';
+      pointsError.classList.remove('hidden');
+      pointsInput.classList.add('input-error');
+      valid = false;
+    } else {
+      pointsError.classList.add('hidden');
+      pointsInput.classList.remove('input-error');
+    }
+    if (!valid) return;
     Eksabli.closeModal('reward-form');
     Eksabli.showToast({ type: 'success', title: 'Reward saved', message: 'It is now live in the customer app.' });
   });

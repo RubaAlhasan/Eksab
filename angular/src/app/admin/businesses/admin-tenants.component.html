@@ -1,0 +1,101 @@
+<app-page-header
+  [title]="'::Menu:AdminTenants' | abpLocalization"
+  [subtitle]="'::AdminPanel:Businesses:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Admin Portal', link: '/admin/businesses' }, { label: ('::Menu:AdminTenants' | abpLocalization) }]"
+>
+</app-page-header>
+
+<div class="card mb-4">
+  <div class="card-body d-flex flex-wrap gap-3 align-items-center">
+    <div class="flex-grow-1" style="min-width: 220px">
+      <app-search-input
+        [placeholder]="'::AdminPanel:Businesses:SearchPlaceholder' | abpLocalization"
+        (valueChange)="onSearchInput($event)"
+      >
+      </app-search-input>
+    </div>
+    <select class="form-select" style="max-width: 220px" (change)="onStatusFilterChange($event)">
+      <option value="">{{ '::AdminPanel:Businesses:AllStatuses' | abpLocalization }}</option>
+      <option value="0">{{ '::AdminPanel:Businesses:StatusPending' | abpLocalization }}</option>
+      <option value="1">{{ '::AdminPanel:Businesses:StatusApproved' | abpLocalization }}</option>
+      <option value="2">{{ '::AdminPanel:Businesses:StatusSuspended' | abpLocalization }}</option>
+    </select>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{{ '::AdminPanel:Businesses:ColumnBusiness' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:Businesses:ColumnStatus' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:Businesses:ColumnSignedUp' | abpLocalization }}</th>
+          <th class="text-end"><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (isLoading()) {
+          <tr>
+            <td colspan="4">
+              <app-loading-spinner [label]="'::AdminPanel:Businesses:Loading' | abpLocalization"></app-loading-spinner>
+            </td>
+          </tr>
+        } @else if (loadFailed()) {
+          <tr>
+            <td colspan="4">
+              <app-error-state
+                [message]="'::AdminPanel:Businesses:LoadErrorMessage' | abpLocalization"
+                [retryLabel]="'::AdminPanel:Businesses:TryAgain' | abpLocalization"
+                (retry)="retry()"
+              >
+              </app-error-state>
+            </td>
+          </tr>
+        } @else if (tenants().length === 0) {
+          <tr>
+            <td colspan="4">
+              <app-empty-state
+                icon="fa-building"
+                [title]="'::AdminPanel:Businesses:EmptyTitle' | abpLocalization"
+              >
+              </app-empty-state>
+            </td>
+          </tr>
+        } @else {
+          @for (tenant of tenants(); track tenant.tenantId) {
+            <tr>
+              <td class="fw-semibold">{{ tenant.tenantName }}</td>
+              <td>
+                <app-status-badge
+                  [label]="statusLabelKey(tenant.approvalStatus) | abpLocalization"
+                  [variant]="statusVariant(tenant.approvalStatus)"
+                >
+                </app-status-badge>
+              </td>
+              <td class="text-muted">{{ tenant.creationTime | date: 'mediumDate' }}</td>
+              <td class="text-end">
+                @if (tenant.approvalStatus === ApprovalStatus.Pending) {
+                  <button type="button" class="btn btn-sm btn-outline-success me-2" (click)="approve(tenant)">
+                    {{ '::AdminPanel:Businesses:Approve' | abpLocalization }}
+                  </button>
+                }
+                @if (tenant.approvalStatus !== ApprovalStatus.Suspended) {
+                  <button type="button" class="btn btn-sm btn-outline-danger" (click)="suspend(tenant)">
+                    {{ '::AdminPanel:Businesses:Suspend' | abpLocalization }}
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (!isLoading() && !loadFailed()) {
+    <div class="card-footer">
+      <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)">
+      </app-pagination>
+    </div>
+  }
+</div>

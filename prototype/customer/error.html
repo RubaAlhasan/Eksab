@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Error — Eksabli</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="phone-frame-wrap">
+<div id="toast-container"></div>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+  <div class="phone-screen bg-white dark:bg-slate-950">
+    <div data-status-bar></div>
+    <div data-top-bar data-title="Error" data-back="home.html"></div>
+
+    <div class="flex-1 flex flex-col items-center justify-center px-8 text-center">
+
+      <div class="tabs-pill mb-8" id="demo-toggle">
+        <span class="tab-pill-trigger active" data-state="404">Not Found</span>
+        <span class="tab-pill-trigger" data-state="500">Server Error</span>
+      </div>
+
+      <div id="state-404">
+        <div class="w-16 h-16 rounded-2xl bg-warning-50 dark:bg-warning-500/10 text-warning-600 dark:text-warning-300 flex items-center justify-center mx-auto mb-6" id="icon-404"></div>
+        <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Error 404</p>
+        <h1 class="text-xl font-extrabold tracking-tight mb-2">We couldn't find that</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mb-8 max-w-[16rem]">This screen doesn't exist, or the link you followed is out of date.</p>
+      </div>
+
+      <div id="state-500" class="hidden">
+        <div class="w-16 h-16 rounded-2xl bg-danger-50 dark:bg-danger-500/10 text-danger-600 dark:text-danger-300 flex items-center justify-center mx-auto mb-6" id="icon-500"></div>
+        <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Something went wrong</p>
+        <h1 class="text-xl font-extrabold tracking-tight mb-2">We couldn't load this</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mb-8 max-w-[16rem]">Your points and account are safe — this screen just failed to load. Try again in a moment.</p>
+      </div>
+
+      <div class="flex flex-col gap-2 w-full max-w-[16rem]">
+        <button id="retry-btn" class="btn btn-primary btn-lg w-full">Try Again</button>
+        <a href="home.html" class="btn btn-secondary btn-lg w-full">Back to Home</a>
+      </div>
+    </div>
+
+    <div data-bottom-nav=""></div>
+  </div>
+</div>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script src="../assets/js/customer-shell.js"></script>
+<script>
+  document.querySelector('[data-bottom-nav]')?.remove();
+  document.getElementById('icon-404').innerHTML = Icons.html('exclamation-triangle', { size: 26 });
+  document.getElementById('icon-500').innerHTML = Icons.html('exclamation-circle', { size: 26 });
+
+  document.querySelectorAll('#demo-toggle [data-state]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#demo-toggle [data-state]').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      const state = btn.getAttribute('data-state');
+      document.getElementById('state-404').classList.toggle('hidden', state !== '404');
+      document.getElementById('state-500').classList.toggle('hidden', state !== '500');
+    });
+  });
+
+  document.getElementById('retry-btn').addEventListener('click', () => {
+    Eksabli.showToast({ type: 'info', title: 'Retrying…', message: 'Static prototype — this would reload the failed request in the real app.' });
+  });
+</script>
+</body>
+</html>

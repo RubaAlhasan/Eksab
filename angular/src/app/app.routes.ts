@@ -1,12 +1,25 @@
-import { AuthService, authGuard, eLayoutType, permissionGuard } from '@abp/ng.core';
+import { AuthService, PermissionService, authGuard, eLayoutType, permissionGuard } from '@abp/ng.core';
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, Routes } from '@angular/router';
+import { adminGuard, isPlatformAdmin } from './core/guards/admin.guard';
 
-/** OAuth redirectUri always lands back on '/' — send an already-authenticated visitor on to /home instead of the public landing page. */
+/**
+ * OAuth redirectUri always lands back on '/' — figure out where an already-authenticated visitor
+ * actually belongs instead of always sending them to the customer/tenant placeholder.
+ *
+ * Realm detection is permission-based (`Eksabli.Tenants.View`, see admin.guard.ts), not tenantId-based:
+ * this app currently has no real Business Portal or customer web area to route a tenant-realm staff
+ * member or a Host-realm customer to, so both fall back to the same `/home` placeholder they already
+ * used before this fix — only the Admin branch is new. Do not extend this to a `/business` redirect
+ * until that portal actually exists; a guard pointing at a route that isn't there is worse than the
+ * status quo.
+ */
 const redirectAuthenticatedToHomeGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
+  const permissionService = inject(PermissionService);
   const router = inject(Router);
-  return authService.isAuthenticated ? router.createUrlTree(['/home']) : true;
+  if (!authService.isAuthenticated) return true;
+  return router.createUrlTree([isPlatformAdmin(permissionService) ? '/admin' : '/home']);
 };
 
 export const APP_ROUTES: Routes = [
@@ -21,6 +34,34 @@ export const APP_ROUTES: Routes = [
     path: 'home',
     loadComponent: () => import('./home/home.component').then(c => c.HomeComponent),
     canActivate: [authGuard],
+  },
+  {
+    // Parent shell for the whole Admin Portal — AdminLayoutComponent renders its own sidebar/topbar
+    // (registered as `eLayoutType.empty` in route.provider.ts so ABP's own Lepton-X SideMenu layout
+    // doesn't *also* wrap these routes — see that file's comment for why this matters).
+    path: 'admin',
+    loadComponent: () => import('./admin/layout/admin-layout.component').then(c => c.AdminLayoutComponent),
+    canActivate: [authGuard, adminGuard],
+    children: [
+      {
+        path: 'businesses',
+        loadComponent: () =>
+          import('./admin/businesses/admin-tenants.component').then(c => c.AdminTenantsComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Tenants.View' },
+      },
+      {
+        path: 'categories',
+        loadComponent: () =>
+          import('./admin/categories/admin-categories.component').then(c => c.AdminCategoriesComponent),
+        canActivate: [permissionGuard],
+        // Read is [AllowAnonymous] on the backend (public taxonomy) — permissionGuard here just gates
+        // reaching the Admin Portal page itself, matching every other admin route's shape; Create/Edit/
+        // Delete are separately permission-checked per-action inside the component (Categories.Create/
+        // .Edit/.Delete), not by this route guard.
+        data: { requiredPolicy: 'Eksabli.Tenants.View' },
+      },
+    ],
   },
   {
     path: 'account',
