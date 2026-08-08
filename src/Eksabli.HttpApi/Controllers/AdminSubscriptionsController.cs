@@ -25,6 +25,12 @@ public class AdminSubscriptionsController : EksabliController
         return _adminSubscriptionAppService.GetListAsync(input);
     }
 
+    [HttpGet("stats")]
+    public Task<AdminSubscriptionStatsDto> GetStatsAsync()
+    {
+        return _adminSubscriptionAppService.GetStatsAsync();
+    }
+
     [HttpGet("invoices")]
     public Task<PagedResultDto<InvoiceDto>> GetInvoicesAsync([FromQuery] AdminInvoiceFilterDto input)
     {

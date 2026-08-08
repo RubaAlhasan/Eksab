@@ -62,5 +62,47 @@ function configureRoutes() {
         layout: eLayoutType.empty,
         requiredPolicy: 'Eksabli.SupportTickets.Manage',
       },
+      // Layout-resolution anchors ONLY for the stock ABP pages nested under /admin in app.routes.ts
+      // (Users/Roles/My Profile/Settings) — `invisible: true` so these do NOT become their own menu
+      // item (real permission checks already live inside each package's own routes, not here); they
+      // exist purely so findRoute()'s path-walk-up (see the /admin/businesses comment above) resolves
+      // eLayoutType.empty for everything under e.g. /admin/identity/*, instead of falling through to
+      // Lepton-X's stock chrome. `name` is required by the `ABP.Route` type but never shown anywhere.
+      {
+        path: '/admin/identity',
+        name: 'Eksabli::Internal:AdminIdentityLayoutAnchor',
+        invisible: true,
+        layout: eLayoutType.empty,
+      },
+      {
+        path: '/admin/setting-management',
+        name: 'Eksabli::Internal:AdminSettingManagementLayoutAnchor',
+        invisible: true,
+        layout: eLayoutType.empty,
+      },
+      {
+        path: '/admin/account',
+        name: 'Eksabli::Internal:AdminAccountLayoutAnchor',
+        invisible: true,
+        layout: eLayoutType.empty,
+      },
+      {
+        path: '/admin/tenant-management',
+        name: 'Eksabli::Internal:AdminTenantManagementLayoutAnchor',
+        invisible: true,
+        layout: eLayoutType.empty,
+      },
+      // Tenant-realm Customers page, folded into the Admin Portal shell (see app.routes.ts and
+      // admin-customers.component.ts's file comment for why this isn't a separate /business route/
+      // portal) — same eLayoutType.empty treatment, own real policy so business staff (who lack
+      // Tenants.View) can still reach it.
+      {
+        path: '/admin/customers',
+        name: '::BusinessPanel:Layout:NavCustomers',
+        iconClass: 'fas fa-users',
+        order: 7,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.Memberships.View',
+      },
   ]);
 }

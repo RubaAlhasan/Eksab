@@ -50,6 +50,38 @@ public class AdminSubscriptionAppService : ApplicationService, IAdminSubscriptio
         }
     }
 
+    // Replaces what admin-subscriptions.component.ts used to compute client-side from two separate
+    // GetListAsync calls (status=Active with up to 500 items transferred, status=Trialing count-only) —
+    // one round trip instead of two, and a TRUE total (every active subscription grouped by plan at
+    // the DB level, not the old client-side version's first-500-rows cap on the MRR sum).
+    public async Task<AdminSubscriptionStatsDto> GetStatsAsync()
+    {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var queryable = await _subscriptionRepository.GetQueryableAsync();
+
+            var activeByPlan = await AsyncExecuter.ToListAsync(
+                queryable
+                    .Where(s => s.Status == TenantSubscriptionStatus.Active)
+                    .GroupBy(s => s.PlanId)
+                    .Select(g => new { PlanId = g.Key, Count = g.Count() }));
+
+            var trialingCount = await AsyncExecuter.CountAsync(
+                queryable.Where(s => s.Status == TenantSubscriptionStatus.Trialing));
+
+            var planPrices = await AsyncExecuter.ToListAsync(
+                (await _planRepository.GetQueryableAsync()).Select(p => new { p.Id, p.MonthlyPrice }));
+            var priceByPlanId = planPrices.ToDictionary(p => p.Id, p => p.MonthlyPrice);
+
+            return new AdminSubscriptionStatsDto
+            {
+                ActiveCount = activeByPlan.Sum(x => x.Count),
+                TrialingCount = trialingCount,
+                ApproxMrr = activeByPlan.Sum(x => priceByPlanId.GetValueOrDefault(x.PlanId) * x.Count)
+            };
+        }
+    }
+
     public async Task<PagedResultDto<InvoiceDto>> GetInvoicesAsync(AdminInvoiceFilterDto input)
     {
         using (_dataFilter.Disable<IMultiTenant>())

@@ -1,4 +1,4 @@
-import type { AuditedEntityDto, FullAuditedEntityDto } from '@abp/ng.core';
+import type { AuditedEntityDto, EntityDto, FullAuditedEntityDto } from '@abp/ng.core';
 import type { ReferralStatus } from './referral-status.enum';
 
 export interface AchievementAwardDto extends AuditedEntityDto<string> {
@@ -26,6 +26,14 @@ export interface CreateUpdateAchievementDto {
 export interface FollowDto extends AuditedEntityDto<string> {
   customerId?: string;
   tenantId?: string | null;
+  followedAt?: string;
+}
+
+export interface FollowerDto extends EntityDto<string> {
+  customerId?: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  phoneNumber?: string | null;
   followedAt?: string;
 }
 

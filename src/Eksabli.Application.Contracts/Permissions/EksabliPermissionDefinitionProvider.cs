@@ -25,6 +25,7 @@ public class EksabliPermissionDefinitionProvider : PermissionDefinitionProvider
         employeeAssignmentsPermission.AddChild(EksabliPermissions.EmployeeAssignments.Delete, L("Permission:EmployeeAssignments.Delete"));
 
         var membershipsPermission = myGroup.AddPermission(EksabliPermissions.Memberships.Default, L("Permission:Memberships"));
+        membershipsPermission.AddChild(EksabliPermissions.Memberships.View, L("Permission:Memberships.View"));
         membershipsPermission.AddChild(EksabliPermissions.Memberships.Award, L("Permission:Memberships.Award"));
         membershipsPermission.AddChild(EksabliPermissions.Memberships.Adjust, L("Permission:Memberships.Adjust"));
 

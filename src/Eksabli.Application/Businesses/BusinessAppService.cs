@@ -81,12 +81,14 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
             var businessProfile = BusinessProfile.Create(GuidGenerator.Create(), input.CategoryId);
             businessProfile.SetDescription(input.DescriptionAr, input.DescriptionEn);
             businessProfile.SetWebsite(input.Website);
+            businessProfile.SetSocialLinks(BuildSocialLinksJson(input.InstagramUrl, input.FacebookUrl));
             await _businessProfileRepository.InsertAsync(businessProfile, autoSave: true);
             businessProfileId = businessProfile.Id;
 
             var branch = Branch.Create(GuidGenerator.Create(), input.BranchName);
             branch.SetAddress(input.BranchAddress);
             branch.SetPhone(input.BranchPhone);
+            branch.SetLocation(input.BranchLatitude, input.BranchLongitude);
             await _branchRepository.InsertAsync(branch, autoSave: true);
             branchId = branch.Id;
 
@@ -127,6 +129,19 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
         {
             await _featureManager.SetForTenantAsync(tenantId, key, value);
         }
+    }
+
+    // BusinessProfile.SocialLinksJson has no fixed schema anywhere else in the codebase (confirmed —
+    // it's a freeform blob, same treatment as SubscriptionPlan.FeatureLimitsJson); "instagram"/
+    // "facebook" here are just the two keys this endpoint happens to populate, not a schema the
+    // column itself enforces. Returns null (not "{}") when neither is provided, matching Website's
+    // own null-when-absent shape rather than storing an empty object.
+    private static string? BuildSocialLinksJson(string? instagramUrl, string? facebookUrl)
+    {
+        var links = new Dictionary<string, string>();
+        if (!string.IsNullOrWhiteSpace(instagramUrl)) links["instagram"] = instagramUrl;
+        if (!string.IsNullOrWhiteSpace(facebookUrl)) links["facebook"] = facebookUrl;
+        return links.Count > 0 ? JsonSerializer.Serialize(links) : null;
     }
 
     public async Task<BusinessProfileDto> GetProfileAsync()

@@ -64,3 +64,26 @@
     max-width: 220px;
   }
 }
+
+// Portal-shell topbar icon button (lang switcher, dark mode, mobile nav toggle) used by
+// AdminLayoutComponent's topbar. Kept as a global utility (originally promoted out of
+// admin-layout.component.scss when a since-deleted, near-duplicate Business Portal shell briefly
+// needed the identical rule too — see admin-customers.component.ts's file comment for why that shell
+// no longer exists) rather than re-scoping back now, since a global icon-button utility is broadly
+// reusable regardless.
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: none;
+  background: transparent;
+  border-radius: 0.75rem;
+  color: var(--eks-text-muted, #64748b);
+
+  &:hover {
+    background: var(--eks-bg, #f8fafc);
+    color: var(--eks-text, #0f172a);
+  }
+}

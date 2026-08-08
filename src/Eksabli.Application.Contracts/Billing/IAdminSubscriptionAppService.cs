@@ -11,6 +11,8 @@ public interface IAdminSubscriptionAppService : IApplicationService
 {
     Task<PagedResultDto<TenantSubscriptionDto>> GetListAsync(AdminSubscriptionFilterDto input);
 
+    Task<AdminSubscriptionStatsDto> GetStatsAsync();
+
     Task<PagedResultDto<InvoiceDto>> GetInvoicesAsync(AdminInvoiceFilterDto input);
 
     Task<InvoiceDto> RecordManualPaymentAsync(RecordManualPaymentDto input);

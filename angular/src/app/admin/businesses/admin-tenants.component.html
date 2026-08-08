@@ -3,6 +3,11 @@
   [subtitle]="'::AdminPanel:Businesses:Subtitle' | abpLocalization"
   [breadcrumbs]="[{ label: 'Admin Portal', link: '/admin/businesses' }, { label: ('::Menu:AdminTenants' | abpLocalization) }]"
 >
+  @if (canCreate()) {
+    <button type="button" class="btn btn-primary btn-sm" (click)="openCreateModal()">
+      <i class="fas fa-plus me-1"></i>{{ '::AdminPanel:Businesses:New' | abpLocalization }}
+    </button>
+  }
 </app-page-header>
 
 <div class="card mb-4">
@@ -29,21 +34,26 @@
       <thead>
         <tr>
           <th>{{ '::AdminPanel:Businesses:ColumnBusiness' | abpLocalization }}</th>
-          <th>{{ '::AdminPanel:Businesses:ColumnStatus' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:Businesses:ColumnCategory' | abpLocalization }}</th>
+          @if (canViewPlans()) {
+            <th>{{ '::AdminPanel:Businesses:ColumnPlan' | abpLocalization }}</th>
+          }
+          <th>{{ '::AdminPanel:Businesses:ColumnMembers' | abpLocalization }}</th>
           <th>{{ '::AdminPanel:Businesses:ColumnSignedUp' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:Businesses:ColumnStatus' | abpLocalization }}</th>
           <th class="text-end"><span class="visually-hidden">Actions</span></th>
         </tr>
       </thead>
       <tbody>
         @if (isLoading()) {
           <tr>
-            <td colspan="4">
+            <td [attr.colspan]="canViewPlans() ? 7 : 6">
               <app-loading-spinner [label]="'::AdminPanel:Businesses:Loading' | abpLocalization"></app-loading-spinner>
             </td>
           </tr>
         } @else if (loadFailed()) {
           <tr>
-            <td colspan="4">
+            <td [attr.colspan]="canViewPlans() ? 7 : 6">
               <app-error-state
                 [message]="'::AdminPanel:Businesses:LoadErrorMessage' | abpLocalization"
                 [retryLabel]="'::AdminPanel:Businesses:TryAgain' | abpLocalization"
@@ -54,7 +64,7 @@
           </tr>
         } @else if (tenants().length === 0) {
           <tr>
-            <td colspan="4">
+            <td [attr.colspan]="canViewPlans() ? 7 : 6">
               <app-empty-state
                 icon="fa-building"
                 [title]="'::AdminPanel:Businesses:EmptyTitle' | abpLocalization"
@@ -66,8 +76,17 @@
           @for (tenant of tenants(); track tenant.tenantId) {
             <tr>
               <td class="fw-semibold">
-                <a [routerLink]="['/admin/businesses', tenant.tenantId]">{{ tenant.tenantName }}</a>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="eks-avatar-sm">{{ initials(tenant.tenantName) }}</span>
+                  <a [routerLink]="['/admin/businesses', tenant.tenantId]">{{ tenant.tenantName }}</a>
+                </div>
               </td>
+              <td class="text-muted">{{ categoryName(tenant.categoryId) }}</td>
+              @if (canViewPlans()) {
+                <td class="text-muted">{{ planName(tenant.tenantId) }}</td>
+              }
+              <td class="fw-semibold">{{ tenant.memberCount }}</td>
+              <td class="text-muted">{{ tenant.creationTime | date: 'mediumDate' }}</td>
               <td>
                 <app-status-badge
                   [label]="statusLabelKey(tenant.approvalStatus) | abpLocalization"
@@ -75,7 +94,6 @@
                 >
                 </app-status-badge>
               </td>
-              <td class="text-muted">{{ tenant.creationTime | date: 'mediumDate' }}</td>
               <td class="text-end">
                 @if (tenant.approvalStatus === ApprovalStatus.Pending) {
                   <button type="button" class="btn btn-sm btn-outline-success me-2" (click)="approve(tenant)">
@@ -101,3 +119,156 @@
     </div>
   }
 </div>
+
+<app-modal
+  [open]="createModalOpen()"
+  [title]="'::AdminPanel:Businesses:NewTitle' | abpLocalization"
+  (closed)="closeCreateModal()"
+>
+  <form [formGroup]="createForm" (ngSubmit)="submitCreateForm()" class="d-flex flex-column gap-3">
+    <p class="text-muted small mb-0">{{ '::AdminPanel:Businesses:NewHint' | abpLocalization }}</p>
+
+    <div>
+      <label class="form-label" for="businessName">{{ '::AdminPanel:Businesses:FieldBusinessName' | abpLocalization }}</label>
+      <input id="businessName" type="text" class="form-control" formControlName="businessName" />
+      @if (createForm.controls.businessName.invalid && createForm.controls.businessName.touched) {
+        <p class="text-danger small mt-1">{{ '::AdminPanel:Businesses:FieldRequired' | abpLocalization }}</p>
+      }
+    </div>
+
+    <div>
+      <label class="form-label" for="categoryId">{{ '::AdminPanel:Businesses:FieldCategory' | abpLocalization }}</label>
+      <select id="categoryId" class="form-select" formControlName="categoryId">
+        <option value="">{{ '::AdminPanel:Businesses:NoCategory' | abpLocalization }}</option>
+        @for (category of categories(); track category.id) {
+          <option [value]="category.id">{{ category.nameEn }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="descriptionEn">{{ '::AdminPanel:Businesses:FieldDescriptionEn' | abpLocalization }}</label>
+        <textarea id="descriptionEn" class="form-control" rows="2" formControlName="descriptionEn"></textarea>
+      </div>
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="descriptionAr">{{ '::AdminPanel:Businesses:FieldDescriptionAr' | abpLocalization }}</label>
+        <textarea id="descriptionAr" class="form-control" rows="2" formControlName="descriptionAr" dir="rtl"></textarea>
+      </div>
+    </div>
+
+    <div>
+      <label class="form-label" for="website">{{ '::AdminPanel:Businesses:FieldWebsite' | abpLocalization }}</label>
+      <input id="website" type="text" class="form-control" formControlName="website" placeholder="https://…" />
+    </div>
+
+    <div class="row g-3">
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="instagramUrl">{{ '::AdminPanel:Businesses:FieldInstagram' | abpLocalization }}</label>
+        <input id="instagramUrl" type="text" class="form-control" formControlName="instagramUrl" placeholder="https://instagram.com/…" />
+      </div>
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="facebookUrl">{{ '::AdminPanel:Businesses:FieldFacebook' | abpLocalization }}</label>
+        <input id="facebookUrl" type="text" class="form-control" formControlName="facebookUrl" placeholder="https://facebook.com/…" />
+      </div>
+    </div>
+
+    <hr class="my-0" />
+    <p class="fw-semibold small text-uppercase text-muted mb-0">{{ '::AdminPanel:Businesses:FirstBranchHeading' | abpLocalization }}</p>
+
+    <div class="row g-3">
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="branchName">{{ '::AdminPanel:Businesses:FieldBranchName' | abpLocalization }}</label>
+        <input id="branchName" type="text" class="form-control" formControlName="branchName" />
+        @if (createForm.controls.branchName.invalid && createForm.controls.branchName.touched) {
+          <p class="text-danger small mt-1">{{ '::AdminPanel:Businesses:FieldRequired' | abpLocalization }}</p>
+        }
+      </div>
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="branchPhone">{{ '::AdminPanel:Businesses:FieldBranchPhone' | abpLocalization }}</label>
+        <input id="branchPhone" type="text" class="form-control" formControlName="branchPhone" />
+      </div>
+    </div>
+
+    <div>
+      <label class="form-label" for="branchAddress">{{ '::AdminPanel:Businesses:FieldBranchAddress' | abpLocalization }}</label>
+      <input id="branchAddress" type="text" class="form-control" formControlName="branchAddress" />
+    </div>
+
+    <div class="row g-3">
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="branchLatitude">{{ '::Latitude' | abpLocalization }}</label>
+        <input
+          id="branchLatitude"
+          type="number"
+          step="any"
+          class="form-control"
+          formControlName="branchLatitude"
+          placeholder="e.g. 24.7136"
+        />
+        @if (createForm.controls.branchLatitude.invalid && createForm.controls.branchLatitude.touched) {
+          <p class="text-danger small mt-1">{{ '::AdminPanel:Businesses:FieldLatitudeRange' | abpLocalization }}</p>
+        }
+      </div>
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="branchLongitude">{{ '::Longitude' | abpLocalization }}</label>
+        <input
+          id="branchLongitude"
+          type="number"
+          step="any"
+          class="form-control"
+          formControlName="branchLongitude"
+          placeholder="e.g. 46.6753"
+        />
+        @if (createForm.controls.branchLongitude.invalid && createForm.controls.branchLongitude.touched) {
+          <p class="text-danger small mt-1">{{ '::AdminPanel:Businesses:FieldLongitudeRange' | abpLocalization }}</p>
+        }
+      </div>
+    </div>
+    <p class="text-muted small mb-0">{{ '::AdminPanel:Businesses:LocationHint' | abpLocalization }}</p>
+
+    <hr class="my-0" />
+    <p class="fw-semibold small text-uppercase text-muted mb-0">{{ '::AdminPanel:Businesses:OwnerHeading' | abpLocalization }}</p>
+
+    <div class="row g-3">
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="ownerEmail">{{ '::AdminPanel:Businesses:FieldOwnerEmail' | abpLocalization }}</label>
+        <input id="ownerEmail" type="email" class="form-control" formControlName="ownerEmail" />
+        @if (createForm.controls.ownerEmail.invalid && createForm.controls.ownerEmail.touched) {
+          <p class="text-danger small mt-1">
+            @if (createForm.controls.ownerEmail.errors?.['required']) {
+              {{ '::AdminPanel:Businesses:FieldRequired' | abpLocalization }}
+            } @else {
+              {{ '::AdminPanel:Businesses:FieldInvalidEmail' | abpLocalization }}
+            }
+          </p>
+        }
+      </div>
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="ownerPassword">{{ '::AdminPanel:Businesses:FieldOwnerPassword' | abpLocalization }}</label>
+        <input id="ownerPassword" type="password" class="form-control" formControlName="ownerPassword" />
+        @if (createForm.controls.ownerPassword.invalid && createForm.controls.ownerPassword.touched) {
+          <p class="text-danger small mt-1">
+            @if (createForm.controls.ownerPassword.errors?.['required']) {
+              {{ '::AdminPanel:Businesses:FieldRequired' | abpLocalization }}
+            } @else {
+              {{ '::AdminPanel:Businesses:FieldPasswordMinLength' | abpLocalization }}
+            }
+          </p>
+        }
+      </div>
+    </div>
+  </form>
+
+  <div slot="footer" class="d-flex gap-2 justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeCreateModal()">
+      {{ '::AdminPanel:Businesses:Cancel' | abpLocalization }}
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="isCreating()" (click)="submitCreateForm()">
+      @if (isCreating()) {
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+      }
+      {{ '::AdminPanel:Businesses:Create' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

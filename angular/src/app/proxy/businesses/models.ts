@@ -8,6 +8,7 @@ export interface AdminTenantDto {
   categoryId?: string | null;
   approvalStatus?: TenantApprovalStatus;
   creationTime?: string;
+  memberCount: number;
 }
 
 export interface AdminTenantFilterDto extends PagedAndSortedResultRequestDto {
@@ -29,9 +30,13 @@ export interface RegisterBusinessDto {
   descriptionAr?: string | null;
   descriptionEn?: string | null;
   website?: string | null;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
   branchName: string;
   branchAddress?: string | null;
   branchPhone?: string | null;
+  branchLatitude?: number | null;
+  branchLongitude?: number | null;
   ownerEmail: string;
   ownerPassword: string;
 }

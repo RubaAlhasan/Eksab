@@ -1,18 +1,23 @@
 import { AuthService, PermissionService, authGuard, eLayoutType, permissionGuard } from '@abp/ng.core';
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, Routes } from '@angular/router';
-import { adminGuard, isPlatformAdmin } from './core/guards/admin.guard';
+import { adminGuard, businessStaffOnlyGuard, isPlatformAdmin } from './core/guards/admin.guard';
 
 /**
  * OAuth redirectUri always lands back on '/' — figure out where an already-authenticated visitor
  * actually belongs instead of always sending them to the customer/tenant placeholder.
  *
- * Realm detection is permission-based (`Eksabli.Tenants.View`, see admin.guard.ts), not tenantId-based:
- * this app currently has no real Business Portal or customer web area to route a tenant-realm staff
- * member or a Host-realm customer to, so both fall back to the same `/home` placeholder they already
- * used before this fix — only the Admin branch is new. Do not extend this to a `/business` redirect
- * until that portal actually exists; a guard pointing at a route that isn't there is worse than the
- * status quo.
+ * Realm detection is permission-based (`Eksabli.Tenants.View`, see admin.guard.ts), not tenantId-based.
+ * A real Customers page for tenant-realm business staff now exists (`/admin/customers`, see below —
+ * folded into the one Admin Portal shell, not a separate portal/route namespace; see admin-customers
+ * .component.ts's file comment for why) but this guard is NOT yet extended to route tenant-realm staff
+ * there — unlike the Host-realm admin case, there's no equally reliable, already-proven-in-this-codebase
+ * signal for "this authenticated session belongs to business staff" (permission grants vary per
+ * role/tenant; no single umbrella permission every staff member is guaranteed to hold). Business staff
+ * can still reach `/admin/customers` directly by URL or a nav link once logged in — they just don't
+ * land there automatically post-login yet. Solving realm detection properly is a separate, larger piece
+ * of work than one page; don't guess at it here. Host-realm customers still fall back to `/home`,
+ * unchanged.
  */
 const redirectAuthenticatedToHomeGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
@@ -39,9 +44,20 @@ export const APP_ROUTES: Routes = [
     // Parent shell for the whole Admin Portal — AdminLayoutComponent renders its own sidebar/topbar
     // (registered as `eLayoutType.empty` in route.provider.ts so ABP's own Lepton-X SideMenu layout
     // doesn't *also* wrap these routes — see that file's comment for why this matters).
+    //
+    // Deliberately only `authGuard` here, NOT `adminGuard` — `adminGuard` requires the Host-only
+    // `Eksabli.Tenants.View` signal permission (see admin.guard.ts), which tenant-realm business staff
+    // never hold by construction. The `customers` child route below needs to be reachable by that
+    // realm too (it used to live under its own now-deleted `/business` shell — see admin-customers
+    // .component.ts's file comment for why it was folded in here instead). Every child route already
+    // enforces its OWN `permissionGuard` + specific policy (or, for the nested stock-ABP children,
+    // relies on that package's own self-contained guards — see the comment further down) regardless of
+    // this parent guard, so relaxing it doesn't widen access to anything: a Host admin without
+    // `Eksabli.Memberships.View` still can't open Customers, and business staff without
+    // `Eksabli.Tenants.View` still can't open Businesses/Categories/Plans/etc.
     path: 'admin',
     loadComponent: () => import('./admin/layout/admin-layout.component').then(c => c.AdminLayoutComponent),
-    canActivate: [authGuard, adminGuard],
+    canActivate: [authGuard],
     children: [
       {
         path: 'businesses',
@@ -102,6 +118,52 @@ export const APP_ROUTES: Routes = [
         // Whole controller queue (GetListAsync) is gated on SupportTickets.Manage, no lesser read to
         // fall back to — same shape as Subscriptions above, not Tenants.View.
         data: { requiredPolicy: 'Eksabli.SupportTickets.Manage' },
+      },
+      {
+        // Tenant-realm data (Memberships/Followers), reachable by business staff — gated on its own
+        // real policy, not Tenants.View (business staff don't hold that Host-only permission). See the
+        // parent '/admin' route's comment above for why the coarse `adminGuard` was relaxed to allow
+        // this, and admin-customers.component.ts's file comment for why this isn't a separate portal.
+        // `businessStaffOnlyGuard` additionally EXCLUDES platform admins — `permissionGuard` alone
+        // isn't enough here since the seeded Host admin role holds every permission including
+        // `Eksabli.Memberships.View` (see that guard's own comment in admin.guard.ts).
+        path: 'customers',
+        loadComponent: () =>
+          import('./admin/customers/admin-customers.component').then(c => c.AdminCustomersComponent),
+        canActivate: [permissionGuard, businessStaffOnlyGuard],
+        data: { requiredPolicy: 'Eksabli.Memberships.View' },
+      },
+      // Stock ABP UI (Users/Roles/My Profile/Settings), nested here — not just linked at their
+      // existing top-level '/identity', '/account', '/setting-management' paths below — so they
+      // render inside AdminLayoutComponent's own shell instead of Lepton-X's stock SideMenu chrome.
+      // No extra canActivate/requiredPolicy needed at this mount point: `createRoutes()` from each
+      // package already ships its own `authGuard`/`permissionGuard` + per-leaf `data.requiredPolicy`
+      // (confirmed by reading each package's compiled output — `AbpIdentity.Roles`/`.Users` for
+      // Identity, `authGuard` for Account) — these entries just relocate where the SAME real guards
+      // render, they don't change what's guarded. The original top-level mounts below are left in
+      // place (not removed): '/account' specifically must stay reachable pre-auth for the actual
+      // login flow, and leaving '/identity' + '/setting-management' reachable at their original
+      // paths too is a harmless, zero-cost fallback (e.g. any stray link generated by the packages
+      // themselves) — just no longer what our own nav links to.
+      {
+        path: 'identity',
+        loadChildren: () => import('@abp/ng.identity').then(c => c.createRoutes()),
+      },
+      {
+        path: 'setting-management',
+        loadChildren: () => import('@abp/ng.setting-management').then(c => c.createRoutes()),
+      },
+      {
+        path: 'account',
+        loadChildren: () => import('@abp/ng.account').then(c => c.createRoutes()),
+      },
+      {
+        // Raw ABP Tenant Management (`Volo.Abp.TenantManagement.Tenant` — connection strings,
+        // deactivate/delete) — a DIFFERENT concept from our own "Businesses" page (`BusinessProfile`
+        // approval workflow), even though both reuse the word "tenant"; see admin-tenants.component.ts.
+        // Same self-contained-guards reasoning as identity/setting-management/account above.
+        path: 'tenant-management',
+        loadChildren: () => import('@abp/ng.tenant-management').then(c => c.createRoutes()),
       },
     ],
   },

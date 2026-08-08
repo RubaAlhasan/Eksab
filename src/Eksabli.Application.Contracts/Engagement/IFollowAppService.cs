@@ -20,5 +20,5 @@ public interface IFollowAppService : IApplicationService
     Task<List<FollowDto>> GetMyFollowsAsync();
 
     // Business-side "Followers list" (Eksabli.Followers.View) — ambient tenant.
-    Task<PagedResultDto<FollowDto>> GetFollowersAsync(PagedAndSortedResultRequestDto input);
+    Task<PagedResultDto<FollowerDto>> GetFollowersAsync(PagedAndSortedResultRequestDto input);
 }

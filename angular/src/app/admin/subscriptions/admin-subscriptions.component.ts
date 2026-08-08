@@ -1,12 +1,10 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
 import { LocalizationPipe, PermissionService } from '@abp/ng.core';
 import { ToasterService } from '@abp/ng.theme.shared';
 import { AdminSubscriptionsService } from '../../proxy/controllers/admin-subscriptions.service';
 import { AdminTenantsService } from '../../proxy/controllers/admin-tenants.service';
-import { SubscriptionPlansService } from '../../proxy/controllers/subscription-plans.service';
 import type { InvoiceDto, TenantSubscriptionDto } from '../../proxy/billing/models';
 import { TenantSubscriptionStatus } from '../../proxy/billing/tenant-subscription-status.enum';
 import { InvoiceStatus } from '../../proxy/billing/invoice-status.enum';
@@ -32,6 +30,16 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
  *   an expandable row showing that subscription's invoices (`GetInvoicesAsync` DOES support filtering
  *   by `tenantSubscriptionId`, which is real), avoiding both the missing endpoint and a page that would
  *   break on refresh/deep-link.
+ *
+ * Stats (`loadStats`) call a real, dedicated `GetStatsAsync` endpoint added specifically for this page —
+ * previously this fired two extra concurrent `GetListAsync` calls against `/api/app/admin-subscriptions`
+ * (status=Active with up to 500 rows transferred just to sum MRR client-side, plus a separate
+ * status=Trialing count-only call) on top of the paginated list's own call to the same endpoint — three
+ * simultaneous requests to one endpoint on every page load, which is what surfaced as a benign-but-noisy
+ * `OperationCanceledException` in the server log if the page was left before they all completed. One
+ * server-side call now (DB-level GroupBy over active subscriptions, joined against plan prices — see
+ * AdminSubscriptionAppService.GetStatsAsync) — one round trip, and the true total MRR, not a
+ * first-500-rows approximation.
  */
 @Component({
   selector: 'app-admin-subscriptions',
@@ -55,7 +63,6 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
 export class AdminSubscriptionsComponent implements OnInit {
   private readonly subscriptionsService = inject(AdminSubscriptionsService);
   private readonly tenantsService = inject(AdminTenantsService);
-  private readonly plansService = inject(SubscriptionPlansService);
   private readonly toaster = inject(ToasterService);
   private readonly permissionService = inject(PermissionService);
 
@@ -81,13 +88,10 @@ export class AdminSubscriptionsComponent implements OnInit {
 
   protected readonly canManage = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Billing.ManagePlatform'));
 
-  /** Supplementary stat row — all three numbers come from real endpoints, never invented:
-   *  - Active/Trialing counts: `totalCount` from a `maxResultCount: 0` filtered query (server counts,
-   *    no items transferred).
-   *  - Approx. MRR: real `monthlyPrice` per plan × count of active subscriptions on that plan, summed
-   *    client-side. Labelled "approx." because the API exposes list price only — no visibility into
-   *    discounts/proration, and (matching the same batch-size assumption used elsewhere on this page
-   *    for tenant names) it sums at most the first 500 active subscriptions.
+  /** Supplementary stat row — all three numbers come from one real endpoint (`GetStatsAsync`), never
+   *  invented. "Approx." on the MRR label stays even though it's now a true total, not a capped
+   *  approximation: the API exposes list price only, no visibility into discounts/proration, so it's
+   *  still an estimate of actual billed revenue, just no longer additionally capped at 500 rows.
    *  Deliberately NOT shown: a "Churn" stat — there is no time-series/analytics endpoint to compute it
    *  from, so it would have to be fabricated. See admin-subscriptions.component.ts's file-level
    *  comment for the [MISSING BACKEND CAPABILITY] list. Stats fail silently (stay null) rather than
@@ -257,33 +261,11 @@ export class AdminSubscriptionsComponent implements OnInit {
 
   private loadStats(): void {
     this.statsLoading.set(true);
-    forkJoin({
-      plans: this.plansService.getList({ maxResultCount: 1000 }),
-      active: this.subscriptionsService.getList({
-        status: TenantSubscriptionStatus.Active,
-        sorting: undefined,
-        skipCount: 0,
-        maxResultCount: 500,
-      }),
-      trialing: this.subscriptionsService.getList({
-        status: TenantSubscriptionStatus.Trialing,
-        sorting: undefined,
-        skipCount: 0,
-        maxResultCount: 0,
-      }),
-    }).subscribe({
-      next: ({ plans, active, trialing }) => {
-        const priceByPlanId = new Map<string, number>();
-        for (const plan of plans.items ?? []) {
-          if (plan.id) priceByPlanId.set(plan.id, plan.monthlyPrice ?? 0);
-        }
-        const mrr = (active.items ?? []).reduce(
-          (sum, sub) => sum + (sub.planId ? (priceByPlanId.get(sub.planId) ?? 0) : 0),
-          0,
-        );
-        this.activeCount.set(active.totalCount ?? 0);
-        this.trialingCount.set(trialing.totalCount ?? 0);
-        this.approxMrr.set(mrr);
+    this.subscriptionsService.getStats().subscribe({
+      next: (stats) => {
+        this.activeCount.set(stats.activeCount);
+        this.trialingCount.set(stats.trialingCount);
+        this.approxMrr.set(stats.approxMrr);
         this.statsLoading.set(false);
       },
       // Stats are supplementary — leave them null (hidden in the template) rather than showing an

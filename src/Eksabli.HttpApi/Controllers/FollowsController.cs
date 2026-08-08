@@ -41,7 +41,7 @@ public class FollowsController : EksabliController
 
     [Authorize(EksabliPermissions.Followers.View)]
     [HttpGet("followers")]
-    public Task<PagedResultDto<FollowDto>> GetFollowersAsync([FromQuery] PagedAndSortedResultRequestDto input)
+    public Task<PagedResultDto<FollowerDto>> GetFollowersAsync([FromQuery] PagedAndSortedResultRequestDto input)
     {
         return _followAppService.GetFollowersAsync(input);
     }

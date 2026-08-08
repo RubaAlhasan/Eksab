@@ -1,7 +1,7 @@
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedAndSortedResultRequestDto, PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { FollowDto } from '../engagement/models';
+import type { FollowDto, FollowerDto } from '../engagement/models';
 
 @Injectable({
   providedIn: 'root',
@@ -20,7 +20,7 @@ export class FollowsService {
   
 
   getFollowers = (input: PagedAndSortedResultRequestDto, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, PagedResultDto<FollowDto>>({
+    this.restService.request<any, PagedResultDto<FollowerDto>>({
       method: 'GET',
       url: '/api/app/follow/followers',
       params: { sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },

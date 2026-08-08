@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Eksabli.Memberships;
+using Eksabli.Permissions;
 using Eksabli.Wallets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Volo.Abp.Application.Dtos;
 
 namespace Eksabli.Controllers;
 
@@ -17,6 +19,13 @@ public class MembershipsController : EksabliController
     public MembershipsController(IMembershipAppService membershipAppService)
     {
         _membershipAppService = membershipAppService;
+    }
+
+    [Authorize(EksabliPermissions.Memberships.View)]
+    [HttpGet]
+    public Task<PagedResultDto<MemberDto>> GetMembersAsync([FromQuery] MemberFilterDto input)
+    {
+        return _membershipAppService.GetMembersAsync(input);
     }
 
     [HttpPost("join")]

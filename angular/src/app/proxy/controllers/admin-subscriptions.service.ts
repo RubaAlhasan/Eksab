@@ -1,7 +1,7 @@
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { AdminInvoiceFilterDto, AdminSubscriptionFilterDto, InvoiceDto, RecordManualPaymentDto, TenantSubscriptionDto } from '../billing/models';
+import type { AdminInvoiceFilterDto, AdminSubscriptionFilterDto, AdminSubscriptionStatsDto, InvoiceDto, RecordManualPaymentDto, TenantSubscriptionDto } from '../billing/models';
 
 @Injectable({
   providedIn: 'root',
@@ -34,6 +34,14 @@ export class AdminSubscriptionsService {
       method: 'POST',
       url: '/api/app/admin-subscriptions/record-manual-payment',
       body: input,
+    },
+    { apiName: this.apiName,...config });
+
+
+  getStats = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, AdminSubscriptionStatsDto>({
+      method: 'GET',
+      url: '/api/app/admin-subscriptions/stats',
     },
     { apiName: this.apiName,...config });
 }

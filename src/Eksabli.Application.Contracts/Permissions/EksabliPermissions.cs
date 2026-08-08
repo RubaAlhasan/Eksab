@@ -29,6 +29,8 @@ public static class EksabliPermissions
     public static class Memberships
     {
         public const string Default = GroupName + ".Memberships";
+        // Business Portal > Customers page — the member list itself, same shape as Followers.View.
+        public const string View = Default + ".View";
         // Defined for parity/future use — Award/Adjust access is enforced via an EmployeeAssignment.Role
         // check inside PosAppService, not via these permissions (see PosAppService.CheckStaffRoleAsync).
         public const string Award = Default + ".Award";

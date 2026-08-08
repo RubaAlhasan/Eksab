@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Eksabli.BusinessProfiles;
+using Eksabli.Memberships;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -20,17 +21,20 @@ public class AdminTenantAppService : ApplicationService, IAdminTenantAppService
     private readonly IRepository<BusinessProfile, Guid> _businessProfileRepository;
     private readonly ITenantRepository _tenantRepository;
     private readonly IRepository<Tenant, Guid> _tenantGenericRepository;
+    private readonly IRepository<Membership, Guid> _membershipRepository;
     private readonly IDataFilter _dataFilter;
 
     public AdminTenantAppService(
         IRepository<BusinessProfile, Guid> businessProfileRepository,
         ITenantRepository tenantRepository,
         IRepository<Tenant, Guid> tenantGenericRepository,
+        IRepository<Membership, Guid> membershipRepository,
         IDataFilter dataFilter)
     {
         _businessProfileRepository = businessProfileRepository;
         _tenantRepository = tenantRepository;
         _tenantGenericRepository = tenantGenericRepository;
+        _membershipRepository = membershipRepository;
         _dataFilter = dataFilter;
     }
 
@@ -44,8 +48,12 @@ public class AdminTenantAppService : ApplicationService, IAdminTenantAppService
             var tenantIds = profiles.Select(p => p.TenantId!.Value).ToList();
             var tenantNameLookup = (await _tenantGenericRepository.GetListAsync(t => tenantIds.Contains(t.Id)))
                 .ToDictionary(t => t.Id, t => t.Name);
+            var memberCountLookup = await GetMemberCountLookupAsync(tenantIds);
 
-            var dtos = profiles.Select(p => ToDto(p, tenantNameLookup.GetValueOrDefault(p.TenantId!.Value) ?? string.Empty));
+            var dtos = profiles.Select(p => ToDto(
+                p,
+                tenantNameLookup.GetValueOrDefault(p.TenantId!.Value) ?? string.Empty,
+                memberCountLookup.GetValueOrDefault(p.TenantId!.Value)));
 
             if (!input.FilterText.IsNullOrWhiteSpace())
             {
@@ -66,8 +74,25 @@ public class AdminTenantAppService : ApplicationService, IAdminTenantAppService
         {
             var profile = await GetBusinessProfileAsync(tenantId);
             var tenant = await _tenantRepository.GetAsync(tenantId);
-            return ToDto(profile, tenant.Name);
+            var memberCountLookup = await GetMemberCountLookupAsync([tenantId]);
+            return ToDto(profile, tenant.Name, memberCountLookup.GetValueOrDefault(tenantId));
         }
+    }
+
+    // Active-member count per tenant, counted at the database level (GroupBy translates to SQL
+    // GROUP BY, not a client-side load of every Membership row) — same
+    // IDataFilter.Disable<IMultiTenant>() scope as the rest of this service, called from within an
+    // already-open `using` block by every caller above, not opening its own.
+    private async Task<Dictionary<Guid, int>> GetMemberCountLookupAsync(List<Guid> tenantIds)
+    {
+        var membershipQueryable = await _membershipRepository.GetQueryableAsync();
+        var counts = await AsyncExecuter.ToListAsync(
+            membershipQueryable
+                .Where(m => m.TenantId.HasValue && tenantIds.Contains(m.TenantId.Value) && m.Status == MembershipStatus.Active)
+                .GroupBy(m => m.TenantId!.Value)
+                .Select(g => new { TenantId = g.Key, Count = g.Count() }));
+
+        return counts.ToDictionary(x => x.TenantId, x => x.Count);
     }
 
     public async Task<AdminTenantDto> ApproveAsync(Guid tenantId)
@@ -79,7 +104,8 @@ public class AdminTenantAppService : ApplicationService, IAdminTenantAppService
             await _businessProfileRepository.UpdateAsync(profile);
 
             var tenant = await _tenantRepository.GetAsync(tenantId);
-            return ToDto(profile, tenant.Name);
+            var memberCountLookup = await GetMemberCountLookupAsync([tenantId]);
+            return ToDto(profile, tenant.Name, memberCountLookup.GetValueOrDefault(tenantId));
         }
     }
 
@@ -92,7 +118,8 @@ public class AdminTenantAppService : ApplicationService, IAdminTenantAppService
             await _businessProfileRepository.UpdateAsync(profile);
 
             var tenant = await _tenantRepository.GetAsync(tenantId);
-            return ToDto(profile, tenant.Name);
+            var memberCountLookup = await GetMemberCountLookupAsync([tenantId]);
+            return ToDto(profile, tenant.Name, memberCountLookup.GetValueOrDefault(tenantId));
         }
     }
 
@@ -102,7 +129,7 @@ public class AdminTenantAppService : ApplicationService, IAdminTenantAppService
             ?? throw new EntityNotFoundException(typeof(BusinessProfile), tenantId);
     }
 
-    private static AdminTenantDto ToDto(BusinessProfile profile, string tenantName)
+    private static AdminTenantDto ToDto(BusinessProfile profile, string tenantName, int memberCount)
     {
         return new AdminTenantDto
         {
@@ -111,7 +138,8 @@ public class AdminTenantAppService : ApplicationService, IAdminTenantAppService
             BusinessProfileId = profile.Id,
             CategoryId = profile.CategoryId,
             ApprovalStatus = profile.ApprovalStatus,
-            CreationTime = profile.CreationTime
+            CreationTime = profile.CreationTime,
+            MemberCount = memberCount
         };
     }
 }

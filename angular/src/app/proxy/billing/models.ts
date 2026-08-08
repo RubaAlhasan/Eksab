@@ -11,6 +11,12 @@ export interface AdminSubscriptionFilterDto extends PagedAndSortedResultRequestD
   status?: TenantSubscriptionStatus | null;
 }
 
+export interface AdminSubscriptionStatsDto {
+  activeCount: number;
+  trialingCount: number;
+  approxMrr: number;
+}
+
 export interface ChangePlanDto {
   planId: string;
 }
