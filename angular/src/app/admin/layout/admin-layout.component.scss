@@ -35,18 +35,26 @@
   width: 260px;
   flex-shrink: 0;
   background: var(--eks-surface);
-  border-right: 1px solid var(--eks-border);
+  border-inline-end: 1px solid var(--eks-border);
   display: flex;
   flex-direction: column;
 
   @media (max-width: 991.98px) {
     position: fixed;
     inset-block: 0;
-    left: 0;
+    inset-inline-start: 0;
     z-index: 1050;
     width: 280px;
+    // translateX has no logical equivalent — flip the sign explicitly under RTL so the drawer
+    // still slides in from the correct (inline-start) edge instead of off the wrong side of the
+    // screen. `:dir()` is a real CSS pseudo-class (not an Angular binding), driven by the `dir`
+    // attribute AdminLayoutComponent sets on the shell root from the current locale.
     transform: translateX(-100%);
     transition: transform 0.2s ease-out;
+
+    &:dir(rtl) {
+      transform: translateX(100%);
+    }
 
     &--open {
       transform: translateX(0);

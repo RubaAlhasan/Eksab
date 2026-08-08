@@ -38,5 +38,13 @@ function configureRoutes() {
         layout: eLayoutType.empty,
         requiredPolicy: 'Eksabli.Tenants.View',
       },
+      {
+        path: '/admin/plans',
+        name: '::Menu:SubscriptionPlans',
+        iconClass: 'fas fa-receipt',
+        order: 4,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.Tenants.View',
+      },
   ]);
 }

@@ -61,6 +61,16 @@ export const APP_ROUTES: Routes = [
         // .Edit/.Delete), not by this route guard.
         data: { requiredPolicy: 'Eksabli.Tenants.View' },
       },
+      {
+        path: 'plans',
+        loadComponent: () => import('./admin/plans/admin-plans.component').then(c => c.AdminPlansComponent),
+        canActivate: [permissionGuard],
+        // Same shape as Categories above: read is [AllowAnonymous] on the backend (public pricing
+        // catalog), this guard just gates reaching the page; Create/Update/Delete are permission-checked
+        // per-action inside the component against the real single permission that covers all three
+        // (Eksabli.Billing.ManagePlatform — SubscriptionPlansController has no granular per-action split).
+        data: { requiredPolicy: 'Eksabli.Tenants.View' },
+      },
     ],
   },
   {
