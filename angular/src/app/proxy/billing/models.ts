@@ -1,0 +1,57 @@
+import type { AuditedEntityDto, FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
+import type { InvoiceStatus } from './invoice-status.enum';
+import type { TenantSubscriptionStatus } from './tenant-subscription-status.enum';
+
+export interface AdminInvoiceFilterDto extends PagedAndSortedResultRequestDto {
+  status?: InvoiceStatus | null;
+  tenantSubscriptionId?: string | null;
+}
+
+export interface AdminSubscriptionFilterDto extends PagedAndSortedResultRequestDto {
+  status?: TenantSubscriptionStatus | null;
+}
+
+export interface ChangePlanDto {
+  planId: string;
+}
+
+export interface CreateUpdateSubscriptionPlanDto {
+  name: string;
+  monthlyPrice?: number;
+  featureLimitsJson?: string;
+  isTrialDefault?: boolean;
+}
+
+export interface InvoiceDto extends AuditedEntityDto<string> {
+  tenantSubscriptionId?: string;
+  amount?: number;
+  status?: InvoiceStatus;
+  dueDate?: string;
+  paidAt?: string | null;
+}
+
+export interface RecordManualPaymentDto {
+  invoiceId: string;
+  providerTransactionRef?: string | null;
+}
+
+export interface SubscriptionPlanDto extends FullAuditedEntityDto<string> {
+  name?: string;
+  monthlyPrice?: number;
+  featureLimitsJson?: string;
+  isTrialDefault?: boolean;
+}
+
+export interface TenantSubscriptionDto extends AuditedEntityDto<string> {
+  tenantId?: string | null;
+  planId?: string;
+  planName?: string | null;
+  startDate?: string;
+  renewalDate?: string;
+  status?: TenantSubscriptionStatus;
+}
+
+export interface UsageDto {
+  branchCount?: number;
+  maxBranches?: number;
+}
