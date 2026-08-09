@@ -160,5 +160,13 @@ function configureRoutes() {
         order: 24,
         layout: eLayoutType.empty,
       },
+      {
+        path: '/business/rewards',
+        name: '::BusinessPanel:Layout:NavRewards',
+        iconClass: 'fas fa-gift',
+        order: 25,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.Rewards.Default',
+      },
   ]);
 }

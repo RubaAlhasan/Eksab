@@ -240,6 +240,13 @@ export const APP_ROUTES: Routes = [
         loadComponent: () =>
           import('./business/points/business-points.component').then(c => c.BusinessPointsComponent),
       },
+      {
+        path: 'rewards',
+        loadComponent: () =>
+          import('./business/rewards/business-rewards.component').then(c => c.BusinessRewardsComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Rewards.Default' },
+      },
     ],
   },
   {

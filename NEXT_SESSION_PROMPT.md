@@ -55,7 +55,8 @@ any new Host-realm page under `/admin/*` (child of `adminGuard`).
 
 Admin Portal MVP scope is fully built (Dashboard + Users, both from earlier this session, see "What's
 NOT done" below for the few remaining backend-blocked items). Business Portal has Dashboard +
-Analytics + Customers + Employees + Branches + Points Management so far — see their own section below.
+Analytics + Customers + Employees + Branches + Points Management + Rewards so far — see their own
+section below.
 **Points Management (`business/points/`) is architecturally different from every other page**: its
 Award Points tab has no ABP permission at all (`PosController` is `[Authorize]`-only; the real gate is
 a custom staff-role check inside `PosAppService`) — read that page's own section before assuming every
@@ -573,6 +574,27 @@ risking a regression in either shell for what's still just two pages.
   - The rounding-policy note ("fractional points always round down") is real — verified against
     `PosAppService.ComputePointsAsync`'s own `Math.Floor` behavior, not just copied from the
     prototype's own copy.
+- **Rewards** (`business/rewards/`) — mirrors `prototype/business/rewards.html`, built against
+  `RewardAppService`'s real full CRUD (`GetListAsync`/`CreateAsync`/`UpdateAsync`, whole controller
+  gated on `Eksabli.Rewards.Default`; `Create`/`Edit` gate the two actions exposed). No backend
+  changes needed. **This prototype page mapped unusually closely to the real DTO** — bilingual name,
+  `Type` (`Discount`/`FreeProduct`/`GiftCard`, exactly the prototype's three options), points cost,
+  and nullable stock (= unlimited) are all real, unchanged in meaning.
+  - **"Require manager approval to redeem" checkbox is real** — maps to the real
+    `ApprovalThresholdPoints` field; checking it sets `ApprovalThresholdPoints = pointsCost` (always
+    triggers `PosAppService.ConfirmRedemptionAsync`'s own real Manager+ requirement for this reward),
+    unchecking clears it to `null`.
+  - **Status badge is real but *derived***, not a stored field — `Reward` has no `IsActive`/`Status`
+    column; "Active"/"Scheduled"/"Expired" is computed client-side from the real `ValidFrom`/`ValidTo`
+    bounds against the current time. "Low stock" (`StockRemaining < 10`, the same threshold
+    `ReportsAppService.GetDashboardHomeAsync` itself uses) takes visual priority over the date-derived
+    status when both apply, matching the prototype's own either/or badge shape.
+  - **No redemption-rate progress bar** — the prototype's "62% redemption rate this month" is
+    hardcoded fake data with no real per-reward computation anywhere in this codebase; dropped.
+  - **No reward image** — no blob-upload UI/pattern exists anywhere in this app; a generic per-type
+    icon is shown instead of pretending an image exists.
+  - No delete action exposed — `DeleteAsync` exists server-side but the prototype has no delete
+    button either.
 
 ## What's NOT done — pick up here, in this order
 
@@ -614,20 +636,25 @@ the Admin Portal**, what's left:
    originally stated MVP scope should now be built; Users (`admin/users/`) was also added this session
    as an explicit user request beyond the original plan, matching `prototype/admin/users.html`.
 
-**For Business Portal pages beyond Dashboard/Analytics/Customers/Employees/Branches/Points Management**
-(mounted under `/business/*`, inside `BusinessLayoutComponent`, gated on `businessRealmGuard` — see the
-top of this file) — no equivalent implementation-plan doc exists yet (the backend-readiness doc covers
-Host-realm Admin Portal features only); scope has been driven directly by `prototype/business/*.html` +
-backend-reality-checking this session. Natural next pages, if asked for: check
-`prototype/business/*.html` for what exists (campaigns, rewards, offers, coupons, settings,
+**For Business Portal pages beyond Dashboard/Analytics/Customers/Employees/Branches/Points
+Management/Rewards** (mounted under `/business/*`, inside `BusinessLayoutComponent`, gated on
+`businessRealmGuard` — see the top of this file) — no equivalent implementation-plan doc exists yet
+(the backend-readiness doc covers Host-realm Admin Portal features only); scope has been driven
+directly by `prototype/business/*.html` + backend-reality-checking this session. Natural next pages,
+if asked for: check `prototype/business/*.html` for what exists (campaigns, offers, coupons, settings,
 notifications, transactions, subscription/billing all have prototype pages — verify each against the
-REAL backend the same way this session did for the six pages already built, and give each its own real
-permission as `data.requiredPolicy` on a `/business/*` child route + a `BusinessLayoutComponent` nav
-entry — unless, like Points Management, the underlying app service turns out to have no ABP permission
-at all, in which case don't force one; check `businessRealmGuard`'s coarse realm gate is still enough).
-`CouponAuditService`/`RewardAppService`/`CampaignAppService` all exist and were referenced this session
-but not opened — read the actual service (and its controller's `[Authorize]` attributes specifically —
-Points Management proved that assumption can be wrong) before assuming a page's data/permission shape.
+REAL backend the same way this session did for the seven pages already built, and give each its own
+real permission as `data.requiredPolicy` on a `/business/*` child route + a `BusinessLayoutComponent`
+nav entry — unless, like Points Management, the underlying app service turns out to have no ABP
+permission at all, in which case don't force one; check `businessRealmGuard`'s coarse realm gate is
+still enough). `CouponAuditService`/`CampaignAppService` exist and were referenced this session but not
+opened — read the actual service (and its controller's `[Authorize]` attributes specifically — Points
+Management proved that assumption can be wrong) before assuming a page's data/permission shape.
+`coupons.html`'s prototype page is a strong next-candidate given `CouponDto`/`CouponAuditFilterDto`
+were already read this session while building Rewards (real fields: rewardId, rewardName, membershipId,
+code, status, issuedAt, redeemedAt, redeemedByEmployeeId, redeemedBranchId) — a coupon audit/history
+list looks directly buildable; check `CouponAuditService`'s own controller before assuming its
+permission shape.
 **`prototype/business/reports.html` was checked and found to be a weak next-candidate** — unlike
 `analytics.html` (built this session), its "Generate report as CSV/PDF" buttons and "Recent Exports"
 history table have no real backend behind them (`ReportsAppService`'s only true report-generation
