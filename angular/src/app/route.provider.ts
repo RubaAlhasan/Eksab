@@ -176,5 +176,13 @@ function configureRoutes() {
         layout: eLayoutType.empty,
         requiredPolicy: 'Eksabli.Rewards.Default',
       },
+      {
+        path: '/business/campaigns',
+        name: '::BusinessPanel:Layout:NavCampaigns',
+        iconClass: 'fas fa-bullhorn',
+        order: 27,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.Campaigns.Default',
+      },
   ]);
 }

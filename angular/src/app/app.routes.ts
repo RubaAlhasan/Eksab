@@ -256,6 +256,13 @@ export const APP_ROUTES: Routes = [
         canActivate: [permissionGuard],
         data: { requiredPolicy: 'Eksabli.Rewards.Default' },
       },
+      {
+        path: 'campaigns',
+        loadComponent: () =>
+          import('./business/campaigns/business-campaigns.component').then(c => c.BusinessCampaignsComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Campaigns.Default' },
+      },
     ],
   },
   {

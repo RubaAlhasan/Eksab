@@ -55,8 +55,8 @@ any new Host-realm page under `/admin/*` (child of `adminGuard`).
 
 Admin Portal MVP scope is fully built (Dashboard + Users, both from earlier this session, see "What's
 NOT done" below for the few remaining backend-blocked items). Business Portal has Dashboard +
-Analytics + Customers + Employees + Branches + Points Management + Rewards + Coupons so far — see
-their own section below.
+Analytics + Customers + Employees + Branches + Points Management + Rewards + Coupons + Campaigns so
+far — see their own section below.
 **Points Management (`business/points/`) is architecturally different from every other page**: its
 Award Points tab has no ABP permission at all (`PosController` is `[Authorize]`-only; the real gate is
 a custom staff-role check inside `PosAppService`) — read that page's own section before assuming every
@@ -620,6 +620,46 @@ risking a regression in either shell for what's still just two pages.
     reuse (and none was extracted for just this one usage). The prototype's own fake "Recent Exports"
     history table (`reports.html`) is deliberately NOT replicated — there's no server-side "generated
     report" persistence anywhere; each export is generated fresh, nothing to list as history.
+- **Campaigns** (`business/campaigns/`) — mirrors `prototype/business/campaigns.html`, built against
+  `CampaignAppService`'s real CRUD + `ActivateAsync`/`PreviewTargetSegmentAsync`, plus
+  `IReportsAppService.GetCampaignPerformanceAsync` for real per-campaign stats. No backend changes
+  needed — this included discovering (by reading `Eksabli.Domain/Campaigns/CampaignRules.cs` and
+  `CampaignSegmentParameters.cs`, both real C# classes with their own `Parse()` methods) the *exact*
+  real JSON schemas behind `Campaign.RulesJson`/`CampaignTargetRule.ParametersJson`, rather than
+  guessing at freeform text fields the way `OpeningHoursJson`/`SocialLinksJson` were treated elsewhere.
+  - **Status** (`Draft`/`Active`/`Ended`) and **Type** (`Birthday`/`DoublePoints`/`SpendXGetY`/
+    `WinBack`/`Vip`/`NewCustomer`/`Referral`, all 7) match the prototype's own options exactly.
+  - **The wizard's Step 3 genuinely differs from the prototype's own flow, for a real reason**:
+    `PreviewTargetSegmentAsync` takes an *existing campaign id* — there's no "preview before saving"
+    endpoint. So the wizard actually **creates the campaign as `Draft`** at the end of Step 2, THEN
+    calls the real preview for that new id, THEN Step 3 offers "Activate Now" or "Save as Draft" (it's
+    already saved either way). This is the honest real flow, not the prototype's implied sequence.
+  - **Step 1's rule fields are conditional on `Type`, using the real `CampaignRules` schema**:
+    `DoublePoints` → `Multiplier`; `SpendXGetY` → `SpendThreshold`+`BonusPoints`; `Birthday` →
+    `DaysBefore`+`BonusPoints`; `WinBack`/`Vip`/`NewCustomer` → `BonusPoints`; `Referral` has no real
+    evaluator yet (confirmed in `CampaignSegmentEvaluator`'s own comment: "defined for schema parity...
+    no evaluator yet") — no rule fields shown for it, with an honest note instead of pretending it does
+    something.
+  - **Step 2 (Target Segment) is skipped entirely for `Birthday` campaigns** —
+    `CampaignSegmentEvaluator.EvaluateAsync` branches specially for `Birthday`, using Step 1's
+    `DaysBefore` against date-of-birth, and ignores `TargetRules` completely (confirmed by reading that
+    method). Only ONE target rule is captured, not the DTO's technically-supported list — matches the
+    prototype's own single-segment dropdown. Segment param fields use the real `CampaignSegmentParameters`
+    schema: `Tier` → `TierId` (a real `TiersService.getList()` dropdown); `Inactive` →
+    `InactiveDays`; `NewCustomer` → `WithinDays`; `All` → no params.
+  - **Per-campaign stats are real**, from `GetCampaignPerformanceAsync` (Sent / Rewarded Members /
+    Bonus Points Awarded) — replacing the prototype's own Sent/Opened/Redeemed (no "opened" read-
+    receipt tracking exists, and "redeemed" isn't a real per-campaign concept the same way). Only
+    fetched for non-`Draft` campaigns.
+  - **Real plan-quota enforcement exists** (`EksabliFeatures.MaxCampaigns`, same "throws a real
+    `UserFriendlyException` at the limit" shape as Branches' `MaxBranches`) but — unlike Branches —
+    there's no dedicated usage-check endpoint (`GetMyUsageAsync` only returns branch counts), so no
+    proactive quota banner was built; the real error just surfaces via the normal toast if hit.
+  - **No Edit/Delete UI** — both exist server-side, but re-deriving the wizard's full state (type-
+    specific rules + segment params) from an existing campaign is meaningfully more work than this
+    first cut; not attempted, same "not attempted this pass" reasoning as Employees/Points
+    Management/Rewards. **No campaign "description" field** — `CampaignDto` has no such property (only
+    bilingual name); the prototype's own description text is dropped, not fabricated.
 
 ## What's NOT done — pick up here, in this order
 
@@ -662,22 +702,22 @@ the Admin Portal**, what's left:
    as an explicit user request beyond the original plan, matching `prototype/admin/users.html`.
 
 **For Business Portal pages beyond Dashboard/Analytics/Customers/Employees/Branches/Points
-Management/Rewards/Coupons** (mounted under `/business/*`, inside `BusinessLayoutComponent`, gated on
-`businessRealmGuard` — see the top of this file) — no equivalent implementation-plan doc exists yet
-(the backend-readiness doc covers Host-realm Admin Portal features only); scope has been driven
-directly by `prototype/business/*.html` + backend-reality-checking this session. Natural next pages,
-if asked for: check `prototype/business/*.html` for what exists (campaigns, offers, settings,
+Management/Rewards/Coupons/Campaigns** (mounted under `/business/*`, inside `BusinessLayoutComponent`,
+gated on `businessRealmGuard` — see the top of this file) — no equivalent implementation-plan doc
+exists yet (the backend-readiness doc covers Host-realm Admin Portal features only); scope has been
+driven directly by `prototype/business/*.html` + backend-reality-checking this session. Natural next
+pages, if asked for: check `prototype/business/*.html` for what exists (offers, settings,
 notifications, transactions, subscription/billing all have prototype pages — verify each against the
-REAL backend the same way this session did for the eight pages already built, and give each its own
+REAL backend the same way this session did for the nine pages already built, and give each its own
 real permission as `data.requiredPolicy` on a `/business/*` child route + a `BusinessLayoutComponent`
-nav entry — unless, like Points Management, the underlying app service turns out to have no ABP
-permission at all, in which case don't force one; check `businessRealmGuard`'s coarse realm gate is
-still enough). `CampaignAppService` exists and was referenced this session but not opened — read the
-actual service (and its controller's `[Authorize]` attributes specifically — Points Management proved
-that assumption can be wrong) before assuming a page's data/permission shape. A reusable
-`downloadBlob()`-style helper is worth extracting into `shared/` the next time a second page needs a
-file download — `business-coupons.component.ts` currently has the only copy (see that page's own file
-comment).
+nav entry — unless the underlying app service turns out to have no ABP permission at all (like Points
+Management), in which case don't force one). A reusable `downloadBlob()`-style helper is worth
+extracting into `shared/` the next time a second page needs a file download — `business-coupons
+.component.ts` currently has the only copy. `NotificationAppService` and `Eksabli.Notifications`
+(channel/delivery-rate concepts already surfaced via `IReportsAppService
+.GetNotificationDeliveryRatesAsync`, unused so far) are real and worth checking against
+`notifications.html` next — Campaigns' own real `NotificationsSent`/`Queued`/`Failed` stats
+(`CampaignPerformanceDto`) suggest the underlying Notification entity/pipeline is genuinely built out.
 **`prototype/business/reports.html` was checked and found to be a weak next-candidate** — unlike
 `analytics.html` (built this session), its "Generate report as CSV/PDF" buttons and "Recent Exports"
 history table have no real backend behind them (`ReportsAppService`'s only true report-generation

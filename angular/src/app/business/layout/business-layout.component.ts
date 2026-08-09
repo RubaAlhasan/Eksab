@@ -67,6 +67,7 @@ export class BusinessLayoutComponent {
     { labelKey: '::BusinessPanel:Layout:NavPoints', icon: 'fa-qrcode', link: '/business/points', permission: '' },
     { labelKey: '::BusinessPanel:Layout:NavRewards', icon: 'fa-gift', link: '/business/rewards', permission: 'Eksabli.Rewards.Default' },
     { labelKey: '::BusinessPanel:Layout:NavCoupons', icon: 'fa-ticket', link: '/business/coupons', permission: 'Eksabli.Rewards.Default' },
+    { labelKey: '::BusinessPanel:Layout:NavCampaigns', icon: 'fa-bullhorn', link: '/business/campaigns', permission: 'Eksabli.Campaigns.Default' },
   ];
 
   protected readonly navItems = computed<BusinessNavItem[]>(() =>
