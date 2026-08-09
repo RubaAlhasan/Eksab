@@ -26,10 +26,19 @@ const FEATURE_KEYS = {
   pushNotifications: 'Eksabli.PushNotifications',
 } as const;
 
+// FeatureLimitsJson values are strings on the backend (Dictionary<string,string> — see the doc comment
+// on SubscriptionPlan.cs), e.g. "5"/"true", but tolerate raw numbers/booleans too for plans saved
+// before admin-plans.component.ts was fixed to always write strings.
 function parseFeatureLimit(json: string | undefined, key: string): number | null {
   try {
     const raw = json ? (JSON.parse(json) as Record<string, unknown>) : {};
-    return typeof raw[key] === 'number' ? (raw[key] as number) : null;
+    const value = raw[key];
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string' && value.trim() !== '') {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -38,7 +47,10 @@ function parseFeatureLimit(json: string | undefined, key: string): number | null
 function parseFeatureToggle(json: string | undefined, key: string): boolean {
   try {
     const raw = json ? (JSON.parse(json) as Record<string, unknown>) : {};
-    return !!raw[key];
+    const value = raw[key];
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') return value === 'true';
+    return false;
   } catch {
     return false;
   }

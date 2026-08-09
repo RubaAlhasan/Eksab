@@ -4,13 +4,23 @@ import { LocalizationPipe } from '@abp/ng.core';
 import { ToasterService } from '@abp/ng.theme.shared';
 import { ReportsService } from '../../proxy/controllers/reports.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { downloadBlob } from '../../shared/utils/download-blob';
 
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
+// `date.toISOString()` converts to UTC first — for any timezone AHEAD of UTC, local midnight (what
+// `startOfMonth`/"today" actually mean to the user) rolls back to the previous day once converted,
+// so an `<input type="date">` bound to that string silently shows the wrong default day. A real bug
+// caught live (this session's own browser walkthrough, timezone UTC+something showed "07/31" instead
+// of "08/01" as the month-start default) — use local date PARTS directly, never `.toISOString()`, to
+// build a `yyyy-MM-dd` value from a local `Date`.
 function toDateInputValue(date: Date): string {
-  return date.toISOString().substring(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -71,7 +81,7 @@ export class BusinessTransactionsComponent {
           .subscribe({
             next: (blob) => {
               this.isExporting.set(false);
-              this.downloadBlob(blob, `Transactions_${value.from}_${value.to}.xlsx`);
+              downloadBlob(blob, `Transactions_${value.from}_${value.to}.xlsx`);
             },
             error: () => {
               this.isExporting.set(false);
@@ -84,14 +94,5 @@ export class BusinessTransactionsComponent {
         this.toaster.error('::BusinessPanel:Transactions:ExportErrorMessage');
       },
     });
-  }
-
-  private downloadBlob(blob: Blob, fileName: string): void {
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = fileName;
-    anchor.click();
-    URL.revokeObjectURL(url);
   }
 }

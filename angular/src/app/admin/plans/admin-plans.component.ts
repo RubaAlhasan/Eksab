@@ -35,6 +35,26 @@ interface ParsedFeatureLimits {
   pushNotifications: boolean;
 }
 
+/** `FeatureLimitsJson` is a Dictionary<string,string> on the backend (see the doc comment on
+ *  `SubscriptionPlan.cs`) — `IFeatureManager.SetForTenantAsync` only accepts string values, so every
+ *  value in the JSON, known keys included, must be a JSON string ("5", "true"), never a bare number or
+ *  boolean. This parse is lenient about *reading* either shape (a plan saved before this fix may still
+ *  have raw numbers/booleans on disk) but `serializeFeatureLimits` below always writes strings. */
+function toKnownNumber(value: unknown): number | null {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function toKnownBoolean(value: unknown): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return value === 'true';
+  return false;
+}
+
 function parseFeatureLimits(json: string | undefined): { known: ParsedFeatureLimits; rest: Record<string, unknown> } {
   let raw: Record<string, unknown> = {};
   try {
@@ -44,12 +64,11 @@ function parseFeatureLimits(json: string | undefined): { known: ParsedFeatureLim
   }
 
   const known: ParsedFeatureLimits = {
-    maxBranches: typeof raw[FEATURE_KEYS.maxBranches] === 'number' ? (raw[FEATURE_KEYS.maxBranches] as number) : null,
-    maxActiveMembers:
-      typeof raw[FEATURE_KEYS.maxActiveMembers] === 'number' ? (raw[FEATURE_KEYS.maxActiveMembers] as number) : null,
-    maxCampaigns: typeof raw[FEATURE_KEYS.maxCampaigns] === 'number' ? (raw[FEATURE_KEYS.maxCampaigns] as number) : null,
-    smsNotifications: !!raw[FEATURE_KEYS.smsNotifications],
-    pushNotifications: !!raw[FEATURE_KEYS.pushNotifications],
+    maxBranches: toKnownNumber(raw[FEATURE_KEYS.maxBranches]),
+    maxActiveMembers: toKnownNumber(raw[FEATURE_KEYS.maxActiveMembers]),
+    maxCampaigns: toKnownNumber(raw[FEATURE_KEYS.maxCampaigns]),
+    smsNotifications: toKnownBoolean(raw[FEATURE_KEYS.smsNotifications]),
+    pushNotifications: toKnownBoolean(raw[FEATURE_KEYS.pushNotifications]),
   };
 
   // Preserve any keys this form doesn't know about (e.g. added by a future feature) rather than
@@ -64,11 +83,11 @@ function parseFeatureLimits(json: string | undefined): { known: ParsedFeatureLim
 
 function serializeFeatureLimits(known: ParsedFeatureLimits, rest: Record<string, unknown>): string {
   const merged: Record<string, unknown> = { ...rest };
-  if (known.maxBranches !== null) merged[FEATURE_KEYS.maxBranches] = known.maxBranches;
-  if (known.maxActiveMembers !== null) merged[FEATURE_KEYS.maxActiveMembers] = known.maxActiveMembers;
-  if (known.maxCampaigns !== null) merged[FEATURE_KEYS.maxCampaigns] = known.maxCampaigns;
-  merged[FEATURE_KEYS.smsNotifications] = known.smsNotifications;
-  merged[FEATURE_KEYS.pushNotifications] = known.pushNotifications;
+  if (known.maxBranches !== null) merged[FEATURE_KEYS.maxBranches] = String(known.maxBranches);
+  if (known.maxActiveMembers !== null) merged[FEATURE_KEYS.maxActiveMembers] = String(known.maxActiveMembers);
+  if (known.maxCampaigns !== null) merged[FEATURE_KEYS.maxCampaigns] = String(known.maxCampaigns);
+  merged[FEATURE_KEYS.smsNotifications] = String(known.smsNotifications);
+  merged[FEATURE_KEYS.pushNotifications] = String(known.pushNotifications);
   return JSON.stringify(merged);
 }
 

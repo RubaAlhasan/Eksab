@@ -1,0 +1,97 @@
+<app-page-header
+  [title]="'::AdminPanel:AuditLogs:Title' | abpLocalization"
+  [subtitle]="'::AdminPanel:AuditLogs:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Admin Portal', link: '/admin/dashboard' }, { label: ('::AdminPanel:AuditLogs:Title' | abpLocalization) }]"
+>
+</app-page-header>
+
+<div class="card mb-4">
+  <div class="card-body d-flex flex-wrap gap-3 align-items-center">
+    <div class="eks-filter-search">
+      <app-search-input
+        [placeholder]="'::AdminPanel:AuditLogs:SearchPlaceholder' | abpLocalization"
+        (valueChange)="onUserNameInput($event)"
+      >
+      </app-search-input>
+    </div>
+    <input type="date" class="form-control eks-filter-select" (change)="onDateChange($event)" />
+    <div class="form-check">
+      <input id="hasExceptionOnly" type="checkbox" class="form-check-input" [checked]="hasExceptionOnly()" (change)="toggleHasExceptionOnly()" />
+      <label class="form-check-label small" for="hasExceptionOnly">{{ '::AdminPanel:AuditLogs:ExceptionsOnly' | abpLocalization }}</label>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{{ '::AdminPanel:AuditLogs:ColumnActor' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:AuditLogs:ColumnRequest' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:AuditLogs:ColumnStatus' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:AuditLogs:ColumnDuration' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:AuditLogs:ColumnTimestamp' | abpLocalization }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (isLoading()) {
+          <tr>
+            <td colspan="5">
+              <app-loading-spinner [label]="'::AdminPanel:AuditLogs:Loading' | abpLocalization"></app-loading-spinner>
+            </td>
+          </tr>
+        } @else if (loadFailed()) {
+          <tr>
+            <td colspan="5">
+              <app-error-state
+                [message]="'::AdminPanel:AuditLogs:LoadErrorMessage' | abpLocalization"
+                [retryLabel]="'::AdminPanel:AuditLogs:TryAgain' | abpLocalization"
+                (retry)="retry()"
+              >
+              </app-error-state>
+            </td>
+          </tr>
+        } @else if (logs().length === 0) {
+          <tr>
+            <td colspan="5">
+              <app-empty-state icon="fa-list-check" [title]="'::AdminPanel:AuditLogs:EmptyTitle' | abpLocalization"></app-empty-state>
+            </td>
+          </tr>
+        } @else {
+          @for (log of logs(); track log.id) {
+            <tr>
+              <td class="fw-semibold">
+                @if (log.userName; as name) {
+                  {{ name }}
+                } @else {
+                  <span class="text-muted fst-italic">{{ '::AdminPanel:AuditLogs:SystemActor' | abpLocalization }}</span>
+                }
+              </td>
+              <td class="text-muted small">
+                <span class="fw-semibold text-body">{{ log.httpMethod }}</span> {{ log.url }}
+              </td>
+              <td>
+                @if (log.httpStatusCode) {
+                  <app-status-badge [label]="log.httpStatusCode + ''" [variant]="statusVariant(log.httpStatusCode)"></app-status-badge>
+                } @else {
+                  —
+                }
+                @if (log.hasException) {
+                  <app-status-badge [label]="'::AdminPanel:AuditLogs:HasException' | abpLocalization" variant="danger"></app-status-badge>
+                }
+              </td>
+              <td class="text-muted">{{ log.executionDuration }} {{ '::AdminPanel:AuditLogs:MsAbbrev' | abpLocalization }}</td>
+              <td class="text-muted">{{ log.executionTime | date: 'medium' }}</td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (!isLoading() && !loadFailed()) {
+    <div class="card-footer">
+      <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)"></app-pagination>
+    </div>
+  }
+</div>

@@ -14,6 +14,7 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { StatusBadgeComponent, StatusBadgeVariant } from '../../shared/components/status-badge/status-badge.component';
+import { downloadBlob } from '../../shared/utils/download-blob';
 
 /**
  * Business Portal > Coupons — mirrors prototype/business/coupons.html's audit trail, built against
@@ -47,9 +48,11 @@ import { StatusBadgeComponent, StatusBadgeVariant } from '../../shared/component
  *   (`GetDownloadTokenAsync()` then `GetListAsExcelFileAsync()`, `[AllowAnonymous]` on the file-stream
  *   endpoint itself since the token is the real auth check, same shape as every other Excel export in
  *   this app) — the FIRST real blob-download implemented in this Angular app this session; downloaded
- *   directly via a `Blob`/`ObjectURL` anchor click, no server-side "generated report" persistence
- *   (unlike the prototype's own fake "Recent Exports" history table on `reports.html`, deliberately
- *   not replicated here — there's nothing to list, each export is generated fresh on demand).
+ *   via `shared/utils/download-blob.ts`'s `downloadBlob()` (`Blob`/`ObjectURL` anchor click, extracted
+ *   there once `business-transactions.component.ts` needed the identical logic), no server-side
+ *   "generated report" persistence (unlike the prototype's own fake "Recent Exports" history table on
+ *   `reports.html`, deliberately not replicated here — there's nothing to list, each export is
+ *   generated fresh on demand).
  */
 @Component({
   selector: 'app-business-coupons',
@@ -92,7 +95,7 @@ export class BusinessCouponsComponent implements OnInit {
   private readonly employeeEmailByUserId = signal<Map<string, string>>(new Map());
   private readonly memberNameByMembershipId = signal<Map<string, string>>(new Map());
 
-  protected readonly canExport = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Rewards.Default'));
+  protected readonly canExport = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Rewards'));
   protected readonly isExporting = signal(false);
 
   ngOnInit(): void {
@@ -183,7 +186,7 @@ export class BusinessCouponsComponent implements OnInit {
           .subscribe({
             next: (blob) => {
               this.isExporting.set(false);
-              this.downloadBlob(blob, 'Coupons.xlsx');
+              downloadBlob(blob, 'Coupons.xlsx');
             },
             error: () => {
               this.isExporting.set(false);
@@ -196,15 +199,6 @@ export class BusinessCouponsComponent implements OnInit {
         this.toaster.error('::BusinessPanel:Coupons:ExportErrorMessage');
       },
     });
-  }
-
-  private downloadBlob(blob: Blob, fileName: string): void {
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = fileName;
-    anchor.click();
-    URL.revokeObjectURL(url);
   }
 
   private load(): void {

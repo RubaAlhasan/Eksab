@@ -45,9 +45,12 @@ public class EksabliPermissionDefinitionProvider : PermissionDefinitionProvider
         rewardsPermission.AddChild(EksabliPermissions.Rewards.Delete, L("Permission:Rewards.Delete"));
         rewardsPermission.AddChild(EksabliPermissions.Rewards.Redeem, L("Permission:Rewards.Redeem"));
 
+        // Billing itself has real children on BOTH sides (a tenant Owner's own subscription vs. a
+        // platform Billing Admin's cross-tenant view) — left as the default `Both` on the parent, with
+        // each child explicitly restricted to the side it actually applies to.
         var billingPermission = myGroup.AddPermission(EksabliPermissions.Billing.Default, L("Permission:Billing"));
-        billingPermission.AddChild(EksabliPermissions.Billing.ManageOwn, L("Permission:Billing.ManageOwn"));
-        billingPermission.AddChild(EksabliPermissions.Billing.ManagePlatform, L("Permission:Billing.ManagePlatform"));
+        billingPermission.AddChild(EksabliPermissions.Billing.ManageOwn, L("Permission:Billing.ManageOwn"), MultiTenancySides.Tenant);
+        billingPermission.AddChild(EksabliPermissions.Billing.ManagePlatform, L("Permission:Billing.ManagePlatform"), MultiTenancySides.Host);
 
         var campaignsPermission = myGroup.AddPermission(EksabliPermissions.Campaigns.Default, L("Permission:Campaigns"));
         campaignsPermission.AddChild(EksabliPermissions.Campaigns.Create, L("Permission:Campaigns.Create"));
@@ -75,21 +78,30 @@ public class EksabliPermissionDefinitionProvider : PermissionDefinitionProvider
         var reportsPermission = myGroup.AddPermission(EksabliPermissions.Reports.Default, L("Permission:Reports"));
         reportsPermission.AddChild(EksabliPermissions.Reports.Export, L("Permission:Reports.Export"));
 
-        var tenantsPermission = myGroup.AddPermission(EksabliPermissions.Tenants.Default, L("Permission:Tenants"));
-        tenantsPermission.AddChild(EksabliPermissions.Tenants.View, L("Permission:Tenants.View"));
-        tenantsPermission.AddChild(EksabliPermissions.Tenants.Approve, L("Permission:Tenants.Approve"));
-        tenantsPermission.AddChild(EksabliPermissions.Tenants.Suspend, L("Permission:Tenants.Suspend"));
+        // Everything from here down is Host-realm-only (platform staff, never a tenant business's own
+        // role) — explicitly restricted via MultiTenancySides.Host. Found necessary by LIVE testing
+        // this session: without this restriction, ABP's own "Grant all permissions" seeding (applied
+        // to a freshly-registered tenant's own Owner role, the exact same seeding path used for the
+        // Host "admin" role) genuinely grants these too, since nothing here previously told ABP they
+        // were Host-only — a real cross-tenant authorization gap, not just a naming convention. See
+        // NEXT_SESSION_PROMPT.md's own gotcha entry for the full writeup and the live-test evidence.
+        var tenantsPermission = myGroup.AddPermission(EksabliPermissions.Tenants.Default, L("Permission:Tenants"), MultiTenancySides.Host);
+        tenantsPermission.AddChild(EksabliPermissions.Tenants.View, L("Permission:Tenants.View"), MultiTenancySides.Host);
+        tenantsPermission.AddChild(EksabliPermissions.Tenants.Approve, L("Permission:Tenants.Approve"), MultiTenancySides.Host);
+        tenantsPermission.AddChild(EksabliPermissions.Tenants.Suspend, L("Permission:Tenants.Suspend"), MultiTenancySides.Host);
 
-        var usersPermission = myGroup.AddPermission(EksabliPermissions.Users.Default, L("Permission:Users"));
-        usersPermission.AddChild(EksabliPermissions.Users.View, L("Permission:Users.View"));
+        var usersPermission = myGroup.AddPermission(EksabliPermissions.Users.Default, L("Permission:Users"), MultiTenancySides.Host);
+        usersPermission.AddChild(EksabliPermissions.Users.View, L("Permission:Users.View"), MultiTenancySides.Host);
 
-        var categoriesPermission = myGroup.AddPermission(EksabliPermissions.Categories.Default, L("Permission:Categories"));
-        categoriesPermission.AddChild(EksabliPermissions.Categories.Create, L("Permission:Categories.Create"));
-        categoriesPermission.AddChild(EksabliPermissions.Categories.Edit, L("Permission:Categories.Edit"));
-        categoriesPermission.AddChild(EksabliPermissions.Categories.Delete, L("Permission:Categories.Delete"));
+        var categoriesPermission = myGroup.AddPermission(EksabliPermissions.Categories.Default, L("Permission:Categories"), MultiTenancySides.Host);
+        categoriesPermission.AddChild(EksabliPermissions.Categories.Create, L("Permission:Categories.Create"), MultiTenancySides.Host);
+        categoriesPermission.AddChild(EksabliPermissions.Categories.Edit, L("Permission:Categories.Edit"), MultiTenancySides.Host);
+        categoriesPermission.AddChild(EksabliPermissions.Categories.Delete, L("Permission:Categories.Delete"), MultiTenancySides.Host);
 
-        var supportTicketsPermission = myGroup.AddPermission(EksabliPermissions.SupportTickets.Default, L("Permission:SupportTickets"));
-        supportTicketsPermission.AddChild(EksabliPermissions.SupportTickets.Manage, L("Permission:SupportTickets.Manage"));
+        var supportTicketsPermission = myGroup.AddPermission(EksabliPermissions.SupportTickets.Default, L("Permission:SupportTickets"), MultiTenancySides.Host);
+        supportTicketsPermission.AddChild(EksabliPermissions.SupportTickets.Manage, L("Permission:SupportTickets.Manage"), MultiTenancySides.Host);
+
+        myGroup.AddPermission(EksabliPermissions.AuditLogs.Default, L("Permission:AuditLogs"), MultiTenancySides.Host);
         //Define your own permissions here. Example:
         //myGroup.AddPermission(EksabliPermissions.MyPermission1, L("Permission:MyPermission1"));
     }

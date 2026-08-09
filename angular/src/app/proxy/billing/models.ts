@@ -9,6 +9,7 @@ export interface AdminInvoiceFilterDto extends PagedAndSortedResultRequestDto {
 
 export interface AdminSubscriptionFilterDto extends PagedAndSortedResultRequestDto {
   status?: TenantSubscriptionStatus | null;
+  tenantId?: string | null;
 }
 
 export interface AdminSubscriptionStatsDto {

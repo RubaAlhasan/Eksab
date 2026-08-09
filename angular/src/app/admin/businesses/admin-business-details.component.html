@@ -99,19 +99,103 @@
       }
 
       @if (activeTab() === 'billing') {
-        <div class="card">
-          <div class="card-body">
-            <app-empty-state
-              icon="fa-file-invoice-dollar"
-              [title]="'::AdminPanel:Businesses:BillingUnavailableTitle' | abpLocalization"
-              [description]="'::AdminPanel:Businesses:BillingUnavailableMessage' | abpLocalization"
-            >
-              <a routerLink="/admin/subscriptions" class="btn btn-sm btn-outline-secondary">
-                {{ '::AdminPanel:Subscriptions:Title' | abpLocalization }}
-              </a>
-            </app-empty-state>
+        @if (billingLoading() && !billingLoaded()) {
+          <app-loading-spinner [label]="'::AdminPanel:Businesses:BillingLoading' | abpLocalization"></app-loading-spinner>
+        } @else if (billingFailed()) {
+          <app-error-state
+            [message]="'::AdminPanel:Businesses:BillingLoadErrorMessage' | abpLocalization"
+            [retryLabel]="'::AdminPanel:Businesses:TryAgain' | abpLocalization"
+            (retry)="retryBilling()"
+          >
+          </app-error-state>
+        } @else if (billingNoSubscription()) {
+          <app-empty-state
+            icon="fa-file-invoice-dollar"
+            [title]="'::AdminPanel:Businesses:BillingUnavailableTitle' | abpLocalization"
+            [description]="'::AdminPanel:Businesses:BillingUnavailableMessage' | abpLocalization"
+          >
+            <a routerLink="/admin/subscriptions" class="btn btn-sm btn-outline-secondary">
+              {{ '::AdminPanel:Subscriptions:Title' | abpLocalization }}
+            </a>
+          </app-empty-state>
+        } @else {
+          @if (billingSubscription(); as subscription) {
+            <div class="card mb-4">
+              <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div>
+                  <p class="fw-bold mb-1">{{ subscription.planName }} {{ '::AdminPanel:Businesses:PlanWord' | abpLocalization }}</p>
+                  <p class="text-muted small mb-0">
+                    {{ '::AdminPanel:Businesses:RenewsPrefix' | abpLocalization }} {{ subscription.renewalDate | date: 'mediumDate' }}
+                  </p>
+                </div>
+                <app-status-badge
+                  [label]="subscriptionStatusLabelKey(subscription.status) | abpLocalization"
+                  [variant]="subscriptionStatusVariant(subscription.status)"
+                >
+                </app-status-badge>
+              </div>
+            </div>
+          }
+
+          <div class="card">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>{{ '::AdminPanel:Businesses:ColumnPeriod' | abpLocalization }}</th>
+                    <th>{{ '::AdminPanel:Businesses:ColumnAmount' | abpLocalization }}</th>
+                    <th>{{ '::AdminPanel:Businesses:ColumnInvoiceStatus' | abpLocalization }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @if (invoicesLoading()) {
+                    <tr>
+                      <td colspan="3">
+                        <app-loading-spinner [label]="'::AdminPanel:Businesses:BillingLoading' | abpLocalization"></app-loading-spinner>
+                      </td>
+                    </tr>
+                  } @else if (invoicesFailed()) {
+                    <tr>
+                      <td colspan="3">
+                        <app-error-state
+                          [message]="'::AdminPanel:Businesses:BillingLoadErrorMessage' | abpLocalization"
+                          [retryLabel]="'::AdminPanel:Businesses:TryAgain' | abpLocalization"
+                          (retry)="retryBilling()"
+                        >
+                        </app-error-state>
+                      </td>
+                    </tr>
+                  } @else if (invoices().length === 0) {
+                    <tr>
+                      <td colspan="3">
+                        <app-empty-state icon="fa-receipt" [title]="'::AdminPanel:Businesses:InvoicesEmptyTitle' | abpLocalization"></app-empty-state>
+                      </td>
+                    </tr>
+                  } @else {
+                    @for (invoice of invoices(); track invoice.id) {
+                      <tr>
+                        <td class="fw-semibold">{{ invoice.dueDate | date: 'MMMM y' }}</td>
+                        <td>{{ invoice.amount | number: '1.0-2' }}</td>
+                        <td>
+                          <app-status-badge
+                            [label]="invoiceStatusLabelKey(invoice.status) | abpLocalization"
+                            [variant]="invoiceStatusVariant(invoice.status)"
+                          >
+                          </app-status-badge>
+                        </td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
+            @if (!invoicesLoading() && !invoicesFailed()) {
+              <div class="card-footer">
+                <app-pagination [pageIndex]="invoicesPageIndex()" [totalPages]="invoicesTotalPages()" (pageChange)="goToInvoicesPage($event)"></app-pagination>
+              </div>
+            }
           </div>
-        </div>
+        }
       }
 
       @if (activeTab() === 'tickets') {

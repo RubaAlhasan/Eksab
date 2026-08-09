@@ -139,6 +139,16 @@ export const APP_ROUTES: Routes = [
         // fall back to — same shape as Subscriptions above, not Tenants.View.
         data: { requiredPolicy: 'Eksabli.SupportTickets.Manage' },
       },
+      {
+        path: 'audit-logs',
+        loadComponent: () =>
+          import('./admin/audit-logs/admin-audit-logs.component').then(c => c.AdminAuditLogsComponent),
+        canActivate: [permissionGuard],
+        // AuditLogsController's whole class is gated on Eksabli.AuditLogs (no child permissions —
+        // a single view-only capability, see EksabliPermissions.AuditLogs's own comment for why this
+        // required a hand-written app service instead of a commercial ABP module).
+        data: { requiredPolicy: 'Eksabli.AuditLogs' },
+      },
       // Stock ABP UI (Users/Roles/My Profile/Settings), nested here — not just linked at their
       // existing top-level '/identity', '/account', '/setting-management' paths below — so they
       // render inside AdminLayoutComponent's own shell instead of Lepton-X's stock SideMenu chrome.
@@ -199,14 +209,14 @@ export const APP_ROUTES: Routes = [
         canActivate: [permissionGuard],
         // Whole `ReportsController` (view included) is gated on `Eksabli.Reports.Default`, no lesser
         // read to fall back to.
-        data: { requiredPolicy: 'Eksabli.Reports.Default' },
+        data: { requiredPolicy: 'Eksabli.Reports' },
       },
       {
         path: 'analytics',
         loadComponent: () =>
           import('./business/analytics/business-analytics.component').then(c => c.BusinessAnalyticsComponent),
         canActivate: [permissionGuard],
-        data: { requiredPolicy: 'Eksabli.Reports.Default' },
+        data: { requiredPolicy: 'Eksabli.Reports' },
       },
       {
         path: 'customers',
@@ -220,14 +230,14 @@ export const APP_ROUTES: Routes = [
         loadComponent: () =>
           import('./business/employees/business-employees.component').then(c => c.BusinessEmployeesComponent),
         canActivate: [permissionGuard],
-        data: { requiredPolicy: 'Eksabli.EmployeeAssignments.Default' },
+        data: { requiredPolicy: 'Eksabli.EmployeeAssignments' },
       },
       {
         path: 'branches',
         loadComponent: () =>
           import('./business/branches/business-branches.component').then(c => c.BusinessBranchesComponent),
         canActivate: [permissionGuard],
-        data: { requiredPolicy: 'Eksabli.Branches.Default' },
+        data: { requiredPolicy: 'Eksabli.Branches' },
       },
       {
         // No `permissionGuard`/`requiredPolicy` — deliberately. `PosController` (the Award Points tab)
@@ -245,7 +255,7 @@ export const APP_ROUTES: Routes = [
         loadComponent: () =>
           import('./business/rewards/business-rewards.component').then(c => c.BusinessRewardsComponent),
         canActivate: [permissionGuard],
-        data: { requiredPolicy: 'Eksabli.Rewards.Default' },
+        data: { requiredPolicy: 'Eksabli.Rewards' },
       },
       {
         // CouponAuditController is gated on the same Eksabli.Rewards.Default permission as Rewards
@@ -254,14 +264,14 @@ export const APP_ROUTES: Routes = [
         loadComponent: () =>
           import('./business/coupons/business-coupons.component').then(c => c.BusinessCouponsComponent),
         canActivate: [permissionGuard],
-        data: { requiredPolicy: 'Eksabli.Rewards.Default' },
+        data: { requiredPolicy: 'Eksabli.Rewards' },
       },
       {
         path: 'campaigns',
         loadComponent: () =>
           import('./business/campaigns/business-campaigns.component').then(c => c.BusinessCampaignsComponent),
         canActivate: [permissionGuard],
-        data: { requiredPolicy: 'Eksabli.Campaigns.Default' },
+        data: { requiredPolicy: 'Eksabli.Campaigns' },
       },
       {
         // NotificationsController's whole class is gated on Eksabli.Notifications.Send — there is no
@@ -298,7 +308,7 @@ export const APP_ROUTES: Routes = [
         // .Default (read), UpdateProfileAsync needs .Edit — gate the route on the lesser (read)
         // permission, same "let the page load, per-action controls inside" shape as most other pages;
         // the Save button itself is hidden for a viewer without .Edit (see the component's canEdit()).
-        data: { requiredPolicy: 'Eksabli.BusinessProfile.Default' },
+        data: { requiredPolicy: 'Eksabli.BusinessProfile' },
       },
       {
         path: 'transactions',

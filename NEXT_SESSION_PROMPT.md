@@ -4,7 +4,91 @@ I'm continuing work on **Eksabli**, a bilingual (Arabic + English, RTL) loyalty 
 ABP Framework 10.5 (.NET 10) + Angular 21, PostgreSQL. Read [`CLAUDE.md`](CLAUDE.md) at the repo
 root first (real dev commands, architecture, Mapperly mapping convention, Excel-export pattern).
 Then read this whole file before doing anything — it exists so you don't repeat mistakes/rediscover
-things already settled.
+things already settled. **Read "URGENT — real cross-tenant authorization gap" (just below) AND gotcha
+#10 first, specifically.** Between them: (a) a genuinely serious backend security gap — any newly
+registered business's Owner held Host-only platform permissions (view/approve/suspend ANY tenant,
+the cross-tenant Users directory, platform Billing) — found and fixed this session via real live
+testing (a registered throwaway test tenant, not simulation), and (b) a session-spanning Angular
+permission-string bug that silently nav-hid/route-blocked most of the Business Portal for everyone,
+also fixed. Neither was ever caught by any `ng build`/`ng lint`/`dotnet test` run — both were only
+found via an actual live browser walkthrough against the running app, which this session had never
+done before this point despite building 14+ pages. **Do a live walkthrough periodically, not just
+build/test — it is the only method that has actually caught real bugs in this codebase so far.**
+
+## URGENT — real cross-tenant authorization gap found and fixed this session, requires a Host restart
+
+**What was wrong**: none of `EksabliPermissionDefinitionProvider.cs`'s Host-realm permission groups
+(Tenants, Users, Categories, SupportTickets, AuditLogs, Billing.ManagePlatform) were restricted via
+ABP's own `MultiTenancySides` mechanism. Combined with ABP's standard tenant-seeding path granting a
+brand-new tenant's own "admin" (Owner) role "all currently-defined permissions" — the EXACT SAME
+seeding path used for the Host "admin" role — this meant **every newly-registered business's Owner
+account genuinely held platform-wide permissions**: view/approve/suspend ANY tenant on the platform,
+the cross-tenant Users directory (customer/staff PII across every business), platform-wide Billing
+management, the Categories taxonomy, and Support Ticket triage for every business, not just their own.
+
+**How this was found**: registered a real, throwaway test business via a direct call to the real,
+already-existing `POST /api/app/business/register` endpint (`[AllowAnonymous]`, no Angular UI exists
+for it — see the note in "What's NOT done" about that separate gap), logged in as its Owner via a real
+browser (Playwright), and inspected the real `/api/abp/application-configuration` response's
+`auth.grantedPolicies`. `Eksabli.Tenants.View`/`.Approve`/`.Suspend`, `Eksabli.Users.View`,
+`Eksabli.Categories.Create`, `Eksabli.SupportTickets.Manage`, `Eksabli.Billing.ManagePlatform` were ALL
+`true` for a plain business Owner — confirmed by behavior too (logging in as this tenant landed on
+`/admin/dashboard`, and it rendered REAL cross-tenant data: total business count, pending approvals,
+etc. — the actual backend API call succeeded, this was not just an Angular routing quirk).
+
+**The fix**: `EksabliPermissionDefinitionProvider.cs` now passes `MultiTenancySides.Host` (or
+`.Tenant` for `Billing.ManageOwn`) as the 3rd argument to every Host-only `AddPermission`/`AddChild`
+call — the real, standard ABP mechanism for exactly this (`PermissionDefinition`/`AddChild` already
+accept an optional `multiTenancySide` parameter, default `Both`). Verified two ways:
+1. **New tests**, `EksabliPermissionDefinition_Tests` (abstract base,
+   `test/Eksabli.Application.Tests/Permissions/`) + `EfCoreEksabliPermissionDefinition_Tests` (concrete
+   subclass) — proves `IPermissionManager.SetAsync` now actively THROWS `ApplicationException` when
+   attempting to grant any of the 8 Host-only permissions inside a tenant context (a hard guard, not a
+   silent no-op — there's no code path left that could land a stale/incorrect grant in the DB), while
+   `Billing.ManageOwn` still grants normally. All 100 EF Core tests pass (91 + 9 new).
+2. Would need re-verifying live (see below) once the fix is actually deployed.
+
+**What you MUST tell the user / do next time, because this session could not finish it live**:
+the currently-running `Eksabli.HttpApi.Host` process (under the user's own Visual Studio/IIS Express,
+locked all session — same reason Audit Logs and the Billing-tab TenantId filter also couldn't be
+live-verified) is running code from BEFORE this fix. **The Host needs to be restarted** to pick up
+this fix (and the Audit Logs feature, and the Billing-tab TenantId filter) at all.
+**Separately, and just as important**: restarting alone does NOT retroactively revoke permissions
+already granted to EXISTING tenants' roles before this fix shipped — ABP's permission-grant STORE
+(the `AbpPermissionGrants` table) isn't touched by a definition-only change; the new `MultiTenancySide`
+restriction only prevents NEW grants and blocks the CHECK for permissions whose definition no longer
+permits the current side (confirmed: `PermissionManager.SetAsync` throws going forward), but a
+pre-existing row could still be sitting there for any tenant seeded before today. **After restarting,
+check the real "Cedar & Bean Coffee" tenant's Owner role via the Roles UI (`/admin/identity/roles`,
+switch to that tenant context or check via impersonation-equivalent) for the 8 affected permissions
+and manually revoke any that show granted** — the same UI used during this session's own diagnosis
+(Roles > admin role > Permissions modal). The throwaway `Claude QA Test Business` tenant created
+during this investigation was suspended (not deleted — no delete endpoint exists) via the real
+Admin Portal UI before this session ended; safe to ignore or hard-delete later if a real delete path
+is ever added.
+
+**Extended live verification (after the fix, using the same throwaway tenant before it was
+suspended)**: logged in as its Owner and visually screenshotted all 14 Business Portal pages — every
+one rendered correctly with real data/real empty states and zero API errors, including every page the
+earlier permission-string bug (gotcha #10) had broken (Branches: real quota banner "1/3", Employees:
+real seeded Owner row, Rewards/Campaigns/Coupons: real empty states, Settings: real profile form,
+Points Management: Point Rules/Tiers tabs both visible). This is strong end-to-end confirmation both
+fixes actually work together, not just in isolation.
+
+**A third, smaller real bug found during this same visual pass and already fixed**:
+`business-transactions.component.ts`'s date-range defaults used `date.toISOString().substring(0, 10)`
+to populate the "From"/"To" `<input type="date">` fields — `.toISOString()` converts to UTC first, so
+for any timezone AHEAD of UTC (confirmed live: this environment's browser showed "07/31" instead of
+"08/01" as the month-start default), local midnight rolls back to the previous day once converted,
+silently showing the WRONG default date to the user. Fixed by building the `yyyy-MM-dd` string from
+local `Date` parts (`getFullYear`/`getMonth`/`getDate`) instead of `.toISOString()` — verified live,
+now correctly shows "2026-08-01". Audited every other `.toISOString()` call in the Angular app: the
+rest either operate on date-ONLY strings (parsed as UTC already, `.toISOString()` is a no-op, safe) or
+deliberately convert a chosen LOCAL day-boundary to its UTC instant for a backend range filter
+(correct, intentional). The Dashboard/Analytics/Notifications report-window calls
+(`new Date(y, m-N, 1).toISOString()`) have the same theoretical few-hours-of-imprecision at their
+window edges, but it's inconsequential there (day/month-bucketed aggregates, not a displayed default
+value) — not fixed, noted here only so it isn't rediscovered as a surprise.
 
 **Backend status: essentially done, but not immutable.** Features 01-08 (identity/multi-tenancy,
 businesses, loyalty engine, billing/subscriptions, categories, support tickets, etc.) were fully
@@ -53,8 +137,10 @@ explicitly requested once; two portals with real realm detection is where it cur
 new tenant-realm-staff page under `/business/*` (own real permission, child of `businessRealmGuard`),
 any new Host-realm page under `/admin/*` (child of `adminGuard`).
 
-Admin Portal MVP scope is fully built (Dashboard + Users, both from earlier this session, see "What's
-NOT done" below for the few remaining backend-blocked items). Business Portal has Dashboard +
+Admin Portal MVP scope is fully built (Dashboard + Users + Audit Logs, all from this/earlier this
+session — Audit Logs shipped via a hand-written app service over ABP's OSS `IAuditLogRepository`
+after the packaged ABP Commercial UI turned out not to be available on nuget.org, see "What's NOT
+done" below for the one remaining backend-blocked item, full Payments). Business Portal has Dashboard +
 Analytics + Customers + Employees + Branches + Points Management + Rewards + Coupons + Campaigns +
 Notifications + Subscription + Billing + Settings + Transactions so far — see their own section below.
 **Points Management (`business/points/`) is architecturally different from every other page**: its
@@ -378,6 +464,34 @@ everything as modified/untracked working-tree changes. Review before committing.
    returned item is simply ignored). **Always use `1`, never `0`, for a filtered-count-only call** —
    grep `maxResultCount:\s*0` before shipping any new stat tile that reuses this "count via a filtered
    list call" pattern.
+10. **THE BIG ONE — a C# permission constant named `.Default` does NOT mean the string `".Default"`
+    is part of the actual permission name.** `EksabliPermissions.Branches.Default` is a C# *field*
+    named "Default" whose *value* is the plain string `"Eksabli.Branches"` (`GroupName + ".Branches"`
+    — no trailing `.Default` in the string itself; "Default" is only ever a C# identifier, chosen to
+    read naturally as `EksabliPermissions.Branches.Default` in `[Authorize(...)]` attributes). Found
+    this session, purely by manual audit (NOT caught by `ng build`, `ng lint`, or any `dotnet test` —
+    it's a pure runtime string-lookup mismatch, invisible to every verification method used up to that
+    point): **every Angular `requiredPolicy`/`permission`/`getGrantedPolicy(...)` call that had been
+    typed as the literal string `'Eksabli.<Group>.Default'` was silently, permanently broken** —
+    `PermissionService.getPolicy` (`@abp/ng.core`) is `grantedPolicies[key] || false`, a plain exact
+    dictionary lookup with NO hierarchy/prefix fallback (confirmed by reading the compiled
+    `abp-ng.core.mjs` directly), so a nonexistent key always resolves to `false` for every user,
+    admin included. This silently hid nav items AND blocked route access (`permissionGuard` redirects
+    away) for: Business Dashboard, Analytics, Employees, Branches, Rewards, Coupons, Campaigns,
+    Settings, and the Points page's Rules/Tiers tabs — i.e. most of the Business Portal, for the
+    entire session, until this audit caught it. Fixed by stripping the spurious `.Default` suffix
+    everywhere it was wrong (`app.routes.ts`, `route.provider.ts`, `business-layout.component.ts`,
+    `business-coupons.component.ts`, `business-points.component.ts` — 27 literal-string occurrences
+    across 5 files). **The fix rule**: only append a suffix to a group's base permission string
+    (`'Eksabli.<Group>'`) when the C# side defines a REAL child constant for it (e.g. `.Create`,
+    `.Edit`, `.Delete`, `.View`, `.Send`, `.Export`, `.Manage`, `.ManageOwn`, `.ManagePlatform`,
+    `.Approve`, `.Suspend`, `.Activate` — all real, all fine as used). If the C# constant you're
+    mirroring is itself literally named `.Default`, the correct Angular string is the BARE group name
+    with no suffix at all (`'Eksabli.Branches'`, not `'Eksabli.Branches.Default'`) — check
+    `EksabliPermissions.cs` directly for the real string value, never infer it from the C# accessor
+    path. **Before trusting any NEW permission-gated page's nav visibility or route access, verify the
+    exact Angular string against this file** — this class of bug will never surface in a build or
+    lint pass, and this session had zero live-browser E2E clicks to catch it interactively either.
 
 ## Business Portal — Customers + Employees
 
@@ -774,6 +888,19 @@ risking a regression in either shell for what's still just two pages.
 
 ## What's NOT done — pick up here, in this order
 
+**No Angular UI exists anywhere for business self-registration.** Found while investigating the
+cross-tenant authorization gap above: `IBusinessAppService.RegisterAsync`
+(`POST /api/app/business/register`, `[AllowAnonymous]`) is a real, complete, working backend endpoint
+(creates the tenant, BusinessProfile, first Branch, Owner user, and trial subscription all in one
+call) — but there is no Angular route/page/form anywhere that calls it. The landing page's "Start free
+trial" buttons don't navigate anywhere real (confirmed by clicking them live); the only reachable
+"Register" link goes to ABP's own STOCK Host-realm `/Account/Register` (a plain Identity user
+signup, not a business/tenant signup — a completely different flow). A real signup page (business
+name, branch, owner email/password, category, etc. — matching `RegisterBusinessDto`'s real fields) is
+a genuine, sizeable, unbuilt feature — not attempted this session since it wasn't the ask, but worth
+flagging clearly since without it, there's currently no way for a real prospective customer to sign
+up through the actual product.
+
 **Dashboard (`admin/dashboard/`) is now built** — was the last Admin Portal MVP page on the original
 plan, mirrors `prototype/admin/dashboard.html`, mounted at `/admin/dashboard` with a bare `/admin` ->
 `dashboard` redirect (so `redirectAuthenticatedToHomeGuard`'s existing `/admin` destination for
@@ -803,10 +930,80 @@ permission exists). Built **entirely from existing endpoints — no backend chan
 Per the backend-readiness doc's Angular Implementation Order and the user's stated MVP scope, **for
 the Admin Portal**, what's left:
 
-1. **Backend-blocked, do not build yet**: Audit Logs (no `AbpAuditLogging` HttpApi module
-   reference exists), full Payments (only the manual-record-payment flow Subscriptions already has
-   exists), Business Details' Billing tab (needs `AdminSubscriptionFilterDto.TenantId`) — revisit
-   only once/if the corresponding backend work lands.
+1. **Backend-blocked, do not build yet**: full Payments (real payment-gateway integration — needs
+   external credentials/infra, a business decision not an engineering one) — revisit only once/if
+   asked for directly.
+   **Audit Logs is NO LONGER on this list — it shipped this session, via a real OSS alternative,
+   not ABP Commercial.** First confirmed the ORIGINAL plan (add
+   `Volo.Abp.AuditLogging.Application.Contracts`/`.Application`/`.HttpApi` NuGet packages, mirroring
+   the exact pattern already used for Identity/TenantManagement/SettingManagement) is a hard dead end:
+   **all three package IDs return zero hits on nuget.org, prerelease included** (confirmed via the
+   NuGet Search API directly, not just a failed local restore) — the free/OSS `Volo.Abp.AuditLogging`
+   package family only ships Domain/Domain.Shared/EntityFrameworkCore/MongoDB/Installer/SourceCode; the
+   queryable Application/HttpApi/Angular UI layer every other admin-identity page reuses is exclusively
+   part of ABP Commercial (paid, a different NuGet feed this repo has no license/source for). Those
+   package-reference edits were tried, failed, and FULLY REVERTED before moving on (`git diff` on all 6
+   touched files came back empty, confirmed clean).
+   **What shipped instead**: a small, hand-written `IAdminAuditLogAppService`
+   (`src/Eksabli.Application.Contracts/AuditLogs/`, `src/Eksabli.Application/AuditLogs/
+   AdminAuditLogAppService.cs`) built directly over ABP's own OSS `IAuditLogRepository`
+   (`Volo.Abp.AuditLogging.Domain`, already referenced by `Eksabli.Domain`/transitively available to
+   `Eksabli.Application`) — real recorded audit-log data, no commercial dependency, no fabrication.
+   `AuditLogsController` (`api/app/audit-log`, `Eksabli.AuditLogs` permission — new group, added to
+   `EksabliPermissions.cs`/`EksabliPermissionDefinitionProvider.cs`). Two real gotchas hit and fixed
+   while building this (both left as inline code comments): (1) ABP's `IsNullOrWhiteSpace()` string
+   extension lives in the **`System`** namespace, not `Volo.Abp` — a bare `using System;` is required;
+   (2) `IAuditLogRepository`'s own `httpStatusCode` filter parameter is typed `System.Net
+   .HttpStatusCode?`, NOT `int?`, even though the `AuditLog` entity's own `HttpStatusCode` property
+   (and this app's own DTO) are plain `int?` — convert only at that one call boundary, don't propagate
+   the BCL enum type further. `AuditLog` also implements `IMultiTenant` (confirmed by reflection), so
+   `GetListAsync` disables that filter via `IDataFilter` (same "cross-tenant Host view" pattern
+   `AdminSubscriptionAppService` already uses) — without that, a platform admin would only see Host
+   (null-tenant) requests. New tests: `AdminAuditLogAppService_Tests` (abstract base,
+   `test/Eksabli.Application.Tests/AuditLogs/`) + `EfCoreAdminAuditLogAppService_Tests` (concrete
+   subclass, `test/Eksabli.EntityFrameworkCore.Tests/...`) — records real audit logs via ABP's own
+   `IAuditingStore.SaveAsync` (the exact same call path ABP's own request-auditing interceptor uses)
+   and reads them back through the new app service, verifying the full real write→read round trip
+   including `UserName`/`HasException` filters. All 91 EF Core tests pass (88 before + 3 new).
+   Angular: `admin/audit-logs/` (mirrors the INTENT, not the literal shape, of
+   `prototype/admin/audit-logs.html` — that prototype's "Actor/Action/Target" columns assume a
+   domain-event log; ABP's real `AuditLog` is an HTTP REQUEST log, so the real columns are
+   Actor/Method+URL/Status/Duration/Exception instead, with real filters for user search, a single-day
+   date range, and a HasException toggle). Proxy files hand-authored (`proxy/audit-logs/`,
+   `proxy/controllers/audit-logs.service.ts`) since this is a brand-new endpoint I fully control the
+   shape of — not a manual-mirror-of-existing-codegen situation like the Billing tab bullet below.
+   Route/nav wired under Admin Portal's "Operations" group next to Support Tickets. Build and lint
+   clean, both locale files updated and JSON-valid.
+   **Follow-up done, not just flagged**: ran `Eksabli.DbMigrator` for real against the actual dev
+   Postgres database this same session (`dotnet Eksabli.DbMigrator.dll` from inside its own
+   `bin/Debug/net10.0` output dir — running it via `dotnet run --project src/Eksabli.DbMigrator` from
+   the repo root failed with an empty-connection-string error, a working-directory/config-resolution
+   artifact of that invocation shape, NOT a real code bug; cd into the build output first if this ever
+   recurs). Output: "Successfully completed host database migrations" + "Successfully completed
+   Cedar & Bean Coffee tenant database migrations" — no pending schema changes were needed (confirms
+   Audit Logs required zero migrations, as expected — it only reads an already-existing table), and the
+   host database seed re-ran, which grants `Eksabli.AuditLogs` (and anything else newly-defined) to the
+   seeded Host admin role via ABP's own idempotent seeder. This also incidentally verified the whole
+   feature end-to-end against the REAL Postgres database, not just the SQLite-backed test suite.
+   **Business Details' Billing tab is no longer on this list either — it shipped earlier this
+   session.** A small,
+   justified backend change (matching the earlier `MembershipAppService.GetMembersAsync` precedent):
+   added `AdminSubscriptionFilterDto.TenantId`, threaded through
+   `AdminSubscriptionAppService.GetListAsync` → `ITenantSubscriptionRepository.GetListAsync` →
+   `EfCoreTenantSubscriptionRepository.ApplyFilter`. New test
+   `AdminSubscriptionAppService_Tests.Should_Filter_By_TenantId` (run via the EF Core-backed concrete
+   subclass, `EfCoreAdminSubscriptionAppService_Tests` — the abstract generic base has no direct test
+   runner, don't `dotnet test --filter` it directly, target `Eksabli.EntityFrameworkCore.Tests`
+   instead). All 88 EF Core tests pass. The Angular proxy (`proxy/billing/models.ts`,
+   `proxy/controllers/admin-subscriptions.service.ts`) was updated MANUALLY (added `tenantId` to the
+   filter interface + query params) rather than via `abp generate-proxy -t ng`, because the real
+   HttpApi.Host was actively running under the user's own Visual Studio/IIS Express session at the
+   time (confirmed via a `dotnet build` DLL-lock error) and re-running codegen against it wasn't safe
+   to attempt mid-session. The manual edit mirrors ABP's own deterministic output format exactly, but
+   if anything about `AdminSubscriptionFilterDto`'s shape ever looks off, regenerate for real via
+   `abp generate-proxy -t ng` next time the host is available to confirm/refresh it canonically. The
+   Business Details Billing tab now shows real Plan/Status/Renewal + a real paged Invoice History,
+   scoped to exactly one tenant's subscription — no more platform-wide fetch-and-filter workaround.
 2. Re-check the implementation plan's Angular Implementation Order table for anything else still
    marked MVP that this file hasn't tracked — with Dashboard shipped, every page in the user's
    originally stated MVP scope should now be built; Users (`admin/users/`) was also added this session
@@ -830,9 +1027,23 @@ elsewhere. **This closes out the Business Portal's prototype-page checklist** �
 this one real feature folded into an existing page; any further Business Portal work now means either
 (a) revisiting something explicitly marked `[MISSING BACKEND CAPABILITY]` above once/if the backend
 gains the capability, or (b) building real backend-first features that have no prototype page at all
-yet. A reusable `downloadBlob()`-style helper is overdue for extraction into `shared/` — TWO identical
-copies exist (`business-coupons.component.ts`, `business-transactions.component.ts`), past the
-"extract on second use" threshold this file used to note as a future trigger.
+yet. `downloadBlob()` has since been extracted to `shared/utils/download-blob.ts` (a plain function,
+not a component — first non-component file under `shared/`) and both `business-coupons.component.ts`/
+`business-transactions.component.ts` now import it instead of each keeping an inline copy; reuse that
+helper for any future file-download page rather than re-inlining it again.
+
+**Gotcha #10 — `FeatureLimitsJson` values must be JSON STRINGS, not raw numbers/booleans.**
+`IFeatureManager.SetForTenantAsync` (the real backend consumer, in `BillingAppService
+.PushPlanFeaturesAsync`/`BusinessAppService.ProvisionTrialSubscriptionAsync`) only accepts
+`Dictionary<string,string>` — every value, including `Eksabli.MaxBranches`/`MaxCampaigns`/etc., must
+serialize as `"5"`/`"true"`, never a bare JSON `5`/`true`. `admin-plans.component.ts`'s
+`serializeFeatureLimits` already wrote strings correctly, but `business-subscription.component.ts`'s
+first-cut `parseFeatureLimit`/`parseFeatureToggle` only checked `typeof value === 'number'`/
+`'boolean'` and silently returned `null`/`false` for the real string-shaped data — a real bug, fixed
+mid-session (both parsers now accept either shape, tolerant of legacy raw-typed data, but always favor
+reading the string form since that's what every plan actually has on disk). If you add a third
+FeatureLimitsJson reader anywhere, use the string-tolerant parsing shape from either of these two
+files, not the original number/boolean-only version.
 **`prototype/business/reports.html` was checked and found to be a weak next-candidate** — unlike
 `analytics.html` (built this session), its "Generate report as CSV/PDF" buttons and "Recent Exports"
 history table have no real backend behind them (`ReportsAppService`'s only true report-generation

@@ -56,23 +56,23 @@ export class BusinessLayoutComponent {
   /** Only real, already-built pages — no placeholder/disabled entries (same rule as Admin Portal's
    *  own `ADMIN_NAV`). Add each new page's entry here the same turn it's build-verified. */
   private static readonly NAV: BusinessNavItem[] = [
-    { labelKey: '::BusinessPanel:Layout:NavDashboard', icon: 'fa-gauge-high', link: '/business/dashboard', permission: 'Eksabli.Reports.Default' },
-    { labelKey: '::BusinessPanel:Layout:NavAnalytics', icon: 'fa-chart-line', link: '/business/analytics', permission: 'Eksabli.Reports.Default' },
+    { labelKey: '::BusinessPanel:Layout:NavDashboard', icon: 'fa-gauge-high', link: '/business/dashboard', permission: 'Eksabli.Reports' },
+    { labelKey: '::BusinessPanel:Layout:NavAnalytics', icon: 'fa-chart-line', link: '/business/analytics', permission: 'Eksabli.Reports' },
     { labelKey: '::BusinessPanel:Layout:NavCustomers', icon: 'fa-users', link: '/business/customers', permission: 'Eksabli.Memberships.View' },
-    { labelKey: '::BusinessPanel:Layout:NavEmployees', icon: 'fa-user-tie', link: '/business/employees', permission: 'Eksabli.EmployeeAssignments.Default' },
-    { labelKey: '::BusinessPanel:Layout:NavBranches', icon: 'fa-building', link: '/business/branches', permission: 'Eksabli.Branches.Default' },
+    { labelKey: '::BusinessPanel:Layout:NavEmployees', icon: 'fa-user-tie', link: '/business/employees', permission: 'Eksabli.EmployeeAssignments' },
+    { labelKey: '::BusinessPanel:Layout:NavBranches', icon: 'fa-building', link: '/business/branches', permission: 'Eksabli.Branches' },
     // Empty permission = always granted (PermissionService.getGrantedPolicy's own "no key" shape,
     // same convention as AdminLayoutComponent's `AbpAccount::MyAccount` entry) — PosController has no
     // ABP permission at all; see business-points.component.ts's file comment for why.
     { labelKey: '::BusinessPanel:Layout:NavPoints', icon: 'fa-qrcode', link: '/business/points', permission: '' },
-    { labelKey: '::BusinessPanel:Layout:NavRewards', icon: 'fa-gift', link: '/business/rewards', permission: 'Eksabli.Rewards.Default' },
-    { labelKey: '::BusinessPanel:Layout:NavCoupons', icon: 'fa-ticket', link: '/business/coupons', permission: 'Eksabli.Rewards.Default' },
-    { labelKey: '::BusinessPanel:Layout:NavCampaigns', icon: 'fa-bullhorn', link: '/business/campaigns', permission: 'Eksabli.Campaigns.Default' },
+    { labelKey: '::BusinessPanel:Layout:NavRewards', icon: 'fa-gift', link: '/business/rewards', permission: 'Eksabli.Rewards' },
+    { labelKey: '::BusinessPanel:Layout:NavCoupons', icon: 'fa-ticket', link: '/business/coupons', permission: 'Eksabli.Rewards' },
+    { labelKey: '::BusinessPanel:Layout:NavCampaigns', icon: 'fa-bullhorn', link: '/business/campaigns', permission: 'Eksabli.Campaigns' },
     { labelKey: '::BusinessPanel:Layout:NavNotifications', icon: 'fa-bell', link: '/business/notifications', permission: 'Eksabli.Notifications.Send' },
     { labelKey: '::BusinessPanel:Layout:NavSubscription', icon: 'fa-credit-card', link: '/business/subscription', permission: 'Eksabli.Billing.ManageOwn' },
     { labelKey: '::BusinessPanel:Layout:NavBilling', icon: 'fa-receipt', link: '/business/billing', permission: 'Eksabli.Billing.ManageOwn' },
     { labelKey: '::BusinessPanel:Layout:NavTransactions', icon: 'fa-file-invoice-dollar', link: '/business/transactions', permission: 'Eksabli.Reports.Export' },
-    { labelKey: '::BusinessPanel:Layout:NavSettings', icon: 'fa-gear', link: '/business/settings', permission: 'Eksabli.BusinessProfile.Default' },
+    { labelKey: '::BusinessPanel:Layout:NavSettings', icon: 'fa-gear', link: '/business/settings', permission: 'Eksabli.BusinessProfile' },
   ];
 
   protected readonly navItems = computed<BusinessNavItem[]>(() =>

@@ -103,6 +103,12 @@ const ADMIN_NAV: AdminNavGroup[] = [
         link: '/admin/support-tickets',
         permission: 'Eksabli.SupportTickets.Manage',
       },
+      {
+        labelKey: '::AdminPanel:AuditLogs:Title',
+        icon: 'fa-list-check',
+        link: '/admin/audit-logs',
+        permission: 'Eksabli.AuditLogs',
+      },
     ],
   },
   {

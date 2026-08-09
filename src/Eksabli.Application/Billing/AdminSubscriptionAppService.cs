@@ -40,6 +40,7 @@ public class AdminSubscriptionAppService : ApplicationService, IAdminSubscriptio
         {
             var (subscriptions, totalCount) = await _subscriptionRepository.GetListAsync(
                 status: input.Status,
+                tenantId: input.TenantId,
                 sorting: input.Sorting,
                 skipCount: input.SkipCount,
                 maxResultCount: input.MaxResultCount);

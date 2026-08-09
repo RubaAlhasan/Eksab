@@ -24,7 +24,7 @@ export class AdminSubscriptionsService {
     this.restService.request<any, PagedResultDto<TenantSubscriptionDto>>({
       method: 'GET',
       url: '/api/app/admin-subscriptions',
-      params: { status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { status: input.status, tenantId: input.tenantId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   

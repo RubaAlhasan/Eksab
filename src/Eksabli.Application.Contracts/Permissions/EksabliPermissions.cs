@@ -153,6 +153,16 @@ public static class EksabliPermissions
         public const string Manage = Default + ".Manage";
     }
 
+    // Platform-wide request audit trail (ABP's own IAuditLogRepository, already recording every
+    // request via the OSS Volo.Abp.AuditLogging.Domain/EntityFrameworkCore modules — only the
+    // browsable UI layer was missing; that's a paid ABP Commercial feature, so this is a small
+    // hand-written query surface over the same real data instead). Host-realm only, same class of
+    // sensitive cross-tenant visibility as Users.View.
+    public static class AuditLogs
+    {
+        public const string Default = GroupName + ".AuditLogs";
+    }
+
     //Add your own permission names. Example:
     //public const string MyPermission1 = GroupName + ".MyPermission1";
 }

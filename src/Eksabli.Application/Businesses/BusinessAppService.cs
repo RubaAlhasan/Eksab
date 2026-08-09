@@ -124,7 +124,7 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
             TenantSubscriptionStatus.Trialing);
         await _tenantSubscriptionRepository.InsertAsync(subscription, autoSave: true);
 
-        var limits = JsonSerializer.Deserialize<Dictionary<string, string>>(trialPlan.FeatureLimitsJson) ?? new Dictionary<string, string>();
+        var limits = SubscriptionPlanFeatureLimits.Parse(trialPlan.FeatureLimitsJson);
         foreach (var (key, value) in limits)
         {
             await _featureManager.SetForTenantAsync(tenantId, key, value);

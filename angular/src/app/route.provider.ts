@@ -78,6 +78,14 @@ function configureRoutes() {
         layout: eLayoutType.empty,
         requiredPolicy: 'Eksabli.SupportTickets.Manage',
       },
+      {
+        path: '/admin/audit-logs',
+        name: '::AdminPanel:AuditLogs:Title',
+        iconClass: 'fas fa-list-check',
+        order: 8,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.AuditLogs',
+      },
       // Layout-resolution anchors ONLY for the stock ABP pages nested under /admin in app.routes.ts
       // (Users/Roles/My Profile/Settings) — `invisible: true` so these do NOT become their own menu
       // item (real permission checks already live inside each package's own routes, not here); they
@@ -117,7 +125,7 @@ function configureRoutes() {
         iconClass: 'fas fa-gauge-high',
         order: 19,
         layout: eLayoutType.empty,
-        requiredPolicy: 'Eksabli.Reports.Default',
+        requiredPolicy: 'Eksabli.Reports',
       },
       {
         path: '/business/analytics',
@@ -125,7 +133,7 @@ function configureRoutes() {
         iconClass: 'fas fa-chart-line',
         order: 20,
         layout: eLayoutType.empty,
-        requiredPolicy: 'Eksabli.Reports.Default',
+        requiredPolicy: 'Eksabli.Reports',
       },
       {
         path: '/business/customers',
@@ -141,7 +149,7 @@ function configureRoutes() {
         iconClass: 'fas fa-user-tie',
         order: 22,
         layout: eLayoutType.empty,
-        requiredPolicy: 'Eksabli.EmployeeAssignments.Default',
+        requiredPolicy: 'Eksabli.EmployeeAssignments',
       },
       {
         path: '/business/branches',
@@ -149,7 +157,7 @@ function configureRoutes() {
         iconClass: 'fas fa-building',
         order: 23,
         layout: eLayoutType.empty,
-        requiredPolicy: 'Eksabli.Branches.Default',
+        requiredPolicy: 'Eksabli.Branches',
       },
       // No requiredPolicy — same shape as '/home' above; PosController has no ABP permission at all,
       // see app.routes.ts's own comment on this route for the full reasoning.
@@ -166,7 +174,7 @@ function configureRoutes() {
         iconClass: 'fas fa-gift',
         order: 25,
         layout: eLayoutType.empty,
-        requiredPolicy: 'Eksabli.Rewards.Default',
+        requiredPolicy: 'Eksabli.Rewards',
       },
       {
         path: '/business/coupons',
@@ -174,7 +182,7 @@ function configureRoutes() {
         iconClass: 'fas fa-ticket',
         order: 26,
         layout: eLayoutType.empty,
-        requiredPolicy: 'Eksabli.Rewards.Default',
+        requiredPolicy: 'Eksabli.Rewards',
       },
       {
         path: '/business/campaigns',
@@ -182,7 +190,7 @@ function configureRoutes() {
         iconClass: 'fas fa-bullhorn',
         order: 27,
         layout: eLayoutType.empty,
-        requiredPolicy: 'Eksabli.Campaigns.Default',
+        requiredPolicy: 'Eksabli.Campaigns',
       },
       {
         path: '/business/notifications',
@@ -214,7 +222,7 @@ function configureRoutes() {
         iconClass: 'fas fa-gear',
         order: 31,
         layout: eLayoutType.empty,
-        requiredPolicy: 'Eksabli.BusinessProfile.Default',
+        requiredPolicy: 'Eksabli.BusinessProfile',
       },
       {
         path: '/business/transactions',

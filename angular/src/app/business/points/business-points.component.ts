@@ -85,8 +85,8 @@ export class BusinessPointsComponent implements OnInit {
   protected readonly RuleType = PointRuleType;
   protected readonly activeTab = signal<PointsTab>('award');
 
-  protected readonly canViewRules = computed(() => this.permissionService.getGrantedPolicy('Eksabli.PointRules.Default'));
-  protected readonly canViewTiers = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Tiers.Default'));
+  protected readonly canViewRules = computed(() => this.permissionService.getGrantedPolicy('Eksabli.PointRules'));
+  protected readonly canViewTiers = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Tiers'));
 
   // --- Award tab ---
   protected readonly phoneForm = new FormGroup({
