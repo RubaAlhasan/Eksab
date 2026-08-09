@@ -10,6 +10,7 @@ import {
   SessionStateService,
   getLocaleDirection,
 } from '@abp/ng.core';
+import { NotificationBellComponent } from '../../shared/components/notification-bell/notification-bell.component';
 interface AdminNavItem {
   labelKey: string;
   icon: string;
@@ -164,7 +165,7 @@ const ADMIN_NAV: AdminNavGroup[] = [
   // doesn't control.
   templateUrl: './admin-layout.component.html',
   styleUrls: ['./admin-layout.component.scss'],
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, LocalizationPipe],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, LocalizationPipe, NotificationBellComponent],
 })
 export class AdminLayoutComponent {
   private readonly authService = inject(AuthService);

@@ -91,6 +91,12 @@ public static class EksabliPermissions
     {
         public const string Default = GroupName + ".Notifications";
         public const string Send = Default + ".Send";
+
+        // Gates IUserNotificationAppService.SendAsync — the manual/admin trigger for the real-time
+        // Notification Hub (SignalR + FCM). Distinct from Send, which gates the customer-facing campaign
+        // channel (INotificationAppService) — receiving your own hub notifications needs no permission
+        // beyond being authenticated, only broadcasting to others does.
+        public const string Broadcast = Default + ".Broadcast";
     }
 
     public static class Achievements

@@ -10,6 +10,7 @@ import {
   SessionStateService,
   getLocaleDirection,
 } from '@abp/ng.core';
+import { NotificationBellComponent } from '../../shared/components/notification-bell/notification-bell.component';
 
 interface BusinessNavItem {
   labelKey: string;
@@ -40,7 +41,7 @@ interface BusinessNavItem {
   selector: 'app-business-layout',
   templateUrl: './business-layout.component.html',
   styleUrls: ['./business-layout.component.scss'],
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, LocalizationPipe],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, LocalizationPipe, NotificationBellComponent],
 })
 export class BusinessLayoutComponent {
   private readonly authService = inject(AuthService);

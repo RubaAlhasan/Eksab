@@ -165,6 +165,57 @@
   position: sticky;
   top: 0;
   z-index: 20;
+
+  // Bootstrap's own .dropdown-menu ships as a separate, lazily-injected CSS bundle
+  // (bootstrap-dim.css, "inject": false in angular.json) that this shell can't rely on being
+  // present — without it .dropdown-menu.show renders with no background/border at all (just the
+  // bare text floating over the page). Re-themed here with this shell's own --eks-* tokens
+  // instead, scoped to the topbar only so stock ABP pages elsewhere (Identity/Tenant Management,
+  // which DO want Lepton-X's real Bootstrap look — see this file's own top comment) are unaffected.
+  .dropdown {
+    position: relative;
+  }
+
+  .dropdown-menu {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    inset-inline-end: 0;
+    inset-inline-start: auto;
+    display: none;
+    min-width: 200px;
+    margin: 0;
+    padding: 0.5rem 0;
+    background: var(--eks-surface);
+    border: 1px solid var(--eks-border);
+    border-radius: 0.75rem;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+    list-style: none;
+    z-index: 1050;
+
+    &.show {
+      display: block;
+    }
+  }
+
+  .dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    background: transparent;
+    border: 0;
+    text-align: start;
+    color: var(--eks-text);
+    font-size: 0.875rem;
+
+    &:hover {
+      background: var(--eks-bg);
+    }
+
+    &.active {
+      color: var(--eks-primary);
+      font-weight: 600;
+    }
+  }
 }
 
 .eks-admin-content {

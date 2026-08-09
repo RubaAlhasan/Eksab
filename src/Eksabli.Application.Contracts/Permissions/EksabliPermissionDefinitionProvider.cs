@@ -64,6 +64,7 @@ public class EksabliPermissionDefinitionProvider : PermissionDefinitionProvider
 
         var notificationsPermission = myGroup.AddPermission(EksabliPermissions.Notifications.Default, L("Permission:Notifications"));
         notificationsPermission.AddChild(EksabliPermissions.Notifications.Send, L("Permission:Notifications.Send"));
+        notificationsPermission.AddChild(EksabliPermissions.Notifications.Broadcast, L("Permission:Notifications.Broadcast"));
 
         var achievementsPermission = myGroup.AddPermission(EksabliPermissions.Achievements.Default, L("Permission:Achievements"));
         achievementsPermission.AddChild(EksabliPermissions.Achievements.Create, L("Permission:Achievements.Create"));

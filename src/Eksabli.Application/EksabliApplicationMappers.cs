@@ -184,6 +184,14 @@ public partial class EksabliNotificationToNotificationDtoMapper : MapperBase<Not
 }
 
 [Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliUserNotificationFeedItemToUserNotificationDtoMapper : MapperBase<UserNotificationFeedItem, UserNotificationDto>
+{
+    public override partial UserNotificationDto Map(UserNotificationFeedItem source);
+
+    public override partial void Map(UserNotificationFeedItem source, UserNotificationDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
 public partial class EksabliReferralToReferralDtoMapper : MapperBase<Referral, ReferralDto>
 {
     public override partial ReferralDto Map(Referral source);
