@@ -55,8 +55,8 @@ any new Host-realm page under `/admin/*` (child of `adminGuard`).
 
 Admin Portal MVP scope is fully built (Dashboard + Users, both from earlier this session, see "What's
 NOT done" below for the few remaining backend-blocked items). Business Portal has Dashboard +
-Analytics + Customers + Employees + Branches + Points Management + Rewards + Coupons + Campaigns so
-far — see their own section below.
+Analytics + Customers + Employees + Branches + Points Management + Rewards + Coupons + Campaigns +
+Notifications so far — see their own section below.
 **Points Management (`business/points/`) is architecturally different from every other page**: its
 Award Points tab has no ABP permission at all (`PosController` is `[Authorize]`-only; the real gate is
 a custom staff-role check inside `PosAppService`) — read that page's own section before assuming every
@@ -660,6 +660,41 @@ risking a regression in either shell for what's still just two pages.
     first cut; not attempted, same "not attempted this pass" reasoning as Employees/Points
     Management/Rewards. **No campaign "description" field** — `CampaignDto` has no such property (only
     bilingual name); the prototype's own description text is dropped, not fabricated.
+- **Notifications** (`business/notifications/`) — mirrors `prototype/business/notifications.html`,
+  built against the real `NotificationAppService` (`SendAsync`/`GetListAsync`/`GetQuotaUsageAsync`)
+  plus `IReportsAppService.GetNotificationDeliveryRatesAsync` for real delivery stats. No backend
+  changes needed; every endpoint and its proxy already existed. Confirms the earlier note below about
+  `NotificationAppService` being real and worth checking — it was.
+  - **Whole `NotificationsController` is gated on one permission, `Eksabli.Notifications.Send`** — no
+    separate "view" permission exists (confirmed by reading the controller's class-level `[Authorize]`),
+    so the route's `data.requiredPolicy` is `Eksabli.Notifications.Send` even for just viewing the log.
+  - **Compose sends to exactly ONE membership, not a segment/audience** — `SendNotificationDto`
+    requires a real `MembershipId`; there is no bulk/broadcast-to-segment endpoint anywhere (that's
+    internal to Campaigns' own sweep worker, not exposed for ad-hoc sends). The prototype's own
+    "Audience" dropdown (All members / Gold & Platinum / Inactive 60+ days) is **dropped**,
+    `[MISSING BACKEND CAPABILITY]`; replaced with a real member search-and-pick, reusing
+    `MembershipsService.getMembers({ filterText })` (debounced, min 2 chars) — the same real search
+    Coupons/Customers already use.
+  - Channel options (Push/Email/SMS/In-App) match the prototype exactly — real `NotificationChannel`
+    enum. Title/Message length limits (128/1000 chars) are real, from `NotificationConsts`.
+  - A sent notification starts as `Queued` (confirmed via `Notification.Create`) and is dispatched by a
+    background job (`NotificationDispatchJob`) — the success toast says "queued for delivery", matching
+    what actually happens, not "sent".
+  - **Stat tiles are real but re-derived, not the prototype's fixed demo numbers**: "Sent this month"
+    and **"Delivery rate"** (replacing the prototype's fake "Open rate" — `[MISSING BACKEND
+    CAPABILITY]`, no open/click tracking exists anywhere) both come from
+    `GetNotificationDeliveryRatesAsync({ from: startOfMonth, to: now })`, summed across all four
+    channels (`DeliveryRate = Σsent / (Σsent + Σfailed)`, same formula `ReportsAppService` itself uses
+    per-channel). **"Sent today / daily limit" replaces the fake "SMS credits used X/1,000"** — real,
+    from `GetQuotaUsageAsync` (`NotificationConsts.MaxDailyNotificationsPerTenant` = 500/day, a
+    per-tenant cap covering ALL channels together, not a per-channel SMS credit pool as the prototype
+    implies).
+  - **Delivery Log**: real, paged, via `GetListAsync` with real `Status` (`Queued`/`Sent`/`Failed` —
+    three real states, not the prototype's single hardcoded "Sent" badge) and `Channel` filters.
+    "Campaign" column shows "Linked"/"—" from the real `CampaignId` presence, matching the prototype's
+    own binary treatment (no campaign-name lookup — the prototype itself doesn't show one either).
+  - No title/code search on the log — `[MISSING BACKEND CAPABILITY]`, `NotificationListFilterDto` has
+    no `filterText`, same documented gap as Employees/Support Tickets/Coupons.
 
 ## What's NOT done — pick up here, in this order
 
@@ -702,22 +737,18 @@ the Admin Portal**, what's left:
    as an explicit user request beyond the original plan, matching `prototype/admin/users.html`.
 
 **For Business Portal pages beyond Dashboard/Analytics/Customers/Employees/Branches/Points
-Management/Rewards/Coupons/Campaigns** (mounted under `/business/*`, inside `BusinessLayoutComponent`,
-gated on `businessRealmGuard` — see the top of this file) — no equivalent implementation-plan doc
-exists yet (the backend-readiness doc covers Host-realm Admin Portal features only); scope has been
-driven directly by `prototype/business/*.html` + backend-reality-checking this session. Natural next
-pages, if asked for: check `prototype/business/*.html` for what exists (offers, settings,
-notifications, transactions, subscription/billing all have prototype pages — verify each against the
-REAL backend the same way this session did for the nine pages already built, and give each its own
-real permission as `data.requiredPolicy` on a `/business/*` child route + a `BusinessLayoutComponent`
-nav entry — unless the underlying app service turns out to have no ABP permission at all (like Points
-Management), in which case don't force one). A reusable `downloadBlob()`-style helper is worth
-extracting into `shared/` the next time a second page needs a file download — `business-coupons
-.component.ts` currently has the only copy. `NotificationAppService` and `Eksabli.Notifications`
-(channel/delivery-rate concepts already surfaced via `IReportsAppService
-.GetNotificationDeliveryRatesAsync`, unused so far) are real and worth checking against
-`notifications.html` next — Campaigns' own real `NotificationsSent`/`Queued`/`Failed` stats
-(`CampaignPerformanceDto`) suggest the underlying Notification entity/pipeline is genuinely built out.
+Management/Rewards/Coupons/Campaigns/Notifications** (mounted under `/business/*`, inside
+`BusinessLayoutComponent`, gated on `businessRealmGuard` — see the top of this file) — no equivalent
+implementation-plan doc exists yet (the backend-readiness doc covers Host-realm Admin Portal features
+only); scope has been driven directly by `prototype/business/*.html` + backend-reality-checking this
+session. Natural next pages, if asked for: check `prototype/business/*.html` for what exists (offers,
+settings, transactions, subscription/billing still have prototype pages not yet checked — verify each
+against the REAL backend the same way this session did for the ten pages already built, and give each
+its own real permission as `data.requiredPolicy` on a `/business/*` child route + a
+`BusinessLayoutComponent` nav entry — unless the underlying app service turns out to have no ABP
+permission at all (like Points Management), in which case don't force one). A reusable
+`downloadBlob()`-style helper is worth extracting into `shared/` the next time a second page needs a
+file download — `business-coupons.component.ts` currently has the only copy.
 **`prototype/business/reports.html` was checked and found to be a weak next-candidate** — unlike
 `analytics.html` (built this session), its "Generate report as CSV/PDF" buttons and "Recent Exports"
 history table have no real backend behind them (`ReportsAppService`'s only true report-generation

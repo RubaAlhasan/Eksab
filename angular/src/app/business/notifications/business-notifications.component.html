@@ -1,0 +1,199 @@
+<app-page-header
+  [title]="'::BusinessPanel:Notifications:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:Notifications:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::BusinessPanel:Notifications:Title' | abpLocalization) }]"
+>
+  @if (canSend()) {
+    <button type="button" class="btn btn-primary btn-sm" (click)="openComposeModal()">
+      <i class="fas fa-plus me-1"></i>{{ '::BusinessPanel:Notifications:Compose' | abpLocalization }}
+    </button>
+  }
+</app-page-header>
+
+@if (!statsLoading()) {
+  <div class="row row-cols-1 row-cols-sm-3 g-4 mb-4">
+    <div class="col">
+      <div class="card p-4 h-100">
+        <p class="fs-3 fw-extrabold mb-0">{{ monthSent() ?? '—' }}</p>
+        <p class="text-muted small mb-0">{{ '::BusinessPanel:Notifications:SentThisMonth' | abpLocalization }}</p>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card p-4 h-100">
+        <p class="fs-3 fw-extrabold mb-0">
+          @if (monthDeliveryRatePct(); as pct) {
+            {{ pct }}%
+          } @else {
+            —
+          }
+        </p>
+        <p class="text-muted small mb-0">{{ '::BusinessPanel:Notifications:DeliveryRate' | abpLocalization }}</p>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card p-4 h-100">
+        @if (quota(); as quota) {
+          <p class="fs-3 fw-extrabold mb-1">
+            {{ quota.sentToday ?? 0 }}<span class="fs-6 text-muted fw-semibold">/{{ quota.dailyLimit }}</span>
+          </p>
+          <p class="text-muted small mb-2">{{ '::BusinessPanel:Notifications:SentToday' | abpLocalization }}</p>
+          <div class="progress" style="height: 6px">
+            <div class="progress-bar" [style.width.%]="quotaPct()"></div>
+          </div>
+        } @else {
+          <p class="fs-3 fw-extrabold mb-0">—</p>
+          <p class="text-muted small mb-0">{{ '::BusinessPanel:Notifications:SentToday' | abpLocalization }}</p>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<div class="card p-4">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <h6 class="fw-bold mb-0">{{ '::BusinessPanel:Notifications:DeliveryLog' | abpLocalization }}</h6>
+    <div class="d-flex gap-2">
+      <select class="form-select form-select-sm eks-filter-select" (change)="onStatusFilterChange($event)">
+        <option value="">{{ '::BusinessPanel:Notifications:FilterAllStatuses' | abpLocalization }}</option>
+        <option [value]="Status.Queued">{{ '::BusinessPanel:Notifications:StatusQueued' | abpLocalization }}</option>
+        <option [value]="Status.Sent">{{ '::BusinessPanel:Notifications:StatusSent' | abpLocalization }}</option>
+        <option [value]="Status.Failed">{{ '::BusinessPanel:Notifications:StatusFailed' | abpLocalization }}</option>
+      </select>
+      <select class="form-select form-select-sm eks-filter-select" (change)="onChannelFilterChange($event)">
+        <option value="">{{ '::BusinessPanel:Notifications:FilterAllChannels' | abpLocalization }}</option>
+        <option [value]="Channel.Push">{{ '::BusinessPanel:Notifications:ChannelPush' | abpLocalization }}</option>
+        <option [value]="Channel.Email">{{ '::BusinessPanel:Notifications:ChannelEmail' | abpLocalization }}</option>
+        <option [value]="Channel.Sms">{{ '::BusinessPanel:Notifications:ChannelSms' | abpLocalization }}</option>
+        <option [value]="Channel.InApp">{{ '::BusinessPanel:Notifications:ChannelInApp' | abpLocalization }}</option>
+      </select>
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <app-loading-spinner [label]="'::BusinessPanel:Notifications:Loading' | abpLocalization"></app-loading-spinner>
+  } @else if (loadFailed()) {
+    <app-error-state
+      [message]="'::BusinessPanel:Notifications:LoadErrorMessage' | abpLocalization"
+      [retryLabel]="'::BusinessPanel:Notifications:TryAgain' | abpLocalization"
+      (retry)="retry()"
+    >
+    </app-error-state>
+  } @else if (notifications().length === 0) {
+    <app-empty-state
+      icon="fa-bell"
+      [title]="'::BusinessPanel:Notifications:EmptyTitle' | abpLocalization"
+      [description]="'::BusinessPanel:Notifications:EmptyDescription' | abpLocalization"
+    >
+    </app-empty-state>
+  } @else {
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>{{ '::BusinessPanel:Notifications:ColTitle' | abpLocalization }}</th>
+            <th>{{ '::BusinessPanel:Notifications:ColChannel' | abpLocalization }}</th>
+            <th>{{ '::BusinessPanel:Notifications:ColCampaign' | abpLocalization }}</th>
+            <th>{{ '::BusinessPanel:Notifications:ColStatus' | abpLocalization }}</th>
+            <th>{{ '::BusinessPanel:Notifications:ColSent' | abpLocalization }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (notification of notifications(); track notification.id) {
+            <tr>
+              <td class="fw-semibold">{{ notification.title }}</td>
+              <td>{{ channelLabelKey(notification.channel) | abpLocalization }}</td>
+              <td class="text-muted">
+                @if (notification.campaignId) {
+                  {{ '::BusinessPanel:Notifications:CampaignLinked' | abpLocalization }}
+                } @else {
+                  —
+                }
+              </td>
+              <td><app-status-badge [label]="statusLabelKey(notification.status) | abpLocalization" [variant]="statusVariant(notification.status)"></app-status-badge></td>
+              <td class="text-muted">{{ notification.sentAt ? (notification.sentAt | date: 'mediumDate') : '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)"></app-pagination>
+  }
+</div>
+
+<app-modal
+  [open]="composeModalOpen()"
+  [title]="'::BusinessPanel:Notifications:ComposeTitle' | abpLocalization"
+  (closed)="closeComposeModal()"
+>
+  <form [formGroup]="composeForm" (ngSubmit)="submitCompose()" class="d-flex flex-column gap-3">
+    <div>
+      <label class="form-label">{{ '::BusinessPanel:Notifications:FieldRecipient' | abpLocalization }}</label>
+      @if (selectedMember(); as member) {
+        <div class="d-flex align-items-center justify-content-between border rounded p-2">
+          <span class="small">{{ memberName(member) }} <span class="text-muted">· {{ member.phoneNumber }}</span></span>
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="changeMember()">
+            {{ '::BusinessPanel:Notifications:ChangeRecipient' | abpLocalization }}
+          </button>
+        </div>
+      } @else {
+        <input
+          type="text"
+          class="form-control"
+          [value]="memberQuery()"
+          (input)="onMemberQueryInput($event)"
+          [placeholder]="'::BusinessPanel:Notifications:RecipientSearchPlaceholder' | abpLocalization"
+        />
+        @if (isSearchingMembers()) {
+          <p class="text-muted small mt-1 mb-0">{{ '::BusinessPanel:Notifications:Searching' | abpLocalization }}</p>
+        } @else if (memberResults().length) {
+          <ul class="list-group mt-1">
+            @for (member of memberResults(); track member.id) {
+              <li class="list-group-item list-group-item-action small" role="button" (click)="selectMember(member)">
+                {{ memberName(member) }} <span class="text-muted">· {{ member.phoneNumber }}</span>
+              </li>
+            }
+          </ul>
+        }
+      }
+    </div>
+
+    <div>
+      <label class="form-label" for="notifTitle">{{ '::BusinessPanel:Notifications:FieldTitle' | abpLocalization }}</label>
+      <input id="notifTitle" type="text" class="form-control" formControlName="title" maxlength="128" />
+      @if (composeForm.controls.title.invalid && composeForm.controls.title.touched) {
+        <p class="text-danger small mt-1">{{ '::BusinessPanel:Notifications:FieldRequired' | abpLocalization }}</p>
+      }
+    </div>
+
+    <div>
+      <label class="form-label" for="notifBody">{{ '::BusinessPanel:Notifications:FieldMessage' | abpLocalization }}</label>
+      <textarea id="notifBody" class="form-control" formControlName="body" rows="3" maxlength="1000"></textarea>
+      @if (composeForm.controls.body.invalid && composeForm.controls.body.touched) {
+        <p class="text-danger small mt-1">{{ '::BusinessPanel:Notifications:FieldRequired' | abpLocalization }}</p>
+      }
+    </div>
+
+    <div>
+      <label class="form-label" for="notifChannel">{{ '::BusinessPanel:Notifications:FieldChannel' | abpLocalization }}</label>
+      <select id="notifChannel" class="form-select" formControlName="channel">
+        <option [ngValue]="Channel.Push">{{ '::BusinessPanel:Notifications:ChannelPush' | abpLocalization }}</option>
+        <option [ngValue]="Channel.Email">{{ '::BusinessPanel:Notifications:ChannelEmail' | abpLocalization }}</option>
+        <option [ngValue]="Channel.Sms">{{ '::BusinessPanel:Notifications:ChannelSms' | abpLocalization }}</option>
+        <option [ngValue]="Channel.InApp">{{ '::BusinessPanel:Notifications:ChannelInApp' | abpLocalization }}</option>
+      </select>
+    </div>
+  </form>
+
+  <div slot="footer" class="d-flex gap-2 justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeComposeModal()">
+      {{ '::BusinessPanel:Notifications:Cancel' | abpLocalization }}
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="isSending() || !selectedMember()" (click)="submitCompose()">
+      @if (isSending()) {
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+      }
+      {{ '::BusinessPanel:Notifications:SendNow' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

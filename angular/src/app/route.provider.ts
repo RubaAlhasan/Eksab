@@ -184,5 +184,13 @@ function configureRoutes() {
         layout: eLayoutType.empty,
         requiredPolicy: 'Eksabli.Campaigns.Default',
       },
+      {
+        path: '/business/notifications',
+        name: '::BusinessPanel:Layout:NavNotifications',
+        iconClass: 'fas fa-bell',
+        order: 28,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.Notifications.Send',
+      },
   ]);
 }

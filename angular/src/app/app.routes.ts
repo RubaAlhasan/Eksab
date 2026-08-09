@@ -263,6 +263,16 @@ export const APP_ROUTES: Routes = [
         canActivate: [permissionGuard],
         data: { requiredPolicy: 'Eksabli.Campaigns.Default' },
       },
+      {
+        // NotificationsController's whole class is gated on Eksabli.Notifications.Send — there is no
+        // separate "view" permission to fall back to (confirmed by reading the controller), same shape
+        // as Subscriptions/Support Tickets in the Admin Portal.
+        path: 'notifications',
+        loadComponent: () =>
+          import('./business/notifications/business-notifications.component').then(c => c.BusinessNotificationsComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Notifications.Send' },
+      },
     ],
   },
   {
