@@ -56,7 +56,7 @@ any new Host-realm page under `/admin/*` (child of `adminGuard`).
 Admin Portal MVP scope is fully built (Dashboard + Users, both from earlier this session, see "What's
 NOT done" below for the few remaining backend-blocked items). Business Portal has Dashboard +
 Analytics + Customers + Employees + Branches + Points Management + Rewards + Coupons + Campaigns +
-Notifications + Subscription + Billing so far — see their own section below.
+Notifications + Subscription + Billing + Settings + Transactions so far — see their own section below.
 **Points Management (`business/points/`) is architecturally different from every other page**: its
 Award Points tab has no ABP permission at all (`PosController` is `[Authorize]`-only; the real gate is
 a custom staff-role check inside `PosAppService`) — read that page's own section before assuming every
@@ -738,6 +738,39 @@ risking a regression in either shell for what's still just two pages.
     non-`Paid` invoice from a `dueDate asc`-sorted fetch, not a dedicated endpoint) and a real paged
     Invoice History table with all 4 real `InvoiceStatus` values (`Draft`/`Sent`/`Paid`/`Overdue` — the
     prototype only shows 3, missing `Draft`).
+- **Settings** (`business/settings/`) — mirrors ONLY the real "Profile & Branding" tab of
+  `prototype/business/settings.html`, built against `IBusinessAppService.GetProfileAsync`/
+  `UpdateProfileAsync` (`Eksabli.BusinessProfile.Default`/`.Edit`) + the same public
+  `CategoriesService.getList()` catalog Admin Categories/registration already use. No backend changes
+  needed.
+  - The prototype's other 3 tabs are dropped entirely (not stubbed): Notification Sender
+    (`[MISSING BACKEND CAPABILITY]` — no per-tenant sender-name/reply-to/custom-domain concept exists
+    anywhere in `Eksabli.Notifications`), Integrations (Stripe/FCM/SMS aggregator badges — pure
+    decoration even in the prototype itself, no real integration entity anywhere), Danger Zone
+    (duplicates Subscription's own dropped Danger Zone — see that page's bullet above).
+  - **Business name is shown read-only**, from `ConfigStateService`'s `currentTenant.name` (same real
+    signal `business.guard.ts` uses for `.id`) — NOT editable, since `UpdateBusinessProfileDto` has no
+    `Name` field at all; the tenant's name lives on ABP's own `Tenant` entity with no self-service
+    rename endpoint anywhere.
+  - Category/Website/Description (bilingual) are real, direct DTO fields. Instagram/Facebook map to
+    the real but schema-free `SocialLinksJson`, matching the exact two keys `RegisterAsync` itself
+    populates at signup (`parseSocialLinks`/`serializeSocialLinks`, same "known keys, preserve the
+    rest" convention as `admin-plans.component.ts`'s `FeatureLimitsJson` parsing). No logo upload —
+    same established gap as Rewards'/Categories' own blob-name-only fields.
+- **Transactions** (`business/transactions/`) — mirrors the INTENT of
+  `prototype/business/transactions.html` ("the detail behind Analytics"), not its shape.
+  `[MISSING BACKEND CAPABILITY]`: there is no live, paged, tenant-wide points-transaction list
+  endpoint anywhere (confirmed while building Dashboard earlier this session, re-confirmed here) — the
+  prototype's own filterable 4,820-row ledger (Type/Branch/Staff/Date filters, live grid) cannot be
+  built for real; `TransactionsExcelDownloadDto` is just `{ DownloadToken, From, To }`, no
+  Type/Branch/Staff fields exist server-side at all. This page is therefore JUST a date-range picker +
+  the real two-step token-gated Excel export (`GetTransactionsDownloadTokenAsync` →
+  `GetTransactionsAsExcelFileAsync`, same pattern as Coupons') — directly fulfilling the "reasonable
+  follow-up" Dashboard's own comment flagged earlier this session. **Route permission is a real gotcha**:
+  `GetTransactionsDownloadTokenAsync` needs `Eksabli.Reports.Export` specifically (a per-action
+  `[Authorize]` override on `ReportsController`), NOT the general `Eksabli.Reports.Default` every other
+  Reports-backed page (Dashboard/Analytics) uses — read the controller before assuming one blanket
+  Reports permission covers everything on it.
 
 ## What's NOT done — pick up here, in this order
 
@@ -780,19 +813,20 @@ the Admin Portal**, what's left:
    as an explicit user request beyond the original plan, matching `prototype/admin/users.html`.
 
 **For Business Portal pages beyond Dashboard/Analytics/Customers/Employees/Branches/Points
-Management/Rewards/Coupons/Campaigns/Notifications/Subscription/Billing** (mounted under
-`/business/*`, inside `BusinessLayoutComponent`, gated on `businessRealmGuard` — see the top of this
-file) — no equivalent implementation-plan doc exists yet (the backend-readiness doc covers Host-realm
-Admin Portal features only); scope has been driven directly by `prototype/business/*.html` +
-backend-reality-checking this session. Remaining unchecked prototype pages: `offers.html`,
-`settings.html`, `transactions.html`, `customer-details.html` (a drill-down, likely belongs inside the
-existing Customers page rather than its own route — check `prototype/business/customers.html` for how
-it links there first) — verify each against the REAL backend the same way this session did for the
-twelve pages already built, and give each its own real permission as `data.requiredPolicy` on a
-`/business/*` child route + a `BusinessLayoutComponent` nav entry — unless the underlying app service
-turns out to have no ABP permission at all (like Points Management), in which case don't force one).
-A reusable `downloadBlob()`-style helper is worth extracting into `shared/` the next time a second
-page needs a file download — `business-coupons.component.ts` currently has the only copy.
+Management/Rewards/Coupons/Campaigns/Notifications/Subscription/Billing/Settings/Transactions**
+(mounted under `/business/*`, inside `BusinessLayoutComponent`, gated on `businessRealmGuard` — see
+the top of this file) — no equivalent implementation-plan doc exists yet (the backend-readiness doc
+covers Host-realm Admin Portal features only); scope has been driven directly by
+`prototype/business/*.html` + backend-reality-checking this session. Remaining unchecked prototype
+pages: `offers.html`, `customer-details.html` (a drill-down, likely belongs inside the existing
+Customers page rather than its own route — check `prototype/business/customers.html` for how it links
+there first) — verify each against the REAL backend the same way this session did for the fourteen
+pages already built, and give each its own real permission as `data.requiredPolicy` on a `/business/*`
+child route + a `BusinessLayoutComponent` nav entry — unless the underlying app service turns out to
+have no ABP permission at all (like Points Management), in which case don't force one). A reusable `downloadBlob()`-style helper is now overdue for extraction into `shared/` — TWO
+identical copies exist (`business-coupons.component.ts` and, added this turn,
+`business-transactions.component.ts`), past the "extract on second use" threshold this file used to
+note as a future trigger.
 **`prototype/business/reports.html` was checked and found to be a weak next-candidate** — unlike
 `analytics.html` (built this session), its "Generate report as CSV/PDF" buttons and "Recent Exports"
 history table have no real backend behind them (`ReportsAppService`'s only true report-generation

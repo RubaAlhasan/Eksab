@@ -289,6 +289,28 @@ export const APP_ROUTES: Routes = [
         canActivate: [permissionGuard],
         data: { requiredPolicy: 'Eksabli.Billing.ManageOwn' },
       },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./business/settings/business-settings.component').then(c => c.BusinessSettingsComponent),
+        canActivate: [permissionGuard],
+        // BusinessController's profile endpoints are split: GetProfileAsync needs BusinessProfile
+        // .Default (read), UpdateProfileAsync needs .Edit — gate the route on the lesser (read)
+        // permission, same "let the page load, per-action controls inside" shape as most other pages;
+        // the Save button itself is hidden for a viewer without .Edit (see the component's canEdit()).
+        data: { requiredPolicy: 'Eksabli.BusinessProfile.Default' },
+      },
+      {
+        path: 'transactions',
+        loadComponent: () =>
+          import('./business/transactions/business-transactions.component').then(c => c.BusinessTransactionsComponent),
+        canActivate: [permissionGuard],
+        // GetTransactionsDownloadTokenAsync (the only real action on this page) is gated on
+        // Eksabli.Reports.Export specifically, NOT the general Eksabli.Reports.Default every other
+        // Reports-backed page (Dashboard/Analytics) uses — confirmed by reading ReportsController's
+        // own per-action [Authorize] override.
+        data: { requiredPolicy: 'Eksabli.Reports.Export' },
+      },
     ],
   },
   {

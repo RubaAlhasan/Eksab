@@ -1,0 +1,32 @@
+<app-page-header
+  [title]="'::BusinessPanel:Transactions:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:Transactions:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::BusinessPanel:Transactions:Title' | abpLocalization) }]"
+>
+</app-page-header>
+
+<div class="card p-4" style="max-width: 36rem">
+  <p class="text-muted small mb-4">{{ '::BusinessPanel:Transactions:Explanation' | abpLocalization }}</p>
+
+  <form [formGroup]="form" (ngSubmit)="exportExcel()" class="d-flex flex-column gap-3">
+    <div class="row g-3">
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="txnFrom">{{ '::BusinessPanel:Transactions:FieldFrom' | abpLocalization }}</label>
+        <input id="txnFrom" type="date" class="form-control" formControlName="from" />
+      </div>
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="txnTo">{{ '::BusinessPanel:Transactions:FieldTo' | abpLocalization }}</label>
+        <input id="txnTo" type="date" class="form-control" formControlName="to" />
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary align-self-start" [disabled]="isExporting()">
+      @if (isExporting()) {
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+      } @else {
+        <i class="fas fa-file-arrow-down me-1"></i>
+      }
+      {{ '::BusinessPanel:Transactions:Export' | abpLocalization }}
+    </button>
+  </form>
+</div>

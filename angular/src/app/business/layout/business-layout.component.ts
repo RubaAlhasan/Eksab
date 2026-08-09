@@ -71,6 +71,8 @@ export class BusinessLayoutComponent {
     { labelKey: '::BusinessPanel:Layout:NavNotifications', icon: 'fa-bell', link: '/business/notifications', permission: 'Eksabli.Notifications.Send' },
     { labelKey: '::BusinessPanel:Layout:NavSubscription', icon: 'fa-credit-card', link: '/business/subscription', permission: 'Eksabli.Billing.ManageOwn' },
     { labelKey: '::BusinessPanel:Layout:NavBilling', icon: 'fa-receipt', link: '/business/billing', permission: 'Eksabli.Billing.ManageOwn' },
+    { labelKey: '::BusinessPanel:Layout:NavTransactions', icon: 'fa-file-invoice-dollar', link: '/business/transactions', permission: 'Eksabli.Reports.Export' },
+    { labelKey: '::BusinessPanel:Layout:NavSettings', icon: 'fa-gear', link: '/business/settings', permission: 'Eksabli.BusinessProfile.Default' },
   ];
 
   protected readonly navItems = computed<BusinessNavItem[]>(() =>

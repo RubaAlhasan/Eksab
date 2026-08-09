@@ -208,5 +208,21 @@ function configureRoutes() {
         layout: eLayoutType.empty,
         requiredPolicy: 'Eksabli.Billing.ManageOwn',
       },
+      {
+        path: '/business/settings',
+        name: '::BusinessPanel:Layout:NavSettings',
+        iconClass: 'fas fa-gear',
+        order: 31,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.BusinessProfile.Default',
+      },
+      {
+        path: '/business/transactions',
+        name: '::BusinessPanel:Layout:NavTransactions',
+        iconClass: 'fas fa-file-invoice-dollar',
+        order: 32,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.Reports.Export',
+      },
   ]);
 }
