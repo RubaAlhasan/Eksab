@@ -17,19 +17,49 @@ landed *during* frontend work when the UI needed real data with no existing endp
 and the Business Portal section below. Keep verifying against real code, not assuming either "the
 backend never changes" or "the backend has everything."
 
-**Current work: building the Angular UI for ONE portal shell (`/admin/*`) serving TWO realms**, on
-branch `MD/admin-portal-frontend`, feature by feature, backend-verified, build-verified at every step.
-`AdminLayoutComponent`/`/admin` is used by both Host-realm platform staff (Businesses, Users,
-Categories, Plans, Subscriptions, Support Tickets, System group — gated on Host-only permissions like
-`Eksabli.Tenants.View`/`Eksabli.Users.View`) AND tenant-realm business staff (Customers — gated on
-`Eksabli.Memberships.View`, a real per-tenant permission, NOT `Eksabli.Tenants.View`). This was a **separate `/business/*`
-route tree with its own `BusinessLayoutComponent` shell earlier this session** — merged back into
-`/admin` after the user pointed out the two-portal split was unnecessary; see the "Customers" section
-below for the full reasoning and what changed. Don't recreate a separate `/business` shell — add any
-future tenant-realm-staff page as another `/admin/*` child instead, gated on its own real permission
-(never `Eksabli.Tenants.View`, which tenant-realm staff don't hold).
-Admin Portal MVP scope is now fully built (Dashboard shipped this session, see "What's NOT done"
-below for the few remaining backend-blocked items) plus Users, an explicit beyond-MVP addition.
+**Current work: building the Angular UI for TWO portals, each with its own shell**, on branch
+`MD/admin-portal-frontend`, feature by feature, backend-verified, build-verified at every step:
+- **Admin Portal** (`AdminLayoutComponent`, `/admin/*`) — Host-realm platform staff only
+  (Businesses, Users, Categories, Plans, Subscriptions, Support Tickets, Dashboard, System group).
+  Gated on `adminGuard` (`Eksabli.Tenants.View` signal permission) at the route level.
+- **Business Portal** (`BusinessLayoutComponent`, `/business/*`) — tenant-realm business staff only
+  (Owner/BranchManager/Cashier/MarketingManager): Customers, Employees so far. Gated on
+  `businessRealmGuard` (`core/guards/business.guard.ts`) — **real tenant-resolution**, not a permission
+  heuristic: it reads `currentTenant.id` from ABP's own `ConfigStateService`, which for an
+  authenticated request is resolved straight from that user's own account via ABP's built-in
+  `CurrentUserTenantResolveContributor` (confirmed by reading `EksabliHttpApiHostModule.cs`'s
+  multi-tenancy wiring — no custom subdomain/header/query resolver is configured). See that guard's own
+  comment for the full reasoning, and `redirectAuthenticatedToHomeGuard` (app.routes.ts) for how it's
+  used to route a business-staff account to `/business` right after login.
+
+**This split flip-flopped twice this session before landing here — both times at explicit, direct user
+instruction, not a design mistake either time:**
+1. Built as two separate portals/shells from the start.
+2. User: *"the url /business/customers not correct why add under business"* → investigated, confirmed
+   the route namespace was never tied to tenant resolution → user: *"must be under admin"* → Customers
+   (then Employees) were folded into the Admin Portal shell, `/business/*` deleted entirely, and a
+   permission-heuristic exclusion (`businessOnly` nav flag + `businessStaffOnlyGuard`) was added since
+   the seeded Host admin role holds every tenant-scoped permission too (grant-all-at-seed-time).
+3. User: *"employees not under admin admin/employees must be under business/employees"* +
+   *"must be when login business show page related to business like prototype"* → reversed back to two
+   separate portals — **but this time with a real realm-detection mechanism** (`businessRealmGuard`,
+   above) instead of the permission-heuristic exclusion, since the user now also wants business-staff
+   accounts auto-routed to their own portal on login, which the old heuristic couldn't support well.
+   `businessStaffOnlyGuard`/`businessOnly` nav flag are gone — no longer needed, the coarse route guard
+   does the whole job now.
+
+**Don't "fix" this back to one shell without being asked again** — both directions have now been
+explicitly requested once; two portals with real realm detection is where it currently stands. Add any
+new tenant-realm-staff page under `/business/*` (own real permission, child of `businessRealmGuard`),
+any new Host-realm page under `/admin/*` (child of `adminGuard`).
+
+Admin Portal MVP scope is fully built (Dashboard + Users, both from earlier this session, see "What's
+NOT done" below for the few remaining backend-blocked items). Business Portal has Dashboard +
+Analytics + Customers + Employees + Branches + Points Management so far — see their own section below.
+**Points Management (`business/points/`) is architecturally different from every other page**: its
+Award Points tab has no ABP permission at all (`PosController` is `[Authorize]`-only; the real gate is
+a custom staff-role check inside `PosAppService`) — read that page's own section before assuming every
+route needs a `data.requiredPolicy`.
 
 ## Source-of-truth priority (in order) — never violate this
 
@@ -213,14 +243,13 @@ everything as modified/untracked working-tree changes. Review before committing.
     different situations, not the same fallback).
   - Platform-staff accounts (seeded Host admin, Support Agent, etc.) are deliberately excluded, same
     scope as the prototype — they belong on the stock Identity > Users page, not this directory.
-- **Sidebar nav is grouped** (`AdminLayoutComponent`'s `ADMIN_NAV: AdminNavGroup[]`) — "Business"
-  (Customers — tenant-realm, see its own section below), "Platform" (Businesses, Users, Categories),
-  "Billing" (Plans, Subscriptions), "Operations" (Support Tickets). Only groups with ≥1 real, built
-  page exist — no placeholder/disabled nav entries for unbuilt features.
-- **Customers** (`admin/customers/`, tenant-realm data — Members + Following tabs) — see the dedicated
-  "Customers page (tenant-realm data, inside the Admin Portal shell)" section below for the full story
-  (originally a separate Business Portal, folded back into this shell after the user questioned the
-  `/business` route split).
+- **Sidebar nav is grouped** (`AdminLayoutComponent`'s `ADMIN_NAV: AdminNavGroup[]`) — "Overview"
+  (Dashboard), "Platform" (Businesses, Users, Categories), "Billing" (Plans, Subscriptions),
+  "Operations" (Support Tickets). Only groups with ≥1 real, built page exist — no placeholder/disabled
+  nav entries for unbuilt features. Host-realm only now — no `businessOnly` items/groups exist anymore
+  (see the top of this file for why; Customers/Employees moved to their own `BusinessLayoutComponent`
+  nav in `business/layout/business-layout.component.ts`, which follows the exact same "only real, built
+  pages, no placeholders" rule).
 - **Business Details** (`admin/businesses/admin-business-details.component.*`,
   `/admin/businesses/:tenantId`) — routed drill-down from the Businesses list (row's name is now a
   link). Left profile card (avatar-initial, name, category — best-effort `CategoriesService.get`,
@@ -349,109 +378,201 @@ everything as modified/untracked working-tree changes. Review before committing.
    grep `maxResultCount:\s*0` before shipping any new stat tile that reuses this "count via a filtered
    list call" pattern.
 
-## Customers page (tenant-realm data, inside the Admin Portal shell)
+## Business Portal — Customers + Employees
 
-This section covers `admin/customers/` — the one page in the Admin Portal that serves tenant-realm
-business staff (Owner/BranchManager/Cashier) rather than Host-realm platform staff. Content/data is
-unchanged from when it was first built; only the **routing/shell** changed, twice, this session:
+Both pages live at `business/customers/business-customers.component.*` (class
+`BusinessCustomersComponent`) and `business/employees/business-employees.component.*` (class
+`BusinessEmployeesComponent`), mounted under `/business/*` inside `BusinessLayoutComponent`
+(`business/layout/`), gated on `businessRealmGuard` (see the top of this file for the full routing
+history — both pages briefly lived at `/admin/customers`/`/admin/employees` mid-session before landing
+here). `BusinessLayoutComponent` is deliberately near-identical to `AdminLayoutComponent` (same shell
+shape, ~150 lines of parallel SCSS under `eks-biz-*` class names instead of `eks-admin-*`) and
+deliberately NOT `OnPush`, same reasoning as `AdminLayoutComponent` (a shell wrapping arbitrary routed
+content shouldn't assume every descendant uses signals) — `[MISSING REFACTOR]`, flagged not fixed:
+this duplication could be extracted into a shared portal-shell component; not attempted, to avoid
+risking a regression in either shell for what's still just two pages.
 
-- **First cut**: built as a genuinely separate **Business Portal** — its own `/business/*` route tree,
-  its own `BusinessLayoutComponent` shell (near-duplicate of `AdminLayoutComponent`, ~150 lines of
-  copy-pasted SCSS), mounted at `/business/customers`.
-- **User then asked "the url /business/customers not correct why add under business"** — questioning
-  the separate route namespace. Investigation confirmed: ABP tenant resolution has **nothing to do
-  with the Angular route path**. This app uses ABP's default resolver chain (`app.UseMultiTenancy()`
-  in `EksabliHttpApiHostModule.cs`, no custom subdomain/path resolver configured) — for an
-  authenticated user, `CurrentUserTenantResolveContributor` resolves `CurrentTenant.Id` straight from
-  the logged-in user's own account (business staff `IdentityUser`s are created *inside* their tenant's
-  identity space at registration, per `BusinessAppService.RegisterAsync`). So `/business` vs `/admin`
-  vs anything else was **purely an Angular route-namespace choice**, never a backend requirement.
-- **User then said "must be under admin"** — an explicit instruction to fold Customers into the one
-  Admin Portal shell instead of maintaining a second, nearly-identical one. Done:
-  - `admin/customers/admin-customers.component.*` (renamed from `business/customers/business-
-    customers.component.*`, class `AdminCustomersComponent`) — same real data/logic, unchanged.
-  - `business/layout/business-layout.component.*` **deleted** — the entire `business/` directory is
-    gone; don't recreate it.
-  - `app.routes.ts`: `customers` is now a child of `/admin` (`Eksabli.Memberships.View` via
-    `permissionGuard`, same as before). The **parent `/admin` route's `adminGuard` was relaxed to
-    `authGuard` only** — `adminGuard` requires the Host-only `Eksabli.Tenants.View` signal permission
-    (see `admin.guard.ts`), which tenant-realm business staff never hold by construction, so leaving it
-    in place would have 403'd every business-staff visit to `/admin` before even reaching the child's
-    own guard. This is safe: every other `/admin/*` child already enforces its own
-    `permissionGuard` + specific real policy (or, for nested stock-ABP children, that package's own
-    self-contained guards) regardless of the parent gate — nothing is newly reachable that wasn't
-    already permission-checked at the leaf.
-  - `route.provider.ts`: entry moved to `/admin/customers` (still `Eksabli.Memberships.View`).
-  - `AdminLayoutComponent`'s `ADMIN_NAV`: added a new **"Business" group** (`::AdminPanel:Layout
-    :GroupBusiness`), listed *first*, containing only Customers — deliberately first because it's
-    likely the *only* visible group for a business-staff account (every other group is gated on
-    Host-only permissions they don't hold); the per-group empty-after-filter pruning already in
-    `navGroups` handles hiding groups a given user can't see, same as before.
-  - `.btn-icon` global utility (promoted to `styles.scss` when the two shells briefly coexisted) was
-    **left as a global utility**, not moved back into `admin-layout.component.scss` — broadly reusable
-    regardless of the second shell's removal, no reason to revert it.
-  - Dropped now-unused localization keys `BusinessPanel:Layout:BusinessBadge/ToggleMenu/
-    ToggleLanguage/ToggleDarkMode` (belonged to the deleted shell); kept `BusinessPanel:Layout
-    :NavCustomers` and all `BusinessPanel:Customers:*` keys (still used by the page itself — the
-    `BusinessPanel` localization *namespace* name was left as-is, only the routing changed).
-- **Then: "this page must appear to business not for admin"** — the user's next, separate request.
-  Root issue: `Eksabli.Memberships.View` alone doesn't exclude a platform admin, because the seeded
-  Host "admin" role is granted **every** permission that exists at `DbMigrator` seed time (see
-  `IdentityDataSeeder`), including business-scoped ones — so a platform admin was passing the
-  permission check and could both see the "Business" nav group and open `/admin/customers`, even
-  though it isn't their data (and would just render empty for them — `Membership` etc. are
-  tenant-scoped, `CurrentTenant.Id` is null for a Host admin). Fixed with an explicit realm exclusion,
-  layered on top of (not instead of) the real permission check:
-  - `core/guards/admin.guard.ts`: new `businessStaffOnlyGuard` — the inverse of `adminGuard`; redirects
-    a platform admin (`isPlatformAdmin(permissionService)` true) to `/admin/businesses` instead of
-    letting them through. Wired as a second `canActivate` on the `customers` child route in
-    app.routes.ts (`[permissionGuard, businessStaffOnlyGuard]`), alongside the existing
-    `data.requiredPolicy: 'Eksabli.Memberships.View'`.
-  - `AdminLayoutComponent`: `AdminNavItem` gained an optional `businessOnly?: boolean` flag (set on the
-    Customers entry); `navGroups`'s computed filter now also drops any `businessOnly` item when
-    `isPlatformAdmin()` is true, so the "Business" nav group itself disappears for a platform admin
-    (and the group-pruning logic already in place removes the now-empty group).
-  - Net effect: Customers is reachable (nav + direct URL) only for an authenticated user who holds
-    `Eksabli.Memberships.View` AND is **not** a platform admin — i.e., real tenant-realm business
-    staff. A platform admin sees neither the nav entry nor the page.
-- **Still true, unchanged from the original build**: no coarse "is business staff" *positive* realm
-  guard exists (there's no single permission every business-staff role is guaranteed to hold — Owner/
-  BranchManager/Cashier get different permission sets) — `Eksabli.Memberships.View` +
-  `businessStaffOnlyGuard`'s negative platform-admin exclusion is what actually gates it now.
-  `redirectAuthenticatedToHomeGuard` (app.routes.ts) still does NOT auto-route business staff anywhere
-  special post-login (falls through to `/home` like any other non-platform-admin authenticated user) —
-  solving real tenant-realm detection is a separate, larger piece of work than one page; don't guess
-  at it.
-- **Data/build shape** — mirrors `prototype/business/customers.html`'s two-tab layout (Members /
-  Following), built against REAL data only:
-  - **Members tab**: a **brand-new backend endpoint**, `MembershipAppService.GetMembersAsync`
-    (`GET /api/app/memberships`, new permission `Eksabli.Memberships.View`) — no such business-facing
-    "list my tenant's members" endpoint existed before this session (`IMembershipAppService` only had
-    self-service `GetMy*` methods). Joins this tenant's `Membership` (ambient-tenant-scoped, no
-    `Disable<IMultiTenant>()` needed — same shape as `FollowAppService.GetFollowersAsync`) with
-    Host-realm `CustomerProfile`/`IdentityUser` (name/phone — same cross-realm join
-    `PosAppService.LookupCustomerByPhoneAsync` already used for a single customer, just batched via
+- **Customers** — mirrors `prototype/business/customers.html`'s two-tab layout (Members / Following),
+  built against REAL data only:
+  - **Members tab**: `MembershipAppService.GetMembersAsync` (`GET /api/app/memberships`, permission
+    `Eksabli.Memberships.View`) — joins this tenant's `Membership` (ambient-tenant-scoped) with
+    Host-realm `CustomerProfile`/`IdentityUser` (name/phone — same cross-realm join `PosAppService
+    .LookupCustomerByPhoneAsync` already used for a single customer, just batched via
     `IIdentityUserRepository.GetListByIdsAsync`) and this tenant's `PointsWallet`/`Tier`
     (balance/tier). Filters/sorts/paginates in C# after loading the tenant's full member set — same
-    "acceptable at this scale" approach `AdminTenantAppService` already uses, at a smaller scale by
-    construction (one tenant, not cross-tenant). "Last Active" is `PointsWallet.LastModificationTime`
-    (bumped by ABP's own auditing whenever a real points transaction changes the wallet) — the closest
-    genuine signal, since there is no login/session tracking anywhere in this codebase; not invented.
-  - **Following tab**: `FollowAppService.GetFollowersAsync` — already existed, but `FollowDto` was
-    bare (no name/phone). Enriched this session via a new `FollowerDto` (same join pattern as
-    `MemberDto`) rather than reusing/mutating `FollowDto`, which stays bare for the customer-facing
-    `GetMyFollowsAsync` (a customer doesn't need their own name echoed back).
-  - `[MISSING BACKEND CAPABILITY]`, deliberately not built: **Export** button (no Excel-export
-    capability exists for Memberships, unlike Books/Authors' real token-gated pattern — nothing to
-    wire it to); **"Convert to Campaign Target"** per follower (`Eksabli.Followers.ConvertToCampaign`
-    permission exists but is explicitly commented "defined for parity/future use" in
-    `EksabliPermissions.cs` — no endpoint backs it); a **customer-details drill-down page** (not
-    built — names are plain text, not a link to a page that doesn't exist).
-  - Real `MembershipStatus` is only `Active`/`Frozen` (confirmed in the domain enum) — the prototype's
-    "At Risk"/"Churned" statuses don't exist anywhere in the backend and are **not** reproduced.
-  - Tier filter dropdown is best-effort/hidden-on-failure: `TiersController` gates its whole
-    controller (including read) on `Eksabli.Tiers.Default`, a permission a `Memberships.View`-only
-    viewer doesn't necessarily also hold.
+    "acceptable at this scale" approach `AdminTenantAppService` uses. "Last Active" is `PointsWallet
+    .LastModificationTime` (bumped by ABP's own auditing on a real points transaction) — the closest
+    genuine signal, since there's no login/session tracking anywhere in this codebase.
+  - **Following tab**: `FollowAppService.GetFollowersAsync`, enriched via `FollowerDto` (name/phone
+    join, same pattern as `MemberDto`) — `FollowDto` itself stays bare for the customer-facing
+    `GetMyFollowsAsync`.
+  - `[MISSING BACKEND CAPABILITY]`, deliberately not built: Export button (no Excel-export capability
+    for Memberships); "Convert to Campaign Target" per follower (permission exists, explicitly
+    "parity/future use", no endpoint backs it); a customer-details drill-down page (names are plain
+    text, not a link to a page that doesn't exist). Real `MembershipStatus` is only `Active`/`Frozen`
+    — the prototype's "At Risk"/"Churned" don't exist and aren't reproduced. Tier filter dropdown is
+    best-effort/hidden-on-failure (`TiersController` gates its whole controller on `Eksabli.Tiers
+    .Default`, a permission a `Memberships.View`-only viewer doesn't necessarily hold).
+- **Employees** — mirrors `prototype/business/employees.html`. **No backend changes needed at all** —
+  `EmployeeAssignmentsController` (`GetListAsync`/`InviteAsync`/`UpdateAsync`/`RemoveAsync`, whole
+  controller gated on `Eksabli.EmployeeAssignments.Default`, no separate read permission) and its
+  Angular proxy (`proxy/employee-assignments/*`, `proxy/branches/*`) already existed, fully generated,
+  untouched. Real fields, deliberately different from the prototype's exact shape:
+  - **No "Name" column** — same finding as the Users page: `IdentityUser.Name`/`.Surname` are never
+    populated for a staff account anywhere in this codebase. The identity cell shows the real email
+    directly instead of a fabricated name or a redundant separate email column.
+  - **No "Status" column** — the prototype's Active/Invited/Suspended aren't real: `InviteAsync`
+    creates a fully active account immediately (no pending-invite state exists, same finding as Users),
+    and there's no soft-suspend — `RemoveAsync` deletes the `EmployeeAssignment` row outright, which is
+    also the exact real mechanism that revokes POS access (`PosAppService`'s staff-role check reads
+    this same table — confirmed by reading it). Every listed row is active by construction; a static
+    badge with no real variation was omitted rather than shown as decoration.
+  - **Branch** resolves via a real bulk `BranchesService.getList` lookup (best-effort, same pattern
+    used everywhere); a null `BranchId` is a real documented domain state
+    (`EmployeeAssignment.BranchId`'s own comment: "null = access to all branches") shown as "All
+    branches", not treated as missing data.
+  - Invite modal's Role dropdown excludes "Owner" (matches the prototype) — there's no invite-as-owner
+    flow, `EmployeeRole.Owner` is only ever set once, at business registration.
+  - The Owner's own row never shows a Revoke action (matches the prototype's own real safeguard).
+  - `[MISSING BACKEND CAPABILITY]`: no search/filter box (`PagedAndSortedResultRequestDto` has no
+    `filterText` for this endpoint, same gap as the Support Tickets queue); no edit-role/reassign-branch
+    UI even though `UpdateAsync` exists server-side — the prototype itself doesn't expose one either, so
+    this matches prototype scope rather than being a gap introduced here.
+- **Dashboard** (`business/dashboard/`) — mirrors `prototype/business/dashboard.html`, and is now the
+  landing page for `/business` (bare path redirects here, matching `redirectAuthenticatedToHomeGuard`'s
+  destination for a business-realm account — see the top of this file). Built entirely from a **real,
+  already-implemented, purpose-built endpoint that neither this session nor any Angular work created**:
+  `IReportsAppService.GetDashboardHomeAsync()` (`GET /api/app/report/dashboard-home`, whole
+  `ReportsController` gated on `Eksabli.Reports.Default`) — its own code comment says it "centralizes
+  KPI calculation so the definitions in docs/eksabli-loyalty-platform/features/07-business-dashboard/
+  README.md#business-rules stay the single source of truth," confirming Feature 07 (Business Dashboard)
+  was fully built server-side well before any Angular work started here. `proxy/reports/*` /
+  `proxy/controllers/reports.service.ts` were also already fully generated — **no backend changes
+  needed** for this page either.
+  - **Stat tiles** (all real, `DashboardHomeDto`): Active Members (last-30-days Earn-transaction
+    activity), Points Issued/Redeemed (30d sums), Active Campaigns (yes — the `Campaign` entity and its
+    Active status genuinely exist server-side even though no Campaigns *page* exists anywhere yet; the
+    count is real, just not linked to anything). No fake "+X%" deltas (the DTO has none) except "X% of
+    issued" under Points Redeemed, which IS real — computed client-side from the same two already-
+    fetched sums, not invented.
+  - **Low-stock alert banner** — real, from `DashboardHomeDto.LowStockRewards` (`Reward
+    .StockRemaining <= 10`, the same threshold the backend itself uses). Not linked anywhere (no
+    Rewards page exists yet).
+  - **Member Growth chart (7 months) + "+X% MoM" badge** — both real. `IReportsAppService
+    .GetMemberGrowthAsync` returns per-DAY new-member counts for an arbitrary range, not pre-bucketed
+    by month, so `business-dashboard.component.ts` fetches one 7-month window and re-buckets
+    client-side (`bucketByMonth()`), filling zero-count months rather than skipping them. The MoM badge
+    is a real last-vs-prior-month delta computed from that same data, hidden (not shown as 0%/∞) when
+    not computable (fewer than 2 months of data, or prior month was 0).
+  - **Quick Actions** — only 2 links, both to pages that actually exist (`/business/customers`,
+    `/business/employees`). The prototype's own "Award points (POS)"/"Create a campaign"/"Add a
+    branch" links were dropped — none of those pages exist in this Business Portal yet, and a link to
+    a nonexistent page is a dead end, not a shortcut.
+  - `[MISSING BACKEND CAPABILITY]`, deliberately not built: the prototype's "Recent Activity" table (5
+    most recent transactions, any customer). No JSON list endpoint exposes tenant-wide recent
+    transactions — `IWalletAppService.GetMyTransactionHistoryAsync` is scoped to the calling customer's
+    own wallet only; `ReportsAppService`'s only tenant-wide transaction read is
+    `GetTransactionsAsExcelFileAsync` (a bulk Excel *export*, gated on `Eksabli.Reports.Export` — see
+    CLAUDE.md's Excel-export pattern), not a live list. A real "Export Transactions" action wired to
+    that existing token-gated download flow would be a reasonable, low-effort follow-up — not attempted
+    this pass, to keep this page's first cut scoped to what the prototype's *own* dashboard-home data
+    actually needs.
+- **Analytics** (`business/analytics/`) — mirrors `prototype/business/analytics.html`, built from real
+  `IReportsAppService` endpoints Dashboard itself didn't use (same `Eksabli.Reports.Default` gate).
+  **No backend changes needed** — every endpoint and its proxy already existed.
+  - **Member Growth** (7 months) — same real `GetMemberGrowthAsync` + client-side month-bucketing as
+    Dashboard, duplicated rather than extracted into a shared service (matches this codebase's existing
+    per-page-owns-its-helpers convention).
+  - **Redemption Rate Trend** (7 months) — real, but needed 7 separate calls to
+    `GetRedemptionRateAsync` (one per month), fired together via `forkJoin` — that endpoint returns one
+    aggregate rate for whatever `{from, to}` range you give it, no lower-granularity data, so a genuine
+    month-by-month trend has no single-call shape. This is a real "N genuinely different date-range
+    queries" case, not the "redundant concurrent calls" anti-pattern from earlier this session.
+  - **"Redemptions by Branch"** — real via `GetBranchComparisonAsync`, but **relabeled** from the
+    prototype's own "Active members by branch": that's not what `BranchComparisonDto.RedemptionCount`
+    actually measures (coupon-redemption counts per branch — `Membership` itself isn't branch-scoped
+    anywhere in the domain, so "active members by branch" isn't a real, computable thing at all).
+    Labeled for what the real data actually is, not what the prototype's copy claimed.
+  - **Tier Distribution** — real via `GetTierDistributionAsync`, a snapshot (no date range).
+  - **KPI Definitions** — only 2 of the prototype's 4 terms, the ones with verifiable real backend
+    logic behind them ("Active member", "Redemption rate"). Dropped "Churn" (a real `Churned` segment
+    IS computed by `GetCustomerSegmentsAsync`, but with different real boundaries than the prototype's
+    stated "60+ days" — not shown since this page doesn't surface that endpoint) and "MRR" (no endpoint
+    exposes a business's own subscription cost as "MRR" anywhere this session found).
+  - **Deliberate scope reduction**: no 7D/30D/90D range toggle (the prototype's own toggle would need
+    to re-drive two of the four widgets differently per range while the other two stay fixed-shape
+    either way) — fixed at trailing-30-days for branch comparison, trailing-7-months for both trend
+    charts, matching Dashboard's own framing. A real toggle is a reasonable follow-up.
+  - Real, unused-here endpoints worth knowing about for a future `reports.html`-style page:
+    `GetCustomerSegmentsAsync` (New/Active/AtRisk/Churned counts) and `GetTopCustomersAsync`
+    (lifetime-value ranking) — both map more naturally to `prototype/business/reports.html`'s
+    "Customer Report" than to this Analytics page.
+- **Branches** (`business/branches/`) — mirrors `prototype/business/branches.html`, built against
+  `BranchAppService`'s real full CRUD (`GetListAsync`/`CreateAsync`/`UpdateAsync`, whole controller
+  gated on `Eksabli.Branches.Default`; `Create`/`Edit` children gate the two actions this page
+  exposes). Proxy already existed, fully generated — no backend changes needed for the CRUD.
+  - **No "Status" badge** — `Branch` has no such field anywhere in the domain (confirmed by reading
+    the entity); every branch that exists is implicitly active.
+  - **No "Members" count per branch** — `Membership` isn't branch-scoped anywhere in the domain (same
+    gap Analytics' "Redemptions by Branch" widget already hit).
+  - **No "QR Code" check-in modal** — no branch check-in QR concept exists anywhere in this codebase
+    (the real `WalletQrToken` flow is a *customer's own wallet* QR for staff to scan at POS — a
+    different thing entirely from a branch's own printable code). The prototype's QR is a literal
+    random pixel grid with nothing real behind it — dropped entirely, not faked.
+  - **Opening hours** is free text into `Branch.OpeningHoursJson`, a freeform `[StringLength(2000)]`
+    string column with no enforced schema (confirmed by reading `Branch.cs`/`BranchAppService`) — same
+    "freeform blob" treatment as `BusinessProfile.SocialLinksJson` elsewhere; stored as whatever text
+    is typed, not parsed as JSON.
+  - **The plan-quota alert IS real** — `IBillingAppService.GetMyUsageAsync()`
+    (`Eksabli.Billing.ManageOwn`, proxy already existed) returns the real
+    `{ BranchCount, MaxBranches }` pair, computed server-side from the exact same
+    `FeatureChecker`/`EksabliFeatures.MaxBranches` check `BranchAppService.CreateAsync` itself already
+    enforces (that create call throws a real `UserFriendlyException` at the actual limit — not
+    duplicated client-side, just surfaced via the normal error toast if it happens). Best-effort/
+    hidden-on-failure for a viewer without `Billing.ManageOwn`.
+  - No delete action exposed — `DeleteAsync` exists server-side (`Eksabli.Branches.Delete`) but the
+    prototype itself has no delete button either; matches prototype scope.
+  - No real pagination — branches are inherently plan-quota-limited to a handful, so a single bounded
+    `maxResultCount: 100` load covers any real business.
+- **Points Management** (`business/points/`) — mirrors `prototype/business/points-management.html`'s
+  three tabs (Award Points / Point Rules / Tiers), built against `PosAppService`/`PointRuleAppService`/
+  `TierAppService` — **no backend changes needed**, every endpoint and proxy already existed.
+  **Genuinely different route shape from every other page**: `PosController` carries no ABP permission
+  at all (`[Authorize]` only) — the real gate is a custom staff-role check *inside* `PosAppService`
+  itself (`CheckStaffRoleAsync`, reads the caller's own `EmployeeAssignment.Role`), because invited
+  staff hold zero ABP permission grants (only the seeded tenant Owner does — confirmed by reading that
+  method's own code comment). So the `/business/points` route has **no `data.requiredPolicy`** — the
+  Award tab is offered to any authenticated business-realm visitor, and a role mismatch surfaces as the
+  real backend error at award time (a toast), matching how the API is actually gated. **If you add
+  another page backed by `PosAppService` (manual adjust, redemption confirm), don't reach for
+  `permissionGuard` — there's no policy to give it.** Point Rules/Tiers tabs DO have real permissions
+  (`Eksabli.PointRules.Default`/`Eksabli.Tiers.Default`) and are shown/hidden per-tab inside the
+  component instead (empty-string "always granted" nav permission, same shape as `AdminLayoutComponent`
+  's `AbpAccount::MyAccount` entry).
+  - **Award Points tab**: real, but reduced to one of the prototype's two identification modes —
+    **Phone Lookup only** (`PosService.lookupCustomerByPhone` → `awardPointsByCustomerId`). "Scan QR"
+    is dropped entirely: the real QR flow consumes a single-use token minted by the *customer's own*
+    wallet app, which would need an actual camera-based scanner UI (no QR-scanning library/pattern
+    exists anywhere in this app) — not something fakeable the way the prototype's own "Simulate Scan"
+    button is.
+  - **No live points-calculation preview** — the prototype shows a running base/tier/campaign
+    breakdown as you type a sale amount. The real calculation only runs *inside* the actual award call
+    (`PosAppService.ComputePointsAsync`, private) — there's no preview/simulate endpoint, and
+    reimplementing that pipeline client-side would risk drifting from the real logic. Instead: click
+    Award, then show the REAL `AwardPointsResultDto` the backend actually computed, after the fact.
+  - **Point Rules tab**: real, but `PointRuleDto` is much thinner than the prototype's table implies —
+    only `RuleType` (`PerCurrencyUnit`/`PerVisit`) and `PointsPerUnit` are real; there's no rule
+    "label"/name and no Active/Inactive status anywhere on the entity. Shown as the rule type
+    humanized ("Per $1 spent"/"Per visit") + the real points value. No "Add Rule" UI — the prototype's
+    own button is a stub that just shows an info toast, not a built form even in the mockup, so this
+    isn't a gap introduced here.
+  - **Tiers tab**: real, read-only (matches the prototype's own tab, also read-only).
+  - Neither Rules nor Tiers exposes Create/Edit despite both `PointRuleAppService`/`TierAppService`
+    having real full CRUD server-side — deliberately not attempted this pass, same "don't build past
+    prototype parity without being asked" reasoning as Employees/Branches.
+  - The rounding-policy note ("fractional points always round down") is real — verified against
+    `PosAppService.ComputePointsAsync`'s own `Math.Floor` behavior, not just copied from the
+    prototype's own copy.
 
 ## What's NOT done — pick up here, in this order
 
@@ -493,18 +614,32 @@ the Admin Portal**, what's left:
    originally stated MVP scope should now be built; Users (`admin/users/`) was also added this session
    as an explicit user request beyond the original plan, matching `prototype/admin/users.html`.
 
-**For tenant-realm-staff pages beyond Customers** (still mounted under `/admin/*` — see the "Customers
-page" section above for why there's no separate portal shell anymore) — no equivalent
-implementation-plan doc exists yet (the backend-readiness doc covers Host-realm Admin Portal features
-only); scope has been driven directly by `prototype/business/*.html` + backend-reality-checking this
-session. Only Customers is built. Natural next pages, if asked for: check `prototype/business/*.html`
-for what exists (dashboard, campaigns, rewards, wallet/points-rules, branches, employee-assignments,
-offers, coupons, reports, settings all have prototype pages — verify each against the REAL backend the
-same way this session did for Customers before building, and give each its own real permission +
-`ADMIN_NAV` entry, never `Eksabli.Tenants.View`; several of these app services already exist per this
-session's own file exploration — `TierAppService`, `PointRuleAppService`, `WalletAppService`,
-`EmployeeAssignmentAppService` was referenced but not
-opened — read the actual service before assuming a page's data is available).
+**For Business Portal pages beyond Dashboard/Analytics/Customers/Employees/Branches/Points Management**
+(mounted under `/business/*`, inside `BusinessLayoutComponent`, gated on `businessRealmGuard` — see the
+top of this file) — no equivalent implementation-plan doc exists yet (the backend-readiness doc covers
+Host-realm Admin Portal features only); scope has been driven directly by `prototype/business/*.html` +
+backend-reality-checking this session. Natural next pages, if asked for: check
+`prototype/business/*.html` for what exists (campaigns, rewards, offers, coupons, settings,
+notifications, transactions, subscription/billing all have prototype pages — verify each against the
+REAL backend the same way this session did for the six pages already built, and give each its own real
+permission as `data.requiredPolicy` on a `/business/*` child route + a `BusinessLayoutComponent` nav
+entry — unless, like Points Management, the underlying app service turns out to have no ABP permission
+at all, in which case don't force one; check `businessRealmGuard`'s coarse realm gate is still enough).
+`CouponAuditService`/`RewardAppService`/`CampaignAppService` all exist and were referenced this session
+but not opened — read the actual service (and its controller's `[Authorize]` attributes specifically —
+Points Management proved that assumption can be wrong) before assuming a page's data/permission shape.
+**`prototype/business/reports.html` was checked and found to be a weak next-candidate** — unlike
+`analytics.html` (built this session), its "Generate report as CSV/PDF" buttons and "Recent Exports"
+history table have no real backend behind them (`ReportsAppService`'s only true report-generation
+capability is the single Excel export already noted as a follow-up under Dashboard's own bullet above
+— no CSV/PDF, no saved-report/export-history persistence exists anywhere). Building it for real would
+mean a much smaller page than the prototype shows (basically just an Export Transactions button); don't
+build it expecting the prototype's full shape to be achievable. `IReportsAppService.
+GetCustomerSegmentsAsync` (New/Active/AtRisk/Churned) and `GetTopCustomersAsync` (lifetime-value
+ranking) are still real and unused if a scaled-down customer-report-style widget is ever wanted.
+`TierAppService`, `PointRuleAppService`, `WalletAppService` were referenced earlier this session but
+not opened — read
+the actual service before assuming a page's data is available.
 
 ## Useful memory
 

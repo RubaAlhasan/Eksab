@@ -108,17 +108,57 @@ function configureRoutes() {
         invisible: true,
         layout: eLayoutType.empty,
       },
-      // Tenant-realm Customers page, folded into the Admin Portal shell (see app.routes.ts and
-      // admin-customers.component.ts's file comment for why this isn't a separate /business route/
-      // portal) — same eLayoutType.empty treatment, own real policy so business staff (who lack
-      // Tenants.View) can still reach it.
+      // Business Portal routes — same eLayoutType.empty treatment as Admin above (BusinessLayoutComponent
+      // renders its own shell; see app.routes.ts's '/business' block and business.guard.ts for the real
+      // tenant-resolution-based realm gate).
       {
-        path: '/admin/customers',
+        path: '/business/dashboard',
+        name: '::BusinessPanel:Layout:NavDashboard',
+        iconClass: 'fas fa-gauge-high',
+        order: 19,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.Reports.Default',
+      },
+      {
+        path: '/business/analytics',
+        name: '::BusinessPanel:Layout:NavAnalytics',
+        iconClass: 'fas fa-chart-line',
+        order: 20,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.Reports.Default',
+      },
+      {
+        path: '/business/customers',
         name: '::BusinessPanel:Layout:NavCustomers',
         iconClass: 'fas fa-users',
-        order: 8,
+        order: 21,
         layout: eLayoutType.empty,
         requiredPolicy: 'Eksabli.Memberships.View',
+      },
+      {
+        path: '/business/employees',
+        name: '::BusinessPanel:Layout:NavEmployees',
+        iconClass: 'fas fa-user-tie',
+        order: 22,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.EmployeeAssignments.Default',
+      },
+      {
+        path: '/business/branches',
+        name: '::BusinessPanel:Layout:NavBranches',
+        iconClass: 'fas fa-building',
+        order: 23,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.Branches.Default',
+      },
+      // No requiredPolicy — same shape as '/home' above; PosController has no ABP permission at all,
+      // see app.routes.ts's own comment on this route for the full reasoning.
+      {
+        path: '/business/points',
+        name: '::BusinessPanel:Layout:NavPoints',
+        iconClass: 'fas fa-qrcode',
+        order: 24,
+        layout: eLayoutType.empty,
       },
   ]);
 }

@@ -1,30 +1,32 @@
-import { AuthService, PermissionService, authGuard, eLayoutType, permissionGuard } from '@abp/ng.core';
+import { AuthService, ConfigStateService, PermissionService, authGuard, eLayoutType, permissionGuard } from '@abp/ng.core';
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, Routes } from '@angular/router';
-import { adminGuard, businessStaffOnlyGuard, isPlatformAdmin } from './core/guards/admin.guard';
+import { adminGuard, isPlatformAdmin } from './core/guards/admin.guard';
+import { businessRealmGuard, isBusinessRealm } from './core/guards/business.guard';
 
 /**
  * OAuth redirectUri always lands back on '/' — figure out where an already-authenticated visitor
  * actually belongs instead of always sending them to the customer/tenant placeholder.
  *
- * Realm detection is permission-based (`Eksabli.Tenants.View`, see admin.guard.ts), not tenantId-based.
- * A real Customers page for tenant-realm business staff now exists (`/admin/customers`, see below —
- * folded into the one Admin Portal shell, not a separate portal/route namespace; see admin-customers
- * .component.ts's file comment for why) but this guard is NOT yet extended to route tenant-realm staff
- * there — unlike the Host-realm admin case, there's no equally reliable, already-proven-in-this-codebase
- * signal for "this authenticated session belongs to business staff" (permission grants vary per
- * role/tenant; no single umbrella permission every staff member is guaranteed to hold). Business staff
- * can still reach `/admin/customers` directly by URL or a nav link once logged in — they just don't
- * land there automatically post-login yet. Solving realm detection properly is a separate, larger piece
- * of work than one page; don't guess at it here. Host-realm customers still fall back to `/home`,
- * unchanged.
+ * Two independent realm signals, checked in order:
+ * 1. `isPlatformAdmin` — permission-based (`Eksabli.Tenants.View`, see admin.guard.ts). A platform
+ *    admin always lands on `/admin`.
+ * 2. `isBusinessRealm` — real tenant-resolution-based (`currentTenant.id` from ABP's own config state,
+ *    see business.guard.ts's own comment for why this is a reliable signal without any custom
+ *    subdomain/header tenant-selection UI). A business-staff account lands on `/business`.
+ *
+ * Everyone else (a Host-realm customer, or nobody authenticated) falls through to `/home`/the landing
+ * page as before.
  */
 const redirectAuthenticatedToHomeGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
   const permissionService = inject(PermissionService);
+  const configState = inject(ConfigStateService);
   const router = inject(Router);
   if (!authService.isAuthenticated) return true;
-  return router.createUrlTree([isPlatformAdmin(permissionService) ? '/admin' : '/home']);
+  if (isPlatformAdmin(permissionService)) return router.createUrlTree(['/admin']);
+  if (isBusinessRealm(configState)) return router.createUrlTree(['/business']);
+  return router.createUrlTree(['/home']);
 };
 
 export const APP_ROUTES: Routes = [
@@ -43,21 +45,12 @@ export const APP_ROUTES: Routes = [
   {
     // Parent shell for the whole Admin Portal — AdminLayoutComponent renders its own sidebar/topbar
     // (registered as `eLayoutType.empty` in route.provider.ts so ABP's own Lepton-X SideMenu layout
-    // doesn't *also* wrap these routes — see that file's comment for why this matters).
-    //
-    // Deliberately only `authGuard` here, NOT `adminGuard` — `adminGuard` requires the Host-only
-    // `Eksabli.Tenants.View` signal permission (see admin.guard.ts), which tenant-realm business staff
-    // never hold by construction. The `customers` child route below needs to be reachable by that
-    // realm too (it used to live under its own now-deleted `/business` shell — see admin-customers
-    // .component.ts's file comment for why it was folded in here instead). Every child route already
-    // enforces its OWN `permissionGuard` + specific policy (or, for the nested stock-ABP children,
-    // relies on that package's own self-contained guards — see the comment further down) regardless of
-    // this parent guard, so relaxing it doesn't widen access to anything: a Host admin without
-    // `Eksabli.Memberships.View` still can't open Customers, and business staff without
-    // `Eksabli.Tenants.View` still can't open Businesses/Categories/Plans/etc.
+    // doesn't *also* wrap these routes — see that file's comment for why this matters). Host-realm
+    // platform staff only — `adminGuard` gates the whole subtree; tenant-realm business staff have
+    // their own separate shell/subtree at `/business` (see below), gated by `businessRealmGuard`.
     path: 'admin',
     loadComponent: () => import('./admin/layout/admin-layout.component').then(c => c.AdminLayoutComponent),
-    canActivate: [authGuard],
+    canActivate: [authGuard, adminGuard],
     children: [
       {
         // Bare '/admin' lands here — matches redirectAuthenticatedToHomeGuard's own destination for a
@@ -146,20 +139,6 @@ export const APP_ROUTES: Routes = [
         // fall back to — same shape as Subscriptions above, not Tenants.View.
         data: { requiredPolicy: 'Eksabli.SupportTickets.Manage' },
       },
-      {
-        // Tenant-realm data (Memberships/Followers), reachable by business staff — gated on its own
-        // real policy, not Tenants.View (business staff don't hold that Host-only permission). See the
-        // parent '/admin' route's comment above for why the coarse `adminGuard` was relaxed to allow
-        // this, and admin-customers.component.ts's file comment for why this isn't a separate portal.
-        // `businessStaffOnlyGuard` additionally EXCLUDES platform admins — `permissionGuard` alone
-        // isn't enough here since the seeded Host admin role holds every permission including
-        // `Eksabli.Memberships.View` (see that guard's own comment in admin.guard.ts).
-        path: 'customers',
-        loadComponent: () =>
-          import('./admin/customers/admin-customers.component').then(c => c.AdminCustomersComponent),
-        canActivate: [permissionGuard, businessStaffOnlyGuard],
-        data: { requiredPolicy: 'Eksabli.Memberships.View' },
-      },
       // Stock ABP UI (Users/Roles/My Profile/Settings), nested here — not just linked at their
       // existing top-level '/identity', '/account', '/setting-management' paths below — so they
       // render inside AdminLayoutComponent's own shell instead of Lepton-X's stock SideMenu chrome.
@@ -191,6 +170,75 @@ export const APP_ROUTES: Routes = [
         // Same self-contained-guards reasoning as identity/setting-management/account above.
         path: 'tenant-management',
         loadChildren: () => import('@abp/ng.tenant-management').then(c => c.createRoutes()),
+      },
+    ],
+  },
+  {
+    // Parent shell for the Business Portal — tenant-realm staff (Owner/BranchManager/Cashier/
+    // MarketingManager). `BusinessLayoutComponent` renders its own sidebar/topbar (same
+    // `eLayoutType.empty` treatment as Admin above — see route.provider.ts). Gated on
+    // `businessRealmGuard` (core/guards/business.guard.ts) — real tenant-resolution (`currentTenant.id`
+    // from ABP's own config state), not a permission heuristic; see that guard's own comment for why
+    // this is reliable. Each child route still gates on its own real permission on top of that, same
+    // "coarse realm guard + per-page permission" shape as Admin.
+    path: 'business',
+    loadComponent: () => import('./business/layout/business-layout.component').then(c => c.BusinessLayoutComponent),
+    canActivate: [authGuard, businessRealmGuard],
+    children: [
+      {
+        // Bare '/business' lands here — matches redirectAuthenticatedToHomeGuard's own destination
+        // for a business-realm account and the prototype's own IA (Dashboard is the landing page).
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'dashboard',
+      },
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./business/dashboard/business-dashboard.component').then(c => c.BusinessDashboardComponent),
+        canActivate: [permissionGuard],
+        // Whole `ReportsController` (view included) is gated on `Eksabli.Reports.Default`, no lesser
+        // read to fall back to.
+        data: { requiredPolicy: 'Eksabli.Reports.Default' },
+      },
+      {
+        path: 'analytics',
+        loadComponent: () =>
+          import('./business/analytics/business-analytics.component').then(c => c.BusinessAnalyticsComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Reports.Default' },
+      },
+      {
+        path: 'customers',
+        loadComponent: () =>
+          import('./business/customers/business-customers.component').then(c => c.BusinessCustomersComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Memberships.View' },
+      },
+      {
+        path: 'employees',
+        loadComponent: () =>
+          import('./business/employees/business-employees.component').then(c => c.BusinessEmployeesComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.EmployeeAssignments.Default' },
+      },
+      {
+        path: 'branches',
+        loadComponent: () =>
+          import('./business/branches/business-branches.component').then(c => c.BusinessBranchesComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Branches.Default' },
+      },
+      {
+        // No `permissionGuard`/`requiredPolicy` — deliberately. `PosController` (the Award Points tab)
+        // has no ABP permission at all; it's gated by a custom staff-role check inside `PosAppService`
+        // itself, not `[Authorize(EksabliPermissions...)]` (see business-points.component.ts's own
+        // file comment for why). The Point Rules/Tiers tabs DO have real permissions
+        // (`Eksabli.PointRules.Default`/`Eksabli.Tiers.Default`) but are shown/hidden per-tab inside
+        // the component instead, since neither alone should gate the whole page.
+        path: 'points',
+        loadComponent: () =>
+          import('./business/points/business-points.component').then(c => c.BusinessPointsComponent),
       },
     ],
   },

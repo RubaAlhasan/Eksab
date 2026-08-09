@@ -10,18 +10,11 @@ import {
   SessionStateService,
   getLocaleDirection,
 } from '@abp/ng.core';
-import { isPlatformAdmin } from '../../core/guards/admin.guard';
-
 interface AdminNavItem {
   labelKey: string;
   icon: string;
   link: string;
   permission: string;
-  /** True for tenant-realm-only pages (e.g. Customers) that must stay hidden from a platform admin
-   *  even though the seeded Host admin role also holds `permission` (every permission is granted at
-   *  seed time — see `businessStaffOnlyGuard`'s comment in admin.guard.ts, which enforces the same
-   *  exclusion at the route level). Omitted/false for every ordinary Host-realm nav item. */
-  businessOnly?: boolean;
 }
 
 interface AdminNavGroup {
@@ -79,30 +72,12 @@ const ADMIN_NAV: AdminNavGroup[] = [
     ],
   },
   {
-    // Tenant-realm data (Memberships/Followers) — it's the group most likely to be the ONLY visible
-    // group for a business-staff account (the Overview group above is Host-only and filtered out for
-    // them), since every other group below is also gated on Host-only permissions (Tenants.View,
-    // Billing.ManagePlatform, etc.) they don't hold. Reuses the real, already-shipped
-    // `BusinessPanel:Layout:NavCustomers` key (previously the now-deleted BusinessLayoutComponent's
-    // own nav label) rather than minting a duplicate.
-    groupKey: '::AdminPanel:Layout:GroupBusiness',
-    items: [
-      {
-        labelKey: '::BusinessPanel:Layout:NavCustomers',
-        icon: 'fa-users',
-        link: '/admin/customers',
-        permission: 'Eksabli.Memberships.View',
-        businessOnly: true,
-      },
-    ],
-  },
-  {
     groupKey: '::AdminPanel:Layout:GroupPlatform',
     items: [
       { labelKey: '::Menu:AdminTenants', icon: 'fa-building', link: '/admin/businesses', permission: 'Eksabli.Tenants.View' },
       // Cross-tenant user directory — a genuinely different permission from Tenants.View (see
       // EksabliPermissions.Users' own comment: it exposes contact info across every tenant, audited
-      // separately). Not `businessOnly` like Customers — this page is Host-only by design.
+      // separately).
       { labelKey: '::Menu:AdminUsers', icon: 'fa-address-book', link: '/admin/users', permission: 'Eksabli.Users.View' },
       { labelKey: '::Menu:Categories', icon: 'fa-tags', link: '/admin/categories', permission: 'Eksabli.Tenants.View' },
     ],
@@ -196,21 +171,18 @@ export class AdminLayoutComponent {
   protected readonly darkMode = signal(false);
   protected readonly langMenuOpen = signal(false);
 
-  /** Per-group permission filter (plus `businessOnly` items are additionally hidden from a platform
-   *  admin — see `AdminNavItem.businessOnly`'s comment above and `businessStaffOnlyGuard` in
-   *  admin.guard.ts, which enforces the same exclusion at the route level, not just in the nav), then
-   *  drop any group left with zero visible items (e.g. a tenant-realm-scoped admin who lacks
-   *  Billing.ManagePlatform shouldn't see an empty "Billing" header). */
-  protected readonly navGroups = computed<AdminNavGroup[]>(() => {
-    const isAdmin = isPlatformAdmin(this.permissionService);
-    return ADMIN_NAV.map((group) => ({
+  /** Per-group permission filter, then drop any group left with zero visible items (e.g. a viewer
+   *  without Billing.ManagePlatform shouldn't see an empty "Billing" header). Realm itself is already
+   *  handled at the route level (`adminGuard` on the whole `/admin` subtree — see app.routes.ts) —
+   *  everyone who reaches this shell at all is a platform admin, no additional per-item realm
+   *  filtering is needed here (unlike the shell's own earlier design, back when Customers/Employees
+   *  briefly lived inside this same shell). */
+  protected readonly navGroups = computed<AdminNavGroup[]>(() =>
+    ADMIN_NAV.map((group) => ({
       groupKey: group.groupKey,
-      items: group.items.filter(
-        (item) =>
-          this.permissionService.getGrantedPolicy(item.permission) && !(item.businessOnly && isAdmin),
-      ),
-    })).filter((group) => group.items.length > 0);
-  });
+      items: group.items.filter((item) => this.permissionService.getGrantedPolicy(item.permission)),
+    })).filter((group) => group.items.length > 0),
+  );
 
   protected readonly currentUserName = computed(() => {
     const currentUser = this.configState.getOne('currentUser') as { userName?: string } | undefined;

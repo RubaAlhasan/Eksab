@@ -19,9 +19,9 @@ import { PaginationComponent } from '../../shared/components/pagination/paginati
 type CustomersTab = 'members' | 'following';
 
 /**
- * Admin Portal > Customers (tenant-realm data, viewed by business staff) — mirrors
- * prototype/business/customers.html's shape, but only where the data is genuinely real:
- * - Members tab: `MembershipsService.getMembers` — a NEW endpoint added this session
+ * Business Portal > Customers — mirrors prototype/business/customers.html's shape, but only where the
+ * data is genuinely real:
+ * - Members tab: `MembershipsService.getMembers` — a NEW endpoint added earlier this session
  *   (`MembershipAppService.GetMembersAsync`, `Eksabli.Memberships.View`) joining this tenant's
  *   `Membership` with Host-realm `CustomerProfile`/`IdentityUser` (name/phone) and this tenant's
  *   `PointsWallet`/`Tier` (balance/tier) — same cross-realm join shape `PosAppService
@@ -31,18 +31,16 @@ type CustomersTab = 'members' | 'following';
  *   the wallet) — the closest genuine signal, since there's no login/session tracking anywhere in
  *   this codebase.
  * - Following tab: `FollowsService.getFollowers` — real, `Eksabli.Followers.View`, also enriched with
- *   name/phone this session (previously bare `FollowDto`, no name to show).
+ *   name/phone earlier this session (previously bare `FollowDto`, no name to show).
  *
- * This page used to live under a separate `/business/customers` route with its own
- * `BusinessLayoutComponent` shell. Folded into the Admin Portal shell at `/admin/customers` instead —
- * a distinct "Business Portal" route namespace never had anything to do with ABP tenant resolution
- * (that's resolved from the authenticated user's own account via `CurrentUserTenantResolveContributor`,
- * not the URL), so the separate shell was pure duplication (~150 lines of near-identical SCSS, see the
- * now-deleted BusinessLayoutComponent's own comment) for zero benefit. `/admin`'s coarse `adminGuard`
- * was relaxed to `authGuard` only (see app.routes.ts) so tenant-realm business staff — who don't and
- * shouldn't hold the Host-only `Eksabli.Tenants.View` signal permission `adminGuard` checked — can
- * still reach this one page; every other `/admin/*` child route remains protected by its own
- * `permissionGuard` + specific policy exactly as before, unaffected by that relaxation.
+ * Routing history: this page briefly lived at `/admin/customers` (folded into the Admin Portal shell)
+ * after the user said "must be under admin" — then moved back here, to its own `/business` shell, after
+ * the user's later, equally explicit "must be under business/employees" + "when login business show
+ * page related to business like prototype". Both instructions were real and honored when given; this is
+ * genuinely where it ended up. `businessRealmGuard` (core/guards/business.guard.ts) now gates the whole
+ * `/business` shell via real tenant-resolution (`currentTenant.id` from ABP's own config state), not a
+ * permission heuristic — see that file's comment for why this is reliable without any custom
+ * subdomain/header tenant-selection UI.
  *
  * `[MISSING BACKEND CAPABILITY]`, deliberately not built:
  * - Export button — no Excel-export capability exists for Memberships (unlike Books/Authors' real
@@ -57,9 +55,9 @@ type CustomersTab = 'members' | 'following';
  *   status filter only offers the two real values.
  */
 @Component({
-  selector: 'app-admin-customers',
-  templateUrl: './admin-customers.component.html',
-  styleUrls: ['./admin-customers.component.scss'],
+  selector: 'app-business-customers',
+  templateUrl: './business-customers.component.html',
+  styleUrls: ['./business-customers.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
@@ -74,7 +72,7 @@ type CustomersTab = 'members' | 'following';
     PaginationComponent,
   ],
 })
-export class AdminCustomersComponent implements OnInit {
+export class BusinessCustomersComponent implements OnInit {
   private readonly membershipsService = inject(MembershipsService);
   private readonly followsService = inject(FollowsService);
   private readonly tiersService = inject(TiersService);

@@ -1,0 +1,40 @@
+.eks-bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  height: 10rem;
+
+  &__col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    gap: 0.375rem;
+  }
+
+  &__bar {
+    width: 100%;
+    max-width: 2.25rem;
+    min-height: 2px;
+    border-radius: 0.375rem 0.375rem 0 0;
+    background: var(--bs-primary, #6248e3);
+
+    &--alt {
+      background: var(--bs-success, #198754);
+    }
+  }
+
+  &__label {
+    font-size: 0.6875rem;
+    color: var(--bs-secondary-color, #6c757d);
+  }
+}
+
+.eks-tier-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
