@@ -61,18 +61,19 @@
             <th>{{ '::BusinessPanel:Customers:ColumnJoined' | abpLocalization }}</th>
             <th>{{ '::BusinessPanel:Customers:ColumnLastActive' | abpLocalization }}</th>
             <th>{{ '::BusinessPanel:Customers:ColumnStatus' | abpLocalization }}</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           @if (isLoading()) {
             <tr>
-              <td colspan="7">
+              <td colspan="8">
                 <app-loading-spinner [label]="'::BusinessPanel:Customers:Loading' | abpLocalization"></app-loading-spinner>
               </td>
             </tr>
           } @else if (loadFailed()) {
             <tr>
-              <td colspan="7">
+              <td colspan="8">
                 <app-error-state
                   [message]="'::BusinessPanel:Customers:LoadErrorMessage' | abpLocalization"
                   [retryLabel]="'::BusinessPanel:Customers:TryAgain' | abpLocalization"
@@ -83,7 +84,7 @@
             </tr>
           } @else if (members().length === 0) {
             <tr>
-              <td colspan="7">
+              <td colspan="8">
                 <app-empty-state
                   icon="fa-users"
                   [title]="'::BusinessPanel:Customers:EmptyTitle' | abpLocalization"
@@ -116,6 +117,13 @@
                     [variant]="statusVariant(member.status)"
                   >
                   </app-status-badge>
+                </td>
+                <td>
+                  @if (member.customerId) {
+                    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="openAdjustModal(member)">
+                      <i class="fas fa-pen me-1"></i>{{ '::BusinessPanel:Customers:AdjustPoints' | abpLocalization }}
+                    </button>
+                  }
                 </td>
               </tr>
             }
@@ -172,3 +180,50 @@
     }
   </div>
 }
+
+<app-modal
+  [open]="adjustModalOpen()"
+  [title]="'::BusinessPanel:Customers:AdjustTitle' | abpLocalization"
+  (closed)="closeAdjustModal()"
+>
+  <form [formGroup]="adjustForm" (ngSubmit)="submitAdjust()" class="d-flex flex-column gap-3">
+    <div>
+      <label class="form-label">{{ '::BusinessPanel:Customers:FieldDirection' | abpLocalization }}</label>
+      <div class="btn-group w-100" role="group">
+        <input type="radio" class="btn-check" id="adjustDirAdd" formControlName="direction" value="add" />
+        <label class="btn btn-outline-primary" for="adjustDirAdd">{{ '::BusinessPanel:Customers:DirectionAdd' | abpLocalization }}</label>
+        <input type="radio" class="btn-check" id="adjustDirRemove" formControlName="direction" value="remove" />
+        <label class="btn btn-outline-primary" for="adjustDirRemove">{{ '::BusinessPanel:Customers:DirectionRemove' | abpLocalization }}</label>
+      </div>
+    </div>
+
+    <div>
+      <label class="form-label" for="adjustAmount">{{ '::BusinessPanel:Customers:FieldAmount' | abpLocalization }}</label>
+      <input id="adjustAmount" type="number" min="1" class="form-control" formControlName="amount" placeholder="e.g. 50" />
+      @if (adjustForm.controls.amount.invalid && adjustForm.controls.amount.touched) {
+        <p class="text-danger small mt-1">{{ '::BusinessPanel:Customers:FieldAmountInvalid' | abpLocalization }}</p>
+      }
+    </div>
+
+    <div>
+      <label class="form-label" for="adjustReason">{{ '::BusinessPanel:Customers:FieldReason' | abpLocalization }}</label>
+      <textarea id="adjustReason" class="form-control" formControlName="reason" rows="2" maxlength="256"></textarea>
+    </div>
+
+    <div class="alert alert-info small mb-0">
+      <i class="fas fa-circle-info me-1"></i>{{ '::BusinessPanel:Customers:AdjustCapNote' | abpLocalization }}
+    </div>
+  </form>
+
+  <div slot="footer" class="d-flex gap-2 justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeAdjustModal()">
+      {{ '::BusinessPanel:Customers:Cancel' | abpLocalization }}
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="isAdjusting()" (click)="submitAdjust()">
+      @if (isAdjusting()) {
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+      }
+      {{ '::BusinessPanel:Customers:ApplyAdjustment' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

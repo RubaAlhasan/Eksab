@@ -812,21 +812,27 @@ the Admin Portal**, what's left:
    originally stated MVP scope should now be built; Users (`admin/users/`) was also added this session
    as an explicit user request beyond the original plan, matching `prototype/admin/users.html`.
 
-**For Business Portal pages beyond Dashboard/Analytics/Customers/Employees/Branches/Points
-Management/Rewards/Coupons/Campaigns/Notifications/Subscription/Billing/Settings/Transactions**
-(mounted under `/business/*`, inside `BusinessLayoutComponent`, gated on `businessRealmGuard` — see
-the top of this file) — no equivalent implementation-plan doc exists yet (the backend-readiness doc
-covers Host-realm Admin Portal features only); scope has been driven directly by
-`prototype/business/*.html` + backend-reality-checking this session. Remaining unchecked prototype
-pages: `offers.html`, `customer-details.html` (a drill-down, likely belongs inside the existing
-Customers page rather than its own route — check `prototype/business/customers.html` for how it links
-there first) — verify each against the REAL backend the same way this session did for the fourteen
-pages already built, and give each its own real permission as `data.requiredPolicy` on a `/business/*`
-child route + a `BusinessLayoutComponent` nav entry — unless the underlying app service turns out to
-have no ABP permission at all (like Points Management), in which case don't force one). A reusable `downloadBlob()`-style helper is now overdue for extraction into `shared/` — TWO
-identical copies exist (`business-coupons.component.ts` and, added this turn,
-`business-transactions.component.ts`), past the "extract on second use" threshold this file used to
-note as a future trigger.
+**Every `prototype/business/*.html` file has now been checked against the real backend.**
+`offers.html` doesn't actually exist in `prototype/business/` (a false lead from an earlier guess —
+verified by listing the directory; don't go looking for it again).
+`customer-details.html` was checked and found NOT real-buildable as its own
+`/business/customers/:id` drill-down route: no single-member `GetAsync(id)` exists (only the paged
+`GetMembersAsync`), no staff-facing per-member transaction history
+(`IWalletAppService.GetMyTransactionHistoryAsync` is self-service-only), and `CouponAuditFilterDto`
+has no `MembershipId` filter to scope a "Coupons Redeemed" tab — three separate real gaps, not one.
+Its one genuinely real piece, the "Manual Point Adjustment" modal
+(`PosAppService.ManualAdjustAsync`), was pulled forward into the existing Customers page instead, as a
+real per-row action (`business-customers.component.ts`) — **note the prototype's own "Daily
+adjustment cap: 200 pts" copy is WRONG relative to the real backend**: the actual cap
+(`PointsTransactionConsts.MaxDailyManualAdjustmentsPerEmployee`) is 20 ADJUSTMENTS per employee per
+day, not a 200-point cumulative ceiling; don't copy the prototype's number if this is ever revisited
+elsewhere. **This closes out the Business Portal's prototype-page checklist** — 14 pages built, plus
+this one real feature folded into an existing page; any further Business Portal work now means either
+(a) revisiting something explicitly marked `[MISSING BACKEND CAPABILITY]` above once/if the backend
+gains the capability, or (b) building real backend-first features that have no prototype page at all
+yet. A reusable `downloadBlob()`-style helper is overdue for extraction into `shared/` — TWO identical
+copies exist (`business-coupons.component.ts`, `business-transactions.component.ts`), past the
+"extract on second use" threshold this file used to note as a future trigger.
 **`prototype/business/reports.html` was checked and found to be a weak next-candidate** — unlike
 `analytics.html` (built this session), its "Generate report as CSV/PDF" buttons and "Recent Exports"
 history table have no real backend behind them (`ReportsAppService`'s only true report-generation

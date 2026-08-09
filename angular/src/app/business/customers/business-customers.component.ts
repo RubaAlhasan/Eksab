@@ -1,9 +1,12 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LocalizationPipe, PermissionService } from '@abp/ng.core';
+import { ToasterService } from '@abp/ng.theme.shared';
 import { MembershipsService } from '../../proxy/controllers/memberships.service';
 import { FollowsService } from '../../proxy/controllers/follows.service';
 import { TiersService } from '../../proxy/controllers/tiers.service';
+import { PosService } from '../../proxy/controllers/pos.service';
 import type { MemberDto } from '../../proxy/memberships/models';
 import type { FollowerDto } from '../../proxy/engagement/models';
 import type { TierDto } from '../../proxy/wallets/models';
@@ -15,6 +18,7 @@ import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
+import { ModalComponent } from '../../shared/components/modal/modal.component';
 
 type CustomersTab = 'members' | 'following';
 
@@ -48,11 +52,28 @@ type CustomersTab = 'members' | 'following';
  * - "Convert to Campaign Target" per follower — `Eksabli.Followers.ConvertToCampaign` permission
  *   exists but is explicitly "defined for parity/future use" (see EksabliPermissions.cs), no endpoint
  *   backs it. Not rendered — a button with nothing behind it is a dead end, not a feature.
- * - A customer-details drill-down page/link — not built yet, so customer names are plain text here,
- *   not a link to a page that doesn't exist.
+ * - A separate customer-details DRILL-DOWN PAGE (`prototype/business/customer-details.html`) was
+ *   checked and found not real-buildable as its own `/business/customers/:id` route: there is no
+ *   single-member `GetAsync(id)` (only the paged `GetMembersAsync`), no staff-facing per-member
+ *   transaction history (`IWalletAppService.GetMyTransactionHistoryAsync` is self-service-only), and
+ *   `CouponAuditFilterDto` has no `MembershipId` filter to scope a "Coupons Redeemed" tab. Customer
+ *   names stay plain text, not links to a page that doesn't exist.
  * - Real `MembershipStatus` is only Active/Frozen (confirmed in the domain enum) — the prototype's
  *   "At Risk"/"Churned" statuses don't exist anywhere in the backend and are not reproduced; the
  *   status filter only offers the two real values.
+ *
+ * **One real piece of `customer-details.html` WAS pulled forward into this page instead**: its
+ * "Manual Point Adjustment" modal is real (`PosAppService.ManualAdjustAsync`, same
+ * no-ABP-permission/custom-staff-role-check shape as `business-points.component.ts`'s Award tab —
+ * Owner/BranchManager only, confirmed by reading `CheckStaffRoleAsync`'s call site there) — added here
+ * as a real per-row action instead of a drill-down page, since every field it needs (`MemberDto
+ * .customerId`, already loaded) is already on hand. **The prototype's own "Daily adjustment cap: 200
+ * pts per staff member" copy is WRONG relative to the real backend** — confirmed by reading
+ * `PosAppService.ManualAdjustAsync`/`PointsTransactionConsts`: the real cap is 20 ADJUSTMENTS per
+ * employee per day (a count, not a cumulative points ceiling), so this page does not reproduce the
+ * prototype's "200 pts" copy or attempt a client-side points cap — the real count cap has no live
+ * "X used today" query to show proactively, so it just surfaces as the real `UserFriendlyException`
+ * toast if hit, same pattern as every other plan/quota limit in this app.
  */
 @Component({
   selector: 'app-business-customers',
@@ -62,6 +83,7 @@ type CustomersTab = 'members' | 'following';
   imports: [
     DatePipe,
     DecimalPipe,
+    ReactiveFormsModule,
     LocalizationPipe,
     PageHeaderComponent,
     SearchInputComponent,
@@ -70,12 +92,15 @@ type CustomersTab = 'members' | 'following';
     ErrorStateComponent,
     EmptyStateComponent,
     PaginationComponent,
+    ModalComponent,
   ],
 })
 export class BusinessCustomersComponent implements OnInit {
   private readonly membershipsService = inject(MembershipsService);
   private readonly followsService = inject(FollowsService);
   private readonly tiersService = inject(TiersService);
+  private readonly posService = inject(PosService);
+  private readonly toaster = inject(ToasterService);
   private readonly permissionService = inject(PermissionService);
 
   protected readonly Status = MembershipStatus;
@@ -105,6 +130,17 @@ export class BusinessCustomersComponent implements OnInit {
   protected readonly followersTotalCount = signal(0);
   protected readonly followersLoading = signal(false);
   protected readonly followersFailed = signal(false);
+
+  // --- Manual Point Adjustment modal (real, `PosAppService.ManualAdjustAsync`) ---
+  protected readonly adjustModalOpen = signal(false);
+  protected readonly isAdjusting = signal(false);
+  protected adjustingMember: MemberDto | null = null;
+
+  protected readonly adjustForm = new FormGroup({
+    direction: new FormControl<'add' | 'remove'>('add', { nonNullable: true }),
+    amount: new FormControl<number | null>(null, { validators: [Validators.required, Validators.min(1)] }),
+    reason: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(256)] }),
+  });
 
   ngOnInit(): void {
     this.loadTiers();
@@ -177,6 +213,45 @@ export class BusinessCustomersComponent implements OnInit {
 
   protected retryFollowers(): void {
     this.loadFollowers();
+  }
+
+  protected openAdjustModal(member: MemberDto): void {
+    this.adjustingMember = member;
+    this.adjustForm.reset({ direction: 'add', amount: null, reason: '' });
+    this.adjustModalOpen.set(true);
+  }
+
+  protected closeAdjustModal(): void {
+    this.adjustModalOpen.set(false);
+  }
+
+  protected submitAdjust(): void {
+    const member = this.adjustingMember;
+    if (!member?.customerId || this.adjustForm.invalid) {
+      this.adjustForm.markAllAsTouched();
+      return;
+    }
+
+    const value = this.adjustForm.getRawValue();
+    const amount = value.amount ?? 0;
+    const points = value.direction === 'remove' ? -amount : amount;
+
+    this.isAdjusting.set(true);
+    this.posService.manualAdjust({ customerId: member.customerId, points, reason: value.reason || undefined }).subscribe({
+      next: () => {
+        this.isAdjusting.set(false);
+        this.adjustModalOpen.set(false);
+        this.toaster.success('::BusinessPanel:Customers:AdjustSuccessMessage');
+        this.load();
+      },
+      // The real daily-cap/role/customer-not-joined errors all surface here as the backend's own
+      // UserFriendlyException message via ABP's global HTTP error handling — no separate client-side
+      // cap check duplicated (see this component's own file comment for why).
+      error: () => {
+        this.isAdjusting.set(false);
+        this.toaster.error('::BusinessPanel:Customers:AdjustErrorMessage');
+      },
+    });
   }
 
   private loadTiers(): void {
