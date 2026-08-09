@@ -168,5 +168,13 @@ function configureRoutes() {
         layout: eLayoutType.empty,
         requiredPolicy: 'Eksabli.Rewards.Default',
       },
+      {
+        path: '/business/coupons',
+        name: '::BusinessPanel:Layout:NavCoupons',
+        iconClass: 'fas fa-ticket',
+        order: 26,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.Rewards.Default',
+      },
   ]);
 }

@@ -247,6 +247,15 @@ export const APP_ROUTES: Routes = [
         canActivate: [permissionGuard],
         data: { requiredPolicy: 'Eksabli.Rewards.Default' },
       },
+      {
+        // CouponAuditController is gated on the same Eksabli.Rewards.Default permission as Rewards
+        // itself — a coupon audit trail is really "Rewards" data, not a separate permission group.
+        path: 'coupons',
+        loadComponent: () =>
+          import('./business/coupons/business-coupons.component').then(c => c.BusinessCouponsComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Rewards.Default' },
+      },
     ],
   },
   {

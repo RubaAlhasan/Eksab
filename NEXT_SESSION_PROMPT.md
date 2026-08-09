@@ -55,8 +55,8 @@ any new Host-realm page under `/admin/*` (child of `adminGuard`).
 
 Admin Portal MVP scope is fully built (Dashboard + Users, both from earlier this session, see "What's
 NOT done" below for the few remaining backend-blocked items). Business Portal has Dashboard +
-Analytics + Customers + Employees + Branches + Points Management + Rewards so far — see their own
-section below.
+Analytics + Customers + Employees + Branches + Points Management + Rewards + Coupons so far — see
+their own section below.
 **Points Management (`business/points/`) is architecturally different from every other page**: its
 Award Points tab has no ABP permission at all (`PosController` is `[Authorize]`-only; the real gate is
 a custom staff-role check inside `PosAppService`) — read that page's own section before assuming every
@@ -595,6 +595,31 @@ risking a regression in either shell for what's still just two pages.
     icon is shown instead of pretending an image exists.
   - No delete action exposed — `DeleteAsync` exists server-side but the prototype has no delete
     button either.
+- **Coupons** (`business/coupons/`) — mirrors `prototype/business/coupons.html`'s audit trail, built
+  against `CouponAuditAppService` (`GetListAsync`/`GetDownloadTokenAsync`/`GetListAsExcelFileAsync`,
+  whole controller gated on `Eksabli.Rewards.Default` — same permission as Rewards, since a coupon
+  audit trail is really "Rewards" data). No backend changes needed.
+  - Code, Status (`Issued`/`Redeemed`/`Expired`/`Cancelled` — exactly the prototype's own four
+    options), and Reward name are all real; `CouponDto.RewardNameEn`/`.RewardNameAr` are already
+    resolved server-side by `GetListAsync` itself.
+  - **Member/Branch/"Redeemed By" are resolved client-side**, best-effort, via bulk lookups reusing
+    *already-existing* endpoints — no new backend calls invented: `MembershipsService.getMembers()`
+    (same call Customers' Members tab makes) for `membershipId -> name`; `BranchesService.getList()`
+    for `redeemedBranchId -> name`; `EmployeeAssignmentsService.getList()` for `redeemedByEmployeeId
+    -> userEmail` (`RedeemedByEmployeeId` is a raw `IdentityUser.Id`, confirmed by reading
+    `PosAppService.ConfirmRedemptionAsync`'s own `CurrentUser.GetId()` call — matched against
+    `EmployeeAssignmentDto.userId`, not its own assignment id).
+  - Date column shows `RedeemedAt` when present, else `IssuedAt` — both real, picking whichever
+    actually happened rather than the prototype's own flattened single date.
+  - Status/Branch filters are real, server-side (`CouponAuditFilterDto`). **No code search** —
+    `[MISSING BACKEND CAPABILITY]`, no `filterText` field, same gap as Support Tickets/Employees.
+  - **Export IS real and was actually built** — the same two-step token-gated Excel-export pattern
+    documented in CLAUDE.md (`GetDownloadTokenAsync()` → `GetListAsExcelFileAsync()`). This is the
+    **first real `Blob`/`ObjectURL` file download implemented in this Angular app this session** — a
+    plain `URL.createObjectURL(blob)` + anchor-click helper, no shared download utility existed yet to
+    reuse (and none was extracted for just this one usage). The prototype's own fake "Recent Exports"
+    history table (`reports.html`) is deliberately NOT replicated — there's no server-side "generated
+    report" persistence anywhere; each export is generated fresh, nothing to list as history.
 
 ## What's NOT done — pick up here, in this order
 
@@ -637,24 +662,22 @@ the Admin Portal**, what's left:
    as an explicit user request beyond the original plan, matching `prototype/admin/users.html`.
 
 **For Business Portal pages beyond Dashboard/Analytics/Customers/Employees/Branches/Points
-Management/Rewards** (mounted under `/business/*`, inside `BusinessLayoutComponent`, gated on
+Management/Rewards/Coupons** (mounted under `/business/*`, inside `BusinessLayoutComponent`, gated on
 `businessRealmGuard` — see the top of this file) — no equivalent implementation-plan doc exists yet
 (the backend-readiness doc covers Host-realm Admin Portal features only); scope has been driven
 directly by `prototype/business/*.html` + backend-reality-checking this session. Natural next pages,
-if asked for: check `prototype/business/*.html` for what exists (campaigns, offers, coupons, settings,
+if asked for: check `prototype/business/*.html` for what exists (campaigns, offers, settings,
 notifications, transactions, subscription/billing all have prototype pages — verify each against the
-REAL backend the same way this session did for the seven pages already built, and give each its own
+REAL backend the same way this session did for the eight pages already built, and give each its own
 real permission as `data.requiredPolicy` on a `/business/*` child route + a `BusinessLayoutComponent`
 nav entry — unless, like Points Management, the underlying app service turns out to have no ABP
 permission at all, in which case don't force one; check `businessRealmGuard`'s coarse realm gate is
-still enough). `CouponAuditService`/`CampaignAppService` exist and were referenced this session but not
-opened — read the actual service (and its controller's `[Authorize]` attributes specifically — Points
-Management proved that assumption can be wrong) before assuming a page's data/permission shape.
-`coupons.html`'s prototype page is a strong next-candidate given `CouponDto`/`CouponAuditFilterDto`
-were already read this session while building Rewards (real fields: rewardId, rewardName, membershipId,
-code, status, issuedAt, redeemedAt, redeemedByEmployeeId, redeemedBranchId) — a coupon audit/history
-list looks directly buildable; check `CouponAuditService`'s own controller before assuming its
-permission shape.
+still enough). `CampaignAppService` exists and was referenced this session but not opened — read the
+actual service (and its controller's `[Authorize]` attributes specifically — Points Management proved
+that assumption can be wrong) before assuming a page's data/permission shape. A reusable
+`downloadBlob()`-style helper is worth extracting into `shared/` the next time a second page needs a
+file download — `business-coupons.component.ts` currently has the only copy (see that page's own file
+comment).
 **`prototype/business/reports.html` was checked and found to be a weak next-candidate** — unlike
 `analytics.html` (built this session), its "Generate report as CSV/PDF" buttons and "Recent Exports"
 history table have no real backend behind them (`ReportsAppService`'s only true report-generation
