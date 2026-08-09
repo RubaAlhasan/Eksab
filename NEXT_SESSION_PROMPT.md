@@ -56,7 +56,7 @@ any new Host-realm page under `/admin/*` (child of `adminGuard`).
 Admin Portal MVP scope is fully built (Dashboard + Users, both from earlier this session, see "What's
 NOT done" below for the few remaining backend-blocked items). Business Portal has Dashboard +
 Analytics + Customers + Employees + Branches + Points Management + Rewards + Coupons + Campaigns +
-Notifications so far — see their own section below.
+Notifications + Subscription + Billing so far — see their own section below.
 **Points Management (`business/points/`) is architecturally different from every other page**: its
 Award Points tab has no ABP permission at all (`PosController` is `[Authorize]`-only; the real gate is
 a custom staff-role check inside `PosAppService`) — read that page's own section before assuming every
@@ -695,6 +695,49 @@ risking a regression in either shell for what's still just two pages.
     own binary treatment (no campaign-name lookup — the prototype itself doesn't show one either).
   - No title/code search on the log — `[MISSING BACKEND CAPABILITY]`, `NotificationListFilterDto` has
     no `filterText`, same documented gap as Employees/Support Tickets/Coupons.
+- **Subscription** (`business/subscription/`) + **Billing** (`business/billing/`) — mirror
+  `prototype/business/subscription.html` and `billing.html` (two separate prototype pages, two
+  separate sidebar nav entries — kept as two separate Angular pages/routes to match, even though
+  Billing ended up small), both built against the real `IBillingAppService`
+  (`GetMyCurrentSubscriptionAsync`/`GetMyUsageAsync`/`GetMyInvoicesAsync`/`ChangePlanAsync`, whole
+  controller on `Eksabli.Billing.ManageOwn`, no separate view permission) plus
+  `ISubscriptionPlanAppService.GetListAsync`/`GetAsync` (the same public pricing catalog Admin Plans
+  manages). No backend changes needed; every endpoint and its proxy already existed.
+  - **Subscription's usage widget required cross-referencing THREE different real sources** since
+    `UsageDto` only actually carries Branches: Branches (real, `GetMyUsageAsync`, the one feature with
+    a real enforced limit + a dedicated usage endpoint — `BranchAppService.CreateAsync` throws at it);
+    Active Campaigns (real, reusing `DashboardHomeDto.ActiveCampaignCount` — confirmed by reading
+    `ReportsAppService` to count exactly `CampaignStatus.Active`, the SAME count
+    `CampaignAppService.CreateAsync`'s own `MaxCampaigns` quota check uses, so it's a genuinely
+    matching "used" figure, not a proxy metric — this feature is also actually enforced); Active
+    Members (real, via `MembershipsService.getMembers({ status: Active, maxResultCount: 1 })`'s
+    `totalCount`, the `maxResultCount: 1` count-only trick from this app's own gotcha #9 — but
+    `MaxActiveMembers` itself is confirmed NOT enforced anywhere in the Application layer, shown as
+    informational with a note saying so, not implied as a hard cap). SMS/Push feature toggles are real
+    booleans read from the current plan's `FeatureLimitsJson` (same well-known-keys parsing convention
+    `admin-plans.component.ts` established, re-implemented locally read-only rather than shared).
+    `[MISSING BACKEND CAPABILITY]`: the prototype's own "SMS Credits used 640/1,000" row has no real
+    backend — dropped (the closest real analog, Notifications' `MaxDailyNotificationsPerTenant`, is a
+    different, already-surfaced-elsewhere concept, not reused here to avoid implying a fake pool).
+  - **"Select" on a plan performs a REAL, immediate `ChangePlanAsync`** — a deliberate, and net MORE
+    honest, divergence from the prototype: its own Upgrade/Downgrade/Select buttons are all stubs
+    ("this would open the plan checkout flow"), but `BillingAppService.ChangePlanAsync` (confirmed by
+    reading it) has no payment/proration step at all — it just reassigns `PlanId` and re-pushes
+    `FeatureLimitsJson`. Faking a checkout step would have been LESS accurate than just doing the real,
+    complete thing; gated behind a `ConfirmationService.warn` dialog since it's a real mutation.
+  - **No Cancel / Danger Zone anywhere** — `[MISSING BACKEND CAPABILITY]`. `TenantSubscription.Cancel()`
+    is a real domain method (confirmed in `TenantSubscription.cs`) but is called from NO app service
+    anywhere in the codebase — not `IBillingAppService`, not even the Host-only
+    `IAdminSubscriptionAppService` (confirmed by reading both interfaces). Genuinely unreachable via any
+    API today; not wired to a dead-end button.
+  - **Billing turned out much smaller than its prototype** — `[MISSING BACKEND CAPABILITY]` for BOTH
+    of the prototype's other two features: the Payment Method card (no card/payment-method storage
+    anywhere in `Eksabli.Billing` — no payment gateway integration exists at all) and Export
+    All/per-invoice Download (no invoice PDF/export endpoint anywhere, unlike the real two-step Excel
+    pattern Coupons/Dashboard use). What's real and kept: a "Next Invoice" tile (client-derived — earliest
+    non-`Paid` invoice from a `dueDate asc`-sorted fetch, not a dedicated endpoint) and a real paged
+    Invoice History table with all 4 real `InvoiceStatus` values (`Draft`/`Sent`/`Paid`/`Overdue` — the
+    prototype only shows 3, missing `Draft`).
 
 ## What's NOT done — pick up here, in this order
 
@@ -737,18 +780,19 @@ the Admin Portal**, what's left:
    as an explicit user request beyond the original plan, matching `prototype/admin/users.html`.
 
 **For Business Portal pages beyond Dashboard/Analytics/Customers/Employees/Branches/Points
-Management/Rewards/Coupons/Campaigns/Notifications** (mounted under `/business/*`, inside
-`BusinessLayoutComponent`, gated on `businessRealmGuard` — see the top of this file) — no equivalent
-implementation-plan doc exists yet (the backend-readiness doc covers Host-realm Admin Portal features
-only); scope has been driven directly by `prototype/business/*.html` + backend-reality-checking this
-session. Natural next pages, if asked for: check `prototype/business/*.html` for what exists (offers,
-settings, transactions, subscription/billing still have prototype pages not yet checked — verify each
-against the REAL backend the same way this session did for the ten pages already built, and give each
-its own real permission as `data.requiredPolicy` on a `/business/*` child route + a
-`BusinessLayoutComponent` nav entry — unless the underlying app service turns out to have no ABP
-permission at all (like Points Management), in which case don't force one). A reusable
-`downloadBlob()`-style helper is worth extracting into `shared/` the next time a second page needs a
-file download — `business-coupons.component.ts` currently has the only copy.
+Management/Rewards/Coupons/Campaigns/Notifications/Subscription/Billing** (mounted under
+`/business/*`, inside `BusinessLayoutComponent`, gated on `businessRealmGuard` — see the top of this
+file) — no equivalent implementation-plan doc exists yet (the backend-readiness doc covers Host-realm
+Admin Portal features only); scope has been driven directly by `prototype/business/*.html` +
+backend-reality-checking this session. Remaining unchecked prototype pages: `offers.html`,
+`settings.html`, `transactions.html`, `customer-details.html` (a drill-down, likely belongs inside the
+existing Customers page rather than its own route — check `prototype/business/customers.html` for how
+it links there first) — verify each against the REAL backend the same way this session did for the
+twelve pages already built, and give each its own real permission as `data.requiredPolicy` on a
+`/business/*` child route + a `BusinessLayoutComponent` nav entry — unless the underlying app service
+turns out to have no ABP permission at all (like Points Management), in which case don't force one).
+A reusable `downloadBlob()`-style helper is worth extracting into `shared/` the next time a second
+page needs a file download — `business-coupons.component.ts` currently has the only copy.
 **`prototype/business/reports.html` was checked and found to be a weak next-candidate** — unlike
 `analytics.html` (built this session), its "Generate report as CSV/PDF" buttons and "Recent Exports"
 history table have no real backend behind them (`ReportsAppService`'s only true report-generation

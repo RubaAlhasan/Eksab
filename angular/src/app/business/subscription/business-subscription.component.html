@@ -1,0 +1,128 @@
+<app-page-header
+  [title]="'::BusinessPanel:Subscription:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:Subscription:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::BusinessPanel:Subscription:Title' | abpLocalization) }]"
+>
+</app-page-header>
+
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::BusinessPanel:Subscription:Loading' | abpLocalization"></app-loading-spinner>
+} @else if (loadFailed()) {
+  <app-error-state
+    [message]="'::BusinessPanel:Subscription:LoadErrorMessage' | abpLocalization"
+    [retryLabel]="'::BusinessPanel:Subscription:TryAgain' | abpLocalization"
+    (retry)="retry()"
+  >
+  </app-error-state>
+} @else {
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-lg-8">
+      <div class="card p-4 h-100">
+        @if (subscription(); as sub) {
+          <div class="d-flex align-items-center justify-content-between mb-1">
+            <h6 class="fw-bold mb-0">
+              {{ sub.planName }} {{ '::BusinessPanel:Subscription:PlanWord' | abpLocalization }}
+            </h6>
+            <app-status-badge [label]="statusLabelKey(sub.status) | abpLocalization" [variant]="statusVariant(sub.status)"></app-status-badge>
+          </div>
+          <p class="text-muted small mb-4">
+            {{ '::BusinessPanel:Subscription:RenewsPrefix' | abpLocalization }}
+            {{ sub.renewalDate | date: 'longDate' }}
+            @if (currentPlan(); as plan) {
+              · {{ plan.monthlyPrice | number: '1.0-2' }}
+              {{ '::BusinessPanel:Subscription:PerMonth' | abpLocalization }}
+            }
+          </p>
+
+          <div class="d-flex flex-column gap-3">
+            @if (usage(); as usage) {
+              <div>
+                <div class="d-flex align-items-center justify-content-between small mb-1">
+                  <span class="fw-semibold">{{ '::BusinessPanel:Subscription:UsageBranches' | abpLocalization }}</span>
+                  <span [class.text-danger]="isOverLimit(usage.branchCount ?? 0, usage.maxBranches ?? null)" [class.fw-semibold]="isOverLimit(usage.branchCount ?? 0, usage.maxBranches ?? null)" class="text-muted">
+                    {{ usage.branchCount }} / {{ usage.maxBranches }}
+                  </span>
+                </div>
+                <div class="progress" style="height: 6px">
+                  <div class="progress-bar" [style.width.%]="usagePct(usage.branchCount ?? 0, usage.maxBranches ?? null)"></div>
+                </div>
+              </div>
+            }
+
+            @if (maxCampaigns() !== null) {
+              <div>
+                <div class="d-flex align-items-center justify-content-between small mb-1">
+                  <span class="fw-semibold">{{ '::BusinessPanel:Subscription:UsageCampaigns' | abpLocalization }}</span>
+                  <span [class.text-danger]="isOverLimit(activeCampaignCount(), maxCampaigns())" [class.fw-semibold]="isOverLimit(activeCampaignCount(), maxCampaigns())" class="text-muted">
+                    {{ activeCampaignCount() ?? '—' }} / {{ maxCampaigns() }}
+                  </span>
+                </div>
+                <div class="progress" style="height: 6px">
+                  <div class="progress-bar" [style.width.%]="usagePct(activeCampaignCount(), maxCampaigns())"></div>
+                </div>
+              </div>
+            }
+
+            @if (maxActiveMembers() !== null) {
+              <div>
+                <div class="d-flex align-items-center justify-content-between small mb-1">
+                  <span class="fw-semibold">{{ '::BusinessPanel:Subscription:UsageMembers' | abpLocalization }}</span>
+                  <span class="text-muted">{{ activeMemberCount() ?? '—' }} / {{ maxActiveMembers() }}</span>
+                </div>
+                <div class="progress" style="height: 6px">
+                  <div class="progress-bar" [style.width.%]="usagePct(activeMemberCount(), maxActiveMembers())"></div>
+                </div>
+                <p class="text-muted mb-0 mt-1" style="font-size: 0.7rem">
+                  {{ '::BusinessPanel:Subscription:UsageMembersNote' | abpLocalization }}
+                </p>
+              </div>
+            }
+
+            <div class="d-flex gap-2 mt-1">
+              <app-status-badge
+                [label]="(smsEnabled() ? '::BusinessPanel:Subscription:FeatureSmsOn' : '::BusinessPanel:Subscription:FeatureSmsOff') | abpLocalization"
+                [variant]="smsEnabled() ? 'success' : 'neutral'"
+              ></app-status-badge>
+              <app-status-badge
+                [label]="(pushEnabled() ? '::BusinessPanel:Subscription:FeaturePushOn' : '::BusinessPanel:Subscription:FeaturePushOff') | abpLocalization"
+                [variant]="pushEnabled() ? 'success' : 'neutral'"
+              ></app-status-badge>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+      <div class="card p-4 h-100">
+        <h6 class="fw-bold mb-3">{{ '::BusinessPanel:Subscription:ComparePlans' | abpLocalization }}</h6>
+        <div class="d-flex flex-column gap-2">
+          @for (plan of plans(); track plan.id) {
+            <div class="d-flex align-items-center justify-content-between p-2 rounded" [class.bg-primary-subtle]="plan.id === currentPlan()?.id">
+              <div>
+                <p class="fw-bold small mb-0">{{ plan.name }}</p>
+                <p class="text-muted small mb-0">{{ plan.monthlyPrice | number: '1.0-2' }}/{{ '::BusinessPanel:Subscription:MoAbbrev' | abpLocalization }}</p>
+              </div>
+              @if (plan.id === currentPlan()?.id) {
+                <app-status-badge [label]="'::BusinessPanel:Subscription:CurrentPlan' | abpLocalization" variant="info"></app-status-badge>
+              } @else if (canManage()) {
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary"
+                  [disabled]="changingPlanId() === plan.id"
+                  (click)="selectPlan(plan)"
+                >
+                  @if (changingPlanId() === plan.id) {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  } @else {
+                    {{ '::BusinessPanel:Subscription:SelectPlan' | abpLocalization }}
+                  }
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}

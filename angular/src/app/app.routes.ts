@@ -273,6 +273,22 @@ export const APP_ROUTES: Routes = [
         canActivate: [permissionGuard],
         data: { requiredPolicy: 'Eksabli.Notifications.Send' },
       },
+      {
+        // BillingController's whole class is gated on Eksabli.Billing.ManageOwn — same shape as
+        // Notifications above, no separate view permission.
+        path: 'subscription',
+        loadComponent: () =>
+          import('./business/subscription/business-subscription.component').then(c => c.BusinessSubscriptionComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Billing.ManageOwn' },
+      },
+      {
+        path: 'billing',
+        loadComponent: () =>
+          import('./business/billing/business-billing.component').then(c => c.BusinessBillingComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Billing.ManageOwn' },
+      },
     ],
   },
   {
