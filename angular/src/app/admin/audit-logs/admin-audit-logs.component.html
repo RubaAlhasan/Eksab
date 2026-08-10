@@ -32,18 +32,19 @@
           <th>{{ '::AdminPanel:AuditLogs:ColumnStatus' | abpLocalization }}</th>
           <th>{{ '::AdminPanel:AuditLogs:ColumnDuration' | abpLocalization }}</th>
           <th>{{ '::AdminPanel:AuditLogs:ColumnTimestamp' | abpLocalization }}</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
         @if (isLoading()) {
           <tr>
-            <td colspan="5">
+            <td colspan="6">
               <app-loading-spinner [label]="'::AdminPanel:AuditLogs:Loading' | abpLocalization"></app-loading-spinner>
             </td>
           </tr>
         } @else if (loadFailed()) {
           <tr>
-            <td colspan="5">
+            <td colspan="6">
               <app-error-state
                 [message]="'::AdminPanel:AuditLogs:LoadErrorMessage' | abpLocalization"
                 [retryLabel]="'::AdminPanel:AuditLogs:TryAgain' | abpLocalization"
@@ -54,7 +55,7 @@
           </tr>
         } @else if (logs().length === 0) {
           <tr>
-            <td colspan="5">
+            <td colspan="6">
               <app-empty-state icon="fa-list-check" [title]="'::AdminPanel:AuditLogs:EmptyTitle' | abpLocalization"></app-empty-state>
             </td>
           </tr>
@@ -83,6 +84,11 @@
               </td>
               <td class="text-muted">{{ log.executionDuration }} {{ '::AdminPanel:AuditLogs:MsAbbrev' | abpLocalization }}</td>
               <td class="text-muted">{{ log.executionTime | date: 'medium' }}</td>
+              <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="viewDetails(log.id)">
+                  <i class="fas fa-eye me-1"></i>{{ '::AdminPanel:AuditLogs:ViewDetails' | abpLocalization }}
+                </button>
+              </td>
             </tr>
           }
         }
@@ -95,3 +101,112 @@
     </div>
   }
 </div>
+
+<app-modal
+  [open]="detailModalOpen()"
+  size="xl"
+  [title]="'::AdminPanel:AuditLogs:DetailTitle' | abpLocalization"
+  (closed)="closeDetailModal()"
+>
+  @if (detailLoading()) {
+    <app-loading-spinner [label]="'::AdminPanel:AuditLogs:Loading' | abpLocalization"></app-loading-spinner>
+  } @else if (detailLoadFailed()) {
+    <app-error-state
+      [message]="'::AdminPanel:AuditLogs:LoadErrorMessage' | abpLocalization"
+      [retryLabel]="'::AdminPanel:AuditLogs:TryAgain' | abpLocalization"
+      (retry)="retryDetail()"
+    >
+    </app-error-state>
+  } @else if (selectedLog(); as log) {
+    <div class="d-flex flex-column gap-4">
+      <div class="row row-cols-2 g-2 small">
+        <div>
+          <span class="text-muted">{{ '::AdminPanel:AuditLogs:ColumnActor' | abpLocalization }}:</span>
+          <span class="fw-semibold">{{ log.userName || ('::AdminPanel:AuditLogs:SystemActor' | abpLocalization) }}</span>
+        </div>
+        <div>
+          <span class="text-muted">{{ '::AdminPanel:AuditLogs:ColumnStatus' | abpLocalization }}:</span>
+          @if (log.httpStatusCode) {
+            <app-status-badge [label]="log.httpStatusCode + ''" [variant]="statusVariant(log.httpStatusCode)"></app-status-badge>
+          } @else {
+            —
+          }
+        </div>
+        <div class="col-12">
+          <span class="text-muted">{{ '::AdminPanel:AuditLogs:ColumnRequest' | abpLocalization }}:</span>
+          <span class="fw-semibold">{{ log.httpMethod }}</span> {{ log.url }}
+        </div>
+        <div>
+          <span class="text-muted">{{ '::AdminPanel:AuditLogs:ColumnDuration' | abpLocalization }}:</span>
+          {{ log.executionDuration }} {{ '::AdminPanel:AuditLogs:MsAbbrev' | abpLocalization }}
+        </div>
+        <div>
+          <span class="text-muted">{{ '::AdminPanel:AuditLogs:ColumnTimestamp' | abpLocalization }}:</span>
+          {{ log.executionTime | date: 'medium' }}
+        </div>
+      </div>
+
+      @if (log.exceptions) {
+        <div>
+          <h6 class="mb-2">{{ '::AdminPanel:AuditLogs:DetailExceptionTitle' | abpLocalization }}</h6>
+          <pre class="bg-danger-subtle text-danger-emphasis rounded p-3 small mb-0" style="white-space: pre-wrap">{{ log.exceptions }}</pre>
+        </div>
+      }
+
+      <div>
+        <h6 class="mb-2">{{ '::AdminPanel:AuditLogs:DetailRequestPayloadTitle' | abpLocalization }}</h6>
+        @if (log.actions.length === 0) {
+          <p class="text-muted small mb-0">{{ '::AdminPanel:AuditLogs:DetailNoActions' | abpLocalization }}</p>
+        } @else {
+          <div class="d-flex flex-column gap-2">
+            @for (action of log.actions; track $index) {
+              <div class="border rounded p-2">
+                <div class="small fw-semibold mb-1">{{ action.serviceName }}.{{ action.methodName }}</div>
+                <pre class="bg-body-tertiary rounded p-2 small mb-0" style="white-space: pre-wrap">{{ prettyPrint(action.parameters) }}</pre>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div>
+        <h6 class="mb-2">{{ '::AdminPanel:AuditLogs:DetailEntityChangesTitle' | abpLocalization }}</h6>
+        @if (log.entityChanges.length === 0) {
+          <p class="text-muted small mb-0">{{ '::AdminPanel:AuditLogs:DetailNoEntityChanges' | abpLocalization }}</p>
+        } @else {
+          <div class="d-flex flex-column gap-3">
+            @for (change of log.entityChanges; track $index) {
+              <div class="border rounded p-2">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <app-status-badge [label]="changeTypeKey(change.changeType) | abpLocalization" [variant]="changeTypeVariant(change.changeType)"></app-status-badge>
+                  <span class="small fw-semibold">{{ change.entityTypeFullName }}</span>
+                  <span class="small text-muted">#{{ change.entityId }}</span>
+                </div>
+                @if (change.propertyChanges.length > 0) {
+                  <table class="table table-sm mb-0">
+                    <thead>
+                      <tr>
+                        <th>{{ '::AdminPanel:AuditLogs:ColumnPropertyName' | abpLocalization }}</th>
+                        <th>{{ '::AdminPanel:AuditLogs:ColumnOriginalValue' | abpLocalization }}</th>
+                        <th>{{ '::AdminPanel:AuditLogs:ColumnNewValue' | abpLocalization }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (property of change.propertyChanges; track $index) {
+                        <tr>
+                          <td class="small fw-semibold">{{ property.propertyName }}</td>
+                          <td class="small text-muted">{{ property.originalValue }}</td>
+                          <td class="small">{{ property.newValue }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+</app-modal>

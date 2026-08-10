@@ -1,7 +1,7 @@
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { AdminAuditLogFilterDto, AuditLogDto } from '../audit-logs/models';
+import type { AdminAuditLogFilterDto, AuditLogDetailDto, AuditLogDto } from '../audit-logs/models';
 
 @Injectable({
   providedIn: 'root',
@@ -9,6 +9,14 @@ import type { AdminAuditLogFilterDto, AuditLogDto } from '../audit-logs/models';
 export class AuditLogsService {
   private restService = inject(RestService);
   apiName = 'Default';
+
+
+  get = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, AuditLogDetailDto>({
+      method: 'GET',
+      url: `/api/app/audit-log/${id}`,
+    },
+    { apiName: this.apiName,...config });
 
 
   getList = (input: AdminAuditLogFilterDto, config?: Partial<Rest.Config>) =>

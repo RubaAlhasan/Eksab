@@ -24,3 +24,32 @@ export interface AdminAuditLogFilterDto extends PagedAndSortedResultRequestDto {
   hasException?: boolean | null;
   httpStatusCode?: number | null;
 }
+
+export interface AuditLogActionDto {
+  serviceName?: string | null;
+  methodName?: string | null;
+  parameters?: string | null;
+  executionTime?: string;
+  executionDuration?: number;
+}
+
+export interface AuditLogEntityPropertyChangeDto {
+  propertyName?: string | null;
+  originalValue?: string | null;
+  newValue?: string | null;
+}
+
+export interface AuditLogEntityChangeDto {
+  entityTypeFullName?: string | null;
+  entityId?: string | null;
+  changeType?: number;
+  changeTime?: string;
+  propertyChanges: AuditLogEntityPropertyChangeDto[];
+}
+
+export interface AuditLogDetailDto extends AuditLogDto {
+  comments?: string | null;
+  exceptions?: string | null;
+  actions: AuditLogActionDto[];
+  entityChanges: AuditLogEntityChangeDto[];
+}

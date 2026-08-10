@@ -62,6 +62,19 @@ public class AdminAuditLogAppService : ApplicationService, IAdminAuditLogAppServ
         }
     }
 
+    // Detail drill-down for a single row — Actions (request payload) + EntityChanges (closest real
+    // "what happened" data; see AuditLogDetailDto's own comment for why there's no literal response
+    // body). Fetched on demand rather than included on every list row: GetListAsync's own AuditLogDto
+    // stays the same lightweight shape it always was, this is a separate, heavier call.
+    public async Task<AuditLogDetailDto> GetAsync(Guid id)
+    {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var log = await _auditLogRepository.GetAsync(id, includeDetails: true);
+            return MapToDetailDto(log);
+        }
+    }
+
     private static List<AuditLogDto> MapToDtos(List<AuditLog> logs)
     {
         return logs.Select(log => new AuditLogDto
@@ -80,5 +93,48 @@ public class AdminAuditLogAppService : ApplicationService, IAdminAuditLogAppServ
             HttpStatusCode = log.HttpStatusCode,
             HasException = !log.Exceptions.IsNullOrWhiteSpace()
         }).ToList();
+    }
+
+    private static AuditLogDetailDto MapToDetailDto(AuditLog log)
+    {
+        return new AuditLogDetailDto
+        {
+            Id = log.Id,
+            UserId = log.UserId,
+            UserName = log.UserName,
+            TenantId = log.TenantId,
+            TenantName = log.TenantName,
+            ApplicationName = log.ApplicationName,
+            ExecutionTime = log.ExecutionTime,
+            ExecutionDuration = log.ExecutionDuration,
+            ClientIpAddress = log.ClientIpAddress,
+            HttpMethod = log.HttpMethod,
+            Url = log.Url,
+            HttpStatusCode = log.HttpStatusCode,
+            HasException = !log.Exceptions.IsNullOrWhiteSpace(),
+            Comments = log.Comments,
+            Exceptions = log.Exceptions,
+            Actions = log.Actions?.Select(a => new AuditLogActionDto
+            {
+                ServiceName = a.ServiceName,
+                MethodName = a.MethodName,
+                Parameters = a.Parameters,
+                ExecutionTime = a.ExecutionTime,
+                ExecutionDuration = a.ExecutionDuration
+            }).ToList() ?? [],
+            EntityChanges = log.EntityChanges?.Select(c => new AuditLogEntityChangeDto
+            {
+                EntityTypeFullName = c.EntityTypeFullName,
+                EntityId = c.EntityId,
+                ChangeType = (int)c.ChangeType,
+                ChangeTime = c.ChangeTime,
+                PropertyChanges = c.PropertyChanges?.Select(p => new AuditLogEntityPropertyChangeDto
+                {
+                    PropertyName = p.PropertyName,
+                    OriginalValue = p.OriginalValue,
+                    NewValue = p.NewValue
+                }).ToList() ?? []
+            }).ToList() ?? []
+        };
     }
 }

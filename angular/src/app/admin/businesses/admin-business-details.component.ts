@@ -8,7 +8,7 @@ import { AdminTenantsService } from '../../proxy/controllers/admin-tenants.servi
 import { CategoriesService } from '../../proxy/controllers/categories.service';
 import { SupportTicketsService } from '../../proxy/controllers/support-tickets.service';
 import { AdminSubscriptionsService } from '../../proxy/controllers/admin-subscriptions.service';
-import type { AdminTenantDto } from '../../proxy/businesses/models';
+import type { AdminTenantDetailStatsDto, AdminTenantDto } from '../../proxy/businesses/models';
 import type { SupportTicketDto } from '../../proxy/platform/models';
 import type { InvoiceDto, TenantSubscriptionDto } from '../../proxy/billing/models';
 import { TenantApprovalStatus } from '../../proxy/business-profiles/tenant-approval-status.enum';
@@ -27,19 +27,32 @@ type DetailTab = 'overview' | 'billing' | 'tickets';
 
 /**
  * Admin Portal > Business Details — the routed drill-down from the Businesses list
- * (admin-tenants.component.ts), `/admin/businesses/:tenantId`. Scope matches
- * admin-portal-implementation-plan.md §04 exactly, not the prototype's business-details.html (which
- * shows fabricated stats — Points Issued/Redeemed, Active Campaigns, Members, Plan, Owner, Branches —
- * none backed by any Admin-accessible endpoint; see that doc's own gap table).
+ * (admin-tenants.component.ts), `/admin/businesses/:tenantId`.
+ *
+ * **Update**: the prototype's own Points Issued/Redeemed, Active Campaigns, Members, Plan, Owner, and
+ * Branches stats — previously believed fabricated/backend-less (per this comment's own earlier
+ * claim, matching admin-portal-implementation-plan.md §04's gap table at the time) — turned out to be
+ * genuinely computable and were added for real: `AdminTenantAppService.GetDetailStatsAsync` (new,
+ * `GET /api/app/admin-tenants/{tenantId}/detail-stats`), same `IDataFilter.Disable<IMultiTenant>()`
+ * cross-tenant pattern this service's own `GetListAsync`/`GetAsync` already used for `MemberCount`
+ * (itself real and already shown on the list page — just never surfaced here until now). Points
+ * Issued/Redeemed (30d) and Active Campaigns reuse `ReportsAppService.GetDashboardHomeAsync`'s own
+ * real formulas, parameterized by an explicit `TenantId` instead of ambient `ICurrentTenant` since this
+ * runs Host-side looking at an arbitrary tenant. Owner is the real `IdentityUser.Email` of the
+ * `EmployeeAssignment` with `Role == Owner` for that tenant (no display name exists for staff anywhere
+ * in this codebase — same finding already documented on Coupons/Employees, email shown instead).
+ * Branches is a real per-tenant `Branch` count. `Plan` reuses the same Billing-tab subscription lookup
+ * this page already had, just also read once eagerly for the profile card.
  *
  * Real API surface, nothing invented:
  * - Overview: `AdminTenantsController.GetAsync` (`AdminTenantDto` — the same fields the list page
  *   already shows) + category name (best-effort `CategoriesService.get`, read is `[AllowAnonymous]`)
- *   + one genuinely real stat, "Open Support Tickets", via a `status=Open, maxResultCount:1` filtered
- *   `SupportTicketsService.getList` (reads `totalCount`, ignores the single returned item — `1` is the
- *   lowest value ABP's own `LimitedResultRequestDto.MaxResultCount` accepts; `[Range(1, ...)]` on that
- *   base class rejects `0` with a 400, confirmed by reflecting the actual compiled DTO after this was
- *   caught live) — omitted entirely for a viewer without `SupportTickets.Manage` rather than erroring.
+ *   + the detail-stats endpoint above + "Open Support Tickets", via a `status=Open, maxResultCount:1`
+ *   filtered `SupportTicketsService.getList` (reads `totalCount`, ignores the single returned item —
+ *   `1` is the lowest value ABP's own `LimitedResultRequestDto.MaxResultCount` accepts; `[Range(1, ...)]`
+ *   on that base class rejects `0` with a 400, confirmed by reflecting the actual compiled DTO after
+ *   this was caught live) — omitted entirely for a viewer without `SupportTickets.Manage` rather than
+ *   erroring.
  * - **Billing tab is now real** — `AdminSubscriptionFilterDto` gained a `TenantId` field this session
  *   (threaded through `AdminSubscriptionAppService.GetListAsync` →
  *   `ITenantSubscriptionRepository.GetListAsync`, a small, justified backend addition matching this
@@ -98,6 +111,12 @@ export class AdminBusinessDetailsComponent implements OnInit {
   protected readonly notFound = signal(false);
   protected readonly categoryName = signal<string | null>(null);
   protected readonly openTicketsCount = signal<number | null>(null);
+  protected readonly detailStats = signal<AdminTenantDetailStatsDto | null>(null);
+  // Eagerly fetched (unlike billingSubscription, which stays lazy behind the Billing tab click) since
+  // the profile card's "Plan" stat needs it immediately on load — a small, cheap duplicate of the same
+  // maxResultCount:1 lookup loadBilling() does later if the Billing tab is opened, kept separate rather
+  // than restructuring that tab's own lazy-load timing.
+  protected readonly planName = signal<string | null>(null);
   protected readonly activeTab = signal<DetailTab>('overview');
 
   protected readonly canApprove = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Tenants.Approve'));
@@ -334,6 +353,8 @@ export class AdminBusinessDetailsComponent implements OnInit {
     this.notFound.set(false);
     this.categoryName.set(null);
     this.openTicketsCount.set(null);
+    this.detailStats.set(null);
+    this.planName.set(null);
 
     this.tenantsService.get(tenantId).subscribe({
       next: (tenant) => {
@@ -341,6 +362,8 @@ export class AdminBusinessDetailsComponent implements OnInit {
         this.isLoading.set(false);
         if (tenant.categoryId) this.loadCategoryName(tenant.categoryId);
         if (this.canViewTickets()) this.loadOpenTicketsCount(tenantId);
+        this.loadDetailStats(tenantId);
+        if (this.canViewBilling()) this.loadPlanName(tenantId);
       },
       error: (err: HttpErrorResponse) => {
         this.isLoading.set(false);
@@ -350,6 +373,22 @@ export class AdminBusinessDetailsComponent implements OnInit {
           this.loadFailed.set(true);
         }
       },
+    });
+  }
+
+  private loadDetailStats(tenantId: string): void {
+    this.tenantsService.getDetailStats(tenantId).subscribe({
+      next: (stats) => this.detailStats.set(stats),
+      // Supplementary stats — the rows/tiles that depend on them just stay hidden (see template),
+      // rather than showing an error, same "best-effort" shape as loadOpenTicketsCount below.
+      error: () => undefined,
+    });
+  }
+
+  private loadPlanName(tenantId: string): void {
+    this.subscriptionsService.getList({ status: null, tenantId, sorting: undefined, skipCount: 0, maxResultCount: 1 }).subscribe({
+      next: (result) => this.planName.set((result.items ?? [])[0]?.planName ?? null),
+      error: () => undefined,
     });
   }
 

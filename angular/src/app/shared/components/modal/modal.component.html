@@ -5,7 +5,12 @@
     style="background: rgba(0, 0, 0, 0.5)"
     (click)="onBackdropClick($event)"
   >
-    <div class="modal-dialog modal-dialog-centered">
+    <div
+      class="modal-dialog modal-dialog-centered"
+      [class.modal-lg]="size() === 'lg'"
+      [class.modal-xl]="size() === 'xl'"
+      [class.modal-sm]="size() === 'sm'"
+    >
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">{{ title() }}</h5>

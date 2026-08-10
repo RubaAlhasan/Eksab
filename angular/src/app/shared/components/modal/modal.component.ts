@@ -16,6 +16,8 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 export class ModalComponent {
   readonly open = input.required<boolean>();
   readonly title = input.required<string>();
+  /** Bootstrap dialog size modifier — omit for the default (unchanged) width. */
+  readonly size = input<'sm' | 'lg' | 'xl'>();
   readonly closed = output<void>();
 
   protected onBackdropClick(event: MouseEvent): void {

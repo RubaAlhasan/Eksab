@@ -11,6 +11,15 @@ export interface AdminTenantDto {
   memberCount: number;
 }
 
+export interface AdminTenantDetailStatsDto {
+  ownerDisplayName?: string | null;
+  ownerEmail?: string | null;
+  branchCount?: number;
+  pointsIssuedLast30Days?: number;
+  pointsRedeemedLast30Days?: number;
+  activeCampaignCount?: number;
+}
+
 export interface AdminTenantFilterDto extends PagedAndSortedResultRequestDto {
   approvalStatus?: TenantApprovalStatus | null;
   filterText?: string | null;

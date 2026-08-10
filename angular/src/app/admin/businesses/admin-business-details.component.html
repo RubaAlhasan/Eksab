@@ -27,11 +27,26 @@
   <div class="row g-4">
     <div class="col-12 col-lg-4">
       <div class="card">
-        <div class="card-body text-center">
+        <div class="card-body text-center p-4">
           <div class="eks-avatar mx-auto mb-3">{{ (tenant.tenantName ?? '?').charAt(0).toUpperCase() }}</div>
           <p class="fw-bold mb-1">{{ tenant.tenantName }}</p>
           <p class="text-muted small mb-2">{{ categoryName() ?? '—' }}</p>
           <app-status-badge [label]="statusLabelKey(tenant.approvalStatus) | abpLocalization" [variant]="statusVariant(tenant.approvalStatus)"></app-status-badge>
+
+          <div class="row g-3 text-center mt-1 mb-1">
+            <div class="col-6">
+              <div class="eks-mini-stat">
+                <p class="eks-mini-stat__value">{{ tenant.memberCount ?? 0 }}</p>
+                <p class="eks-mini-stat__label">{{ '::AdminPanel:Businesses:ColumnMembers' | abpLocalization }}</p>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="eks-mini-stat">
+                <p class="eks-mini-stat__value">{{ planName() ?? '—' }}</p>
+                <p class="eks-mini-stat__label">{{ '::AdminPanel:Businesses:ColumnPlan' | abpLocalization }}</p>
+              </div>
+            </div>
+          </div>
 
           <div class="text-start mt-4">
             <div class="eks-detail-row">
@@ -39,20 +54,26 @@
               <span class="fw-semibold small">{{ tenant.creationTime | date: 'mediumDate' }}</span>
             </div>
             <div class="eks-detail-row">
-              <span class="text-muted small">{{ '::AdminPanel:Businesses:BusinessIdLabel' | abpLocalization }}</span>
-              <span class="fw-semibold small font-monospace">{{ tenant.businessProfileId }}</span>
+              <span class="text-muted small">{{ '::AdminPanel:Businesses:OwnerLabel' | abpLocalization }}</span>
+              <span class="fw-semibold small" [title]="detailStats()?.ownerEmail ?? ''">
+                {{ detailStats()?.ownerDisplayName ?? detailStats()?.ownerEmail ?? '—' }}
+              </span>
+            </div>
+            <div class="eks-detail-row">
+              <span class="text-muted small">{{ '::AdminPanel:Businesses:BranchesLabel' | abpLocalization }}</span>
+              <span class="fw-semibold small">{{ detailStats()?.branchCount ?? '—' }}</span>
             </div>
           </div>
 
           @if (canApprove() || canSuspend()) {
             <div class="d-flex flex-column gap-2 mt-4">
               @if (canApprove() && tenant.approvalStatus !== ApprovalStatus.Approved) {
-                <button type="button" class="btn btn-outline-success btn-sm" (click)="approve()">
+                <button type="button" class="btn btn-success w-100" (click)="approve()">
                   {{ '::AdminPanel:Businesses:Approve' | abpLocalization }}
                 </button>
               }
               @if (canSuspend() && tenant.approvalStatus !== ApprovalStatus.Suspended) {
-                <button type="button" class="btn btn-outline-danger btn-sm" (click)="suspend()">
+                <button type="button" class="btn btn-danger w-100" (click)="suspend()">
                   {{ '::AdminPanel:Businesses:Suspend' | abpLocalization }}
                 </button>
               }
@@ -86,7 +107,36 @@
       </ul>
 
       @if (activeTab() === 'overview') {
-        @if (openTicketsCount() !== null) {
+        @if (detailStats(); as stats) {
+          <div class="row g-3">
+            <div class="col-12 col-sm-6">
+              <div class="card p-4">
+                <p class="text-muted small mb-1">{{ '::AdminPanel:Businesses:PointsIssuedLabel' | abpLocalization }}</p>
+                <p class="fs-4 fw-bold mb-0">{{ stats.pointsIssuedLast30Days ?? 0 | number: '1.0-0' }}</p>
+              </div>
+            </div>
+            <div class="col-12 col-sm-6">
+              <div class="card p-4">
+                <p class="text-muted small mb-1">{{ '::AdminPanel:Businesses:PointsRedeemedLabel' | abpLocalization }}</p>
+                <p class="fs-4 fw-bold mb-0">{{ stats.pointsRedeemedLast30Days ?? 0 | number: '1.0-0' }}</p>
+              </div>
+            </div>
+            <div class="col-12 col-sm-6">
+              <div class="card p-4">
+                <p class="text-muted small mb-1">{{ '::AdminPanel:Businesses:ActiveCampaignsLabel' | abpLocalization }}</p>
+                <p class="fs-4 fw-bold mb-0">{{ stats.activeCampaignCount ?? 0 }}</p>
+              </div>
+            </div>
+            @if (openTicketsCount() !== null) {
+              <div class="col-12 col-sm-6">
+                <div class="card p-4">
+                  <p class="text-muted small mb-1">{{ '::AdminPanel:Businesses:OpenTicketsLabel' | abpLocalization }}</p>
+                  <p class="fs-4 fw-bold mb-0">{{ openTicketsCount() }}</p>
+                </div>
+              </div>
+            }
+          </div>
+        } @else if (openTicketsCount() !== null) {
           <div class="card eks-stat-tile d-inline-block">
             <div class="card-body">
               <div class="eks-stat-tile__value">{{ openTicketsCount() }}</div>

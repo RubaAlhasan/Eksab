@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Eksabli.AuditLogs;
 using Eksabli.Permissions;
@@ -23,5 +24,11 @@ public class AuditLogsController : EksabliController
     public Task<PagedResultDto<AuditLogDto>> GetListAsync([FromQuery] AdminAuditLogFilterDto input)
     {
         return _adminAuditLogAppService.GetListAsync(input);
+    }
+
+    [HttpGet("{id}")]
+    public Task<AuditLogDetailDto> GetAsync(Guid id)
+    {
+        return _adminAuditLogAppService.GetAsync(id);
     }
 }

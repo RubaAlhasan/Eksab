@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -23,4 +24,6 @@ namespace Eksabli.AuditLogs;
 public interface IAdminAuditLogAppService : IApplicationService
 {
     Task<PagedResultDto<AuditLogDto>> GetListAsync(AdminAuditLogFilterDto input);
+
+    Task<AuditLogDetailDto> GetAsync(Guid id);
 }

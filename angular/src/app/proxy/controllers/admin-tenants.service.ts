@@ -1,7 +1,7 @@
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { AdminTenantDto, AdminTenantFilterDto } from '../businesses/models';
+import type { AdminTenantDetailStatsDto, AdminTenantDto, AdminTenantFilterDto } from '../businesses/models';
 
 @Injectable({
   providedIn: 'root',
@@ -25,7 +25,15 @@ export class AdminTenantsService {
       url: `/api/app/admin-tenants/${tenantId}`,
     },
     { apiName: this.apiName,...config });
-  
+
+
+  getDetailStats = (tenantId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, AdminTenantDetailStatsDto>({
+      method: 'GET',
+      url: `/api/app/admin-tenants/${tenantId}/detail-stats`,
+    },
+    { apiName: this.apiName,...config });
+
 
   getList = (input: AdminTenantFilterDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PagedResultDto<AdminTenantDto>>({

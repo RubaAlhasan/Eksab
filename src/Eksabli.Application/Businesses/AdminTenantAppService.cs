@@ -2,14 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Eksabli.Branches;
 using Eksabli.BusinessProfiles;
+using Eksabli.Campaigns;
+using Eksabli.EmployeeAssignments;
 using Eksabli.Memberships;
+using Eksabli.Wallets;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.TenantManagement;
 
@@ -22,6 +27,11 @@ public class AdminTenantAppService : ApplicationService, IAdminTenantAppService
     private readonly ITenantRepository _tenantRepository;
     private readonly IRepository<Tenant, Guid> _tenantGenericRepository;
     private readonly IRepository<Membership, Guid> _membershipRepository;
+    private readonly IRepository<PointsTransaction, Guid> _transactionRepository;
+    private readonly IRepository<Campaign, Guid> _campaignRepository;
+    private readonly IRepository<Branch, Guid> _branchRepository;
+    private readonly IRepository<EmployeeAssignment, Guid> _employeeAssignmentRepository;
+    private readonly IIdentityUserRepository _identityUserRepository;
     private readonly IDataFilter _dataFilter;
 
     public AdminTenantAppService(
@@ -29,12 +39,22 @@ public class AdminTenantAppService : ApplicationService, IAdminTenantAppService
         ITenantRepository tenantRepository,
         IRepository<Tenant, Guid> tenantGenericRepository,
         IRepository<Membership, Guid> membershipRepository,
+        IRepository<PointsTransaction, Guid> transactionRepository,
+        IRepository<Campaign, Guid> campaignRepository,
+        IRepository<Branch, Guid> branchRepository,
+        IRepository<EmployeeAssignment, Guid> employeeAssignmentRepository,
+        IIdentityUserRepository identityUserRepository,
         IDataFilter dataFilter)
     {
         _businessProfileRepository = businessProfileRepository;
         _tenantRepository = tenantRepository;
         _tenantGenericRepository = tenantGenericRepository;
         _membershipRepository = membershipRepository;
+        _transactionRepository = transactionRepository;
+        _campaignRepository = campaignRepository;
+        _branchRepository = branchRepository;
+        _employeeAssignmentRepository = employeeAssignmentRepository;
+        _identityUserRepository = identityUserRepository;
         _dataFilter = dataFilter;
     }
 
@@ -76,6 +96,56 @@ public class AdminTenantAppService : ApplicationService, IAdminTenantAppService
             var tenant = await _tenantRepository.GetAsync(tenantId);
             var memberCountLookup = await GetMemberCountLookupAsync([tenantId]);
             return ToDto(profile, tenant.Name, memberCountLookup.GetValueOrDefault(tenantId));
+        }
+    }
+
+    // Admin Portal > Business Details' Owner/Branches rows and Overview stat grid — cross-tenant, same
+    // IDataFilter.Disable<IMultiTenant>() scope as every other method here. Points Issued/Redeemed
+    // (30d) and Active Campaigns mirror ReportsAppService.GetDashboardHomeAsync's own real formulas
+    // exactly, just parameterized by an explicit TenantId instead of relying on ambient
+    // ICurrentTenant (this runs in the Host realm, looking at an arbitrary OTHER tenant's data) — same
+    // single-source-of-truth KPI definitions, not reinvented for the Admin Portal.
+    public async Task<AdminTenantDetailStatsDto> GetDetailStatsAsync(Guid tenantId)
+    {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var last30Days = Clock.Now.AddDays(-30);
+
+            var earnTransactions = await _transactionRepository.GetListAsync(t =>
+                t.TenantId == tenantId && t.Type == PointsTransactionType.Earn && t.CreationTime >= last30Days);
+            var redeemTransactions = await _transactionRepository.GetListAsync(t =>
+                t.TenantId == tenantId && t.Type == PointsTransactionType.Redeem && t.CreationTime >= last30Days);
+
+            var activeCampaignCount = await _campaignRepository.CountAsync(c =>
+                c.TenantId == tenantId && c.Status == CampaignStatus.Active);
+
+            var branchCount = await _branchRepository.CountAsync(b => b.TenantId == tenantId);
+
+            var ownerAssignment = await _employeeAssignmentRepository.FirstOrDefaultAsync(e =>
+                e.TenantId == tenantId && e.Role == EmployeeRole.Owner);
+
+            string? ownerDisplayName = null;
+            string? ownerEmail = null;
+            if (ownerAssignment != null)
+            {
+                var ownerUser = await _identityUserRepository.FindAsync(ownerAssignment.UserId);
+                if (ownerUser != null)
+                {
+                    ownerEmail = ownerUser.Email;
+                    var fullName = $"{ownerUser.Name} {ownerUser.Surname}".Trim();
+                    ownerDisplayName = fullName.IsNullOrWhiteSpace() ? null : fullName;
+                }
+            }
+
+            return new AdminTenantDetailStatsDto
+            {
+                OwnerDisplayName = ownerDisplayName,
+                OwnerEmail = ownerEmail,
+                BranchCount = (int)branchCount,
+                PointsIssuedLast30Days = earnTransactions.Sum(t => t.Points),
+                PointsRedeemedLast30Days = -redeemTransactions.Sum(t => t.Points), // Redeem points are stored negative
+                ActiveCampaignCount = (int)activeCampaignCount
+            };
         }
     }
 
