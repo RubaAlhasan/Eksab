@@ -34,7 +34,9 @@
         <h2 class="fw-bold small mb-3">{{ '::BusinessPanel:Points:IdentifyTitle' | abpLocalization }}</h2>
         <form [formGroup]="phoneForm" (ngSubmit)="lookup()" class="d-flex gap-2 align-items-start mb-3">
           <div class="flex-grow-1">
+            <label class="form-label" for="phoneNumber">{{ '::BusinessPanel:Points:PhoneLabel' | abpLocalization }}</label>
             <input
+              id="phoneNumber"
               type="tel"
               class="form-control"
               formControlName="phoneNumber"

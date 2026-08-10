@@ -19,10 +19,14 @@
     max-width: 2.25rem;
     min-height: 2px;
     border-radius: 0.375rem 0.375rem 0 0;
-    background: var(--bs-primary, #6248e3);
+    // Matches the prototype's own `.chart-bar` (design-system.css) exactly — one gradient shared by
+    // every bar chart on this page (Growth AND Redemption Trend both use it, undifferentiated, same
+    // as the prototype). `--alt` used to be a flat Bootstrap-success green here, a color the prototype
+    // never actually uses for either chart — removed so both charts render identically to it.
+    background: linear-gradient(180deg, #9d8ff8, #6248e3);
 
-    &--alt {
-      background: var(--bs-success, #198754);
+    @media (prefers-color-scheme: dark) {
+      background: linear-gradient(180deg, #7c6af0, #4f37c4);
     }
   }
 
@@ -37,4 +41,28 @@
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
+}
+
+// Replaces Bootstrap's default `.progress`/`.progress-bar` (square-ish corners, flat theme-primary
+// fill) with the prototype's own `.progress-track`/`.progress-fill` look (design-system.css): fully
+// pill-shaped, subtle track, purple gradient fill. Used by both Branch Comparison and Tier
+// Distribution — Tier's per-segment `[style.background-color]` binding still overrides this gradient
+// with a solid color, same as the prototype's own JS does ("apply solid tier colors to the fills,
+// override the default gradient").
+.eks-progress-track {
+  height: 0.5rem;
+  background-color: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+
+  @media (prefers-color-scheme: dark) {
+    background-color: #1e293b;
+  }
+}
+
+.eks-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #9d8ff8, #6248e3);
+  transition: width 0.5s ease-out;
 }

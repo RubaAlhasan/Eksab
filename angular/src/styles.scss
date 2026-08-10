@@ -73,6 +73,20 @@
   min-width: 140px;
   flex: 1 1 140px;
 
+  // Optional — cards that don't include an `__icon` element (e.g. admin-subscriptions' plain
+  // value+label tiles) are unaffected, this is purely additive. Sizing matches the prototype's own
+  // `.stat-icon-wrap` (design-system.css) exactly: 2.5rem box, 0.75rem radius.
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.75rem;
+    margin-bottom: 0.75rem;
+    font-size: 1.125rem;
+  }
+
   &__value {
     font-size: 1.5rem;
     font-weight: 800;
@@ -105,5 +119,88 @@
   &:hover {
     background: var(--eks-bg, #f8fafc);
     color: var(--eks-text, #0f172a);
+  }
+}
+
+// Table header treatment — matches the prototype's own `.table thead th` (design-system.css):
+// uppercase, small, letter-spaced, muted color, subtle background. Bootstrap's bare `.table` (what
+// every list page here — Coupons, Customers, Transactions, Dashboard Recent Activity, ... — actually
+// uses) has none of this by default, which is why headers looked plain/un-styled next to the
+// prototype. Global rather than per-page since it's the same design-system rule everywhere, same
+// "promote once several pages need it" reasoning as the utilities above. Deliberately NOT touching
+// cell padding/borders here — only typography/color, to avoid disturbing row heights already tuned on
+// existing tables.
+.table > thead > tr > th {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--eks-text-muted, #64748b);
+  background-color: var(--eks-bg, #f8fafc);
+}
+
+// Small circular initials avatar — was independently duplicated verbatim in SIX component-scoped scss
+// files (admin-tenants, admin-dashboard, admin-users, business-customers, business-employees,
+// business-points) before being promoted here, same "promote once several pages need it" reasoning as
+// the rules above. Points' own copy was also a one-off color mismatch (success-subtle green, since it
+// sits on a green confirmation card) versus the other five (primary-subtle) — standardized on
+// primary-subtle here, matching the prototype's own `.avatar` (design-system.css), a purple-gradient
+// avatar unrelated to whatever card color happens to surround it.
+.eks-avatar-sm {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background-color: var(--bs-primary-bg-subtle, #cfe2ff);
+  color: var(--bs-primary-text-emphasis, #084298);
+}
+
+// Restyles Bootstrap's `.nav-tabs` (boxed/pill look by default) to match the prototype's own
+// `.tab-trigger` (design-system.css): plain underline tabs — muted label, 2px transparent border
+// becoming primary-colored on the active tab, no background/box at all. Global since `.nav-tabs` is
+// already reused as-is on Customers/Points/Admin Business Details, same reasoning as the rules above.
+.nav-tabs {
+  border-bottom: 1px solid var(--eks-border, #e2e8f0);
+
+  // Lepton-X's own theme (bootstrap-dim.css) ships a SECOND, more specific `.nav-tabs .nav-item
+  // .nav-link` rule set — a hardcoded (non-variable) pink active-tab color (`#f72585`) plus a
+  // `position: relative; bottom: -2px` offset on `.nav-item` that detaches the active indicator from
+  // this rule's own border-bottom, which is what produced the broken-looking double/offset underline.
+  // `.nav-item` selectors here match that same shape so ours doesn't lose on specificity;
+  // `!important` only on the one color Lepton's rule hardcodes outside any CSS variable we could
+  // otherwise just override cleanly.
+  .nav-item {
+    bottom: auto;
+  }
+
+  .nav-item .nav-link,
+  .nav-link {
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--eks-text-muted, #64748b);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    margin-bottom: -1px;
+
+    &:hover {
+      color: var(--eks-text, #0f172a);
+      border-bottom-color: transparent !important;
+      background: transparent;
+    }
+
+    &.active {
+      color: var(--bs-primary, #6248e3);
+      border-bottom-color: var(--bs-primary, #6248e3) !important;
+      background: transparent;
+    }
   }
 }

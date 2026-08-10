@@ -1,6 +1,7 @@
 import { RestService, Rest } from '@abp/ng.core';
+import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { BranchComparisonDto, CampaignPerformanceDto, CustomerSegmentReportDto, DashboardHomeDto, MemberGrowthPointDto, NotificationDeliveryRateDto, RedemptionRateReportDto, ReportPeriodDto, TierDistributionDto, TopCustomerDto, TransactionsExcelDownloadDto } from '../reports/models';
+import type { BranchComparisonDto, CampaignPerformanceDto, CustomerSegmentReportDto, DashboardHomeDto, MemberGrowthPointDto, NotificationDeliveryRateDto, RedemptionRateReportDto, ReportPeriodDto, TransactionFilterDto, TransactionListItemDto, TierDistributionDto, TopCustomerDto, TransactionsExcelDownloadDto } from '../reports/models';
 import type { DownloadTokenResultDto } from '../shared/models';
 
 @Injectable({
@@ -102,6 +103,15 @@ export class ReportsService {
     this.restService.request<any, DownloadTokenResultDto>({
       method: 'GET',
       url: '/api/app/report/transactions/download-token',
+    },
+    { apiName: this.apiName,...config });
+
+
+  getTransactionsList = (input: TransactionFilterDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, PagedResultDto<TransactionListItemDto>>({
+      method: 'GET',
+      url: '/api/app/report/transactions',
+      params: { type: input.type, branchId: input.branchId, staffId: input.staffId, from: input.from, to: input.to, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
 }

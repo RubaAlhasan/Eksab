@@ -1,12 +1,14 @@
-import { DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
 import { ReportsService } from '../../proxy/controllers/reports.service';
-import type { DashboardHomeDto, MemberGrowthPointDto } from '../../proxy/reports/models';
+import type { DashboardHomeDto, MemberGrowthPointDto, TransactionListItemDto } from '../../proxy/reports/models';
+import { PointsTransactionType } from '../../proxy/wallets/points-transaction-type.enum';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
+import { StatusBadgeComponent, StatusBadgeVariant } from '../../shared/components/status-badge/status-badge.component';
 
 interface GrowthBar {
   label: string;
@@ -42,23 +44,41 @@ interface GrowthBar {
  *   badge is real too, when computable (last two months both present, prior month > 0) — derived from
  *   the same fetched data, not invented; hidden otherwise rather than showing a misleading 0%/∞.
  * - Quick Actions: only links to pages that actually exist in this Business Portal today (Customers,
- *   Employees) — the prototype's own "Award points (POS)"/"Create a campaign"/"Add a branch" links
- *   are omitted, since none of those pages exist yet; a link to a page that doesn't exist is a dead
- *   end, not a shortcut.
- * - `[MISSING BACKEND CAPABILITY]`, deliberately not built: the prototype's "Recent Activity" table
- *   (5 most recent transactions, any customer). No JSON list endpoint exposes tenant-wide recent
- *   transactions — `IWalletAppService.GetMyTransactionHistoryAsync` is scoped to the calling
- *   customer's own wallet (self-service), and `ReportsAppService`'s only tenant-wide transaction read
- *   is `GetTransactionsAsExcelFileAsync` (a bulk Excel *export*, not a live list — see CLAUDE.md's
- *   Excel-export pattern). Omitted rather than misusing the export flow to fake a live table; wiring a
- *   real "Export Transactions" action is a reasonable follow-up, not attempted this pass.
+ *   Employees, Transactions — the last one added once the Transactions live ledger landed) — the
+ *   prototype's own "Award points (POS)"/"Create a campaign"/"Add a branch" links are still omitted,
+ *   since none of those pages exist yet; a link to a page that doesn't exist is a dead end, not a
+ *   shortcut.
+ * - Stat tile icons: added to match the prototype's own icon-in-colored-box treatment
+ *   (`stat-icon-wrap bg-{color}-50 ... text-{color}-600`), translated to this app's Bootstrap
+ *   `-subtle`/`-emphasis` convention (same one `StatusBadgeComponent` uses) instead of the prototype's
+ *   raw Tailwind color scale — same icon/color pairing as the prototype (users/primary, plus/success,
+ *   gift/warning, bullhorn/info). Purely decorative, `eks-stat-card__icon` is an optional element so
+ *   Admin Subscriptions' plain value+label stat tiles (same shared `.eks-stat-card` class) are
+ *   unaffected.
+ * - Recent Activity table: now real too — the `[MISSING BACKEND CAPABILITY]` gap this comment used to
+ *   document is closed. Uses the same `ReportsAppService.GetTransactionsListAsync` endpoint built for
+ *   the Transactions page (`ReportsService.getTransactionsList`), unfiltered, `maxResultCount: 5`, so
+ *   it's just the 5 most recent rows of the same live ledger, not a separate concept. Customer/Type
+ *   badge/points-sign rendering mirrors `business-transactions.component.ts` exactly (same helper
+ *   shapes, same localization keys reused from `BusinessPanel:Transactions:*` rather than duplicating
+ *   a parallel set under `Dashboard:*`). "View all transactions" links to `/business/transactions`,
+ *   matching the prototype's own link.
  */
 @Component({
   selector: 'app-business-dashboard',
   templateUrl: './business-dashboard.component.html',
   styleUrls: ['./business-dashboard.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DecimalPipe, RouterLink, LocalizationPipe, PageHeaderComponent, LoadingSpinnerComponent, ErrorStateComponent],
+  imports: [
+    DatePipe,
+    DecimalPipe,
+    RouterLink,
+    LocalizationPipe,
+    PageHeaderComponent,
+    LoadingSpinnerComponent,
+    ErrorStateComponent,
+    StatusBadgeComponent,
+  ],
 })
 export class BusinessDashboardComponent implements OnInit {
   private readonly reportsService = inject(ReportsService);
@@ -85,9 +105,13 @@ export class BusinessDashboardComponent implements OnInit {
     return prior > 0 ? Math.round(((last - prior) / prior) * 100) : null;
   });
 
+  protected readonly recentActivityLoading = signal(true);
+  protected readonly recentActivity = signal<TransactionListItemDto[]>([]);
+
   ngOnInit(): void {
     this.load();
     this.loadGrowth();
+    this.loadRecentActivity();
   }
 
   protected retry(): void {
@@ -124,6 +148,55 @@ export class BusinessDashboardComponent implements OnInit {
       // Best-effort — the chart card just stays hidden, doesn't block the stat tiles above.
       error: () => this.growthLoading.set(false),
     });
+  }
+
+  private loadRecentActivity(): void {
+    this.recentActivityLoading.set(true);
+    // Unfiltered, newest-first (the repository's own default sort), capped to 5 — the same live ledger
+    // the Transactions page browses in full, just its most recent slice.
+    this.reportsService.getTransactionsList({ skipCount: 0, maxResultCount: 5 }).subscribe({
+      next: (result) => {
+        this.recentActivity.set(result.items ?? []);
+        this.recentActivityLoading.set(false);
+      },
+      // Best-effort — same "just stays empty" shape as loadGrowth(), doesn't block the rest of the page.
+      error: () => this.recentActivityLoading.set(false),
+    });
+  }
+
+  protected customerName(txn: TransactionListItemDto): string {
+    const name = [txn.customerFirstName, txn.customerLastName].filter(Boolean).join(' ').trim();
+    return name || '—';
+  }
+
+  protected typeLabelKey(type: PointsTransactionType | undefined): string {
+    switch (type) {
+      case PointsTransactionType.Redeem:
+        return '::BusinessPanel:Transactions:TypeRedeem';
+      case PointsTransactionType.Adjust:
+        return '::BusinessPanel:Transactions:TypeAdjust';
+      case PointsTransactionType.Expire:
+        return '::BusinessPanel:Transactions:TypeExpire';
+      case PointsTransactionType.Refund:
+        return '::BusinessPanel:Transactions:TypeRefund';
+      default:
+        return '::BusinessPanel:Transactions:TypeEarn';
+    }
+  }
+
+  protected typeVariant(type: PointsTransactionType | undefined): StatusBadgeVariant {
+    switch (type) {
+      case PointsTransactionType.Redeem:
+        return 'danger';
+      case PointsTransactionType.Adjust:
+        return 'info';
+      case PointsTransactionType.Expire:
+        return 'neutral';
+      case PointsTransactionType.Refund:
+        return 'warning';
+      default:
+        return 'success';
+    }
   }
 
   /** `GetMemberGrowthAsync` returns one row per DAY with a new-member count — this re-buckets that

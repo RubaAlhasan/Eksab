@@ -107,7 +107,13 @@
                   </div>
                 </td>
                 <td class="text-muted">{{ member.phoneNumber ?? '—' }}</td>
-                <td class="text-muted">{{ member.tierName ?? '—' }}</td>
+                <td>
+                  @if (member.tierName) {
+                    <app-status-badge [label]="member.tierName" [variant]="tierVariant(member.tierId)"></app-status-badge>
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
                 <td class="fw-semibold">{{ member.balance | number: '1.0-0' }}</td>
                 <td class="text-muted">{{ member.joinedAt | date: 'mediumDate' }}</td>
                 <td class="text-muted">{{ member.lastActiveAt ? (member.lastActiveAt | date: 'mediumDate') : '—' }}</td>

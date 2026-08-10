@@ -315,11 +315,15 @@ export const APP_ROUTES: Routes = [
         loadComponent: () =>
           import('./business/transactions/business-transactions.component').then(c => c.BusinessTransactionsComponent),
         canActivate: [permissionGuard],
-        // GetTransactionsDownloadTokenAsync (the only real action on this page) is gated on
-        // Eksabli.Reports.Export specifically, NOT the general Eksabli.Reports.Default every other
-        // Reports-backed page (Dashboard/Analytics) uses — confirmed by reading ReportsController's
-        // own per-action [Authorize] override.
-        data: { requiredPolicy: 'Eksabli.Reports.Export' },
+        // The live ledger table (GetTransactionsListAsync) falls under the controller-level
+        // Eksabli.Reports.Default, same as Dashboard/Analytics — gate the route on that broader "can
+        // view reports" permission (its actual string value is "Eksabli.Reports", NOT
+        // "Eksabli.Reports.Default" — the C# property name `Default` isn't part of the permission
+        // string, see EksabliPermissions.Reports; confirmed against Dashboard/Analytics' own
+        // requiredPolicy above) so a viewer without .Export can still browse the table; the Export
+        // button itself is hidden without .Export via the component's own canExport() check (same
+        // "route on the lesser permission, tighter control inside" shape Coupons/BusinessProfile use).
+        data: { requiredPolicy: 'Eksabli.Reports' },
       },
     ],
   },

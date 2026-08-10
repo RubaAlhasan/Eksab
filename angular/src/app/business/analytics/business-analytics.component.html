@@ -62,8 +62,8 @@
                   <span class="fw-semibold">{{ bar.label }}</span>
                   <span class="text-muted">{{ bar.value }}</span>
                 </div>
-                <div class="progress" style="height: 6px">
-                  <div class="progress-bar" role="progressbar" [style.width.%]="(bar.value / branchMax()) * 100"></div>
+                <div class="eks-progress-track">
+                  <div class="eks-progress-fill" role="progressbar" [style.width.%]="(bar.value / branchMax()) * 100"></div>
                 </div>
               </div>
             }
@@ -89,8 +89,8 @@
                   </span>
                   <span class="text-muted">{{ bar.pct }}%</span>
                 </div>
-                <div class="progress" style="height: 6px">
-                  <div class="progress-bar" role="progressbar" [style.width.%]="bar.pct" [style.background-color]="bar.color"></div>
+                <div class="eks-progress-track">
+                  <div class="eks-progress-fill" role="progressbar" [style.width.%]="bar.pct" [style.background-color]="bar.color"></div>
                 </div>
               </div>
             }

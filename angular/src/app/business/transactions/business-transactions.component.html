@@ -3,24 +3,8 @@
   [subtitle]="'::BusinessPanel:Transactions:Subtitle' | abpLocalization"
   [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::BusinessPanel:Transactions:Title' | abpLocalization) }]"
 >
-</app-page-header>
-
-<div class="card p-4" style="max-width: 36rem">
-  <p class="text-muted small mb-4">{{ '::BusinessPanel:Transactions:Explanation' | abpLocalization }}</p>
-
-  <form [formGroup]="form" (ngSubmit)="exportExcel()" class="d-flex flex-column gap-3">
-    <div class="row g-3">
-      <div class="col-12 col-sm-6">
-        <label class="form-label" for="txnFrom">{{ '::BusinessPanel:Transactions:FieldFrom' | abpLocalization }}</label>
-        <input id="txnFrom" type="date" class="form-control" formControlName="from" />
-      </div>
-      <div class="col-12 col-sm-6">
-        <label class="form-label" for="txnTo">{{ '::BusinessPanel:Transactions:FieldTo' | abpLocalization }}</label>
-        <input id="txnTo" type="date" class="form-control" formControlName="to" />
-      </div>
-    </div>
-
-    <button type="submit" class="btn btn-primary align-self-start" [disabled]="isExporting()">
+  @if (canExport()) {
+    <button type="button" class="btn btn-secondary btn-sm" [disabled]="isExporting()" (click)="exportExcel()">
       @if (isExporting()) {
         <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
       } @else {
@@ -28,5 +12,118 @@
       }
       {{ '::BusinessPanel:Transactions:Export' | abpLocalization }}
     </button>
-  </form>
+  }
+</app-page-header>
+
+<div class="card mb-4">
+  <div class="card-body d-flex flex-wrap gap-3 align-items-center" [formGroup]="form">
+    <select class="form-select eks-filter-select" (change)="onTypeFilterChange($event)">
+      <option value="">{{ '::BusinessPanel:Transactions:AllTypes' | abpLocalization }}</option>
+      <option [value]="Type.Earn">{{ '::BusinessPanel:Transactions:TypeEarn' | abpLocalization }}</option>
+      <option [value]="Type.Redeem">{{ '::BusinessPanel:Transactions:TypeRedeem' | abpLocalization }}</option>
+      <option [value]="Type.Adjust">{{ '::BusinessPanel:Transactions:TypeAdjust' | abpLocalization }}</option>
+      <option [value]="Type.Expire">{{ '::BusinessPanel:Transactions:TypeExpire' | abpLocalization }}</option>
+      <option [value]="Type.Refund">{{ '::BusinessPanel:Transactions:TypeRefund' | abpLocalization }}</option>
+    </select>
+    @if (branches().length > 0) {
+      <select class="form-select eks-filter-select" (change)="onBranchFilterChange($event)">
+        <option value="">{{ '::BusinessPanel:Transactions:AllBranches' | abpLocalization }}</option>
+        @for (branch of branches(); track branch.id) {
+          <option [value]="branch.id">{{ branch.name }}</option>
+        }
+      </select>
+    }
+    @if (employees().length > 0) {
+      <select class="form-select eks-filter-select" (change)="onStaffFilterChange($event)">
+        <option value="">{{ '::BusinessPanel:Transactions:AllStaff' | abpLocalization }}</option>
+        @for (employee of employees(); track employee.userId) {
+          <option [value]="employee.userId">{{ employee.userEmail }}</option>
+        }
+      </select>
+    }
+    <input
+      type="date"
+      class="form-control eks-filter-select"
+      formControlName="from"
+      [attr.aria-label]="'::BusinessPanel:Transactions:FieldFrom' | abpLocalization"
+      (change)="onDateRangeChange()"
+    />
+    <input
+      type="date"
+      class="form-control eks-filter-select"
+      formControlName="to"
+      [attr.aria-label]="'::BusinessPanel:Transactions:FieldTo' | abpLocalization"
+      (change)="onDateRangeChange()"
+    />
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{{ '::BusinessPanel:Transactions:ColumnCustomer' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Transactions:ColumnType' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Transactions:ColumnPoints' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Transactions:ColumnSource' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Transactions:ColumnBranch' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Transactions:ColumnStaff' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Transactions:ColumnDate' | abpLocalization }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (isLoading()) {
+          <tr>
+            <td colspan="7">
+              <app-loading-spinner [label]="'::BusinessPanel:Transactions:Loading' | abpLocalization"></app-loading-spinner>
+            </td>
+          </tr>
+        } @else if (loadFailed()) {
+          <tr>
+            <td colspan="7">
+              <app-error-state
+                [message]="'::BusinessPanel:Transactions:LoadErrorMessage' | abpLocalization"
+                [retryLabel]="'::BusinessPanel:Transactions:TryAgain' | abpLocalization"
+                (retry)="retry()"
+              >
+              </app-error-state>
+            </td>
+          </tr>
+        } @else if (transactions().length === 0) {
+          <tr>
+            <td colspan="7">
+              <app-empty-state
+                icon="fa-receipt"
+                [title]="'::BusinessPanel:Transactions:EmptyTitle' | abpLocalization"
+                [description]="'::BusinessPanel:Transactions:EmptyDescription' | abpLocalization"
+              >
+              </app-empty-state>
+            </td>
+          </tr>
+        } @else {
+          @for (txn of transactions(); track txn.id) {
+            <tr>
+              <td class="fw-semibold">{{ customerName(txn) }}</td>
+              <td>
+                <app-status-badge [label]="typeLabelKey(txn.type) | abpLocalization" [variant]="typeVariant(txn.type)"></app-status-badge>
+              </td>
+              <td class="fw-semibold" [class.text-success]="(txn.points ?? 0) > 0" [class.text-danger]="(txn.points ?? 0) < 0">
+                {{ (txn.points ?? 0) > 0 ? '+' : '' }}{{ txn.points }}
+              </td>
+              <td class="text-muted">{{ sourceLabelKey(txn.source) | abpLocalization }}</td>
+              <td class="text-muted">{{ branchName(txn) }}</td>
+              <td class="text-muted">{{ staffEmail(txn) }}</td>
+              <td class="text-muted">{{ txn.creationTime | date: 'medium' }}</td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (!isLoading() && !loadFailed()) {
+    <div class="card-footer">
+      <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)"></app-pagination>
+    </div>
+  }
 </div>

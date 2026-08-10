@@ -1,4 +1,7 @@
+import type { PagedAndSortedResultRequestDto, EntityDto } from '@abp/ng.core';
 import type { NotificationChannel } from '../notifications/notification-channel.enum';
+import type { PointsTransactionType } from '../wallets/points-transaction-type.enum';
+import type { PointsTransactionSource } from '../wallets/points-transaction-source.enum';
 
 export interface BranchComparisonDto {
   branchId?: string;
@@ -79,4 +82,24 @@ export interface TransactionsExcelDownloadDto {
   downloadToken?: string;
   from?: string;
   to?: string;
+}
+
+export interface TransactionFilterDto extends PagedAndSortedResultRequestDto {
+  type?: PointsTransactionType | null;
+  branchId?: string | null;
+  staffId?: string | null;
+  from?: string | null;
+  to?: string | null;
+}
+
+export interface TransactionListItemDto extends EntityDto<string> {
+  customerId?: string | null;
+  customerFirstName?: string | null;
+  customerLastName?: string | null;
+  type?: PointsTransactionType;
+  points?: number;
+  source?: PointsTransactionSource;
+  branchId?: string | null;
+  staffId?: string | null;
+  creationTime?: string;
 }

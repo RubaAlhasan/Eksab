@@ -22,6 +22,12 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
 
 type CustomersTab = 'members' | 'following';
 
+// Prototype's tierBadge maps fixed names (Bronze/Silver/Gold/Platinum) to colors — not usable as-is
+// since tiers are tenant-configurable here (no fixed name set). Cycles by ascending tier ORDER instead
+// (tiers() is already sorted `minLifetimePoints asc`), same "position, not name" approach
+// business-analytics.component.ts's TIER_COLORS already uses for the same underlying data.
+const TIER_VARIANTS: StatusBadgeVariant[] = ['neutral', 'info', 'warning', 'success'];
+
 /**
  * Business Portal > Customers — mirrors prototype/business/customers.html's shape, but only where the
  * data is genuinely real:
@@ -174,6 +180,12 @@ export class BusinessCustomersComponent implements OnInit {
 
   protected statusVariant(status: MembershipStatus | undefined): StatusBadgeVariant {
     return status === MembershipStatus.Frozen ? 'neutral' : 'success';
+  }
+
+  protected tierVariant(tierId: string | undefined | null): StatusBadgeVariant {
+    if (!tierId) return 'neutral';
+    const index = this.tiers().findIndex((t) => t.id === tierId);
+    return index < 0 ? 'neutral' : TIER_VARIANTS[index % TIER_VARIANTS.length];
   }
 
   protected selectTab(tab: CustomersTab): void {
