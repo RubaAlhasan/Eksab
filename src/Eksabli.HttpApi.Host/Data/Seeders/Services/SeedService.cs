@@ -50,5 +50,10 @@ public class SeedService : ISingletonDependency
 
         var categoryDataSeederContributor = scope.ServiceProvider.GetRequiredService<CategoryDataSeederContributor>();
         await categoryDataSeederContributor.SeedAsync();
+
+        // Must run after SubscriptionPlan above — RegisterAsync provisions a trial subscription and
+        // requires a plan flagged IsTrialDefault to already exist.
+        var demoBusinessDataSeederContributor = scope.ServiceProvider.GetRequiredService<DemoBusinessDataSeederContributor>();
+        await demoBusinessDataSeederContributor.SeedAsync(new DataSeedContext());
     }
 }
