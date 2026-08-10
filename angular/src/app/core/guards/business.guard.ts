@@ -1,6 +1,9 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { ConfigStateService } from '@abp/ng.core';
+import { catchError, map, of } from 'rxjs';
+import { BusinessService } from '../../proxy/controllers/business.service';
+import { TenantApprovalStatus } from '../../proxy/business-profiles/tenant-approval-status.enum';
 
 /**
  * True if the current session resolves to a real tenant — i.e. this is a tenant-realm business-staff
@@ -34,4 +37,30 @@ export const businessRealmGuard: CanActivateFn = () => {
   const configState = inject(ConfigStateService);
   const router = inject(Router);
   return isBusinessRealm(configState) ? true : router.createUrlTree(['/home']);
+};
+
+/**
+ * Gates the entire `/business` subtree on `BusinessProfile.ApprovalStatus` — every new business
+ * starts `Pending` (a manual moderation queue, see `BusinessProfile.cs`'s own comment) and can be
+ * `Suspended` later by an admin, but until now nothing on the frontend even *read* that status
+ * (`BusinessProfileDto` never exposed it — added alongside this guard) so a Pending/Suspended
+ * business's own staff had full, unrestricted use of the portal. Redirects anywhere but Approved to
+ * `/business/pending` (`BusinessPendingComponent`), which fetches the same profile itself to show
+ * the right message and is deliberately a *separate top-level route*, not a child of `business` —
+ * nesting it there would re-run this same guard on every redirect attempt and loop.
+ *
+ * "Fail open" (allow navigation) if the profile call itself errors — this is a UX gate on top of
+ * real per-endpoint permission checks, not the actual security boundary, so a transient network
+ * failure here shouldn't lock staff out entirely; same reasoning `MembershipAppService.JoinAsync`'s
+ * own "missing BusinessProfile fails open" comment uses on the backend.
+ */
+export const businessApprovalGuard: CanActivateFn = () => {
+  const businessService = inject(BusinessService);
+  const router = inject(Router);
+  return businessService.getProfile().pipe(
+    map(profile =>
+      profile.approvalStatus === TenantApprovalStatus.Approved ? true : router.createUrlTree(['/business/pending']),
+    ),
+    catchError(() => of(true)),
+  );
 };

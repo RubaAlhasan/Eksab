@@ -1,4 +1,5 @@
 import type { AuditedEntityDto } from '@abp/ng.core';
+import type { TenantApprovalStatus } from './tenant-approval-status.enum';
 
 export interface BusinessProfileDto extends AuditedEntityDto<string> {
   tenantId?: string | null;
@@ -8,6 +9,7 @@ export interface BusinessProfileDto extends AuditedEntityDto<string> {
   descriptionEn?: string | null;
   website?: string | null;
   socialLinksJson?: string | null;
+  approvalStatus: TenantApprovalStatus;
 }
 
 export interface UpdateBusinessProfileDto {

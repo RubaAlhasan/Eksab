@@ -2,7 +2,7 @@ import { AuthService, ConfigStateService, PermissionService, authGuard, eLayoutT
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, Routes } from '@angular/router';
 import { adminGuard, isPlatformAdmin } from './core/guards/admin.guard';
-import { businessRealmGuard, isBusinessRealm } from './core/guards/business.guard';
+import { businessApprovalGuard, businessRealmGuard, isBusinessRealm } from './core/guards/business.guard';
 
 /**
  * OAuth redirectUri always lands back on '/' — figure out where an already-authenticated visitor
@@ -184,16 +184,28 @@ export const APP_ROUTES: Routes = [
     ],
   },
   {
+    // Sibling of the guarded `business` subtree below, deliberately NOT a child of it —
+    // `businessApprovalGuard` (core/guards/business.guard.ts) redirects the whole `business` subtree
+    // here for a Pending/Suspended account, and nesting this route under the same parent would re-run
+    // that guard on every redirect attempt and loop. Still gated on realm (a customer/admin account
+    // has no business to be pending/suspended on) but deliberately not on approval status itself.
+    path: 'business/pending',
+    loadComponent: () => import('./business/pending/business-pending.component').then(c => c.BusinessPendingComponent),
+    canActivate: [authGuard, businessRealmGuard],
+  },
+  {
     // Parent shell for the Business Portal — tenant-realm staff (Owner/BranchManager/Cashier/
     // MarketingManager). `BusinessLayoutComponent` renders its own sidebar/topbar (same
     // `eLayoutType.empty` treatment as Admin above — see route.provider.ts). Gated on
     // `businessRealmGuard` (core/guards/business.guard.ts) — real tenant-resolution (`currentTenant.id`
     // from ABP's own config state), not a permission heuristic; see that guard's own comment for why
-    // this is reliable. Each child route still gates on its own real permission on top of that, same
-    // "coarse realm guard + per-page permission" shape as Admin.
+    // this is reliable — and on `businessApprovalGuard`, which redirects a Pending/Suspended business's
+    // own staff to `/business/pending` (see that guard's comment) instead of the portal. Each child
+    // route still gates on its own real permission on top of that, same "coarse realm guard + per-page
+    // permission" shape as Admin.
     path: 'business',
     loadComponent: () => import('./business/layout/business-layout.component').then(c => c.BusinessLayoutComponent),
-    canActivate: [authGuard, businessRealmGuard],
+    canActivate: [authGuard, businessRealmGuard, businessApprovalGuard],
     children: [
       {
         // Bare '/business' lands here — matches redirectAuthenticatedToHomeGuard's own destination

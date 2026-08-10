@@ -116,6 +116,18 @@ function configureRoutes() {
         invisible: true,
         layout: eLayoutType.empty,
       },
+      // Not a menu item — a redirect target for a Pending/Suspended business (businessApprovalGuard,
+      // core/guards/business.guard.ts). `invisible: true` + placeholder name, same "layout-resolution
+      // anchor" shape as the stock-ABP-page anchors below; needed because unlike '/admin/businesses/
+      // :tenantId', there's no bare '/business' entry here for findRoute()'s path-walk-up to fall back
+      // to — without this exact entry, this route would resolve to eLayoutType.application (Lepton-X's
+      // stock chrome) instead of the bare page BusinessPendingComponent actually renders.
+      {
+        path: '/business/pending',
+        name: 'Eksabli::Internal:BusinessPendingLayoutAnchor',
+        invisible: true,
+        layout: eLayoutType.empty,
+      },
       // Business Portal routes — same eLayoutType.empty treatment as Admin above (BusinessLayoutComponent
       // renders its own shell; see app.routes.ts's '/business' block and business.guard.ts for the real
       // tenant-resolution-based realm gate).

@@ -67,7 +67,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
             // seed data that bypassed BusinessAppService.RegisterAsync) fails open rather than blocking
             // every join with an unrelated 500.
             var businessProfile = await _businessProfileRepository.FirstOrDefaultAsync();
-            if (businessProfile?.ApprovalStatus == TenantApprovalStatus.Suspended)
+            if (businessProfile != null && businessProfile.ApprovalStatus != TenantApprovalStatus.Approved)
             {
                 throw new UserFriendlyException("This business isn't currently accepting new members.");
             }
