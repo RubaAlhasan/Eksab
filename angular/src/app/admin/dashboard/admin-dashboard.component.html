@@ -8,12 +8,14 @@
 <div class="d-flex flex-wrap gap-3 mb-4">
   <div class="card eks-stat-card">
     <div class="card-body">
+      <div class="eks-stat-card__icon bg-primary-subtle text-primary-emphasis"><i class="fas fa-store"></i></div>
       <div class="eks-stat-card__value">{{ businessesLoading() ? '—' : (totalBusinesses() ?? 0) }}</div>
       <div class="eks-stat-card__label">{{ '::AdminPanel:Dashboard:StatTotalBusinesses' | abpLocalization }}</div>
     </div>
   </div>
   <div class="card eks-stat-card">
     <div class="card-body">
+      <div class="eks-stat-card__icon bg-warning-subtle text-warning-emphasis"><i class="fas fa-hourglass-half"></i></div>
       <div class="eks-stat-card__value">{{ businessesLoading() ? '—' : (pendingCount() ?? 0) }}</div>
       <div class="eks-stat-card__label">{{ '::AdminPanel:Dashboard:StatPendingApprovals' | abpLocalization }}</div>
     </div>
@@ -21,6 +23,7 @@
   @if (canViewMrr() && !mrrLoading() && mrr() !== null) {
     <div class="card eks-stat-card">
       <div class="card-body">
+        <div class="eks-stat-card__icon bg-success-subtle text-success-emphasis"><i class="fas fa-money-bill-wave"></i></div>
         <div class="eks-stat-card__value">${{ mrr() | number: '1.0-0' }}</div>
         <div class="eks-stat-card__label">{{ '::AdminPanel:Dashboard:StatMrr' | abpLocalization }}</div>
       </div>
@@ -29,6 +32,7 @@
   @if (canViewTickets() && openTicketsCount() !== null) {
     <div class="card eks-stat-card">
       <div class="card-body">
+        <div class="eks-stat-card__icon bg-info-subtle text-info-emphasis"><i class="fas fa-headset"></i></div>
         <div class="eks-stat-card__value">{{ openTicketsCount() }}</div>
         <div class="eks-stat-card__label">{{ '::AdminPanel:Dashboard:StatOpenTickets' | abpLocalization }}</div>
       </div>
@@ -37,8 +41,40 @@
 </div>
 
 <div class="row g-4 mb-4">
-  <div class="col-12">
-    <div class="card p-4">
+  @if (canViewMrr()) {
+    <div class="col-12 col-lg-8">
+      <div class="card p-4 h-100">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div>
+            <h2 class="fw-bold small mb-0">{{ '::AdminPanel:Dashboard:StatMrr' | abpLocalization }}</h2>
+            <p class="text-muted small mb-0">{{ '::AdminPanel:Dashboard:MrrTrendSubtitle' | abpLocalization }}</p>
+          </div>
+          @if (mrrTrendGrowthPct(); as pct) {
+            <span class="badge" [class.bg-success-subtle]="pct >= 0" [class.text-success-emphasis]="pct >= 0" [class.bg-danger-subtle]="pct < 0" [class.text-danger-emphasis]="pct < 0">
+              {{ pct >= 0 ? '+' : '' }}{{ pct }}% {{ '::AdminPanel:Dashboard:MrrTrendGrowthSuffix' | abpLocalization }}
+            </span>
+          }
+        </div>
+        @if (mrrTrendLoading()) {
+          <app-loading-spinner [label]="'::AdminPanel:Dashboard:Loading' | abpLocalization"></app-loading-spinner>
+        } @else if (mrrTrendBars().length === 0) {
+          <p class="text-muted small mb-0">{{ '::AdminPanel:Dashboard:NoMrrTrendData' | abpLocalization }}</p>
+        } @else {
+          <div class="eks-growth-chart">
+            @for (bar of mrrTrendBars(); track bar.label) {
+              <div class="eks-growth-chart__col" [title]="bar.label + ': $' + (bar.value | number: '1.0-0')">
+                <div class="eks-growth-chart__bar" [style.height.%]="(bar.value / mrrTrendMax()) * 100"></div>
+                <span class="eks-growth-chart__label">{{ bar.label }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <div class="col-12" [class.col-lg-4]="canViewMrr()">
+    <div class="card p-4 h-100">
       <h2 class="fw-bold small mb-3">{{ '::AdminPanel:Dashboard:CategoryMixTitle' | abpLocalization }}</h2>
       @if (categoriesLoading()) {
         <app-loading-spinner [label]="'::AdminPanel:Dashboard:Loading' | abpLocalization"></app-loading-spinner>

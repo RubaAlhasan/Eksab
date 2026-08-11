@@ -337,6 +337,15 @@ export const APP_ROUTES: Routes = [
         // "route on the lesser permission, tighter control inside" shape Coupons/BusinessProfile use).
         data: { requiredPolicy: 'Eksabli.Reports' },
       },
+      {
+        // No `canActivate`/`requiredPolicy` — same shape as `points` above. SupportTicketsController's
+        // GetListAsync/CreateAsync/AddMessageAsync have no ABP permission beyond the class-level
+        // [Authorize] (self-scoped server-side to the caller's own tenant, not a permission check —
+        // see SupportTicketAppService.GetListAsync's own comment for why this can't be bypassed).
+        path: 'support-tickets',
+        loadComponent: () =>
+          import('./business/support-tickets/business-support-tickets.component').then(c => c.BusinessSupportTicketsComponent),
+      },
     ],
   },
   {

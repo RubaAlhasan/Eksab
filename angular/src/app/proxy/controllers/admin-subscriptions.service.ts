@@ -1,7 +1,7 @@
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { AdminInvoiceFilterDto, AdminSubscriptionFilterDto, AdminSubscriptionStatsDto, InvoiceDto, RecordManualPaymentDto, TenantSubscriptionDto } from '../billing/models';
+import type { AdminInvoiceFilterDto, AdminSubscriptionFilterDto, AdminSubscriptionStatsDto, InvoiceDto, MrrTrendPointDto, RecordManualPaymentDto, TenantSubscriptionDto } from '../billing/models';
 
 @Injectable({
   providedIn: 'root',
@@ -42,6 +42,14 @@ export class AdminSubscriptionsService {
     this.restService.request<any, AdminSubscriptionStatsDto>({
       method: 'GET',
       url: '/api/app/admin-subscriptions/stats',
+    },
+    { apiName: this.apiName,...config });
+
+
+  getMrrTrend = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, MrrTrendPointDto[]>({
+      method: 'GET',
+      url: '/api/app/admin-subscriptions/mrr-trend',
     },
     { apiName: this.apiName,...config });
 }

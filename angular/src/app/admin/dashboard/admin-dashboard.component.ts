@@ -8,6 +8,7 @@ import { SupportTicketsService } from '../../proxy/controllers/support-tickets.s
 import { CategoriesService } from '../../proxy/controllers/categories.service';
 import type { AdminTenantDto } from '../../proxy/businesses/models';
 import type { CategoryDto, SupportTicketDto } from '../../proxy/platform/models';
+import type { MrrTrendPointDto } from '../../proxy/billing/models';
 import { TenantApprovalStatus } from '../../proxy/business-profiles/tenant-approval-status.enum';
 import { SupportTicketStatus } from '../../proxy/platform/support-ticket-status.enum';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -19,15 +20,10 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
  * Admin Portal > Dashboard — the last Admin Portal MVP page, deliberately built last (composes widgets
  * from pages that all already exist: Businesses, Categories, Subscriptions, Support Tickets). Mirrors
  * prototype/admin/dashboard.html's layout, but every widget is checked against a real endpoint first —
- * two of the prototype's four stat tiles and its entire MRR trend chart are `[MISSING BACKEND
- * CAPABILITY]` and deliberately NOT built:
+ * one of the prototype's four stat tiles is `[MISSING BACKEND CAPABILITY]` and deliberately NOT built:
  * - **Daily Active Users** — no login/session tracking exists anywhere in this codebase (same gap
  *   already documented for Members' "Last Active" column, which falls back to wallet activity
  *   instead). No real number to show; omitted entirely, not faked.
- * - **MRR trend chart / "+X% (7mo)" badge** — `AdminSubscriptionAppService.GetStatsAsync()` (added
- *   earlier this session) gives one accurate CURRENT MRR figure, DB-computed — real and shown as a
- *   stat tile — but there's no historical/time-series snapshot table anywhere to chart a trend against
- *   or compute a real period-over-period delta from. No chart, no growth badge.
  *
  * What IS real and shown:
  * - **Total Businesses** / **Pending Approvals** (count + list) — `AdminTenantsService.getList` (one
@@ -43,6 +39,17 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
  * - **Platform MRR** — `AdminSubscriptionsService.getStats()`, gated on `Eksabli.Billing.ManagePlatform`
  *   (tile hidden entirely, call skipped, for a viewer without it — same pattern as the Businesses page's
  *   Plan column).
+ * - **Platform MRR trend chart** — `AdminSubscriptionsService.getMrrTrend()` (new
+ *   `AdminSubscriptionAppService.GetMrrTrendAsync`, added this session), 7 real monthly bars grouped
+ *   server-side from **paid `Invoice` rows** (`Invoice.Amount` summed by `Invoice.PaidAt`'s month,
+ *   Host-scoped `Disable<IMultiTenant>()`), zero-filled for months with no paid invoices rather than
+ *   omitted. This is collected-revenue-per-month, not a true point-in-time MRR snapshot (no
+ *   subscription-status history table exists to compute that) — same "real but approximate" spirit as
+ *   `ApproxMrr` itself, not the prototype's fabricated demo trend. The "+X% (7mo)" badge is real too,
+ *   comparing this window's first and last bar, and only shown when computable (first bar > 0) —
+ *   hidden otherwise rather than showing a misleading 0%/∞, same rule
+ *   `business-dashboard.component.ts`'s own MoM badge already follows. Same permission gate as the
+ *   stat tile.
  * - **Open Support Tickets** (count) / **Recent Support Tickets** (list) — `SupportTicketsService
  *   .getList`, twice (once `status: Open, maxResultCount: 1` for the accurate count — reads
  *   `totalCount`, ignores the single item; `1` is the lowest value ABP's own `LimitedResultRequestDto
@@ -56,6 +63,12 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
  * - **Category Mix** — `CategoriesService.getList` ([AllowAnonymous], already used elsewhere), top 5 by
  *   the real `CategoryDto.BusinessCount` field (added earlier this session), bars scaled relative to
  *   the largest visible category — not the prototype's own arbitrary "× 3 of the total" fudge factor.
+ * - Stat tile icons: added to match the prototype's own icon-in-colored-box treatment
+ *   (`stat-icon-wrap bg-{color}-50 ... text-{color}-600`), translated to this app's Bootstrap
+ *   `-subtle`/`-emphasis` convention, same as `business-dashboard.component.ts` already established —
+ *   icon/color choice adapted to this page's own 4 tiles (store/primary, hourglass/warning,
+ *   money-bill-wave/success, headset/info), since the prototype's own 4 tiles don't line up 1:1
+ *   (it has Daily Active Users where this page has Pending Approvals).
  */
 @Component({
   selector: 'app-admin-dashboard',
@@ -92,6 +105,23 @@ export class AdminDashboardComponent implements OnInit {
   protected readonly mrrLoading = signal(false);
   protected readonly mrr = signal<number | null>(null);
 
+  protected readonly mrrTrendLoading = signal(false);
+  private readonly mrrTrendPoints = signal<MrrTrendPointDto[]>([]);
+  protected readonly mrrTrendBars = computed(() =>
+    this.mrrTrendPoints().map((p) => ({
+      label: new Date(p.year, p.month - 1, 1).toLocaleDateString(undefined, { month: 'short' }),
+      value: p.amount,
+    })),
+  );
+  protected readonly mrrTrendMax = computed(() => Math.max(1, ...this.mrrTrendBars().map((b) => b.value)));
+  protected readonly mrrTrendGrowthPct = computed(() => {
+    const bars = this.mrrTrendBars();
+    if (bars.length < 2) return null;
+    const first = bars[0].value;
+    const last = bars[bars.length - 1].value;
+    return first > 0 ? Math.round(((last - first) / first) * 100) : null;
+  });
+
   protected readonly ticketsLoading = signal(false);
   protected readonly ticketsFailed = signal(false);
   protected readonly openTicketsCount = signal<number | null>(null);
@@ -108,7 +138,10 @@ export class AdminDashboardComponent implements OnInit {
   ngOnInit(): void {
     this.loadBusinesses();
     this.loadCategories();
-    if (this.canViewMrr()) this.loadMrr();
+    if (this.canViewMrr()) {
+      this.loadMrr();
+      this.loadMrrTrend();
+    }
     if (this.canViewTickets()) this.loadTickets();
   }
 
@@ -215,6 +248,18 @@ export class AdminDashboardComponent implements OnInit {
       // Best-effort — the tile just stays hidden (see the template's `mrr(); as value` guard),
       // doesn't block the rest of the dashboard.
       error: () => this.mrrLoading.set(false),
+    });
+  }
+
+  private loadMrrTrend(): void {
+    this.mrrTrendLoading.set(true);
+    this.subscriptionsService.getMrrTrend().subscribe({
+      next: (points) => {
+        this.mrrTrendPoints.set(points);
+        this.mrrTrendLoading.set(false);
+      },
+      // Best-effort — the chart card just stays hidden, doesn't block the rest of the dashboard.
+      error: () => this.mrrTrendLoading.set(false),
     });
   }
 

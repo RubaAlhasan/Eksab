@@ -95,7 +95,7 @@
                 </app-status-badge>
               </td>
               <td class="text-end">
-                @if (tenant.approvalStatus === ApprovalStatus.Pending) {
+                @if (tenant.approvalStatus !== ApprovalStatus.Approved) {
                   <button type="button" class="btn btn-sm btn-outline-success me-2" (click)="approve(tenant)">
                     {{ '::AdminPanel:Businesses:Approve' | abpLocalization }}
                   </button>

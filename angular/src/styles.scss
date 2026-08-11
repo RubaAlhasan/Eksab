@@ -99,6 +99,80 @@
   }
 }
 
+// Vertical bar-chart primitive (label + bars + x-axis labels) — originally scoped inside
+// business-dashboard.component.scss (Member Growth chart) before admin-dashboard.component.html's
+// Platform MRR trend chart needed the identical rule too — promoted here rather than duplicated a
+// second time, same "promote on the second use" pattern as .eks-stat-card above.
+.eks-growth-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  height: 12rem;
+
+  &__col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    gap: 0.375rem;
+  }
+
+  &__bar {
+    width: 100%;
+    max-width: 2.5rem;
+    min-height: 2px;
+    border-radius: 0.375rem 0.375rem 0 0;
+    background: var(--bs-primary, #6248e3);
+  }
+
+  &__label {
+    font-size: 0.6875rem;
+    color: var(--bs-secondary-color, #6c757d);
+  }
+}
+
+// Clickable table row (whole `<tr>` opens a detail modal on click) — was independently duplicated in
+// admin-subscriptions.component.scss and admin-support-tickets.component.scss before
+// business-support-tickets.component.html needed it a third time; promoted here rather than
+// duplicated again, same "promote on the second/third use" pattern as the other utilities above.
+.eks-clickable-row {
+  cursor: pointer;
+}
+
+// Message-thread primitive (chat-bubble-style list, "mine" bubbles right-aligned/tinted) — originally
+// scoped inside admin-support-tickets.component.scss before business-support-tickets.component.html
+// needed the identical rule too.
+.eks-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 320px;
+  overflow-y: auto;
+
+  &__message {
+    max-width: 85%;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    background-color: var(--bs-tertiary-bg, #f8f9fa);
+
+    &--mine {
+      align-self: flex-end;
+      background-color: var(--bs-primary-bg-subtle, #cfe2ff);
+    }
+  }
+
+  &__meta {
+    margin-bottom: 0.25rem;
+  }
+
+  &__body {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
+
 // Portal-shell topbar icon button (lang switcher, dark mode, mobile nav toggle) used by
 // AdminLayoutComponent's topbar. Kept as a global utility (originally promoted out of
 // admin-layout.component.scss when a since-deleted, near-duplicate Business Portal shell briefly

@@ -270,6 +270,11 @@ export class AdminTenantsComponent implements OnInit {
     }
   }
 
+  // Also the reactivation path for a Suspended business — BusinessProfile.Approve() (backend) is
+  // explicitly documented as doing double duty ("no separate Reactivate() method to keep in sync with
+  // this one"), so the template's Approve button shows for anything !== Approved, not just Pending
+  // (fixed here to match admin-business-details.component.html's already-correct condition — this
+  // list page previously used `=== Pending`, which left a Suspended row with no action to undo it).
   protected approve(tenant: AdminTenantDto): void {
     if (!tenant.tenantId) return;
     this.confirmation

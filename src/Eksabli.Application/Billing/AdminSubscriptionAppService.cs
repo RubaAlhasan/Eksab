@@ -83,6 +83,43 @@ public class AdminSubscriptionAppService : ApplicationService, IAdminSubscriptio
         }
     }
 
+    // Real, DB-backed revenue trend for the Admin Dashboard's "Platform MRR" chart (see
+    // MrrTrendPointDto for why this is collected-revenue-per-month rather than a true point-in-time
+    // MRR snapshot) — one bar per month for the trailing 7 months (this month inclusive), zero-filled
+    // for months with no paid invoices rather than omitted, so a sparse trend doesn't misrepresent
+    // itself as a shorter one.
+    public async Task<List<MrrTrendPointDto>> GetMrrTrendAsync()
+    {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var queryable = await _invoiceRepository.GetQueryableAsync();
+
+            var from = new DateTime(Clock.Now.Year, Clock.Now.Month, 1).AddMonths(-6);
+            var paidInvoices = await AsyncExecuter.ToListAsync(
+                queryable.Where(i => i.Status == InvoiceStatus.Paid && i.PaidAt != null && i.PaidAt >= from));
+
+            var amountByMonth = paidInvoices
+                .GroupBy(i => new { i.PaidAt!.Value.Year, i.PaidAt!.Value.Month })
+                .ToDictionary(g => (g.Key.Year, g.Key.Month), g => g.Sum(i => i.Amount));
+
+            var points = new List<MrrTrendPointDto>();
+            var cursor = from;
+            var end = new DateTime(Clock.Now.Year, Clock.Now.Month, 1);
+            while (cursor <= end)
+            {
+                points.Add(new MrrTrendPointDto
+                {
+                    Year = cursor.Year,
+                    Month = cursor.Month,
+                    Amount = amountByMonth.GetValueOrDefault((cursor.Year, cursor.Month))
+                });
+                cursor = cursor.AddMonths(1);
+            }
+
+            return points;
+        }
+    }
+
     public async Task<PagedResultDto<InvoiceDto>> GetInvoicesAsync(AdminInvoiceFilterDto input)
     {
         using (_dataFilter.Disable<IMultiTenant>())

@@ -244,5 +244,14 @@ function configureRoutes() {
         layout: eLayoutType.empty,
         requiredPolicy: 'Eksabli.Reports.Export',
       },
+      {
+        // No requiredPolicy — same shape as '/business/points' above; no ABP permission gates this
+        // page, see app.routes.ts's own comment on this route for why.
+        path: '/business/support-tickets',
+        name: '::BusinessPanel:Layout:NavSupportTickets',
+        iconClass: 'fas fa-life-ring',
+        order: 33,
+        layout: eLayoutType.empty,
+      },
   ]);
 }

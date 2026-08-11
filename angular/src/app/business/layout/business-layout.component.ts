@@ -74,6 +74,9 @@ export class BusinessLayoutComponent {
     { labelKey: '::BusinessPanel:Layout:NavBilling', icon: 'fa-receipt', link: '/business/billing', permission: 'Eksabli.Billing.ManageOwn' },
     { labelKey: '::BusinessPanel:Layout:NavTransactions', icon: 'fa-file-invoice-dollar', link: '/business/transactions', permission: 'Eksabli.Reports.Export' },
     { labelKey: '::BusinessPanel:Layout:NavSettings', icon: 'fa-gear', link: '/business/settings', permission: 'Eksabli.BusinessProfile' },
+    // Empty permission — same shape as Points above; no ABP permission gates this page, see
+    // app.routes.ts's own comment on this route for why.
+    { labelKey: '::BusinessPanel:Layout:NavSupportTickets', icon: 'fa-life-ring', link: '/business/support-tickets', permission: '' },
   ];
 
   protected readonly navItems = computed<BusinessNavItem[]>(() =>

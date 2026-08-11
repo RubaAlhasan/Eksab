@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Eksabli.Billing;
 using Eksabli.Permissions;
@@ -29,6 +30,12 @@ public class AdminSubscriptionsController : EksabliController
     public Task<AdminSubscriptionStatsDto> GetStatsAsync()
     {
         return _adminSubscriptionAppService.GetStatsAsync();
+    }
+
+    [HttpGet("mrr-trend")]
+    public Task<List<MrrTrendPointDto>> GetMrrTrendAsync()
+    {
+        return _adminSubscriptionAppService.GetMrrTrendAsync();
     }
 
     [HttpGet("invoices")]

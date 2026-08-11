@@ -37,6 +37,12 @@ export interface InvoiceDto extends AuditedEntityDto<string> {
   paidAt?: string | null;
 }
 
+export interface MrrTrendPointDto {
+  year: number;
+  month: number;
+  amount: number;
+}
+
 export interface RecordManualPaymentDto {
   invoiceId: string;
   providerTransactionRef?: string | null;
