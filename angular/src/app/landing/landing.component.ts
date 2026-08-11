@@ -13,6 +13,7 @@ import {
   afterNextRender,
   computed,
   inject,
+  signal,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
@@ -65,6 +66,13 @@ export class LandingComponent {
     initialValue: this.sessionState.getLanguage() ?? 'en',
   });
   readonly dir = computed(() => getLocaleDirection(this.currentLang() ?? 'en'));
+
+  /** Mobile header collapse — below the breakpoint where `.main-nav` + `.header-actions` no longer
+   *  fit alongside the wordmark in one row (see landing.component.scss's `.menu-toggle`/`.mobile-menu`
+   *  rules), the same nav/lang/login/CTA content moves into this toggled panel instead of overflowing.
+   *  Same signal-based toggle shape as AdminLayoutComponent/BusinessLayoutComponent's own
+   *  `mobileNavOpen`, kept local here since this page has no shared shell to hoist it into. */
+  readonly mobileMenuOpen = signal(false);
 
   readonly walletCards: WalletCard[] = [
     { tenant: 't3', initials: 'CC', name: 'Crust & Co.', balance: 210 },
@@ -127,6 +135,14 @@ export class LandingComponent {
 
   setLang(lang: 'en' | 'ar'): void {
     this.routeBasedCultureUrl.applyLanguageSelection(lang);
+  }
+
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen.update((open) => !open);
+  }
+
+  closeMobileMenu(): void {
+    this.mobileMenuOpen.set(false);
   }
 
   login(): void {

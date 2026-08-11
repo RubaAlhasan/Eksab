@@ -6,6 +6,7 @@ using Eksabli.Reports;
 using Eksabli.Shared;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Content;
 
 namespace Eksabli.Controllers;
@@ -88,5 +89,14 @@ public class ReportsController : EksabliController
     public Task<IRemoteStreamContent> GetTransactionsAsExcelFileAsync([FromQuery] TransactionsExcelDownloadDto input)
     {
         return _reportsAppService.GetTransactionsAsExcelFileAsync(input);
+    }
+
+    // Live/paged version of the same ledger the Excel export above dumps in bulk — falls under the
+    // controller-level Reports.Default authorize, same as every other read-only report here (Export
+    // stays its own tighter permission, only gating the download-token/excel-file actions).
+    [HttpGet("transactions")]
+    public Task<PagedResultDto<TransactionListItemDto>> GetTransactionsListAsync([FromQuery] TransactionFilterDto input)
+    {
+        return _reportsAppService.GetTransactionsListAsync(input);
     }
 }

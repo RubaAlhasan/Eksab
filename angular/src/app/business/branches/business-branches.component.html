@@ -1,0 +1,119 @@
+<app-page-header
+  [title]="'::BusinessPanel:Branches:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:Branches:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::BusinessPanel:Branches:Title' | abpLocalization) }]"
+>
+  @if (canCreate()) {
+    <button type="button" class="btn btn-primary btn-sm" (click)="openCreateModal()">
+      <i class="fas fa-plus me-1"></i>{{ '::BusinessPanel:Branches:AddBranch' | abpLocalization }}
+    </button>
+  }
+</app-page-header>
+
+@if (usage(); as usage) {
+  @if (usage.maxBranches !== undefined && usage.branchCount !== undefined) {
+    <div class="alert d-flex align-items-start gap-2 mb-4" [class.alert-warning]="usage.branchCount >= usage.maxBranches" [class.alert-info]="usage.branchCount < usage.maxBranches">
+      <i class="fas" [class.fa-triangle-exclamation]="usage.branchCount >= usage.maxBranches" [class.fa-circle-info]="usage.branchCount < usage.maxBranches"></i>
+      <p class="mb-0">
+        {{ '::BusinessPanel:Branches:QuotaPrefix' | abpLocalization }}
+        <strong>{{ usage.maxBranches }}</strong>
+        {{ '::BusinessPanel:Branches:QuotaBranchesWord' | abpLocalization }}
+        {{ '::BusinessPanel:Branches:QuotaMiddle' | abpLocalization }}
+        <strong>{{ usage.branchCount }}</strong>.
+        @if (usage.branchCount >= usage.maxBranches) {
+          {{ '::BusinessPanel:Branches:QuotaAtLimit' | abpLocalization }}
+        }
+      </p>
+    </div>
+  }
+}
+
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::BusinessPanel:Branches:Loading' | abpLocalization"></app-loading-spinner>
+} @else if (loadFailed()) {
+  <app-error-state
+    [message]="'::BusinessPanel:Branches:LoadErrorMessage' | abpLocalization"
+    [retryLabel]="'::BusinessPanel:Branches:TryAgain' | abpLocalization"
+    (retry)="retry()"
+  >
+  </app-error-state>
+} @else if (branches().length === 0) {
+  <app-empty-state
+    icon="fa-building"
+    [title]="'::BusinessPanel:Branches:EmptyTitle' | abpLocalization"
+    [description]="'::BusinessPanel:Branches:EmptyDescription' | abpLocalization"
+  >
+  </app-empty-state>
+} @else {
+  <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
+    @for (branch of branches(); track branch.id) {
+      <div class="col">
+        <div class="card p-4 h-100">
+          <div class="d-flex align-items-start justify-content-between mb-2">
+            <span class="eks-branch-icon"><i class="fas fa-location-dot"></i></span>
+            @if (canEdit()) {
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                [attr.aria-label]="'::BusinessPanel:Branches:Edit' | abpLocalization"
+                (click)="openEditModal(branch)"
+              >
+                <i class="fas fa-pen"></i>
+              </button>
+            }
+          </div>
+          <p class="fw-bold small mb-1">{{ branch.name }}</p>
+          <p class="text-muted small mb-1">{{ branch.address ?? '—' }}</p>
+          <p class="text-muted small mb-0">{{ branch.phone ?? '—' }}</p>
+          @if (branch.openingHoursJson) {
+            <p class="text-muted small mb-0 mt-1">
+              <i class="fas fa-clock me-1"></i>{{ branch.openingHoursJson }}
+            </p>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<app-modal
+  [open]="formModalOpen()"
+  [title]="(editingBranchId ? '::BusinessPanel:Branches:EditTitle' : '::BusinessPanel:Branches:AddTitle') | abpLocalization"
+  (closed)="closeFormModal()"
+>
+  <form [formGroup]="form" (ngSubmit)="submitForm()" class="d-flex flex-column gap-3">
+    <div>
+      <label class="form-label" for="branchName">{{ '::BusinessPanel:Branches:FieldName' | abpLocalization }}</label>
+      <input id="branchName" type="text" class="form-control" formControlName="name" />
+      @if (form.controls.name.invalid && form.controls.name.touched) {
+        <p class="text-danger small mt-1">{{ '::BusinessPanel:Branches:FieldRequired' | abpLocalization }}</p>
+      }
+    </div>
+    <div>
+      <label class="form-label" for="branchAddress">{{ '::BusinessPanel:Branches:FieldAddress' | abpLocalization }}</label>
+      <input id="branchAddress" type="text" class="form-control" formControlName="address" />
+    </div>
+    <div class="row g-3">
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="branchPhone">{{ '::BusinessPanel:Branches:FieldPhone' | abpLocalization }}</label>
+        <input id="branchPhone" type="text" class="form-control" formControlName="phone" />
+      </div>
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="branchHours">{{ '::BusinessPanel:Branches:FieldHours' | abpLocalization }}</label>
+        <input id="branchHours" type="text" class="form-control" formControlName="openingHoursJson" placeholder="9:00 AM – 10:00 PM" />
+      </div>
+    </div>
+  </form>
+
+  <div slot="footer" class="d-flex gap-2 justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeFormModal()">
+      {{ '::BusinessPanel:Branches:Cancel' | abpLocalization }}
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="isSaving()" (click)="submitForm()">
+      @if (isSaving()) {
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+      }
+      {{ '::BusinessPanel:Branches:Save' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

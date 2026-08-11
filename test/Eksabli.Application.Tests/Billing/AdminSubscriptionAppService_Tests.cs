@@ -72,6 +72,19 @@ public abstract class AdminSubscriptionAppService_Tests<TStartupModule> : Eksabl
     }
 
     [Fact]
+    public async Task Should_Filter_By_TenantId()
+    {
+        var (tenantA, _) = await CreateTenantWithSubscriptionAsync();
+        var (tenantB, _) = await CreateTenantWithSubscriptionAsync();
+
+        var list = await WithUnitOfWorkAsync(() => _adminSubscriptionAppService.GetListAsync(new AdminSubscriptionFilterDto { TenantId = tenantA }));
+
+        list.Items.ShouldHaveSingleItem();
+        list.Items.Single().TenantId.ShouldBe(tenantA);
+        list.Items.Select(s => s.TenantId).ShouldNotContain(tenantB);
+    }
+
+    [Fact]
     public async Task RecordManualPaymentAsync_Should_Mark_Invoice_Paid_And_Insert_A_Payment()
     {
         var (tenantId, subscriptionId) = await CreateTenantWithSubscriptionAsync();

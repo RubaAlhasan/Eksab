@@ -83,7 +83,8 @@ const authFolder = folder(
       name: 'Login (OTP grant)',
       method: 'POST', pathSegments: ['connect', 'token'], auth: 'noauth',
       opts: { baseVar: 'issuerUrl' },
-      description: 'Custom OpenIddict extension grant `grant_type=otp` (src/Eksabli.HttpApi.Host/OpenIddict/OtpLoginGrantHandler.cs) — exchanges a verified phone+code pair for tokens, creating the Host-realm customer on first use. Body MUST be `application/x-www-form-urlencoded` (standard OAuth2 token request), not JSON.',
+      description: 'Custom OpenIddict extension grant `grant_type=otp` (src/Eksabli.HttpApi.Host/OpenIddict/OtpLoginGrantHandler.cs) — exchanges a verified phone+code pair for tokens. Body MUST be `application/x-www-form-urlencoded` (standard OAuth2 token request), not JSON.\n\n' +
+        'Two cases, same call: (1) phone number never registered at all -> creates a bare Host-realm customer on the spot (legacy "pure OTP login" fallback, e.g. for numbers added via POS). (2) phone number was registered via **Register Customer** above but not yet verified -> this call is what actually activates that account (`phoneNumberConfirmed` flips true) and logs it in; the profile/name/email/dob captured at registration was already saved, this step only proves the phone number. Already-verified accounts just log in normally.',
       formBody: [
         { key: 'grant_type', value: 'otp' },
         { key: 'phone_number', value: '+966501112222' },
@@ -100,10 +101,10 @@ const authFolder = folder(
       name: 'Login (password grant)',
       method: 'POST', pathSegments: ['connect', 'token'], auth: 'noauth',
       opts: { baseVar: 'issuerUrl' },
-      description: 'Standard OAuth2 Resource Owner Password grant. `username` is the ABP `IdentityUser.UserName` set at Register (not the phone number, unless you also set `UserName` to the phone). Requires `offline_access` in `scope` to receive a `refresh_token`. **Verified live** end-to-end with a throwaway registered user — real response shape shown, tokens truncated for readability.',
+      description: 'Standard OAuth2 Resource Owner Password grant. `username` is the ABP `IdentityUser.UserName` — for a customer created via **Register Customer**, that\'s the normalized phone number itself (not a chosen handle), since phone IS the username by this app\'s design. Requires `offline_access` in `scope` to receive a `refresh_token`. Note: the account must have `phoneNumberConfirmed: true` (i.e. completed **Login (OTP grant)** at least once) — password-only login for a still-unverified registration has not been tested and is not guaranteed to work.',
       formBody: [
         { key: 'grant_type', value: 'password' },
-        { key: 'username', value: 'sara.customer' },
+        { key: 'username', value: '+966501112222' },
         { key: 'password', value: 'P@ssw0rd!2026' },
         { key: 'client_id', value: 'Eksabli_App' },
         { key: 'scope', value: 'Eksabli offline_access profile email phone roles' },
@@ -129,20 +130,27 @@ const authFolder = folder(
       testScriptLines: tokenTestScript,
     }),
     item({
-      name: 'Register',
-      method: 'POST', pathSegments: ['account', 'register'], auth: 'noauth',
-      description: '`[AllowAnonymous]`, standard ABP self-registration. Note there is no `phoneNumber` field here — set it afterwards via **Profile > Update My Account Profile**, then use Send OTP + Login (OTP grant) to enable phone/OTP sign-in. `appName` must match a registered OpenIddict client display context; use `"Angular"` (the seeded public client\'s name). Verified live: returns 200 (not 201) with the full `IdentityUserDto` including audit fields.',
-      body: { userName: 'sara.customer', emailAddress: 'sara.customer@example.com', password: 'P@ssw0rd!2026', appName: 'Angular' },
-      success: { status: 'OK', code: 200, body: { id: IDS.customer, tenantId: null, userName: 'sara.customer', name: null, surname: null, email: 'sara.customer@example.com', emailConfirmed: false, phoneNumber: null, phoneNumberConfirmed: false, isActive: true, lockoutEnabled: true, accessFailedCount: 0, lockoutEnd: null, concurrencyStamp: '8be40c6cad184c0bb6ecd55e4f42a1e6', entityVersion: 1, creationTime: '2025-11-08T10:00:00Z' } },
-      include401: false,
+      name: 'Register Customer',
+      method: 'POST', pathSegments: ['app', 'otp', 'register'], auth: 'noauth',
+      description: 'Field set matches `prototype/customer/register.html` exactly. Creates the Host-realm `IdentityUser` **and** a fully-populated `CustomerProfile` (name/email/dob/gender) immediately — not blank like the old stock self-registration below used to leave it — but the account stays unusable (`phoneNumberConfirmed: false`) until you follow up with **Login (OTP grant)** using the code this call sends (same SMS mechanism as **Send OTP**, no separate request needed). Posting the same, still-unverified phone number again overwrites the earlier attempt rather than erroring (handles an abandoned/retry signup); posting an ALREADY-VERIFIED phone number returns the error below instead. `email`/`dateOfBirth`/`gender` are optional. `gender` is an int: ' + enumDoc('CustomerGender') + '. NOT verified live yet (host wasn\'t running when this was generated) — shapes reflect the actual controller/DTO code, not curl output.',
+      body: { phoneNumber: '+966501112222', firstName: 'Layla', lastName: 'Haddad', email: 'layla@example.com', dateOfBirth: '1995-04-12T00:00:00Z', gender: enumVal('CustomerGender', 'Female'), password: 'P@ssw0rd!2026' },
+      success: { status: 'No Content', code: 204, body: null },
       includeValidation: true,
       validationFields: [
-        { member: 'appName', message: 'The AppName field is required.' },
-        { member: 'password', message: 'The Password field is required.' },
-        { member: 'userName', message: 'The Username field is required.' },
-        { member: 'emailAddress', message: 'The Email address field is required.' },
+        { member: 'phoneNumber', message: "'phoneNumber' is required." },
+        { member: 'firstName', message: "'firstName' is required." },
+        { member: 'lastName', message: "'lastName' is required." },
+        { member: 'password', message: "The field password must be a string with a minimum length of '8'." },
       ],
-      errors: [{ name: '403 Forbidden - Username already taken', status: 'Forbidden', code: 403, body: businessRuleBody("Username 'sara.customer' is already taken.") }],
+      errors: [{ name: '403 Forbidden - Phone number already registered', status: 'Forbidden', code: 403, body: businessRuleBody('This phone number is already registered. Please log in instead.') }],
+    }),
+    item({
+      name: 'Register (ABP self-registration — DISABLED, reference only)',
+      method: 'POST', pathSegments: ['account', 'register'], auth: 'noauth',
+      description: 'Kept for reference only — do not use. This stock ABP endpoint is now switched OFF platform-wide (`Abp.Account.IsSelfRegistrationEnabled = false`, set on every Host/DbMigrator startup by `src/Eksabli.Application/Data/Seeders/SelfRegistrationDisabledDataSeederContributor.cs`). It used to create a bare `IdentityUser` with no `CustomerProfile` at all — exactly what caused customers to show up as "Unnamed" everywhere in the Business/Admin portals, since phone/OTP (via **Register Customer** above) is this app\'s real identity path and this endpoint never participated in it. Not re-verified live since being disabled — the rejection body below is inferred from ABP\'s own setting check, not curl-observed.',
+      body: { userName: 'sara.customer', emailAddress: 'sara.customer@example.com', password: 'P@ssw0rd!2026', appName: 'Angular' },
+      success: { name: '403 Forbidden - Self-registration disabled (inferred)', status: 'Forbidden', code: 403, body: businessRuleBody('Self registration is not enabled.') },
+      include401: false,
     }),
     item({
       name: 'Forgot Password - Send Reset Code',
@@ -209,7 +217,7 @@ const profileFolder = folder('Profile', 'ABP\'s built-in `IdentityUser` profile 
   item({
     name: 'Get My Customer Profile',
     method: 'GET', pathSegments: ['app', 'customer-profile', 'my'], auth: 'bearer',
-    description: 'Verified live: `CustomerProfile` is auto-created at registration with `firstName`/`lastName` null and `gender` defaulting to 0 (Unspecified).',
+    description: 'If the account came from **Register Customer**, this is already filled in with what was submitted there. Verified live (against the older, pre-Register-Customer flow): for an account that only ever went through plain OTP login with no prior registration call, `CustomerProfile` is auto-created blank — `firstName`/`lastName` null, `gender` defaulting to 0 (Unspecified) — and this endpoint self-heals a missing row either way if one somehow still doesn\'t exist.',
     success: { status: 'OK', code: 200, body: { userId: IDS.customer, firstName: null, lastName: null, dateOfBirth: null, gender: enumVal('CustomerGender', 'Unspecified') } },
   }),
   item({
@@ -477,7 +485,7 @@ const collection = {
     description:
       'Customer-facing (Host-realm) API, rebuilt directly from the live Swagger doc of `Eksabli.HttpApi.Host`, the real `[Authorize]` attributes in `src/Eksabli.HttpApi/Controllers/` (ABP\'s auto-API-controllers are disabled in this repo — every app service has a hand-written controller instead), and live curl verification with a throwaway registered user against `https://localhost:44330`.\n\n' +
       '**Base URLs** — two, because token issuance is not an ABP application service: `{{baseUrl}}` = `https://localhost:44330/api` for everything else, `{{issuerUrl}}` = `https://localhost:44330` for `/connect/token`.\n\n' +
-      '**Auth flow**: run **Authentication > Login (password grant)** (or Send OTP -> Login (OTP grant)) first — its Tests script saves `accessToken`/`refreshToken` automatically (note: OAuth2 responses use `access_token`/`refresh_token`, snake_case). A collection-level Pre-request script auto-refreshes when the token is close to expiry. **Verified end-to-end**: Register -> Login (password grant) -> several Bearer-authenticated calls all confirmed working against the live host.\n\n' +
+      '**Auth flow**: for a new customer, run **Register Customer -> Login (OTP grant)** (the register call sends the code itself, no separate Send OTP needed). For a returning customer, either **Send OTP -> Login (OTP grant)**, or **Login (password grant)** once they have a confirmed phone number. Every grant\'s Tests script saves `accessToken`/`refreshToken` automatically (note: OAuth2 responses use `access_token`/`refresh_token`, snake_case). A collection-level Pre-request script auto-refreshes when the token is close to expiry. Note: stock ABP self-registration (`/api/account/register`) is disabled platform-wide as of this revision — see that folder entry\'s own description for why; it is kept only as a labeled reference, not a working flow.\n\n' +
       '**Two distinct error shapes — do not confuse them:**\n' +
       '- Missing/invalid Bearer token (401), or a permission-attribute rejection like `[Authorize(SomePermission)]` (403) -> **empty body**, verified live on `/api/app/achievement` and `/api/app/category` (POST).\n' +
       '- A business rule thrown from inside app-service code (wrong password, entity not found, ownership check) -> ABP\'s JSON `{ error: {...} }` wrapper. Confirmed live: **wrong password change and "email not found" both return 403** (not 400) with `data: null`; entity-not-found (bad id) returns **404** with message `"There is no entity {Type} with id = {id}!"`. Only real input-shape validation failures (missing required fields, bad email format) return 400, with message `"Your request is not valid!"`.\n' +

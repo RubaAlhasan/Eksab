@@ -1,0 +1,14 @@
+// Card-grid layout (not a table — Plans is a small catalog, matches prototype/admin/plans.html and
+// admin-portal-implementation-plan.md §09's recommended layout). No page-specific overrides needed
+// beyond Bootstrap's own grid/card utilities.
+//
+// Visually re-matched against prototype/admin/plans.html directly (2-col at sm, 4-col at lg — no
+// intermediate 3-col step; `.card.p-4` instead of a separate `.card-body`, matching the same
+// convention Branches/Rewards already use; stacked plain-text limit lines instead of wrapped badge
+// chips; neutral-gray badge instead of info-blue). Two things the prototype shows that this page
+// deliberately does NOT copy, because the prototype is simplified demo data, not the real contract:
+// - The header badge is "Trial Default" (real `SubscriptionPlanDto.isTrialDefault`), not a "N
+//   tenants" count — no such aggregate exists on this DTO (see admin-portal-backend-readiness.md).
+// - The edit modal keeps its extra real fields (Campaigns limit, Trial Default, SMS/Push) beyond the
+//   prototype's Name/Price/Branch/Member set — those are real, saved, `FeatureLimitsJson` values;
+//   removing them from the form wouldn't make them not exist, just make them uneditable.

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Extensions.DependencyInjection;
 using OpenIddict.Validation.AspNetCore;
@@ -16,6 +17,7 @@ using OpenIddict.Server.AspNetCore;
 using Eksabli.EntityFrameworkCore;
 using Eksabli.MultiTenancy;
 using Eksabli.HealthChecks;
+using Eksabli.Notifications;
 using Microsoft.OpenApi;
 using Volo.Abp;
 using Volo.Abp.Studio;
@@ -23,6 +25,7 @@ using Volo.Abp.Account;
 using Volo.Abp.Account.Web;
 using Volo.Abp.AspNetCore.MultiTenancy;
 using Volo.Abp.AspNetCore.Mvc;
+using Volo.Abp.AspNetCore.SignalR;
 using Volo.Abp.Autofac;
 using Volo.Abp.Localization;
 using Volo.Abp.Modularity;
@@ -41,6 +44,7 @@ using Volo.Abp.Swashbuckle;
 using Volo.Abp.Studio.Client.AspNetCore;
 using Volo.Abp.Security.Claims;
 using Eksabli.OpenIddict;
+using Volo.Abp.Auditing;
 using Eksabli.StartupTasks;
 
 namespace Eksabli;
@@ -55,7 +59,8 @@ namespace Eksabli;
     typeof(EksabliEntityFrameworkCoreModule),
     typeof(AbpAccountWebOpenIddictModule),
     typeof(AbpSwashbuckleModule),
-    typeof(AbpAspNetCoreSerilogModule)
+    typeof(AbpAspNetCoreSerilogModule),
+    typeof(AbpAspNetCoreSignalRModule)
     )]
 public class EksabliHttpApiHostModule : AbpModule
 {
@@ -140,6 +145,33 @@ public class EksabliHttpApiHostModule : AbpModule
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
         ConfigureStartupTasks(context);
+        ConfigureNotificationHub(context);
+        ConfigureAuditing();
+    }
+
+    // ABP defaults IsEnabledForGetRequests to false — routine GET traffic (list/dashboard/detail
+    // reads, the vast majority of both Admin and Business Portal usage) never reaches AbpAuditLogs at
+    // all under that default, only POST/PUT/DELETE actions do. That's why Admin Audit Logs only ever
+    // showed repeated POST /connect/token rows (OAuth token requests) and nothing else — every other
+    // page load in either portal is a GET the auditing pipeline was silently skipping, not a gap in
+    // AdminAuditLogAppService's own query surface. Turning this on means every GET gets its own
+    // AbpAuditLogs row too — more storage/write volume, an expected, standard trade-off for "show all
+    // requests" (a paid ABP Commercial module would normally add filtering/retention tooling on top of
+    // this same OSS data; out of scope here — see AdminAuditLogAppService's own file comment on the
+    // Commercial-vs-OSS boundary already documented for this feature).
+    private void ConfigureAuditing()
+    {
+        Configure<AbpAuditingOptions>(options =>
+        {
+            options.IsEnabledForGetRequests = true;
+        });
+    }
+
+    // Swaps NullRealTimeNotifier for the real SignalR transport — see IRealTimeNotifier's class comment
+    // for why this lives here (HttpApi.Host) rather than in the Domain/Application layers.
+    private static void ConfigureNotificationHub(ServiceConfigurationContext context)
+    {
+        context.Services.Replace(ServiceDescriptor.Transient<IRealTimeNotifier, SignalRRealTimeNotifier>());
     }
 
     private void ConfigureStartupTasks(ServiceConfigurationContext context)
@@ -304,6 +336,7 @@ public class EksabliHttpApiHostModule : AbpModule
         app.UseAbpStudioLink();
         app.UseAbpSecurityHeaders();
         app.UseCors();
+        app.UseNotificationHubQueryStringAuthentication();
         app.UseAuthentication();
         app.UseAbpOpenIddictValidation();
 

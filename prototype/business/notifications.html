@@ -66,8 +66,8 @@
   <div class="modal-panel p-6" style="max-width:32rem">
     <h3 class="font-bold text-base mb-4">Compose Notification</h3>
     <div class="space-y-3">
-      <div><label class="field-label">Title</label><input class="input" placeholder="e.g. Weekend offer inside!"></div>
-      <div><label class="field-label">Message</label><textarea class="textarea" rows="3" placeholder="Write your message…"></textarea></div>
+      <div><label class="field-label">Title</label><input id="compose-title-input" class="input" placeholder="e.g. Weekend offer inside!"><p class="field-error hidden" id="compose-title-error"></p></div>
+      <div><label class="field-label">Message</label><textarea id="compose-message-input" class="textarea" rows="3" placeholder="Write your message…"></textarea><p class="field-error hidden" id="compose-message-error"></p></div>
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="field-label">Channel</label>
@@ -106,8 +106,41 @@
       <td class="text-slate-400">${new Date(n.sentAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
     </tr>`).join('');
 
-  document.getElementById('compose-btn').addEventListener('click', () => Eksabli.openModal('compose'));
-  document.getElementById('send-btn').addEventListener('click', () => { Eksabli.closeModal('compose'); Eksabli.showToast({ type: 'success', title: 'Notification queued', message: 'Delivery will begin within a few minutes.' }); });
+  document.getElementById('compose-btn').addEventListener('click', () => {
+    document.getElementById('compose-title-input').value = '';
+    document.getElementById('compose-message-input').value = '';
+    ['compose-title-error', 'compose-message-error'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    ['compose-title-input', 'compose-message-input'].forEach(id => document.getElementById(id).classList.remove('input-error'));
+    Eksabli.openModal('compose');
+  });
+  document.getElementById('send-btn').addEventListener('click', () => {
+    const titleInput = document.getElementById('compose-title-input');
+    const messageInput = document.getElementById('compose-message-input');
+    const titleError = document.getElementById('compose-title-error');
+    const messageError = document.getElementById('compose-message-error');
+    let valid = true;
+    if (!titleInput.value.trim()) {
+      titleError.textContent = 'Title is required.';
+      titleError.classList.remove('hidden');
+      titleInput.classList.add('input-error');
+      valid = false;
+    } else {
+      titleError.classList.add('hidden');
+      titleInput.classList.remove('input-error');
+    }
+    if (!messageInput.value.trim()) {
+      messageError.textContent = 'Message is required.';
+      messageError.classList.remove('hidden');
+      messageInput.classList.add('input-error');
+      valid = false;
+    } else {
+      messageError.classList.add('hidden');
+      messageInput.classList.remove('input-error');
+    }
+    if (!valid) return;
+    Eksabli.closeModal('compose');
+    Eksabli.showToast({ type: 'success', title: 'Notification queued', message: 'Delivery will begin within a few minutes.' });
+  });
 </script>
 </body>
 </html>

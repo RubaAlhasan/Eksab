@@ -48,12 +48,28 @@ public class SupportTicketAppService : ApplicationService, ISupportTicketAppServ
         return MapWithMessages(ticket);
     }
 
+    // Two callers share this one action (see the controller's own comment for why there's no separate
+    // "my tickets" endpoint): a Support Agent sees the real cross-tenant/cross-customer queue, exactly
+    // as `input` asks for it. Everyone else — tenant-realm business staff, or a Host-realm customer —
+    // gets forcibly scoped to their own tickets, the *caller's* identity always wins over whatever
+    // `input.TenantId` says, so this can never become an accidental cross-tenant read no matter what a
+    // non-Manage caller passes.
     public async Task<PagedResultDto<SupportTicketDto>> GetListAsync(SupportTicketFilterDto input)
     {
+        var tenantId = input.TenantId;
+        Guid? customerId = null;
+
+        if (!await _permissionChecker.IsGrantedAsync(EksabliPermissions.SupportTickets.Manage))
+        {
+            tenantId = CurrentTenant.Id;
+            customerId = CurrentTenant.Id == null ? CurrentUser.GetId() : (Guid?)null;
+        }
+
         var (tickets, totalCount) = await _repository.GetListAsync(
             status: input.Status,
             priority: input.Priority,
-            tenantId: input.TenantId,
+            tenantId: tenantId,
+            customerId: customerId,
             sorting: input.Sorting,
             skipCount: input.SkipCount,
             maxResultCount: input.MaxResultCount);

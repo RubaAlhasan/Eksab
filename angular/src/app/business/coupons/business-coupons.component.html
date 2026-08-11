@@ -1,0 +1,104 @@
+<app-page-header
+  [title]="'::BusinessPanel:Coupons:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:Coupons:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::BusinessPanel:Coupons:Title' | abpLocalization) }]"
+>
+  @if (canExport()) {
+    <button type="button" class="btn btn-secondary btn-sm" [disabled]="isExporting()" (click)="exportExcel()">
+      @if (isExporting()) {
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+      } @else {
+        <i class="fas fa-file-arrow-down me-1"></i>
+      }
+      {{ '::BusinessPanel:Coupons:Export' | abpLocalization }}
+    </button>
+  }
+</app-page-header>
+
+<div class="card mb-4">
+  <div class="card-body d-flex flex-wrap gap-3 align-items-center">
+    <select class="form-select eks-filter-select" (change)="onStatusFilterChange($event)">
+      <option value="">{{ '::BusinessPanel:Coupons:AllStatuses' | abpLocalization }}</option>
+      <option value="0">{{ '::BusinessPanel:Coupons:StatusIssued' | abpLocalization }}</option>
+      <option value="1">{{ '::BusinessPanel:Coupons:StatusRedeemed' | abpLocalization }}</option>
+      <option value="2">{{ '::BusinessPanel:Coupons:StatusExpired' | abpLocalization }}</option>
+      <option value="3">{{ '::BusinessPanel:Coupons:StatusCancelled' | abpLocalization }}</option>
+    </select>
+    @if (branches().length > 0) {
+      <select class="form-select eks-filter-select" (change)="onBranchFilterChange($event)">
+        <option value="">{{ '::BusinessPanel:Coupons:AllBranches' | abpLocalization }}</option>
+        @for (branch of branches(); track branch.id) {
+          <option [value]="branch.id">{{ branch.name }}</option>
+        }
+      </select>
+    }
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{{ '::BusinessPanel:Coupons:ColumnCode' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Coupons:ColumnReward' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Coupons:ColumnMember' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Coupons:ColumnStatus' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Coupons:ColumnBranch' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Coupons:ColumnRedeemedBy' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Coupons:ColumnDate' | abpLocalization }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (isLoading()) {
+          <tr>
+            <td colspan="7">
+              <app-loading-spinner [label]="'::BusinessPanel:Coupons:Loading' | abpLocalization"></app-loading-spinner>
+            </td>
+          </tr>
+        } @else if (loadFailed()) {
+          <tr>
+            <td colspan="7">
+              <app-error-state
+                [message]="'::BusinessPanel:Coupons:LoadErrorMessage' | abpLocalization"
+                [retryLabel]="'::BusinessPanel:Coupons:TryAgain' | abpLocalization"
+                (retry)="retry()"
+              >
+              </app-error-state>
+            </td>
+          </tr>
+        } @else if (coupons().length === 0) {
+          <tr>
+            <td colspan="7">
+              <app-empty-state
+                icon="fa-ticket"
+                [title]="'::BusinessPanel:Coupons:EmptyTitle' | abpLocalization"
+                [description]="'::BusinessPanel:Coupons:EmptyDescription' | abpLocalization"
+              >
+              </app-empty-state>
+            </td>
+          </tr>
+        } @else {
+          @for (coupon of coupons(); track coupon.id) {
+            <tr>
+              <td class="font-monospace fw-semibold">{{ coupon.code }}</td>
+              <td class="text-muted">{{ coupon.rewardNameEn }}</td>
+              <td class="text-muted">{{ memberName(coupon) }}</td>
+              <td>
+                <app-status-badge [label]="statusLabelKey(coupon.status) | abpLocalization" [variant]="statusVariant(coupon.status)"></app-status-badge>
+              </td>
+              <td class="text-muted">{{ branchName(coupon) }}</td>
+              <td class="text-muted">{{ redeemedByEmail(coupon) }}</td>
+              <td class="text-muted">{{ displayDate(coupon) ? (displayDate(coupon) | date: 'mediumDate') : '—' }}</td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (!isLoading() && !loadFailed()) {
+    <div class="card-footer">
+      <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)"></app-pagination>
+    </div>
+  }
+</div>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Error — Eksabli Business Portal</title>
+
+<script src="../assets/js/tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = window.EksabliTailwindConfig;</script>
+<link rel="stylesheet" href="../assets/css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased min-h-screen flex flex-col">
+<div id="toast-container"></div>
+
+<header class="border-b border-slate-200 dark:border-slate-800">
+  <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+    <a href="dashboard.html" class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-extrabold text-sm shadow-soft">E</div>
+      <span class="font-extrabold text-lg tracking-tight">Eksabli Business</span>
+    </a>
+    <button data-theme-toggle class="btn btn-icon btn-ghost" aria-label="Toggle dark mode">
+      <span class="block dark:hidden" id="icon-sun"></span>
+      <span class="hidden dark:block" id="icon-moon"></span>
+    </button>
+  </div>
+</header>
+
+<main class="flex-1 flex items-center justify-center px-6 py-16">
+  <div class="w-full max-w-md text-center">
+
+    <div class="tabs-pill mx-auto mb-8 w-fit" id="demo-toggle">
+      <span class="tab-pill-trigger active" data-state="404">Preview: Not Found</span>
+      <span class="tab-pill-trigger" data-state="500">Preview: Server Error</span>
+    </div>
+
+    <div id="state-404">
+      <div class="w-16 h-16 rounded-2xl bg-warning-50 dark:bg-warning-500/10 text-warning-600 dark:text-warning-300 flex items-center justify-center mx-auto mb-6" id="icon-404"></div>
+      <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Error 404</p>
+      <h1 class="text-2xl font-extrabold tracking-tight mb-2">Page not found</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-8">The page you're looking for doesn't exist, may have moved, or you may not have access to it.</p>
+    </div>
+
+    <div id="state-500" class="hidden">
+      <div class="w-16 h-16 rounded-2xl bg-danger-50 dark:bg-danger-500/10 text-danger-600 dark:text-danger-300 flex items-center justify-center mx-auto mb-6" id="icon-500"></div>
+      <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Error 500</p>
+      <h1 class="text-2xl font-extrabold tracking-tight mb-2">Something went wrong</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-8">We hit an unexpected error loading this page. Your data is safe — try again, or come back in a few minutes.</p>
+    </div>
+
+    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+      <a href="dashboard.html" class="btn btn-primary btn-md">Back to Dashboard</a>
+      <button id="retry-btn" class="btn btn-secondary btn-md">Try Again</button>
+    </div>
+  </div>
+</main>
+
+<script src="../assets/js/icons.js"></script>
+<script src="../assets/js/demo-data.js"></script>
+<script src="../assets/js/components.js"></script>
+<script>
+  document.getElementById('icon-sun').innerHTML = Icons.html('sun', { size: 18 });
+  document.getElementById('icon-moon').innerHTML = Icons.html('moon', { size: 18 });
+  document.getElementById('icon-404').innerHTML = Icons.html('exclamation-triangle', { size: 26 });
+  document.getElementById('icon-500').innerHTML = Icons.html('exclamation-circle', { size: 26 });
+
+  document.querySelectorAll('#demo-toggle [data-state]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#demo-toggle [data-state]').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      const state = btn.getAttribute('data-state');
+      document.getElementById('state-404').classList.toggle('hidden', state !== '404');
+      document.getElementById('state-500').classList.toggle('hidden', state !== '500');
+    });
+  });
+
+  document.getElementById('retry-btn').addEventListener('click', () => {
+    Eksabli.showToast({ type: 'info', title: 'Retrying…', message: 'This is a static prototype — in the real app this reloads the failed request.' });
+  });
+</script>
+</body>
+</html>

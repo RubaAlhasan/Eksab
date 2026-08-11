@@ -22,4 +22,12 @@ public class OtpController : EksabliController
     {
         return _otpAppService.RequestOtpAsync(input);
     }
+
+    // Call before completing sign-in via POST /connect/token (grant_type=otp) so a first-time
+    // customer's CustomerProfile comes out already named. See IOtpAppService.RegisterAsync.
+    [HttpPost("register")]
+    public Task RegisterAsync(RegisterCustomerDto input)
+    {
+        return _otpAppService.RegisterAsync(input);
+    }
 }

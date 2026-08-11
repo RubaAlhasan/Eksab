@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Eksabli.Branches;
 using Eksabli.Campaigns;
 using Eksabli.CustomerProfiles;
+using Eksabli.EmployeeAssignments;
 using Eksabli.Memberships;
 using Eksabli.Notifications;
 using Eksabli.Rewards;
@@ -14,6 +15,7 @@ using Eksabli.Wallets;
 using Microsoft.Extensions.Caching.Distributed;
 using MiniExcelLibs;
 using Volo.Abp;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Authorization;
 using Volo.Abp.Caching;
@@ -32,12 +34,13 @@ public class ReportsAppService : ApplicationService, IReportsAppService
 
     private readonly IRepository<Membership, Guid> _membershipRepository;
     private readonly IRepository<PointsWallet, Guid> _walletRepository;
-    private readonly IRepository<PointsTransaction, Guid> _transactionRepository;
+    private readonly IPointsTransactionRepository _transactionRepository;
     private readonly IRepository<Wallets.Tier, Guid> _tierRepository;
     private readonly IRepository<Campaign, Guid> _campaignRepository;
     private readonly IRepository<Reward, Guid> _rewardRepository;
     private readonly IRepository<Coupon, Guid> _couponRepository;
     private readonly IRepository<Branch, Guid> _branchRepository;
+    private readonly IRepository<EmployeeAssignment, Guid> _employeeAssignmentRepository;
     private readonly INotificationRepository _notificationRepository;
     private readonly IRepository<Notification, Guid> _notificationGenericRepository;
     private readonly IRepository<CustomerProfile, Guid> _customerProfileRepository;
@@ -47,12 +50,13 @@ public class ReportsAppService : ApplicationService, IReportsAppService
     public ReportsAppService(
         IRepository<Membership, Guid> membershipRepository,
         IRepository<PointsWallet, Guid> walletRepository,
-        IRepository<PointsTransaction, Guid> transactionRepository,
+        IPointsTransactionRepository transactionRepository,
         IRepository<Wallets.Tier, Guid> tierRepository,
         IRepository<Campaign, Guid> campaignRepository,
         IRepository<Reward, Guid> rewardRepository,
         IRepository<Coupon, Guid> couponRepository,
         IRepository<Branch, Guid> branchRepository,
+        IRepository<EmployeeAssignment, Guid> employeeAssignmentRepository,
         INotificationRepository notificationRepository,
         IRepository<Notification, Guid> notificationGenericRepository,
         IRepository<CustomerProfile, Guid> customerProfileRepository,
@@ -67,6 +71,7 @@ public class ReportsAppService : ApplicationService, IReportsAppService
         _rewardRepository = rewardRepository;
         _couponRepository = couponRepository;
         _branchRepository = branchRepository;
+        _employeeAssignmentRepository = employeeAssignmentRepository;
         _notificationRepository = notificationRepository;
         _notificationGenericRepository = notificationGenericRepository;
         _customerProfileRepository = customerProfileRepository;
@@ -374,5 +379,96 @@ public class ReportsAppService : ApplicationService, IReportsAppService
             "Transactions.xlsx",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         );
+    }
+
+    // Business Portal > Transactions live ledger — the paged/filterable table the prototype's
+    // transactions.html shows. Unlike the Excel export above (a bulk dump, one date-bounded read is
+    // fine) or MembershipAppService's "load all, filter in memory" shape (bounded by customer count),
+    // PointsTransaction is an append-only ledger that grows forever — see the entity's own comment — so
+    // this must never materialize the whole matched set. Filtering, ordering, and paging all happen at
+    // the database, via IPointsTransactionRepository.GetListAsync (same "filter/sort/page at the
+    // database" shape as ICouponRepository/EfCoreCouponRepository). Only Branch/Customer/Staff *display*
+    // data is resolved afterwards, and only for the current page's rows (bounded by page size).
+    public async Task<PagedResultDto<TransactionListItemDto>> GetTransactionsListAsync(TransactionFilterDto input)
+    {
+        // PointsTransaction carries no branch of its own — derive it from the staff member who created
+        // the row (CreatedByEmployeeId, the same soft reference into EmployeeAssignment.UserId space
+        // documented on the entity itself). Resolve BranchId -> matching staff ids *before* the main
+        // query so the repository can still push the derived filter into the same database query as
+        // everything else — EmployeeAssignment is small and staff-bounded, cheap to fully filter this way.
+        ICollection<Guid>? staffIdsForBranch = null;
+        if (input.BranchId.HasValue)
+        {
+            staffIdsForBranch = (await _employeeAssignmentRepository.GetListAsync(e => e.BranchId == input.BranchId))
+                .Select(e => e.UserId)
+                .ToList();
+        }
+
+        var (page, totalCount) = await _transactionRepository.GetListAsync(
+            type: input.Type,
+            createdByEmployeeId: input.StaffId,
+            createdByEmployeeIds: staffIdsForBranch,
+            from: input.From,
+            to: input.To,
+            skipCount: input.SkipCount,
+            maxResultCount: input.MaxResultCount);
+
+        // Rows with no staff attribution (customer/system-triggered) or a staff member with all-branch
+        // access (BranchId null) simply have no resolvable branch — only needed for this page now.
+        var employeeIds = page.Where(t => t.CreatedByEmployeeId.HasValue).Select(t => t.CreatedByEmployeeId!.Value).Distinct().ToList();
+        var employeeBranchLookup = employeeIds.Count == 0
+            ? new Dictionary<Guid, Guid?>()
+            : (await _employeeAssignmentRepository.GetListAsync(e => employeeIds.Contains(e.UserId)))
+                .ToDictionary(e => e.UserId, e => e.BranchId);
+
+        var walletIds = page.Select(t => t.WalletId).Distinct().ToList();
+        var walletToMembership = (await _walletRepository.GetListAsync(w => walletIds.Contains(w.Id)))
+            .ToDictionary(w => w.Id, w => w.MembershipId);
+
+        var membershipIds = walletToMembership.Values.Distinct().ToList();
+        var membershipToCustomer = (await _membershipRepository.GetListAsync(m => membershipIds.Contains(m.Id)))
+            .ToDictionary(m => m.Id, m => m.CustomerId);
+
+        Dictionary<Guid, CustomerProfile> profileLookup;
+        using (_currentTenant.Change(null)) // CustomerProfile is Host-realm
+        {
+            var customerIds = membershipToCustomer.Values.Distinct().ToList();
+            profileLookup = (await _customerProfileRepository.GetListAsync(p => customerIds.Contains(p.UserId)))
+                .ToDictionary(p => p.UserId);
+        }
+
+        var items = page.Select(t =>
+        {
+            Guid? customerId = null;
+            CustomerProfile? profile = null;
+            if (walletToMembership.TryGetValue(t.WalletId, out var membershipId) &&
+                membershipToCustomer.TryGetValue(membershipId, out var custId))
+            {
+                customerId = custId;
+                profileLookup.TryGetValue(custId, out profile);
+            }
+
+            Guid? branchId = null;
+            if (t.CreatedByEmployeeId.HasValue)
+            {
+                employeeBranchLookup.TryGetValue(t.CreatedByEmployeeId.Value, out branchId);
+            }
+
+            return new TransactionListItemDto
+            {
+                Id = t.Id,
+                CustomerId = customerId,
+                CustomerFirstName = profile?.FirstName,
+                CustomerLastName = profile?.LastName,
+                Type = t.Type,
+                Points = t.Points,
+                Source = t.Source,
+                BranchId = branchId,
+                StaffId = t.CreatedByEmployeeId,
+                CreationTime = t.CreationTime
+            };
+        }).ToList();
+
+        return new PagedResultDto<TransactionListItemDto>(totalCount, items);
     }
 }

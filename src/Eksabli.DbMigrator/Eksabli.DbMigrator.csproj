@@ -18,6 +18,7 @@
     <PackageReference Include="Volo.Abp.Autofac" Version="10.5.0" />
     <ProjectReference Include="..\Eksabli.EntityFrameworkCore\Eksabli.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\Eksabli.Application.Contracts\Eksabli.Application.Contracts.csproj" />
+    <ProjectReference Include="..\Eksabli.Application\Eksabli.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -10,6 +10,7 @@ public interface ITenantSubscriptionRepository : IRepository<TenantSubscription,
 {
     Task<(List<TenantSubscription> Items, int TotalCount)> GetListAsync(
         TenantSubscriptionStatus? status = null,
+        Guid? tenantId = null,
         string? sorting = null,
         int skipCount = 0,
         int maxResultCount = int.MaxValue,

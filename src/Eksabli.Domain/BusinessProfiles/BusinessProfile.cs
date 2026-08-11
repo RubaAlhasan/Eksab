@@ -23,8 +23,9 @@ public class BusinessProfile : AuditedAggregateRoot<Guid>, IMultiTenant
 
     // Manual approval queue until self-serve moderation tooling exists — see
     // docs/eksabli-loyalty-platform/features/08-admin-panel/README.md#business-rules. Every new
-    // registration starts Pending; MembershipAppService.JoinAsync is the one place Suspended is
-    // actually enforced today.
+    // registration starts Pending; MembershipAppService.JoinAsync blocks joining anything other than
+    // Approved, and the Business Portal's own approval guard (Angular) blocks a Pending/Suspended
+    // business's own staff from the dashboard.
     public TenantApprovalStatus ApprovalStatus { get; private set; }
 
     protected BusinessProfile()

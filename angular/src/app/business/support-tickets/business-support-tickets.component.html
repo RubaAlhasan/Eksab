@@ -1,0 +1,222 @@
+<app-page-header
+  [title]="'::BusinessPanel:SupportTickets:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:SupportTickets:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: ('::BusinessPanel:SupportTickets:Title' | abpLocalization) }]"
+>
+  <button type="button" class="btn btn-primary btn-sm" (click)="openCreateModal()">
+    <i class="fas fa-plus me-1"></i>{{ '::BusinessPanel:SupportTickets:NewButton' | abpLocalization }}
+  </button>
+</app-page-header>
+
+<div class="card mb-4">
+  <div class="card-body d-flex flex-wrap gap-3 align-items-center">
+    <select class="form-select eks-filter-select" (change)="onStatusFilterChange($event)">
+      <option value="">{{ '::BusinessPanel:SupportTickets:AllStatuses' | abpLocalization }}</option>
+      <option value="0">{{ '::BusinessPanel:SupportTickets:StatusOpen' | abpLocalization }}</option>
+      <option value="1">{{ '::BusinessPanel:SupportTickets:StatusInProgress' | abpLocalization }}</option>
+      <option value="2">{{ '::BusinessPanel:SupportTickets:StatusResolved' | abpLocalization }}</option>
+      <option value="3">{{ '::BusinessPanel:SupportTickets:StatusClosed' | abpLocalization }}</option>
+    </select>
+    <select class="form-select eks-filter-select" (change)="onPriorityFilterChange($event)">
+      <option value="">{{ '::BusinessPanel:SupportTickets:AllPriorities' | abpLocalization }}</option>
+      <option value="0">{{ '::BusinessPanel:SupportTickets:PriorityLow' | abpLocalization }}</option>
+      <option value="1">{{ '::BusinessPanel:SupportTickets:PriorityMedium' | abpLocalization }}</option>
+      <option value="2">{{ '::BusinessPanel:SupportTickets:PriorityHigh' | abpLocalization }}</option>
+      <option value="3">{{ '::BusinessPanel:SupportTickets:PriorityUrgent' | abpLocalization }}</option>
+    </select>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{{ '::BusinessPanel:SupportTickets:ColumnSubject' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:SupportTickets:ColumnPriority' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:SupportTickets:ColumnStatus' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:SupportTickets:ColumnUpdated' | abpLocalization }}</th>
+          <th class="text-end"><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (isLoading()) {
+          <tr>
+            <td colspan="5">
+              <app-loading-spinner [label]="'::BusinessPanel:SupportTickets:Loading' | abpLocalization"></app-loading-spinner>
+            </td>
+          </tr>
+        } @else if (loadFailed()) {
+          <tr>
+            <td colspan="5">
+              <app-error-state
+                [message]="'::BusinessPanel:SupportTickets:LoadErrorMessage' | abpLocalization"
+                [retryLabel]="'::BusinessPanel:SupportTickets:TryAgain' | abpLocalization"
+                (retry)="retry()"
+              >
+              </app-error-state>
+            </td>
+          </tr>
+        } @else if (tickets().length === 0) {
+          <tr>
+            <td colspan="5">
+              <app-empty-state icon="fa-life-ring" [title]="'::BusinessPanel:SupportTickets:EmptyTitle' | abpLocalization">
+                <button type="button" class="btn btn-outline-primary btn-sm" (click)="openCreateModal()">
+                  {{ '::BusinessPanel:SupportTickets:EmptyAction' | abpLocalization }}
+                </button>
+              </app-empty-state>
+            </td>
+          </tr>
+        } @else {
+          @for (ticket of tickets(); track ticket.id) {
+            <tr class="eks-clickable-row" (click)="openDetail(ticket)">
+              <td class="fw-semibold">{{ ticket.subject }}</td>
+              <td>
+                <app-status-badge
+                  [label]="priorityLabelKey(ticket.priority) | abpLocalization"
+                  [variant]="priorityVariant(ticket.priority)"
+                >
+                </app-status-badge>
+              </td>
+              <td>
+                <app-status-badge
+                  [label]="statusLabelKey(ticket.status) | abpLocalization"
+                  [variant]="statusVariant(ticket.status)"
+                >
+                </app-status-badge>
+              </td>
+              <td class="text-muted">{{ (ticket.lastModificationTime ?? ticket.creationTime) | date: 'medium' }}</td>
+              <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="openDetail(ticket); $event.stopPropagation()">
+                  {{ '::BusinessPanel:SupportTickets:View' | abpLocalization }}
+                </button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (!isLoading() && !loadFailed()) {
+    <div class="card-footer">
+      <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)"></app-pagination>
+    </div>
+  }
+</div>
+
+<app-modal
+  [open]="detailModalOpen()"
+  [title]="detailTicket()?.subject ?? ('::BusinessPanel:SupportTickets:Title' | abpLocalization)"
+  (closed)="closeDetail()"
+>
+  @if (detailLoading()) {
+    <app-loading-spinner [label]="'::BusinessPanel:SupportTickets:ThreadLoading' | abpLocalization"></app-loading-spinner>
+  } @else if (detailFailed()) {
+    <app-error-state
+      [message]="'::BusinessPanel:SupportTickets:ThreadLoadError' | abpLocalization"
+      [retryLabel]="'::BusinessPanel:SupportTickets:TryAgain' | abpLocalization"
+      (retry)="retryDetail()"
+    >
+    </app-error-state>
+  } @else if (detailTicket(); as ticket) {
+    <div class="d-flex gap-2 mb-3">
+      <app-status-badge [label]="priorityLabelKey(ticket.priority) | abpLocalization" [variant]="priorityVariant(ticket.priority)"></app-status-badge>
+      <app-status-badge [label]="statusLabelKey(ticket.status) | abpLocalization" [variant]="statusVariant(ticket.status)"></app-status-badge>
+    </div>
+
+    <div class="eks-thread mb-3">
+      @for (message of ticket.messages ?? []; track message.id; let first = $first) {
+        <div class="eks-thread__message" [class.eks-thread__message--mine]="isFromCurrentUser(message)">
+          <div class="eks-thread__meta small text-muted">
+            @if (first) {
+              {{ '::BusinessPanel:SupportTickets:OriginalMessageLabel' | abpLocalization }}
+            } @else if (isFromCurrentUser(message)) {
+              {{ '::BusinessPanel:SupportTickets:YouLabel' | abpLocalization }}
+            } @else {
+              {{ '::BusinessPanel:SupportTickets:SupportLabel' | abpLocalization }}
+            }
+            · {{ message.createdAt | date: 'short' }}
+          </div>
+          <div class="eks-thread__body">{{ message.body }}</div>
+        </div>
+      }
+    </div>
+
+    @if (ticket.status === Status.Closed) {
+      <p class="text-muted small mb-0">{{ '::BusinessPanel:SupportTickets:ClosedNotice' | abpLocalization }}</p>
+    } @else {
+      <form [formGroup]="replyForm" (ngSubmit)="sendReply()">
+        <textarea
+          class="form-control"
+          rows="3"
+          formControlName="body"
+          [placeholder]="'::BusinessPanel:SupportTickets:ReplyPlaceholder' | abpLocalization"
+        ></textarea>
+      </form>
+    }
+  }
+
+  <div slot="footer" class="d-flex gap-2 justify-content-end w-100">
+    @if (detailTicket(); as ticket) {
+      @if (ticket.status !== Status.Closed) {
+        <button type="button" class="btn btn-primary" [disabled]="isSendingReply() || replyForm.invalid" (click)="sendReply()">
+          @if (isSendingReply()) {
+            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+          }
+          {{ '::BusinessPanel:SupportTickets:SendReply' | abpLocalization }}
+        </button>
+      }
+    }
+    <button type="button" class="btn btn-secondary" (click)="closeDetail()">
+      {{ '::BusinessPanel:SupportTickets:CloseModal' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>
+
+<app-modal
+  [open]="createModalOpen()"
+  [title]="'::BusinessPanel:SupportTickets:NewTitle' | abpLocalization"
+  (closed)="closeCreateModal()"
+>
+  <form [formGroup]="createForm" (ngSubmit)="submitCreateForm()" class="d-flex flex-column gap-3">
+    <p class="text-muted small mb-0">{{ '::BusinessPanel:SupportTickets:NewHint' | abpLocalization }}</p>
+
+    <div>
+      <label class="form-label" for="ticketSubject">{{ '::BusinessPanel:SupportTickets:FieldSubject' | abpLocalization }}</label>
+      <input id="ticketSubject" type="text" class="form-control" formControlName="subject" />
+      @if (createForm.controls.subject.invalid && createForm.controls.subject.touched) {
+        <p class="text-danger small mt-1">{{ '::BusinessPanel:SupportTickets:FieldRequired' | abpLocalization }}</p>
+      }
+    </div>
+
+    <div>
+      <label class="form-label" for="ticketPriority">{{ '::BusinessPanel:SupportTickets:FieldPriority' | abpLocalization }}</label>
+      <select id="ticketPriority" class="form-select" formControlName="priority">
+        <option [ngValue]="Priority.Low">{{ '::BusinessPanel:SupportTickets:PriorityLow' | abpLocalization }}</option>
+        <option [ngValue]="Priority.Medium">{{ '::BusinessPanel:SupportTickets:PriorityMedium' | abpLocalization }}</option>
+        <option [ngValue]="Priority.High">{{ '::BusinessPanel:SupportTickets:PriorityHigh' | abpLocalization }}</option>
+        <option [ngValue]="Priority.Urgent">{{ '::BusinessPanel:SupportTickets:PriorityUrgent' | abpLocalization }}</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="form-label" for="ticketBody">{{ '::BusinessPanel:SupportTickets:FieldBody' | abpLocalization }}</label>
+      <textarea id="ticketBody" class="form-control" rows="4" formControlName="body"></textarea>
+      @if (createForm.controls.body.invalid && createForm.controls.body.touched) {
+        <p class="text-danger small mt-1">{{ '::BusinessPanel:SupportTickets:FieldRequired' | abpLocalization }}</p>
+      }
+    </div>
+  </form>
+
+  <div slot="footer" class="d-flex gap-2 justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeCreateModal()">
+      {{ '::BusinessPanel:SupportTickets:Cancel' | abpLocalization }}
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="isCreating()" (click)="submitCreateForm()">
+      @if (isCreating()) {
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+      }
+      {{ '::BusinessPanel:SupportTickets:Create' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

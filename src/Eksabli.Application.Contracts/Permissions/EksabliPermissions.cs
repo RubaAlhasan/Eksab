@@ -29,6 +29,8 @@ public static class EksabliPermissions
     public static class Memberships
     {
         public const string Default = GroupName + ".Memberships";
+        // Business Portal > Customers page — the member list itself, same shape as Followers.View.
+        public const string View = Default + ".View";
         // Defined for parity/future use — Award/Adjust access is enforced via an EmployeeAssignment.Role
         // check inside PosAppService, not via these permissions (see PosAppService.CheckStaffRoleAsync).
         public const string Award = Default + ".Award";
@@ -89,6 +91,12 @@ public static class EksabliPermissions
     {
         public const string Default = GroupName + ".Notifications";
         public const string Send = Default + ".Send";
+
+        // Gates IUserNotificationAppService.SendAsync — the manual/admin trigger for the real-time
+        // Notification Hub (SignalR + FCM). Distinct from Send, which gates the customer-facing campaign
+        // channel (INotificationAppService) — receiving your own hub notifications needs no permission
+        // beyond being authenticated, only broadcasting to others does.
+        public const string Broadcast = Default + ".Broadcast";
     }
 
     public static class Achievements
@@ -126,6 +134,15 @@ public static class EksabliPermissions
         public const string Suspend = Default + ".Suspend";
     }
 
+    // Cross-tenant "Users" directory (Admin Portal) — deliberately its own permission, not reused as
+    // Tenants.View, so it can be granted/audited independently (it exposes customer phone numbers and
+    // business-staff emails across every tenant, a more sensitive scope than the Businesses list).
+    public static class Users
+    {
+        public const string Default = GroupName + ".Users";
+        public const string View = Default + ".View";
+    }
+
     public static class Categories
     {
         public const string Default = GroupName + ".Categories";
@@ -140,6 +157,16 @@ public static class EksabliPermissions
         // Reporter-initiated create/read-own doesn't need a permission beyond authenticated — this
         // gates the Support Agent queue/thread/resolve tooling specifically.
         public const string Manage = Default + ".Manage";
+    }
+
+    // Platform-wide request audit trail (ABP's own IAuditLogRepository, already recording every
+    // request via the OSS Volo.Abp.AuditLogging.Domain/EntityFrameworkCore modules — only the
+    // browsable UI layer was missing; that's a paid ABP Commercial feature, so this is a small
+    // hand-written query surface over the same real data instead). Host-realm only, same class of
+    // sensitive cross-tenant visibility as Users.View.
+    public static class AuditLogs
+    {
+        public const string Default = GroupName + ".AuditLogs";
     }
 
     //Add your own permission names. Example:

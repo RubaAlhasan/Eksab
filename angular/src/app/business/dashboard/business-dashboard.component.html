@@ -1,0 +1,170 @@
+<app-page-header
+  [title]="'::BusinessPanel:Dashboard:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:Dashboard:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: ('::BusinessPanel:Dashboard:Title' | abpLocalization) }]"
+>
+</app-page-header>
+
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::BusinessPanel:Dashboard:Loading' | abpLocalization"></app-loading-spinner>
+} @else if (loadFailed()) {
+  <app-error-state
+    [message]="'::BusinessPanel:Dashboard:LoadErrorMessage' | abpLocalization"
+    [retryLabel]="'::BusinessPanel:Dashboard:TryAgain' | abpLocalization"
+    (retry)="retry()"
+  >
+  </app-error-state>
+} @else if (home(); as home) {
+  @if (home.lowStockRewards && home.lowStockRewards.length > 0) {
+    <div class="alert alert-warning d-flex align-items-start gap-2 mb-4">
+      <i class="fas fa-exclamation-triangle mt-1"></i>
+      <p class="mb-0">
+        {{ '::BusinessPanel:Dashboard:LowStockPrefix' | abpLocalization }}
+        @for (reward of home.lowStockRewards; track reward.id; let last = $last) {
+          <strong>{{ reward.nameEn }}</strong> ({{ reward.stockRemaining }} {{ '::BusinessPanel:Dashboard:LowStockLeft' | abpLocalization }}){{ last ? '' : ', ' }}
+        }
+        <a routerLink="/business/rewards" class="alert-link">{{ '::BusinessPanel:Dashboard:ReviewRewards' | abpLocalization }}</a>
+      </p>
+    </div>
+  }
+
+  <div class="d-flex flex-wrap gap-3 mb-4">
+    <div class="card eks-stat-card">
+      <div class="card-body">
+        <div class="eks-stat-card__icon bg-primary-subtle text-primary-emphasis"><i class="fas fa-users"></i></div>
+        <div class="eks-stat-card__value">{{ home.activeMemberCount ?? 0 }}</div>
+        <div class="eks-stat-card__label">{{ '::BusinessPanel:Dashboard:StatActiveMembers' | abpLocalization }}</div>
+      </div>
+    </div>
+    <div class="card eks-stat-card">
+      <div class="card-body">
+        <div class="eks-stat-card__icon bg-success-subtle text-success-emphasis"><i class="fas fa-plus"></i></div>
+        <div class="eks-stat-card__value">{{ home.pointsIssuedLast30Days | number: '1.0-0' }}</div>
+        <div class="eks-stat-card__label">{{ '::BusinessPanel:Dashboard:StatPointsIssued' | abpLocalization }}</div>
+      </div>
+    </div>
+    <div class="card eks-stat-card">
+      <div class="card-body">
+        <div class="eks-stat-card__icon bg-warning-subtle text-warning-emphasis"><i class="fas fa-gift"></i></div>
+        <div class="eks-stat-card__value">{{ home.pointsRedeemedLast30Days | number: '1.0-0' }}</div>
+        <div class="eks-stat-card__label">
+          {{ '::BusinessPanel:Dashboard:StatPointsRedeemed' | abpLocalization }}
+          @if (redemptionRatePct(); as pct) {
+            <span class="text-muted">· {{ pct }}{{ '::BusinessPanel:Dashboard:OfIssuedSuffix' | abpLocalization }}</span>
+          }
+        </div>
+      </div>
+    </div>
+    <div class="card eks-stat-card">
+      <div class="card-body">
+        <div class="eks-stat-card__icon bg-info-subtle text-info-emphasis"><i class="fas fa-bullhorn"></i></div>
+        <div class="eks-stat-card__value">{{ home.activeCampaignCount ?? 0 }}</div>
+        <div class="eks-stat-card__label">{{ '::BusinessPanel:Dashboard:StatActiveCampaigns' | abpLocalization }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-lg-8">
+      <div class="card p-4 h-100">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div>
+            <h2 class="fw-bold small mb-0">{{ '::BusinessPanel:Dashboard:GrowthTitle' | abpLocalization }}</h2>
+            <p class="text-muted small mb-0">{{ '::BusinessPanel:Dashboard:GrowthSubtitle' | abpLocalization }}</p>
+          </div>
+          @if (growthMomPct(); as pct) {
+            <span class="badge" [class.bg-success-subtle]="pct >= 0" [class.text-success-emphasis]="pct >= 0" [class.bg-danger-subtle]="pct < 0" [class.text-danger-emphasis]="pct < 0">
+              {{ pct >= 0 ? '+' : '' }}{{ pct }}% {{ '::BusinessPanel:Dashboard:MomSuffix' | abpLocalization }}
+            </span>
+          }
+        </div>
+        @if (growthLoading()) {
+          <app-loading-spinner [label]="'::BusinessPanel:Dashboard:Loading' | abpLocalization"></app-loading-spinner>
+        } @else if (growthBars().length === 0) {
+          <p class="text-muted small mb-0">{{ '::BusinessPanel:Dashboard:NoGrowthData' | abpLocalization }}</p>
+        } @else {
+          <div class="eks-growth-chart">
+            @for (bar of growthBars(); track bar.label) {
+              <div class="eks-growth-chart__col" [title]="bar.label + ': ' + bar.value">
+                <div class="eks-growth-chart__bar" [style.height.%]="(bar.value / growthMax()) * 100"></div>
+                <span class="eks-growth-chart__label">{{ bar.label }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+      <div class="card p-4 h-100">
+        <h2 class="fw-bold small mb-3">{{ '::BusinessPanel:Dashboard:QuickActionsTitle' | abpLocalization }}</h2>
+        <div class="d-flex flex-column gap-1">
+          <a routerLink="/business/customers" class="eks-quick-link">
+            <span class="eks-quick-link__icon"><i class="fas fa-users"></i></span>
+            <span class="flex-grow-1 small fw-semibold">{{ '::BusinessPanel:Dashboard:QuickLinkCustomers' | abpLocalization }}</span>
+            <i class="fas fa-chevron-right text-muted small"></i>
+          </a>
+          <a routerLink="/business/employees" class="eks-quick-link">
+            <span class="eks-quick-link__icon"><i class="fas fa-user-tie"></i></span>
+            <span class="flex-grow-1 small fw-semibold">{{ '::BusinessPanel:Dashboard:QuickLinkEmployees' | abpLocalization }}</span>
+            <i class="fas fa-chevron-right text-muted small"></i>
+          </a>
+          <a routerLink="/business/transactions" class="eks-quick-link">
+            <span class="eks-quick-link__icon"><i class="fas fa-receipt"></i></span>
+            <span class="flex-grow-1 small fw-semibold">{{ '::BusinessPanel:Dashboard:QuickLinkTransactions' | abpLocalization }}</span>
+            <i class="fas fa-chevron-right text-muted small"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card p-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h2 class="fw-bold small mb-0">{{ '::BusinessPanel:Dashboard:RecentActivityTitle' | abpLocalization }}</h2>
+      <a routerLink="/business/transactions" class="small fw-semibold text-decoration-none">
+        {{ '::BusinessPanel:Dashboard:ViewAllTransactions' | abpLocalization }}
+      </a>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>{{ '::BusinessPanel:Transactions:ColumnCustomer' | abpLocalization }}</th>
+            <th>{{ '::BusinessPanel:Transactions:ColumnType' | abpLocalization }}</th>
+            <th>{{ '::BusinessPanel:Transactions:ColumnPoints' | abpLocalization }}</th>
+            <th>{{ '::BusinessPanel:Transactions:ColumnDate' | abpLocalization }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (recentActivityLoading()) {
+            <tr>
+              <td colspan="4">
+                <app-loading-spinner [label]="'::BusinessPanel:Dashboard:Loading' | abpLocalization"></app-loading-spinner>
+              </td>
+            </tr>
+          } @else if (recentActivity().length === 0) {
+            <tr>
+              <td colspan="4" class="text-muted small text-center py-3">
+                {{ '::BusinessPanel:Dashboard:NoRecentActivity' | abpLocalization }}
+              </td>
+            </tr>
+          } @else {
+            @for (txn of recentActivity(); track txn.id) {
+              <tr>
+                <td class="fw-semibold">{{ customerName(txn) }}</td>
+                <td>
+                  <app-status-badge [label]="typeLabelKey(txn.type) | abpLocalization" [variant]="typeVariant(txn.type)"></app-status-badge>
+                </td>
+                <td class="fw-semibold" [class.text-success]="(txn.points ?? 0) > 0" [class.text-danger]="(txn.points ?? 0) < 0">
+                  {{ (txn.points ?? 0) > 0 ? '+' : '' }}{{ txn.points }}
+                </td>
+                <td class="text-muted">{{ txn.creationTime | date: 'MMM d' }}</td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}

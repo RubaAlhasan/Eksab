@@ -16,6 +16,8 @@ public interface IAdminTenantAppService : IApplicationService
 
     Task<AdminTenantDto> GetAsync(Guid tenantId);
 
+    Task<AdminTenantDetailStatsDto> GetDetailStatsAsync(Guid tenantId);
+
     Task<AdminTenantDto> ApproveAsync(Guid tenantId);
 
     Task<AdminTenantDto> SuspendAsync(Guid tenantId);
