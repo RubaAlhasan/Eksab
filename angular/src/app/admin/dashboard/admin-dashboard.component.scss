@@ -1,0 +1,6 @@
+// .eks-avatar-sm is a global utility now (see styles.scss) — promoted out of here once it turned out
+// to be duplicated verbatim across six components; see styles.scss's own comment for the full list.
+
+.eks-dashboard-row {
+  background-color: var(--bs-tertiary-bg, #f8f9fa);
+}

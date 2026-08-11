@@ -20,12 +20,13 @@ public class EfCoreTenantSubscriptionRepository : EfCoreRepository<EksabliDbCont
 
     public async Task<(List<TenantSubscription> Items, int TotalCount)> GetListAsync(
         TenantSubscriptionStatus? status = null,
+        Guid? tenantId = null,
         string? sorting = null,
         int skipCount = 0,
         int maxResultCount = int.MaxValue,
         CancellationToken cancellationToken = default)
     {
-        var queryable = ApplyFilter(await GetQueryableAsync(), status);
+        var queryable = ApplyFilter(await GetQueryableAsync(), status, tenantId);
 
         var totalCount = await AsyncExecuter.CountAsync(queryable, GetCancellationToken(cancellationToken));
 
@@ -39,11 +40,16 @@ public class EfCoreTenantSubscriptionRepository : EfCoreRepository<EksabliDbCont
         return (items, totalCount);
     }
 
-    protected virtual IQueryable<TenantSubscription> ApplyFilter(IQueryable<TenantSubscription> query, TenantSubscriptionStatus? status)
+    protected virtual IQueryable<TenantSubscription> ApplyFilter(IQueryable<TenantSubscription> query, TenantSubscriptionStatus? status, Guid? tenantId)
     {
         if (status.HasValue)
         {
             query = query.Where(x => x.Status == status.Value);
+        }
+
+        if (tenantId.HasValue)
+        {
+            query = query.Where(x => x.TenantId == tenantId.Value);
         }
 
         return query;

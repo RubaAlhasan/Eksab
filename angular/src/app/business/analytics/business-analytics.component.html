@@ -1,0 +1,116 @@
+<app-page-header
+  [title]="'::BusinessPanel:Analytics:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:Analytics:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::BusinessPanel:Analytics:Title' | abpLocalization) }]"
+>
+</app-page-header>
+
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::BusinessPanel:Analytics:Loading' | abpLocalization"></app-loading-spinner>
+} @else if (loadFailed()) {
+  <app-error-state
+    [message]="'::BusinessPanel:Analytics:LoadErrorMessage' | abpLocalization"
+    [retryLabel]="'::BusinessPanel:Analytics:TryAgain' | abpLocalization"
+    (retry)="retry()"
+  >
+  </app-error-state>
+} @else {
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-lg-6">
+      <div class="card p-4 h-100">
+        <h2 class="fw-bold small mb-1">{{ '::BusinessPanel:Analytics:GrowthTitle' | abpLocalization }}</h2>
+        <p class="text-muted small mb-3">{{ '::BusinessPanel:Analytics:GrowthSubtitle' | abpLocalization }}</p>
+        <div class="eks-bar-chart">
+          @for (bar of growthBars(); track bar.label) {
+            <div class="eks-bar-chart__col" [title]="bar.label + ': ' + bar.value">
+              <div class="eks-bar-chart__bar" [style.height.%]="(bar.value / growthMax()) * 100"></div>
+              <span class="eks-bar-chart__label">{{ bar.label }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+      <div class="card p-4 h-100">
+        <h2 class="fw-bold small mb-1">{{ '::BusinessPanel:Analytics:RedemptionTrendTitle' | abpLocalization }}</h2>
+        <p class="text-muted small mb-3">{{ '::BusinessPanel:Analytics:RedemptionTrendSubtitle' | abpLocalization }}</p>
+        <div class="eks-bar-chart">
+          @for (bar of redemptionBars(); track bar.label) {
+            <div class="eks-bar-chart__col" [title]="bar.label + ': ' + bar.value + '%'">
+              <div class="eks-bar-chart__bar eks-bar-chart__bar--alt" [style.height.%]="(bar.value / redemptionMax()) * 100"></div>
+              <span class="eks-bar-chart__label">{{ bar.label }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-lg-8">
+      <div class="card p-4 h-100">
+        <h2 class="fw-bold small mb-1">{{ '::BusinessPanel:Analytics:BranchTitle' | abpLocalization }}</h2>
+        <p class="text-muted small mb-3">{{ '::BusinessPanel:Analytics:BranchSubtitle' | abpLocalization }}</p>
+        @if (branchBars().length === 0) {
+          <p class="text-muted small mb-0">{{ '::BusinessPanel:Analytics:NoBranchData' | abpLocalization }}</p>
+        } @else {
+          <div class="d-flex flex-column gap-3">
+            @for (bar of branchBars(); track bar.label) {
+              <div>
+                <div class="d-flex align-items-center justify-content-between small mb-1">
+                  <span class="fw-semibold">{{ bar.label }}</span>
+                  <span class="text-muted">{{ bar.value }}</span>
+                </div>
+                <div class="eks-progress-track">
+                  <div class="eks-progress-fill" role="progressbar" [style.width.%]="(bar.value / branchMax()) * 100"></div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+      <div class="card p-4 h-100">
+        <h2 class="fw-bold small mb-1">{{ '::BusinessPanel:Analytics:TierTitle' | abpLocalization }}</h2>
+        <p class="text-muted small mb-3">{{ '::BusinessPanel:Analytics:TierSubtitle' | abpLocalization }}</p>
+        @if (tierBars().length === 0) {
+          <p class="text-muted small mb-0">{{ '::BusinessPanel:Analytics:NoTierData' | abpLocalization }}</p>
+        } @else {
+          <div class="d-flex flex-column gap-3">
+            @for (bar of tierBars(); track bar.label) {
+              <div>
+                <div class="d-flex align-items-center justify-content-between small mb-1">
+                  <span class="fw-semibold d-flex align-items-center gap-2">
+                    <span class="eks-tier-dot" [style.background-color]="bar.color"></span>
+                    {{ bar.label }}
+                  </span>
+                  <span class="text-muted">{{ bar.pct }}%</span>
+                </div>
+                <div class="eks-progress-track">
+                  <div class="eks-progress-fill" role="progressbar" [style.width.%]="bar.pct" [style.background-color]="bar.color"></div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="card p-4">
+    <h2 class="fw-bold small mb-3">{{ '::BusinessPanel:Analytics:KpiTitle' | abpLocalization }}</h2>
+    <div class="row g-3">
+      <div class="col-12 col-sm-6 d-flex gap-2">
+        <span class="badge bg-primary-subtle text-primary-emphasis flex-shrink-0 mt-1">{{ '::BusinessPanel:Analytics:KpiActiveMemberTerm' | abpLocalization }}</span>
+        <p class="text-muted small mb-0">{{ '::BusinessPanel:Analytics:KpiActiveMemberDefinition' | abpLocalization }}</p>
+      </div>
+      <div class="col-12 col-sm-6 d-flex gap-2">
+        <span class="badge bg-primary-subtle text-primary-emphasis flex-shrink-0 mt-1">{{ '::BusinessPanel:Analytics:KpiRedemptionRateTerm' | abpLocalization }}</span>
+        <p class="text-muted small mb-0">{{ '::BusinessPanel:Analytics:KpiRedemptionRateDefinition' | abpLocalization }}</p>
+      </div>
+    </div>
+  </div>
+}

@@ -184,6 +184,14 @@ public partial class EksabliNotificationToNotificationDtoMapper : MapperBase<Not
 }
 
 [Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliUserNotificationFeedItemToUserNotificationDtoMapper : MapperBase<UserNotificationFeedItem, UserNotificationDto>
+{
+    public override partial UserNotificationDto Map(UserNotificationFeedItem source);
+
+    public override partial void Map(UserNotificationFeedItem source, UserNotificationDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
 public partial class EksabliReferralToReferralDtoMapper : MapperBase<Referral, ReferralDto>
 {
     public override partial ReferralDto Map(Referral source);
@@ -218,8 +226,13 @@ public partial class EksabliFollowToFollowDtoMapper : MapperBase<Follow, FollowD
 [Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
 public partial class EksabliCategoryToCategoryDtoMapper : MapperBase<Category, CategoryDto>
 {
+    // BusinessCount isn't a Category property — it's a cross-aggregate count (BusinessProfiles
+    // referencing this category, across every tenant) computed and set by CategoryAppService after
+    // mapping, same pattern as TenantSubscriptionDto.PlanName above.
+    [MapperIgnoreTarget(nameof(CategoryDto.BusinessCount))]
     public override partial CategoryDto Map(Category source);
 
+    [MapperIgnoreTarget(nameof(CategoryDto.BusinessCount))]
     public override partial void Map(Category source, CategoryDto destination);
 }
 

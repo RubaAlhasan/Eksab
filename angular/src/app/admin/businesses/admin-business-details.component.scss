@@ -1,0 +1,81 @@
+// Matches the prototype's own `.avatar.avatar-xl` (design-system.css) exactly: 5rem, purple gradient,
+// white text — unlike the small inline avatars used in table rows elsewhere in this app
+// (`.eks-avatar-sm`, a global utility deliberately kept on the existing Bootstrap `-subtle`/`-emphasis`
+// convention already established across 6+ components), this large profile avatar is the one place on
+// this page where the prototype's own gradient treatment is the most visually prominent element, worth
+// matching precisely rather than translating to the subtle idiom.
+.eks-avatar {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #7c6af0, #4f37c4);
+}
+
+// Matches the prototype's own `p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60` mini stat boxes
+// (Members/Plan) in the profile card.
+.eks-mini-stat {
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background-color: var(--eks-bg, #f8fafc);
+
+  &__value {
+    font-size: 1.125rem;
+    font-weight: 800;
+    margin-bottom: 0;
+    // Explicit rather than inherited — this theme's default body color reads as a muted slate, not
+    // the near-black the detail rows below use; matching them here means both actually reference the
+    // same token instead of two different sources of "dark text" that happen to render differently.
+    color: var(--eks-text, #0f172a);
+  }
+
+  &__label {
+    font-size: 0.75rem;
+    color: var(--eks-text-muted, #64748b);
+    margin-bottom: 0;
+  }
+}
+
+// Matches the prototype's own plain `space-y-2` label/value rows — no divider between them at all.
+.eks-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+
+  // Same reasoning as .eks-mini-stat__value above — explicit color so every row's value renders
+  // identically dark, not whatever each span's own inherited default happens to resolve to.
+  // min-width: 0 + truncation: this column is only ~300px wide on mobile (col-12 at narrow
+  // viewports), and the value side can be a long, unbroken string (the owner's email, in
+  // particular) — flex items don't shrink below their content's intrinsic width by default, so
+  // without this a long email would push the row wider than the card. Safe to truncate since the
+  // template already puts the full value in a `[title]` tooltip on this same span.
+  span:last-child {
+    color: var(--eks-text, #0f172a);
+    min-width: 0;
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.eks-stat-tile {
+  min-width: 160px;
+
+  &__value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  &__label {
+    font-size: 0.8125rem;
+    color: var(--bs-secondary-color, #6c757d);
+  }
+}

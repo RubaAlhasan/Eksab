@@ -1,0 +1,152 @@
+<app-page-header
+  [title]="'::BusinessPanel:Employees:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:Employees:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Business Portal', link: '/business/employees' }, { label: ('::BusinessPanel:Employees:Title' | abpLocalization) }]"
+>
+  @if (canInvite()) {
+    <button type="button" class="btn btn-primary btn-sm" (click)="openInviteModal()">
+      <i class="fas fa-plus me-1"></i>{{ '::BusinessPanel:Employees:InviteStaff' | abpLocalization }}
+    </button>
+  }
+</app-page-header>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{{ '::BusinessPanel:Employees:ColumnStaff' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Employees:ColumnRole' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Employees:ColumnBranch' | abpLocalization }}</th>
+          <th><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (isLoading()) {
+          <tr>
+            <td colspan="4">
+              <app-loading-spinner [label]="'::BusinessPanel:Employees:Loading' | abpLocalization"></app-loading-spinner>
+            </td>
+          </tr>
+        } @else if (loadFailed()) {
+          <tr>
+            <td colspan="4">
+              <app-error-state
+                [message]="'::BusinessPanel:Employees:LoadErrorMessage' | abpLocalization"
+                [retryLabel]="'::BusinessPanel:Employees:TryAgain' | abpLocalization"
+                (retry)="retry()"
+              >
+              </app-error-state>
+            </td>
+          </tr>
+        } @else if (employees().length === 0) {
+          <tr>
+            <td colspan="4">
+              <app-empty-state
+                icon="fa-user-tie"
+                [title]="'::BusinessPanel:Employees:EmptyTitle' | abpLocalization"
+                [description]="'::BusinessPanel:Employees:EmptyDescription' | abpLocalization"
+              >
+              </app-empty-state>
+            </td>
+          </tr>
+        } @else {
+          @for (employee of employees(); track employee.id) {
+            <tr>
+              <td class="fw-semibold">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="eks-avatar-sm">{{ initials(employee.userEmail) }}</span>
+                  <span>{{ employee.userEmail ?? '—' }}</span>
+                </div>
+              </td>
+              <td class="text-muted">{{ roleLabelKey(employee.role) | abpLocalization }}</td>
+              <td class="text-muted">
+                @if (employee.branchId) {
+                  {{ branchName(employee.branchId) }}
+                } @else {
+                  {{ '::BusinessPanel:Employees:AllBranches' | abpLocalization }}
+                }
+              </td>
+              <td class="text-end">
+                @if (canRevoke() && employee.role !== Role.Owner) {
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    [disabled]="revokeTargetId() === employee.id"
+                    (click)="revoke(employee)"
+                  >
+                    {{ '::BusinessPanel:Employees:Revoke' | abpLocalization }}
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (!isLoading() && !loadFailed()) {
+    <div class="card-footer">
+      <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)"></app-pagination>
+    </div>
+  }
+</div>
+
+<app-modal
+  [open]="inviteModalOpen()"
+  [title]="'::BusinessPanel:Employees:InviteModalTitle' | abpLocalization"
+  (closed)="closeInviteModal()"
+>
+  <form [formGroup]="inviteForm" (ngSubmit)="submitInviteForm()" class="d-flex flex-column gap-3">
+    <div>
+      <label class="form-label" for="email">{{ '::BusinessPanel:Employees:FieldEmail' | abpLocalization }}</label>
+      <input
+        id="email"
+        type="email"
+        class="form-control"
+        formControlName="email"
+        [placeholder]="'::BusinessPanel:Employees:FieldEmailPlaceholder' | abpLocalization"
+      />
+      @if (inviteForm.controls.email.invalid && inviteForm.controls.email.touched) {
+        <p class="text-danger small mt-1">
+          @if (inviteForm.controls.email.errors?.['required']) {
+            {{ '::BusinessPanel:Employees:FieldRequired' | abpLocalization }}
+          } @else {
+            {{ '::BusinessPanel:Employees:FieldInvalidEmail' | abpLocalization }}
+          }
+        </p>
+      }
+    </div>
+
+    <div>
+      <label class="form-label" for="role">{{ '::BusinessPanel:Employees:FieldRole' | abpLocalization }}</label>
+      <select id="role" class="form-select" formControlName="role">
+        <option [ngValue]="Role.BranchManager">{{ '::BusinessPanel:Employees:RoleBranchManager' | abpLocalization }}</option>
+        <option [ngValue]="Role.Cashier">{{ '::BusinessPanel:Employees:RoleCashier' | abpLocalization }}</option>
+        <option [ngValue]="Role.MarketingManager">{{ '::BusinessPanel:Employees:RoleMarketingManager' | abpLocalization }}</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="form-label" for="branchId">{{ '::BusinessPanel:Employees:FieldBranch' | abpLocalization }}</label>
+      <select id="branchId" class="form-select" formControlName="branchId">
+        <option value="">{{ '::BusinessPanel:Employees:AllBranches' | abpLocalization }}</option>
+        @for (branch of branches(); track branch.id) {
+          <option [value]="branch.id">{{ branch.name }}</option>
+        }
+      </select>
+    </div>
+  </form>
+
+  <div slot="footer" class="d-flex gap-2 justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeInviteModal()">
+      {{ '::BusinessPanel:Employees:Cancel' | abpLocalization }}
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="isInviting()" (click)="submitInviteForm()">
+      @if (isInviting()) {
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+      }
+      {{ '::BusinessPanel:Employees:SendInvite' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

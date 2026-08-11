@@ -1,0 +1,139 @@
+<app-page-header
+  [title]="'::BusinessPanel:Rewards:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:Rewards:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::BusinessPanel:Rewards:Title' | abpLocalization) }]"
+>
+  @if (canCreate()) {
+    <button type="button" class="btn btn-primary btn-sm" (click)="openCreateModal()">
+      <i class="fas fa-plus me-1"></i>{{ '::BusinessPanel:Rewards:NewReward' | abpLocalization }}
+    </button>
+  }
+</app-page-header>
+
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::BusinessPanel:Rewards:Loading' | abpLocalization"></app-loading-spinner>
+} @else if (loadFailed()) {
+  <app-error-state
+    [message]="'::BusinessPanel:Rewards:LoadErrorMessage' | abpLocalization"
+    [retryLabel]="'::BusinessPanel:Rewards:TryAgain' | abpLocalization"
+    (retry)="retry()"
+  >
+  </app-error-state>
+} @else if (rewards().length === 0) {
+  <app-empty-state
+    icon="fa-gift"
+    [title]="'::BusinessPanel:Rewards:EmptyTitle' | abpLocalization"
+    [description]="'::BusinessPanel:Rewards:EmptyDescription' | abpLocalization"
+  >
+  </app-empty-state>
+} @else {
+  <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
+    @for (reward of rewards(); track reward.id) {
+      <div class="col">
+        <div class="card p-4 h-100 d-flex flex-column">
+          <div class="d-flex align-items-start justify-content-between mb-3">
+            <span class="eks-reward-icon"><i class="fas {{ typeIcon(reward.type) }}"></i></span>
+            @if (canEdit()) {
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                [attr.aria-label]="'::BusinessPanel:Rewards:Edit' | abpLocalization"
+                (click)="openEditModal(reward)"
+              >
+                <i class="fas fa-pen"></i>
+              </button>
+            }
+          </div>
+          <p class="fw-bold small mb-1">{{ reward.nameEn }}</p>
+          <p class="text-muted small mb-3">
+            {{ typeLabelKey(reward.type) | abpLocalization }} ·
+            @if (stockLabel(reward); as stock) {
+              {{ stock.count }} {{ '::BusinessPanel:Rewards:InStock' | abpLocalization }}
+            } @else {
+              {{ '::BusinessPanel:Rewards:Unlimited' | abpLocalization }}
+            }
+          </p>
+          <div class="d-flex align-items-center justify-content-between mt-auto">
+            <span class="fw-bold text-primary">{{ reward.pointsCost }} {{ '::BusinessPanel:Rewards:PointsWord' | abpLocalization }}</span>
+            @if (isLowStock(reward)) {
+              <app-status-badge [label]="'::BusinessPanel:Rewards:StatusLowStock' | abpLocalization" variant="warning"></app-status-badge>
+            } @else {
+              <app-status-badge [label]="statusLabelKey(status(reward)) | abpLocalization" [variant]="statusVariant(status(reward))"></app-status-badge>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<app-modal
+  [open]="formModalOpen()"
+  [title]="(editingRewardId ? '::BusinessPanel:Rewards:EditTitle' : '::BusinessPanel:Rewards:NewReward') | abpLocalization"
+  (closed)="closeFormModal()"
+>
+  <form [formGroup]="form" (ngSubmit)="submitForm()" class="d-flex flex-column gap-3">
+    <div class="row g-3">
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="rewardNameEn">{{ '::BusinessPanel:Rewards:FieldNameEn' | abpLocalization }}</label>
+        <input id="rewardNameEn" type="text" class="form-control" formControlName="nameEn" />
+        @if (form.controls.nameEn.invalid && form.controls.nameEn.touched) {
+          <p class="text-danger small mt-1">{{ '::BusinessPanel:Rewards:FieldRequired' | abpLocalization }}</p>
+        }
+      </div>
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="rewardNameAr">{{ '::BusinessPanel:Rewards:FieldNameAr' | abpLocalization }}</label>
+        <input id="rewardNameAr" type="text" class="form-control" formControlName="nameAr" dir="rtl" />
+        @if (form.controls.nameAr.invalid && form.controls.nameAr.touched) {
+          <p class="text-danger small mt-1">{{ '::BusinessPanel:Rewards:FieldRequired' | abpLocalization }}</p>
+        }
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="rewardType">{{ '::BusinessPanel:Rewards:FieldType' | abpLocalization }}</label>
+        <select id="rewardType" class="form-select" formControlName="type">
+          <option [ngValue]="Type.Discount">{{ '::BusinessPanel:Rewards:TypeDiscount' | abpLocalization }}</option>
+          <option [ngValue]="Type.FreeProduct">{{ '::BusinessPanel:Rewards:TypeFreeProduct' | abpLocalization }}</option>
+          <option [ngValue]="Type.GiftCard">{{ '::BusinessPanel:Rewards:TypeGiftCard' | abpLocalization }}</option>
+        </select>
+      </div>
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="rewardPoints">{{ '::BusinessPanel:Rewards:FieldPointsCost' | abpLocalization }}</label>
+        <input id="rewardPoints" type="number" min="1" class="form-control" formControlName="pointsCost" placeholder="500" />
+        @if (form.controls.pointsCost.invalid && form.controls.pointsCost.touched) {
+          <p class="text-danger small mt-1">{{ '::BusinessPanel:Rewards:FieldPointsCostInvalid' | abpLocalization }}</p>
+        }
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="rewardStock">{{ '::BusinessPanel:Rewards:FieldStock' | abpLocalization }}</label>
+        <input id="rewardStock" type="number" min="0" class="form-control" formControlName="stockRemaining" placeholder="e.g. 50" />
+      </div>
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="rewardValidTo">{{ '::BusinessPanel:Rewards:FieldValidTo' | abpLocalization }}</label>
+        <input id="rewardValidTo" type="date" class="form-control" formControlName="validTo" />
+      </div>
+    </div>
+
+    <div class="form-check">
+      <input id="requireApproval" type="checkbox" class="form-check-input" formControlName="requireApproval" />
+      <label class="form-check-label small" for="requireApproval">{{ '::BusinessPanel:Rewards:FieldRequireApproval' | abpLocalization }}</label>
+    </div>
+  </form>
+
+  <div slot="footer" class="d-flex gap-2 justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeFormModal()">
+      {{ '::BusinessPanel:Rewards:Cancel' | abpLocalization }}
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="isSaving()" (click)="submitForm()">
+      @if (isSaving()) {
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+      }
+      {{ '::BusinessPanel:Rewards:Save' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

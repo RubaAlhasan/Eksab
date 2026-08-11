@@ -18,4 +18,6 @@ public class BusinessProfileDto : AuditedEntityDto<Guid>
     public string? Website { get; set; }
 
     public string? SocialLinksJson { get; set; }
+
+    public TenantApprovalStatus ApprovalStatus { get; set; }
 }

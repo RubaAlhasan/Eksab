@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Eksabli.Localization;
 using Eksabli.MultiTenancy;
+using Eksabli.Notifications;
 using Eksabli.Wallets;
 using System;
 using Volo.Abp;
@@ -54,6 +55,23 @@ public class EksabliDomainModule : AbpModule
 #if DEBUG
         context.Services.Replace(ServiceDescriptor.Singleton<IEmailSender, NullEmailSender>());
 #endif
+
+        ConfigureFcm(context);
+    }
+
+    // Swaps NullPushNotificationSender for the real FCM sender once a provider is actually configured —
+    // same "no real provider chosen yet" placeholder pattern as NullSmsSender/NullPaymentGateway, now
+    // resolved for push specifically. Leave Fcm:CredentialsFilePath unset in dev to keep using the Null
+    // sender (logs instead of calling out to Firebase).
+    private void ConfigureFcm(ServiceConfigurationContext context)
+    {
+        var configuration = context.Services.GetConfiguration();
+        Configure<FcmOptions>(configuration.GetSection("Fcm"));
+
+        if (!string.IsNullOrWhiteSpace(configuration["Fcm:CredentialsFilePath"]))
+        {
+            context.Services.Replace(ServiceDescriptor.Singleton<IPushNotificationSender, FirebaseCloudMessagingSender>());
+        }
     }
 
     public override async Task OnApplicationInitializationAsync(ApplicationInitializationContext context)

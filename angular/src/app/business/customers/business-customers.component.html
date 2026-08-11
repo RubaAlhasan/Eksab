@@ -1,0 +1,235 @@
+<app-page-header
+  [title]="'::BusinessPanel:Customers:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:Customers:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Business Portal', link: '/business/customers' }, { label: ('::BusinessPanel:Customers:Title' | abpLocalization) }]"
+>
+</app-page-header>
+
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item">
+    <button type="button" class="nav-link" [class.active]="activeTab() === 'members'" (click)="selectTab('members')">
+      {{ '::BusinessPanel:Customers:TabMembers' | abpLocalization }}
+    </button>
+  </li>
+  @if (canViewFollowers()) {
+    <li class="nav-item">
+      <button type="button" class="nav-link" [class.active]="activeTab() === 'following'" (click)="selectTab('following')">
+        {{ '::BusinessPanel:Customers:TabFollowing' | abpLocalization }}
+        @if (followersTotalCount() > 0) {
+          <span class="badge bg-secondary-subtle text-secondary-emphasis ms-1">{{ followersTotalCount() }}</span>
+        }
+      </button>
+    </li>
+  }
+</ul>
+
+@if (activeTab() === 'members') {
+  <div class="card mb-4">
+    <div class="card-body d-flex flex-wrap gap-3 align-items-center">
+      <div class="eks-filter-search">
+        <app-search-input
+          [placeholder]="'::BusinessPanel:Customers:SearchPlaceholder' | abpLocalization"
+          (valueChange)="onSearchInput($event)"
+        >
+        </app-search-input>
+      </div>
+      @if (tiers().length > 0) {
+        <select class="form-select eks-filter-select" (change)="onTierFilterChange($event)">
+          <option value="">{{ '::BusinessPanel:Customers:AllTiers' | abpLocalization }}</option>
+          @for (tier of tiers(); track tier.id) {
+            <option [value]="tier.id">{{ tier.name }}</option>
+          }
+        </select>
+      }
+      <select class="form-select eks-filter-select" (change)="onStatusFilterChange($event)">
+        <option value="">{{ '::BusinessPanel:Customers:AllStatuses' | abpLocalization }}</option>
+        <option value="0">{{ '::BusinessPanel:Customers:StatusActive' | abpLocalization }}</option>
+        <option value="1">{{ '::BusinessPanel:Customers:StatusFrozen' | abpLocalization }}</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>{{ '::BusinessPanel:Customers:ColumnCustomer' | abpLocalization }}</th>
+            <th>{{ '::BusinessPanel:Customers:ColumnPhone' | abpLocalization }}</th>
+            <th>{{ '::BusinessPanel:Customers:ColumnTier' | abpLocalization }}</th>
+            <th>{{ '::BusinessPanel:Customers:ColumnBalance' | abpLocalization }}</th>
+            <th>{{ '::BusinessPanel:Customers:ColumnJoined' | abpLocalization }}</th>
+            <th>{{ '::BusinessPanel:Customers:ColumnLastActive' | abpLocalization }}</th>
+            <th>{{ '::BusinessPanel:Customers:ColumnStatus' | abpLocalization }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (isLoading()) {
+            <tr>
+              <td colspan="8">
+                <app-loading-spinner [label]="'::BusinessPanel:Customers:Loading' | abpLocalization"></app-loading-spinner>
+              </td>
+            </tr>
+          } @else if (loadFailed()) {
+            <tr>
+              <td colspan="8">
+                <app-error-state
+                  [message]="'::BusinessPanel:Customers:LoadErrorMessage' | abpLocalization"
+                  [retryLabel]="'::BusinessPanel:Customers:TryAgain' | abpLocalization"
+                  (retry)="retry()"
+                >
+                </app-error-state>
+              </td>
+            </tr>
+          } @else if (members().length === 0) {
+            <tr>
+              <td colspan="8">
+                <app-empty-state
+                  icon="fa-users"
+                  [title]="'::BusinessPanel:Customers:EmptyTitle' | abpLocalization"
+                  [description]="'::BusinessPanel:Customers:EmptyDescription' | abpLocalization"
+                >
+                </app-empty-state>
+              </td>
+            </tr>
+          } @else {
+            @for (member of members(); track member.id) {
+              <tr>
+                <td class="fw-semibold">
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="eks-avatar-sm">{{ initials(member) }}</span>
+                    @if (customerName(member); as name) {
+                      <span>{{ name }}</span>
+                    } @else {
+                      <span class="text-muted fst-italic">{{ '::BusinessPanel:Customers:UnknownCustomer' | abpLocalization }}</span>
+                    }
+                  </div>
+                </td>
+                <td class="text-muted">{{ member.phoneNumber ?? '—' }}</td>
+                <td>
+                  @if (member.tierName) {
+                    <app-status-badge [label]="member.tierName" [variant]="tierVariant(member.tierId)"></app-status-badge>
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+                <td class="fw-semibold">{{ member.balance | number: '1.0-0' }}</td>
+                <td class="text-muted">{{ member.joinedAt | date: 'mediumDate' }}</td>
+                <td class="text-muted">{{ member.lastActiveAt ? (member.lastActiveAt | date: 'mediumDate') : '—' }}</td>
+                <td>
+                  <app-status-badge
+                    [label]="statusLabelKey(member.status) | abpLocalization"
+                    [variant]="statusVariant(member.status)"
+                  >
+                  </app-status-badge>
+                </td>
+                <td>
+                  @if (member.customerId) {
+                    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="openAdjustModal(member)">
+                      <i class="fas fa-pen me-1"></i>{{ '::BusinessPanel:Customers:AdjustPoints' | abpLocalization }}
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (!isLoading() && !loadFailed()) {
+      <div class="card-footer">
+        <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)"></app-pagination>
+      </div>
+    }
+  </div>
+}
+
+@if (activeTab() === 'following') {
+  <p class="text-muted small">{{ '::BusinessPanel:Customers:FollowingHint' | abpLocalization }}</p>
+  <div class="card">
+    @if (followersLoading()) {
+      <div class="card-body">
+        <app-loading-spinner [label]="'::BusinessPanel:Customers:Loading' | abpLocalization"></app-loading-spinner>
+      </div>
+    } @else if (followersFailed()) {
+      <div class="card-body">
+        <app-error-state
+          [message]="'::BusinessPanel:Customers:FollowingLoadErrorMessage' | abpLocalization"
+          [retryLabel]="'::BusinessPanel:Customers:TryAgain' | abpLocalization"
+          (retry)="retryFollowers()"
+        >
+        </app-error-state>
+      </div>
+    } @else if (followers().length === 0) {
+      <div class="card-body">
+        <app-empty-state icon="fa-user-plus" [title]="'::BusinessPanel:Customers:FollowingEmptyTitle' | abpLocalization"></app-empty-state>
+      </div>
+    } @else {
+      <div class="list-group list-group-flush">
+        @for (follower of followers(); track follower.id) {
+          <div class="list-group-item d-flex align-items-center gap-3 p-3">
+            <span class="eks-avatar-sm">{{ initials(follower) }}</span>
+            <div class="flex-grow-1">
+              @if (customerName(follower); as name) {
+                <p class="small fw-semibold mb-0">{{ name }}</p>
+              } @else {
+                <p class="small fw-semibold mb-0 text-muted fst-italic">{{ '::BusinessPanel:Customers:UnknownCustomer' | abpLocalization }}</p>
+              }
+              <p class="text-muted small mb-0">
+                {{ follower.phoneNumber ?? '—' }} · {{ follower.followedAt | date: 'mediumDate' }}
+              </p>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+}
+
+<app-modal
+  [open]="adjustModalOpen()"
+  [title]="'::BusinessPanel:Customers:AdjustTitle' | abpLocalization"
+  (closed)="closeAdjustModal()"
+>
+  <form [formGroup]="adjustForm" (ngSubmit)="submitAdjust()" class="d-flex flex-column gap-3">
+    <div>
+      <label class="form-label">{{ '::BusinessPanel:Customers:FieldDirection' | abpLocalization }}</label>
+      <div class="btn-group w-100" role="group">
+        <input type="radio" class="btn-check" id="adjustDirAdd" formControlName="direction" value="add" />
+        <label class="btn btn-outline-primary" for="adjustDirAdd">{{ '::BusinessPanel:Customers:DirectionAdd' | abpLocalization }}</label>
+        <input type="radio" class="btn-check" id="adjustDirRemove" formControlName="direction" value="remove" />
+        <label class="btn btn-outline-primary" for="adjustDirRemove">{{ '::BusinessPanel:Customers:DirectionRemove' | abpLocalization }}</label>
+      </div>
+    </div>
+
+    <div>
+      <label class="form-label" for="adjustAmount">{{ '::BusinessPanel:Customers:FieldAmount' | abpLocalization }}</label>
+      <input id="adjustAmount" type="number" min="1" class="form-control" formControlName="amount" placeholder="e.g. 50" />
+      @if (adjustForm.controls.amount.invalid && adjustForm.controls.amount.touched) {
+        <p class="text-danger small mt-1">{{ '::BusinessPanel:Customers:FieldAmountInvalid' | abpLocalization }}</p>
+      }
+    </div>
+
+    <div>
+      <label class="form-label" for="adjustReason">{{ '::BusinessPanel:Customers:FieldReason' | abpLocalization }}</label>
+      <textarea id="adjustReason" class="form-control" formControlName="reason" rows="2" maxlength="256"></textarea>
+    </div>
+
+    <div class="alert alert-info small mb-0">
+      <i class="fas fa-circle-info me-1"></i>{{ '::BusinessPanel:Customers:AdjustCapNote' | abpLocalization }}
+    </div>
+  </form>
+
+  <div slot="footer" class="d-flex gap-2 justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeAdjustModal()">
+      {{ '::BusinessPanel:Customers:Cancel' | abpLocalization }}
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="isAdjusting()" (click)="submitAdjust()">
+      @if (isAdjusting()) {
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+      }
+      {{ '::BusinessPanel:Customers:ApplyAdjustment' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

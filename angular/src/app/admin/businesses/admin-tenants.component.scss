@@ -1,0 +1,11 @@
+.admin-tenants {
+  .table td,
+  .table th {
+    vertical-align: middle;
+  }
+}
+
+// .eks-filter-search / .eks-filter-select / .eks-avatar-sm are global utilities now (see styles.scss)
+// — Subscriptions needed the identical filter-row rule, and five other components independently
+// duplicated the identical avatar rule, so both were promoted out of per-component scoped styles
+// rather than duplicated further.

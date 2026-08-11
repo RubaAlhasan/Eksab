@@ -4,13 +4,16 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Eksabli.BusinessProfiles;
+using Eksabli.CustomerProfiles;
 using Eksabli.Engagement;
 using Eksabli.Wallets;
 using Microsoft.Extensions.Caching.Distributed;
 using Volo.Abp;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Users;
 
@@ -24,6 +27,8 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
     private readonly IRepository<Wallets.Tier, Guid> _tierRepository;
     private readonly IReferralRepository _referralRepository;
     private readonly IRepository<BusinessProfile, Guid> _businessProfileRepository;
+    private readonly IRepository<CustomerProfile, Guid> _customerProfileRepository;
+    private readonly IIdentityUserRepository _identityUserRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
     private readonly IDistributedCache _qrCache;
@@ -34,6 +39,8 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
         IRepository<Wallets.Tier, Guid> tierRepository,
         IReferralRepository referralRepository,
         IRepository<BusinessProfile, Guid> businessProfileRepository,
+        IRepository<CustomerProfile, Guid> customerProfileRepository,
+        IIdentityUserRepository identityUserRepository,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
         IDistributedCache qrCache)
@@ -43,6 +50,8 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
         _tierRepository = tierRepository;
         _referralRepository = referralRepository;
         _businessProfileRepository = businessProfileRepository;
+        _customerProfileRepository = customerProfileRepository;
+        _identityUserRepository = identityUserRepository;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
         _qrCache = qrCache;
@@ -58,7 +67,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
             // seed data that bypassed BusinessAppService.RegisterAsync) fails open rather than blocking
             // every join with an unrelated 500.
             var businessProfile = await _businessProfileRepository.FirstOrDefaultAsync();
-            if (businessProfile?.ApprovalStatus == TenantApprovalStatus.Suspended)
+            if (businessProfile != null && businessProfile.ApprovalStatus != TenantApprovalStatus.Approved)
             {
                 throw new UserFriendlyException("This business isn't currently accepting new members.");
             }
@@ -141,6 +150,88 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
             new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(expiresInSeconds) });
 
         return new WalletQrTokenResultDto { Token = token, ExpiresInSeconds = expiresInSeconds };
+    }
+
+    // Business Portal > Customers "Members" tab. Ambient tenant already scopes Membership/PointsWallet
+    // to the caller's own business — no Disable<IMultiTenant>()/tenant switch needed for those, same
+    // shape as FollowAppService.GetFollowersAsync. IdentityUser/CustomerProfile ARE Host-realm though
+    // (same join PosAppService.LookupCustomerByPhoneAsync already does for a single customer — this
+    // is that same join, batched across every member instead of one phone lookup).
+    //
+    // Loads this tenant's full member set into memory, then filters/sorts/paginates in C# — same
+    // "acceptable at this scale" approach AdminTenantAppService already uses for the (much larger,
+    // cross-tenant) Businesses list; a single tenant's own member count is smaller by construction.
+    // Revisit if a tenant's member count genuinely grows past what's comfortable in memory.
+    public async Task<PagedResultDto<MemberDto>> GetMembersAsync(MemberFilterDto input)
+    {
+        var memberships = await _membershipRepository.GetListAsync();
+        var membershipIds = memberships.Select(m => m.Id).ToList();
+        var customerIds = memberships.Select(m => m.CustomerId).ToList();
+
+        var wallets = await _walletRepository.GetListAsync(w => membershipIds.Contains(w.MembershipId));
+        var walletByMembershipId = wallets.ToDictionary(w => w.MembershipId);
+
+        var tierIds = wallets.Where(w => w.CurrentTierId.HasValue).Select(w => w.CurrentTierId!.Value).Distinct().ToList();
+        var tierNameById = (await _tierRepository.GetListAsync(t => tierIds.Contains(t.Id)))
+            .ToDictionary(t => t.Id, t => t.Name);
+
+        List<IdentityUser> users;
+        List<CustomerProfile> profiles;
+        using (_currentTenant.Change(null))
+        {
+            // IIdentityUserRepository is a curated interface (no generic predicate/queryable access,
+            // unlike a plain IRepository<T>) — GetListByIdsAsync is its own purpose-built batch lookup.
+            users = await _identityUserRepository.GetListByIdsAsync(customerIds);
+            profiles = await _customerProfileRepository.GetListAsync(p => customerIds.Contains(p.UserId));
+        }
+        var userById = users.ToDictionary(u => u.Id);
+        var profileByUserId = profiles.ToDictionary(p => p.UserId);
+
+        var dtos = memberships.Select(m =>
+        {
+            var wallet = walletByMembershipId.GetValueOrDefault(m.Id);
+            var profile = profileByUserId.GetValueOrDefault(m.CustomerId);
+            var user = userById.GetValueOrDefault(m.CustomerId);
+            return new MemberDto
+            {
+                Id = m.Id,
+                CustomerId = m.CustomerId,
+                FirstName = profile?.FirstName,
+                LastName = profile?.LastName,
+                PhoneNumber = user?.PhoneNumber,
+                JoinedAt = m.JoinedAt,
+                Status = m.Status,
+                Balance = wallet?.Balance ?? 0,
+                TierId = wallet?.CurrentTierId,
+                TierName = wallet?.CurrentTierId.HasValue == true ? tierNameById.GetValueOrDefault(wallet.CurrentTierId.Value) : null,
+                LastActiveAt = wallet?.LastModificationTime
+            };
+        });
+
+        if (!input.FilterText.IsNullOrWhiteSpace())
+        {
+            var filterText = input.FilterText!;
+            dtos = dtos.Where(d =>
+                (d.FirstName?.Contains(filterText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (d.LastName?.Contains(filterText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (d.PhoneNumber?.Contains(filterText, StringComparison.OrdinalIgnoreCase) ?? false));
+        }
+
+        if (input.TierId.HasValue)
+        {
+            dtos = dtos.Where(d => d.TierId == input.TierId.Value);
+        }
+
+        if (input.Status.HasValue)
+        {
+            dtos = dtos.Where(d => d.Status == input.Status.Value);
+        }
+
+        var dtoList = dtos.OrderByDescending(d => d.JoinedAt).ToList();
+        var totalCount = dtoList.Count;
+        var paged = dtoList.Skip(input.SkipCount).Take(input.MaxResultCount).ToList();
+
+        return new PagedResultDto<MemberDto>(totalCount, paged);
     }
 
     // Called only from within GetMyWalletsAsync's own Disable<IMultiTenant> block — no need to

@@ -1,0 +1,257 @@
+<app-page-header
+  [title]="'::BusinessPanel:Campaigns:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:Campaigns:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::BusinessPanel:Campaigns:Title' | abpLocalization) }]"
+>
+  @if (canCreate()) {
+    <button type="button" class="btn btn-primary btn-sm" (click)="openWizard()">
+      <i class="fas fa-plus me-1"></i>{{ '::BusinessPanel:Campaigns:NewCampaign' | abpLocalization }}
+    </button>
+  }
+</app-page-header>
+
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::BusinessPanel:Campaigns:Loading' | abpLocalization"></app-loading-spinner>
+} @else if (loadFailed()) {
+  <app-error-state
+    [message]="'::BusinessPanel:Campaigns:LoadErrorMessage' | abpLocalization"
+    [retryLabel]="'::BusinessPanel:Campaigns:TryAgain' | abpLocalization"
+    (retry)="retry()"
+  >
+  </app-error-state>
+} @else if (campaigns().length === 0) {
+  <app-empty-state
+    icon="fa-bullhorn"
+    [title]="'::BusinessPanel:Campaigns:EmptyTitle' | abpLocalization"
+    [description]="'::BusinessPanel:Campaigns:EmptyDescription' | abpLocalization"
+  >
+  </app-empty-state>
+} @else {
+  <div class="d-flex flex-column gap-3">
+    @for (campaign of campaigns(); track campaign.id) {
+      <div class="card p-4">
+        <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-2">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <p class="fw-bold small mb-0">{{ campaign.nameEn }}</p>
+              <app-status-badge [label]="statusLabelKey(campaign.status) | abpLocalization" [variant]="statusVariant(campaign.status)"></app-status-badge>
+            </div>
+            <p class="text-muted small mb-0">
+              {{ typeLabelKey(campaign.type) | abpLocalization }} ·
+              {{ campaign.startDate | date: 'mediumDate' }} – {{ campaign.endDate | date: 'mediumDate' }}
+            </p>
+          </div>
+          @if (canActivate() && campaign.status === Status.Draft) {
+            <button type="button" class="btn btn-primary btn-sm" [disabled]="isActivating()" (click)="activate(campaign)">
+              {{ '::BusinessPanel:Campaigns:Activate' | abpLocalization }}
+            </button>
+          }
+        </div>
+
+        @if (performance(campaign); as perf) {
+          <div class="row row-cols-3 text-center mt-3">
+            <div class="col">
+              <p class="fs-6 fw-bold mb-0">{{ perf.notificationsSent ?? 0 }}</p>
+              <p class="text-muted small mb-0">{{ '::BusinessPanel:Campaigns:StatSent' | abpLocalization }}</p>
+            </div>
+            <div class="col">
+              <p class="fs-6 fw-bold mb-0">{{ perf.membershipsRewarded ?? 0 }}</p>
+              <p class="text-muted small mb-0">{{ '::BusinessPanel:Campaigns:StatRewarded' | abpLocalization }}</p>
+            </div>
+            <div class="col">
+              <p class="fs-6 fw-bold text-success mb-0">{{ perf.bonusPointsAwarded ?? 0 }}</p>
+              <p class="text-muted small mb-0">{{ '::BusinessPanel:Campaigns:StatBonusPoints' | abpLocalization }}</p>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+}
+
+<app-modal
+  [open]="modalOpen()"
+  [title]="'::BusinessPanel:Campaigns:WizardTitle' | abpLocalization"
+  (closed)="closeWizard()"
+>
+  <p class="text-muted small mb-3">
+    {{ '::BusinessPanel:Campaigns:StepPrefix' | abpLocalization }} {{ wizardStep() }} {{ '::BusinessPanel:Campaigns:StepSuffix' | abpLocalization }}
+  </p>
+
+  @if (wizardStep() === 1) {
+    <form [formGroup]="step1Form" class="d-flex flex-column gap-3">
+      <div class="row g-3">
+        <div class="col-12 col-sm-6">
+          <label class="form-label" for="campaignNameEn">{{ '::BusinessPanel:Campaigns:FieldNameEn' | abpLocalization }}</label>
+          <input id="campaignNameEn" type="text" class="form-control" formControlName="nameEn" />
+          @if (step1Form.controls.nameEn.invalid && step1Form.controls.nameEn.touched) {
+            <p class="text-danger small mt-1">{{ '::BusinessPanel:Campaigns:FieldRequired' | abpLocalization }}</p>
+          }
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="form-label" for="campaignNameAr">{{ '::BusinessPanel:Campaigns:FieldNameAr' | abpLocalization }}</label>
+          <input id="campaignNameAr" type="text" class="form-control" formControlName="nameAr" dir="rtl" />
+          @if (step1Form.controls.nameAr.invalid && step1Form.controls.nameAr.touched) {
+            <p class="text-danger small mt-1">{{ '::BusinessPanel:Campaigns:FieldRequired' | abpLocalization }}</p>
+          }
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label" for="campaignType">{{ '::BusinessPanel:Campaigns:FieldType' | abpLocalization }}</label>
+        <select id="campaignType" class="form-select" formControlName="type">
+          <option [ngValue]="Type.DoublePoints">{{ '::BusinessPanel:Campaigns:TypeDoublePoints' | abpLocalization }}</option>
+          <option [ngValue]="Type.Birthday">{{ '::BusinessPanel:Campaigns:TypeBirthday' | abpLocalization }}</option>
+          <option [ngValue]="Type.WinBack">{{ '::BusinessPanel:Campaigns:TypeWinBack' | abpLocalization }}</option>
+          <option [ngValue]="Type.SpendXGetY">{{ '::BusinessPanel:Campaigns:TypeSpendXGetY' | abpLocalization }}</option>
+          <option [ngValue]="Type.Vip">{{ '::BusinessPanel:Campaigns:TypeVip' | abpLocalization }}</option>
+          <option [ngValue]="Type.NewCustomer">{{ '::BusinessPanel:Campaigns:TypeNewCustomer' | abpLocalization }}</option>
+          <option [ngValue]="Type.Referral">{{ '::BusinessPanel:Campaigns:TypeReferral' | abpLocalization }}</option>
+        </select>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-12 col-sm-6">
+          <label class="form-label" for="campaignStart">{{ '::BusinessPanel:Campaigns:FieldStartDate' | abpLocalization }}</label>
+          <input id="campaignStart" type="date" class="form-control" formControlName="startDate" />
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="form-label" for="campaignEnd">{{ '::BusinessPanel:Campaigns:FieldEndDate' | abpLocalization }}</label>
+          <input id="campaignEnd" type="date" class="form-control" formControlName="endDate" />
+        </div>
+      </div>
+
+      @if (step1Form.controls.type.value === Type.DoublePoints) {
+        <div>
+          <label class="form-label" for="multiplier">{{ '::BusinessPanel:Campaigns:FieldMultiplier' | abpLocalization }}</label>
+          <input id="multiplier" type="number" step="0.1" min="1" class="form-control" formControlName="multiplier" />
+        </div>
+      }
+      @if (step1Form.controls.type.value === Type.SpendXGetY) {
+        <div class="row g-3">
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="spendThreshold">{{ '::BusinessPanel:Campaigns:FieldSpendThreshold' | abpLocalization }}</label>
+            <input id="spendThreshold" type="number" min="0" class="form-control" formControlName="spendThreshold" />
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="bonusPoints1">{{ '::BusinessPanel:Campaigns:FieldBonusPoints' | abpLocalization }}</label>
+            <input id="bonusPoints1" type="number" min="0" class="form-control" formControlName="bonusPoints" />
+          </div>
+        </div>
+      }
+      @if (step1Form.controls.type.value === Type.Birthday) {
+        <div class="row g-3">
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="daysBefore">{{ '::BusinessPanel:Campaigns:FieldDaysBefore' | abpLocalization }}</label>
+            <input id="daysBefore" type="number" min="0" class="form-control" formControlName="daysBefore" />
+          </div>
+          <div class="col-12 col-sm-6">
+            <label class="form-label" for="bonusPoints2">{{ '::BusinessPanel:Campaigns:FieldBonusPoints' | abpLocalization }}</label>
+            <input id="bonusPoints2" type="number" min="0" class="form-control" formControlName="bonusPoints" />
+          </div>
+        </div>
+      }
+      @if (step1Form.controls.type.value === Type.WinBack || step1Form.controls.type.value === Type.Vip || step1Form.controls.type.value === Type.NewCustomer) {
+        <div>
+          <label class="form-label" for="bonusPoints3">{{ '::BusinessPanel:Campaigns:FieldBonusPoints' | abpLocalization }}</label>
+          <input id="bonusPoints3" type="number" min="0" class="form-control" formControlName="bonusPoints" />
+        </div>
+      }
+      @if (step1Form.controls.type.value === Type.Referral) {
+        <p class="text-muted small mb-0">{{ '::BusinessPanel:Campaigns:ReferralHint' | abpLocalization }}</p>
+      }
+    </form>
+  }
+
+  @if (wizardStep() === 2) {
+    <form [formGroup]="step2Form" class="d-flex flex-column gap-3">
+      <div>
+        <label class="form-label" for="segmentType">{{ '::BusinessPanel:Campaigns:FieldSegment' | abpLocalization }}</label>
+        <select id="segmentType" class="form-select" formControlName="segmentType">
+          <option [ngValue]="SegmentType.All">{{ '::BusinessPanel:Campaigns:SegmentAll' | abpLocalization }}</option>
+          <option [ngValue]="SegmentType.Tier">{{ '::BusinessPanel:Campaigns:SegmentTier' | abpLocalization }}</option>
+          <option [ngValue]="SegmentType.Inactive">{{ '::BusinessPanel:Campaigns:SegmentInactive' | abpLocalization }}</option>
+          <option [ngValue]="SegmentType.NewCustomer">{{ '::BusinessPanel:Campaigns:SegmentNewCustomer' | abpLocalization }}</option>
+        </select>
+      </div>
+
+      @if (step2Form.controls.segmentType.value === SegmentType.Tier) {
+        <div>
+          <label class="form-label" for="tierId">{{ '::BusinessPanel:Campaigns:FieldTier' | abpLocalization }}</label>
+          <select id="tierId" class="form-select" formControlName="tierId">
+            <option [ngValue]="null">{{ '::BusinessPanel:Campaigns:SelectTier' | abpLocalization }}</option>
+            @for (tier of tiers(); track tier.id) {
+              <option [ngValue]="tier.id">{{ tier.name }}</option>
+            }
+          </select>
+        </div>
+      }
+      @if (step2Form.controls.segmentType.value === SegmentType.Inactive) {
+        <div>
+          <label class="form-label" for="inactiveDays">{{ '::BusinessPanel:Campaigns:FieldInactiveDays' | abpLocalization }}</label>
+          <input id="inactiveDays" type="number" min="1" class="form-control" formControlName="inactiveDays" />
+        </div>
+      }
+      @if (step2Form.controls.segmentType.value === SegmentType.NewCustomer) {
+        <div>
+          <label class="form-label" for="withinDays">{{ '::BusinessPanel:Campaigns:FieldWithinDays' | abpLocalization }}</label>
+          <input id="withinDays" type="number" min="1" class="form-control" formControlName="withinDays" />
+        </div>
+      }
+    </form>
+  }
+
+  @if (wizardStep() === 3) {
+    <div class="alert alert-success d-flex align-items-start gap-2 mb-0">
+      <i class="fas fa-circle-check mt-1"></i>
+      <div>
+        <p class="mb-1">{{ '::BusinessPanel:Campaigns:DraftSavedMessage' | abpLocalization }}</p>
+        @if (previewCount() !== null) {
+          <p class="mb-0">
+            {{ '::BusinessPanel:Campaigns:EstimatedAudiencePrefix' | abpLocalization }}
+            <strong>{{ previewCount() }}</strong>
+            {{ '::BusinessPanel:Campaigns:MembersWord' | abpLocalization }}
+          </p>
+        }
+      </div>
+    </div>
+  }
+
+  <div slot="footer" class="d-flex gap-2 justify-content-end w-100">
+    @if (wizardStep() === 1) {
+      <button type="button" class="btn btn-secondary" (click)="closeWizard()">
+        {{ '::BusinessPanel:Campaigns:Cancel' | abpLocalization }}
+      </button>
+      <button type="button" class="btn btn-primary" [disabled]="isSaving()" (click)="nextFromStep1()">
+        @if (isSaving()) {
+          <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+        }
+        {{ '::BusinessPanel:Campaigns:Next' | abpLocalization }}
+      </button>
+    }
+    @if (wizardStep() === 2) {
+      <button type="button" class="btn btn-secondary" (click)="backStep()">
+        {{ '::BusinessPanel:Campaigns:Back' | abpLocalization }}
+      </button>
+      <button type="button" class="btn btn-primary" [disabled]="isSaving()" (click)="submitStep2()">
+        @if (isSaving()) {
+          <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+        }
+        {{ '::BusinessPanel:Campaigns:Next' | abpLocalization }}
+      </button>
+    }
+    @if (wizardStep() === 3) {
+      <button type="button" class="btn btn-secondary" (click)="saveAsDraft()">
+        {{ '::BusinessPanel:Campaigns:SaveAsDraft' | abpLocalization }}
+      </button>
+      @if (canActivate()) {
+        <button type="button" class="btn btn-primary" [disabled]="isActivating()" (click)="activateFromWizard()">
+          @if (isActivating()) {
+            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+          }
+          {{ '::BusinessPanel:Campaigns:ActivateNow' | abpLocalization }}
+        </button>
+      }
+    }
+  </div>
+</app-modal>

@@ -1,0 +1,79 @@
+<app-page-header
+  [title]="'::BusinessPanel:Settings:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:Settings:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::BusinessPanel:Settings:Title' | abpLocalization) }]"
+>
+</app-page-header>
+
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::BusinessPanel:Settings:Loading' | abpLocalization"></app-loading-spinner>
+} @else if (loadFailed()) {
+  <app-error-state
+    [message]="'::BusinessPanel:Settings:LoadErrorMessage' | abpLocalization"
+    [retryLabel]="'::BusinessPanel:Settings:TryAgain' | abpLocalization"
+    (retry)="retry()"
+  >
+  </app-error-state>
+} @else {
+  <div class="card p-4" style="max-width: 42rem">
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <div class="eks-logo-placeholder"><i class="fas fa-building"></i></div>
+      <div>
+        <p class="fw-bold mb-0">{{ businessName() }}</p>
+        <p class="text-muted small mb-0">
+          @if (profile()?.logoBlobName) {
+            {{ profile()?.logoBlobName }}
+          } @else {
+            {{ '::BusinessPanel:Settings:NoLogo' | abpLocalization }}
+          }
+        </p>
+      </div>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submitForm()" class="d-flex flex-column gap-3">
+      <div>
+        <label class="form-label" for="settingsCategory">{{ '::BusinessPanel:Settings:FieldCategory' | abpLocalization }}</label>
+        <select id="settingsCategory" class="form-select" formControlName="categoryId">
+          <option [ngValue]="null">{{ '::BusinessPanel:Settings:SelectCategory' | abpLocalization }}</option>
+          @for (category of categories(); track category.id) {
+            <option [ngValue]="category.id">{{ category.nameEn }}</option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="form-label" for="settingsWebsite">{{ '::BusinessPanel:Settings:FieldWebsite' | abpLocalization }}</label>
+        <input id="settingsWebsite" type="text" class="form-control" formControlName="website" placeholder="https://…" />
+      </div>
+
+      <div>
+        <label class="form-label" for="settingsDescriptionEn">{{ '::BusinessPanel:Settings:FieldDescriptionEn' | abpLocalization }}</label>
+        <textarea id="settingsDescriptionEn" class="form-control" formControlName="descriptionEn" rows="3"></textarea>
+      </div>
+      <div>
+        <label class="form-label" for="settingsDescriptionAr">{{ '::BusinessPanel:Settings:FieldDescriptionAr' | abpLocalization }}</label>
+        <textarea id="settingsDescriptionAr" class="form-control" formControlName="descriptionAr" rows="3" dir="rtl"></textarea>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-12 col-sm-6">
+          <label class="form-label" for="settingsInstagram">{{ '::BusinessPanel:Settings:FieldInstagram' | abpLocalization }}</label>
+          <input id="settingsInstagram" type="text" class="form-control" formControlName="instagram" placeholder="https://instagram.com/…" />
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="form-label" for="settingsFacebook">{{ '::BusinessPanel:Settings:FieldFacebook' | abpLocalization }}</label>
+          <input id="settingsFacebook" type="text" class="form-control" formControlName="facebook" placeholder="https://facebook.com/…" />
+        </div>
+      </div>
+
+      @if (canEdit()) {
+        <button type="submit" class="btn btn-primary align-self-start" [disabled]="isSaving()">
+          @if (isSaving()) {
+            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+          }
+          {{ '::BusinessPanel:Settings:SaveChanges' | abpLocalization }}
+        </button>
+      }
+    </form>
+  </div>
+}

@@ -79,6 +79,10 @@ public class EksabliDbContext :
 
     public DbSet<Notification> Notifications { get; set; }
 
+    public DbSet<NotificationMessage> NotificationMessages { get; set; }
+
+    public DbSet<UserNotification> UserNotifications { get; set; }
+
     public DbSet<Referral> Referrals { get; set; }
 
     public DbSet<Achievement> Achievements { get; set; }
@@ -351,6 +355,25 @@ public class EksabliDbContext :
             b.Property(x => x.Body).IsRequired().HasMaxLength(NotificationConsts.MaxBodyLength);
             b.HasIndex(x => new { x.TenantId, x.CampaignId });
             b.HasIndex(x => new { x.MembershipId, x.CreationTime });
+        });
+
+        builder.Entity<NotificationMessage>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "NotificationMessages", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.Title).IsRequired().HasMaxLength(UserNotificationConsts.MaxTitleLength);
+            b.Property(x => x.Message).IsRequired().HasMaxLength(UserNotificationConsts.MaxMessageLength);
+            b.Property(x => x.Category).HasMaxLength(UserNotificationConsts.MaxCategoryLength);
+            b.Property(x => x.Data).HasMaxLength(UserNotificationConsts.MaxDataLength);
+        });
+
+        builder.Entity<UserNotification>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "UserNotifications", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            // Feed query is "my unread/all, newest first" — see EfCoreUserNotificationRepository.GetFeedAsync.
+            b.HasIndex(x => new { x.UserId, x.IsRead, x.CreationTime });
+            b.HasIndex(x => x.NotificationMessageId);
         });
 
         builder.Entity<Referral>(b =>

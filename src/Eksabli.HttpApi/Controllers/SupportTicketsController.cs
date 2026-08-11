@@ -32,9 +32,12 @@ public class SupportTicketsController : EksabliController
         return _supportTicketAppService.GetAsync(id);
     }
 
-    // The queue — every ticket, not just the caller's own, so this specifically needs the Support
-    // Agent permission on top of the class-level authenticated requirement.
-    [Authorize(EksabliPermissions.SupportTickets.Manage)]
+    // No permission gate beyond the class-level [Authorize] — this is dual-purpose: a Support Agent
+    // (Eksabli.SupportTickets.Manage) gets the full cross-tenant/cross-customer queue with whatever
+    // filters they pass; anyone else gets silently self-scoped to their own tenant's or their own
+    // customer tickets regardless of what they pass (see SupportTicketAppService.GetListAsync — the
+    // scoping decision lives there, not here, so it can't be bypassed by calling this endpoint
+    // directly with a crafted tenantId).
     [HttpGet]
     public Task<PagedResultDto<SupportTicketDto>> GetListAsync([FromQuery] SupportTicketFilterDto input)
     {

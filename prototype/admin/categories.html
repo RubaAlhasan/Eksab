@@ -45,7 +45,7 @@
 <div class="modal-overlay" data-modal="cat-form">
   <div class="modal-panel p-6" style="max-width:26rem">
     <h3 class="font-bold text-base mb-4" id="cat-modal-title">New Category</h3>
-    <div><label class="field-label">Category name</label><input class="input" id="cat-name-input" placeholder="e.g. Pet Care"></div>
+    <div><label class="field-label">Category name</label><input class="input" id="cat-name-input" placeholder="e.g. Pet Care"><p class="field-error hidden" id="cat-name-error"></p></div>
     <div class="flex gap-3 mt-5">
       <button class="btn btn-secondary flex-1" data-modal-close="cat-form">Cancel</button>
       <button class="btn btn-primary flex-1" id="save-cat-btn">Save</button>
@@ -83,10 +83,28 @@
       </td>
     </tr>`).join('');
 
-  document.getElementById('new-cat-btn').addEventListener('click', () => { document.getElementById('cat-modal-title').textContent = 'New Category'; document.getElementById('cat-name-input').value = ''; Eksabli.openModal('cat-form'); });
-  document.querySelectorAll('.edit-cat').forEach(btn => btn.addEventListener('click', () => { document.getElementById('cat-modal-title').textContent = 'Edit Category'; Eksabli.openModal('cat-form'); }));
+  function resetCatForm() {
+    document.getElementById('cat-name-input').value = '';
+    document.getElementById('cat-name-error').classList.add('hidden');
+    document.getElementById('cat-name-input').classList.remove('input-error');
+  }
+  document.getElementById('new-cat-btn').addEventListener('click', () => { document.getElementById('cat-modal-title').textContent = 'New Category'; resetCatForm(); Eksabli.openModal('cat-form'); });
+  document.querySelectorAll('.edit-cat').forEach(btn => btn.addEventListener('click', () => { document.getElementById('cat-modal-title').textContent = 'Edit Category'; resetCatForm(); Eksabli.openModal('cat-form'); }));
   document.querySelectorAll('.delete-cat').forEach(btn => btn.addEventListener('click', () => Eksabli.openModal('cat-delete')));
-  document.getElementById('save-cat-btn').addEventListener('click', () => { Eksabli.closeModal('cat-form'); Eksabli.showToast({ type: 'success', title: 'Category saved' }); });
+  document.getElementById('save-cat-btn').addEventListener('click', () => {
+    const nameInput = document.getElementById('cat-name-input');
+    const nameError = document.getElementById('cat-name-error');
+    if (!nameInput.value.trim()) {
+      nameError.textContent = 'Category name is required.';
+      nameError.classList.remove('hidden');
+      nameInput.classList.add('input-error');
+      return;
+    }
+    nameError.classList.add('hidden');
+    nameInput.classList.remove('input-error');
+    Eksabli.closeModal('cat-form');
+    Eksabli.showToast({ type: 'success', title: 'Category saved' });
+  });
   document.getElementById('confirm-delete-cat').addEventListener('click', () => { Eksabli.closeModal('cat-delete'); Eksabli.showToast({ type: 'danger', title: 'Category deleted' }); });
 </script>
 </body>

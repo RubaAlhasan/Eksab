@@ -1,0 +1,165 @@
+<app-page-header
+  [title]="'::Menu:Categories' | abpLocalization"
+  [subtitle]="'::AdminPanel:Categories:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Admin Portal', link: '/admin/businesses' }, { label: ('::Menu:Categories' | abpLocalization) }]"
+>
+  @if (canCreate()) {
+    <button type="button" class="btn btn-primary btn-sm" (click)="openCreateModal()">
+      <i class="fas fa-plus me-1"></i>{{ '::AdminPanel:Categories:New' | abpLocalization }}
+    </button>
+  }
+</app-page-header>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <app-search-input
+      [placeholder]="'::AdminPanel:Categories:SearchPlaceholder' | abpLocalization"
+      (valueChange)="onSearchInput($event)"
+    >
+    </app-search-input>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{{ '::AdminPanel:Categories:ColumnCategory' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:Categories:ColumnBusinesses' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:Categories:ColumnParent' | abpLocalization }}</th>
+          <th class="text-end"><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (isLoading()) {
+          <tr>
+            <td colspan="4">
+              <app-loading-spinner [label]="'::AdminPanel:Categories:Loading' | abpLocalization"></app-loading-spinner>
+            </td>
+          </tr>
+        } @else if (loadFailed()) {
+          <tr>
+            <td colspan="4">
+              <app-error-state
+                [message]="'::AdminPanel:Categories:LoadErrorMessage' | abpLocalization"
+                [retryLabel]="'::AdminPanel:Categories:TryAgain' | abpLocalization"
+                (retry)="retry()"
+              >
+              </app-error-state>
+            </td>
+          </tr>
+        } @else if (categories().length === 0) {
+          <tr>
+            <td colspan="4">
+              <app-empty-state icon="fa-tags" [title]="'::AdminPanel:Categories:EmptyTitle' | abpLocalization"></app-empty-state>
+            </td>
+          </tr>
+        } @else {
+          @for (category of categories(); track category.id) {
+            <tr>
+              <td>
+                <div class="fw-semibold"><i class="fas fa-tag text-muted me-2"></i>{{ category.nameEn }}</div>
+                <div class="text-muted small">{{ category.nameAr }}</div>
+              </td>
+              <td class="text-muted">{{ category.businessCount }}</td>
+              <td class="text-muted">{{ parentName(category) ?? '—' }}</td>
+              <td class="text-end">
+                @if (canEdit()) {
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary me-2"
+                    [attr.aria-label]="'::AdminPanel:Categories:Edit' | abpLocalization"
+                    (click)="openEditModal(category)"
+                  >
+                    <i class="fas fa-pencil"></i>
+                  </button>
+                }
+                @if (canDelete()) {
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    [attr.aria-label]="'::AdminPanel:Categories:Delete' | abpLocalization"
+                    (click)="deleteCategory(category)"
+                  >
+                    <i class="fas fa-trash"></i>
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (!isLoading() && !loadFailed()) {
+    <div class="card-footer">
+      <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)"></app-pagination>
+    </div>
+  }
+</div>
+
+<app-modal [open]="modalOpen()" [title]="modalTitle() | abpLocalization" (closed)="closeModal()">
+  <form [formGroup]="form" (ngSubmit)="submitForm()" class="d-flex flex-column gap-3">
+    <div>
+      <label class="form-label" for="nameEn">{{ '::AdminPanel:Categories:FieldNameEn' | abpLocalization }}</label>
+      <input id="nameEn" type="text" class="form-control" formControlName="nameEn" placeholder="e.g. Coffee Shop" />
+      @if (form.controls.nameEn.invalid && form.controls.nameEn.touched) {
+        <p class="text-danger small mt-1">
+          @if (form.controls.nameEn.errors?.['required']) {
+            {{ '::AdminPanel:Categories:NameEnRequired' | abpLocalization }}
+          } @else if (form.controls.nameEn.errors?.['maxlength']) {
+            {{ '::AdminPanel:Categories:NameMaxLength' | abpLocalization }}
+          }
+        </p>
+      }
+    </div>
+    <div>
+      <label class="form-label" for="nameAr">{{ '::AdminPanel:Categories:FieldNameAr' | abpLocalization }}</label>
+      <input id="nameAr" type="text" class="form-control" formControlName="nameAr" placeholder="مثال: مقهى" dir="rtl" />
+      @if (form.controls.nameAr.invalid && form.controls.nameAr.touched) {
+        <p class="text-danger small mt-1">
+          @if (form.controls.nameAr.errors?.['required']) {
+            {{ '::AdminPanel:Categories:NameArRequired' | abpLocalization }}
+          } @else if (form.controls.nameAr.errors?.['maxlength']) {
+            {{ '::AdminPanel:Categories:NameMaxLength' | abpLocalization }}
+          }
+        </p>
+      }
+    </div>
+    <div>
+      <label class="form-label" for="parentCategoryId">{{ '::AdminPanel:Categories:FieldParent' | abpLocalization }}</label>
+      <select id="parentCategoryId" class="form-select" formControlName="parentCategoryId">
+        <option value="">{{ '::AdminPanel:Categories:NoParent' | abpLocalization }}</option>
+        @for (option of parentOptions(); track option.id) {
+          <option [value]="option.id">{{ option.nameEn }}</option>
+        }
+      </select>
+    </div>
+    <div>
+      <label class="form-label" for="iconBlobName">{{ '::AdminPanel:Categories:FieldIcon' | abpLocalization }}</label>
+      <input
+        id="iconBlobName"
+        type="text"
+        class="form-control"
+        formControlName="iconBlobName"
+        placeholder="categories/coffee.png"
+      />
+      @if (form.controls.iconBlobName.invalid && form.controls.iconBlobName.touched) {
+        <p class="text-danger small mt-1">{{ '::AdminPanel:Categories:IconMaxLength' | abpLocalization }}</p>
+      }
+    </div>
+  </form>
+
+  <div slot="footer" class="d-flex gap-2 justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeModal()">
+      {{ '::AdminPanel:Categories:Cancel' | abpLocalization }}
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="isSaving()" (click)="submitForm()">
+      @if (isSaving()) {
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+      }
+      {{ '::AdminPanel:Categories:Save' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Eksabli.Branches;
 using Eksabli.Features;
@@ -93,7 +92,7 @@ public class BillingAppService : ApplicationService, IBillingAppService
         var tenantId = CurrentTenant.Id
             ?? throw new AbpException("PushPlanFeaturesAsync must run in a tenant context.");
 
-        var limits = JsonSerializer.Deserialize<Dictionary<string, string>>(plan.FeatureLimitsJson) ?? new Dictionary<string, string>();
+        var limits = SubscriptionPlanFeatureLimits.Parse(plan.FeatureLimitsJson);
         foreach (var (key, value) in limits)
         {
             await _featureManager.SetForTenantAsync(tenantId, key, value);

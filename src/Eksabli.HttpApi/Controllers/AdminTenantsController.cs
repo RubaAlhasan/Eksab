@@ -32,6 +32,12 @@ public class AdminTenantsController : EksabliController
         return _adminTenantAppService.GetAsync(tenantId);
     }
 
+    [HttpGet("{tenantId}/detail-stats")]
+    public Task<AdminTenantDetailStatsDto> GetDetailStatsAsync(Guid tenantId)
+    {
+        return _adminTenantAppService.GetDetailStatsAsync(tenantId);
+    }
+
     [Authorize(EksabliPermissions.Tenants.Approve)]
     [HttpPost("{tenantId}/approve")]
     public Task<AdminTenantDto> ApproveAsync(Guid tenantId)

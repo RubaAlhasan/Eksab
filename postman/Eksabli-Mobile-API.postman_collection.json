@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Eksabli Mobile API",
-    "description": "Customer-facing (Host-realm) API, rebuilt directly from the live Swagger doc of `Eksabli.HttpApi.Host`, the real `[Authorize]` attributes in `src/Eksabli.HttpApi/Controllers/` (ABP's auto-API-controllers are disabled in this repo — every app service has a hand-written controller instead), and live curl verification with a throwaway registered user against `https://localhost:44330`.\n\n**Base URLs** — two, because token issuance is not an ABP application service: `{{baseUrl}}` = `https://localhost:44330/api` for everything else, `{{issuerUrl}}` = `https://localhost:44330` for `/connect/token`.\n\n**Auth flow**: run **Authentication > Login (password grant)** (or Send OTP -> Login (OTP grant)) first — its Tests script saves `accessToken`/`refreshToken` automatically (note: OAuth2 responses use `access_token`/`refresh_token`, snake_case). A collection-level Pre-request script auto-refreshes when the token is close to expiry. **Verified end-to-end**: Register -> Login (password grant) -> several Bearer-authenticated calls all confirmed working against the live host.\n\n**Two distinct error shapes — do not confuse them:**\n- Missing/invalid Bearer token (401), or a permission-attribute rejection like `[Authorize(SomePermission)]` (403) -> **empty body**, verified live on `/api/app/achievement` and `/api/app/category` (POST).\n- A business rule thrown from inside app-service code (wrong password, entity not found, ownership check) -> ABP's JSON `{ error: {...} }` wrapper. Confirmed live: **wrong password change and \"email not found\" both return 403** (not 400) with `data: null`; entity-not-found (bad id) returns **404** with message `\"There is no entity {Type} with id = {id}!\"`. Only real input-shape validation failures (missing required fields, bad email format) return 400, with message `\"Your request is not valid!\"`.\n- `/connect/token` errors follow plain OAuth2 `{ error, error_description }` instead of either ABP shape.\n\n**Known gaps vs. the original design docs — intentionally NOT invented as fake endpoints:**\n- No store discovery/search/nearby/list endpoint exists yet (only `follow/{tenantId}`, `business/profile`, both need an already-known `tenantId`). Categories is the only public browse surface today.\n- No customer notification inbox: `/api/app/notification` GET is the tenant's *sent* log, gated by `Eksabli.Notifications.Send` (a marketing-staff permission) — not readable by ordinary customers.\n- No customer-facing Campaigns/Offers read: both controllers require `Eksabli.Campaigns`/`Eksabli.Offers` (Default), which are staff-oriented permissions, not `[AllowAnonymous]`/open-to-customer.\n- No Leaderboard and no app-level Settings (language/theme) endpoint exist at all.\n- Achievements browsing is gated behind the same staff \"Default\" permission used for badge CRUD (verified live, see folder note).\n- Support ticket \"list all my tickets\" doesn't exist — only get-by-id once you already have one.\n- Several write endpoints (Join Business, Follow, Redeem catalog browse) do not validate that the referenced `tenantId` actually exists — verified live with an all-zero GUID, which was silently accepted.",
+    "description": "Customer-facing (Host-realm) API, rebuilt directly from the live Swagger doc of `Eksabli.HttpApi.Host`, the real `[Authorize]` attributes in `src/Eksabli.HttpApi/Controllers/` (ABP's auto-API-controllers are disabled in this repo — every app service has a hand-written controller instead), and live curl verification with a throwaway registered user against `https://localhost:44330`.\n\n**Base URLs** — two, because token issuance is not an ABP application service: `{{baseUrl}}` = `https://localhost:44330/api` for everything else, `{{issuerUrl}}` = `https://localhost:44330` for `/connect/token`.\n\n**Auth flow**: for a new customer, run **Register Customer -> Login (OTP grant)** (the register call sends the code itself, no separate Send OTP needed). For a returning customer, either **Send OTP -> Login (OTP grant)**, or **Login (password grant)** once they have a confirmed phone number. Every grant's Tests script saves `accessToken`/`refreshToken` automatically (note: OAuth2 responses use `access_token`/`refresh_token`, snake_case). A collection-level Pre-request script auto-refreshes when the token is close to expiry. Note: stock ABP self-registration (`/api/account/register`) is disabled platform-wide as of this revision — see that folder entry's own description for why; it is kept only as a labeled reference, not a working flow.\n\n**Two distinct error shapes — do not confuse them:**\n- Missing/invalid Bearer token (401), or a permission-attribute rejection like `[Authorize(SomePermission)]` (403) -> **empty body**, verified live on `/api/app/achievement` and `/api/app/category` (POST).\n- A business rule thrown from inside app-service code (wrong password, entity not found, ownership check) -> ABP's JSON `{ error: {...} }` wrapper. Confirmed live: **wrong password change and \"email not found\" both return 403** (not 400) with `data: null`; entity-not-found (bad id) returns **404** with message `\"There is no entity {Type} with id = {id}!\"`. Only real input-shape validation failures (missing required fields, bad email format) return 400, with message `\"Your request is not valid!\"`.\n- `/connect/token` errors follow plain OAuth2 `{ error, error_description }` instead of either ABP shape.\n\n**Known gaps vs. the original design docs — intentionally NOT invented as fake endpoints:**\n- No store discovery/search/nearby/list endpoint exists yet (only `follow/{tenantId}`, `business/profile`, both need an already-known `tenantId`). Categories is the only public browse surface today.\n- No customer notification inbox: `/api/app/notification` GET is the tenant's *sent* log, gated by `Eksabli.Notifications.Send` (a marketing-staff permission) — not readable by ordinary customers.\n- No customer-facing Campaigns/Offers read: both controllers require `Eksabli.Campaigns`/`Eksabli.Offers` (Default), which are staff-oriented permissions, not `[AllowAnonymous]`/open-to-customer.\n- No Leaderboard and no app-level Settings (language/theme) endpoint exist at all.\n- Achievements browsing is gated behind the same staff \"Default\" permission used for badge CRUD (verified live, see folder note).\n- Support ticket \"list all my tickets\" doesn't exist — only get-by-id once you already have one.\n- Several write endpoints (Join Business, Follow, Redeem catalog browse) do not validate that the referenced `tenantId` actually exists — verified live with an all-zero GUID, which was silently accepted.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -265,7 +265,7 @@
                 "token"
               ]
             },
-            "description": "Custom OpenIddict extension grant `grant_type=otp` (src/Eksabli.HttpApi.Host/OpenIddict/OtpLoginGrantHandler.cs) — exchanges a verified phone+code pair for tokens, creating the Host-realm customer on first use. Body MUST be `application/x-www-form-urlencoded` (standard OAuth2 token request), not JSON.",
+            "description": "Custom OpenIddict extension grant `grant_type=otp` (src/Eksabli.HttpApi.Host/OpenIddict/OtpLoginGrantHandler.cs) — exchanges a verified phone+code pair for tokens. Body MUST be `application/x-www-form-urlencoded` (standard OAuth2 token request), not JSON.\n\nTwo cases, same call: (1) phone number never registered at all -> creates a bare Host-realm customer on the spot (legacy \"pure OTP login\" fallback, e.g. for numbers added via POS). (2) phone number was registered via **Register Customer** above but not yet verified -> this call is what actually activates that account (`phoneNumberConfirmed` flips true) and logs it in; the profile/name/email/dob captured at registration was already saved, this step only proves the phone number. Already-verified accounts just log in normally.",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -317,7 +317,7 @@
                     "token"
                   ]
                 },
-                "description": "Custom OpenIddict extension grant `grant_type=otp` (src/Eksabli.HttpApi.Host/OpenIddict/OtpLoginGrantHandler.cs) — exchanges a verified phone+code pair for tokens, creating the Host-realm customer on first use. Body MUST be `application/x-www-form-urlencoded` (standard OAuth2 token request), not JSON.",
+                "description": "Custom OpenIddict extension grant `grant_type=otp` (src/Eksabli.HttpApi.Host/OpenIddict/OtpLoginGrantHandler.cs) — exchanges a verified phone+code pair for tokens. Body MUST be `application/x-www-form-urlencoded` (standard OAuth2 token request), not JSON.\n\nTwo cases, same call: (1) phone number never registered at all -> creates a bare Host-realm customer on the spot (legacy \"pure OTP login\" fallback, e.g. for numbers added via POS). (2) phone number was registered via **Register Customer** above but not yet verified -> this call is what actually activates that account (`phoneNumberConfirmed` flips true) and logs it in; the profile/name/email/dob captured at registration was already saved, this step only proves the phone number. Already-verified accounts just log in normally.",
                 "body": {
                   "mode": "urlencoded",
                   "urlencoded": [
@@ -380,7 +380,7 @@
                     "token"
                   ]
                 },
-                "description": "Custom OpenIddict extension grant `grant_type=otp` (src/Eksabli.HttpApi.Host/OpenIddict/OtpLoginGrantHandler.cs) — exchanges a verified phone+code pair for tokens, creating the Host-realm customer on first use. Body MUST be `application/x-www-form-urlencoded` (standard OAuth2 token request), not JSON.",
+                "description": "Custom OpenIddict extension grant `grant_type=otp` (src/Eksabli.HttpApi.Host/OpenIddict/OtpLoginGrantHandler.cs) — exchanges a verified phone+code pair for tokens. Body MUST be `application/x-www-form-urlencoded` (standard OAuth2 token request), not JSON.\n\nTwo cases, same call: (1) phone number never registered at all -> creates a bare Host-realm customer on the spot (legacy \"pure OTP login\" fallback, e.g. for numbers added via POS). (2) phone number was registered via **Register Customer** above but not yet verified -> this call is what actually activates that account (`phoneNumberConfirmed` flips true) and logs it in; the profile/name/email/dob captured at registration was already saved, this step only proves the phone number. Already-verified accounts just log in normally.",
                 "body": {
                   "mode": "urlencoded",
                   "urlencoded": [
@@ -443,7 +443,7 @@
                     "token"
                   ]
                 },
-                "description": "Custom OpenIddict extension grant `grant_type=otp` (src/Eksabli.HttpApi.Host/OpenIddict/OtpLoginGrantHandler.cs) — exchanges a verified phone+code pair for tokens, creating the Host-realm customer on first use. Body MUST be `application/x-www-form-urlencoded` (standard OAuth2 token request), not JSON.",
+                "description": "Custom OpenIddict extension grant `grant_type=otp` (src/Eksabli.HttpApi.Host/OpenIddict/OtpLoginGrantHandler.cs) — exchanges a verified phone+code pair for tokens. Body MUST be `application/x-www-form-urlencoded` (standard OAuth2 token request), not JSON.\n\nTwo cases, same call: (1) phone number never registered at all -> creates a bare Host-realm customer on the spot (legacy \"pure OTP login\" fallback, e.g. for numbers added via POS). (2) phone number was registered via **Register Customer** above but not yet verified -> this call is what actually activates that account (`phoneNumberConfirmed` flips true) and logs it in; the profile/name/email/dob captured at registration was already saved, this step only proves the phone number. Already-verified accounts just log in normally.",
                 "body": {
                   "mode": "urlencoded",
                   "urlencoded": [
@@ -526,7 +526,7 @@
                 "token"
               ]
             },
-            "description": "Standard OAuth2 Resource Owner Password grant. `username` is the ABP `IdentityUser.UserName` set at Register (not the phone number, unless you also set `UserName` to the phone). Requires `offline_access` in `scope` to receive a `refresh_token`. **Verified live** end-to-end with a throwaway registered user — real response shape shown, tokens truncated for readability.",
+            "description": "Standard OAuth2 Resource Owner Password grant. `username` is the ABP `IdentityUser.UserName` — for a customer created via **Register Customer**, that's the normalized phone number itself (not a chosen handle), since phone IS the username by this app's design. Requires `offline_access` in `scope` to receive a `refresh_token`. Note: the account must have `phoneNumberConfirmed: true` (i.e. completed **Login (OTP grant)** at least once) — password-only login for a still-unverified registration has not been tested and is not guaranteed to work.",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
@@ -537,7 +537,7 @@
                 },
                 {
                   "key": "username",
-                  "value": "sara.customer",
+                  "value": "+966501112222",
                   "disabled": false
                 },
                 {
@@ -578,7 +578,7 @@
                     "token"
                   ]
                 },
-                "description": "Standard OAuth2 Resource Owner Password grant. `username` is the ABP `IdentityUser.UserName` set at Register (not the phone number, unless you also set `UserName` to the phone). Requires `offline_access` in `scope` to receive a `refresh_token`. **Verified live** end-to-end with a throwaway registered user — real response shape shown, tokens truncated for readability.",
+                "description": "Standard OAuth2 Resource Owner Password grant. `username` is the ABP `IdentityUser.UserName` — for a customer created via **Register Customer**, that's the normalized phone number itself (not a chosen handle), since phone IS the username by this app's design. Requires `offline_access` in `scope` to receive a `refresh_token`. Note: the account must have `phoneNumberConfirmed: true` (i.e. completed **Login (OTP grant)** at least once) — password-only login for a still-unverified registration has not been tested and is not guaranteed to work.",
                 "body": {
                   "mode": "urlencoded",
                   "urlencoded": [
@@ -589,7 +589,7 @@
                     },
                     {
                       "key": "username",
-                      "value": "sara.customer",
+                      "value": "+966501112222",
                       "disabled": false
                     },
                     {
@@ -641,7 +641,7 @@
                     "token"
                   ]
                 },
-                "description": "Standard OAuth2 Resource Owner Password grant. `username` is the ABP `IdentityUser.UserName` set at Register (not the phone number, unless you also set `UserName` to the phone). Requires `offline_access` in `scope` to receive a `refresh_token`. **Verified live** end-to-end with a throwaway registered user — real response shape shown, tokens truncated for readability.",
+                "description": "Standard OAuth2 Resource Owner Password grant. `username` is the ABP `IdentityUser.UserName` — for a customer created via **Register Customer**, that's the normalized phone number itself (not a chosen handle), since phone IS the username by this app's design. Requires `offline_access` in `scope` to receive a `refresh_token`. Note: the account must have `phoneNumberConfirmed: true` (i.e. completed **Login (OTP grant)** at least once) — password-only login for a still-unverified registration has not been tested and is not guaranteed to work.",
                 "body": {
                   "mode": "urlencoded",
                   "urlencoded": [
@@ -652,7 +652,7 @@
                     },
                     {
                       "key": "username",
-                      "value": "sara.customer",
+                      "value": "+966501112222",
                       "disabled": false
                     },
                     {
@@ -878,7 +878,7 @@
           ]
         },
         {
-          "name": "Register",
+          "name": "Register Customer",
           "request": {
             "method": "POST",
             "header": [
@@ -889,19 +889,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/account/register",
+              "raw": "{{baseUrl}}/app/otp/register",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "account",
+                "app",
+                "otp",
                 "register"
               ]
             },
-            "description": "`[AllowAnonymous]`, standard ABP self-registration. Note there is no `phoneNumber` field here — set it afterwards via **Profile > Update My Account Profile**, then use Send OTP + Login (OTP grant) to enable phone/OTP sign-in. `appName` must match a registered OpenIddict client display context; use `\"Angular\"` (the seeded public client's name). Verified live: returns 200 (not 201) with the full `IdentityUserDto` including audit fields.",
+            "description": "Field set matches `prototype/customer/register.html` exactly. Creates the Host-realm `IdentityUser` **and** a fully-populated `CustomerProfile` (name/email/dob/gender) immediately — not blank like the old stock self-registration below used to leave it — but the account stays unusable (`phoneNumberConfirmed: false`) until you follow up with **Login (OTP grant)** using the code this call sends (same SMS mechanism as **Send OTP**, no separate request needed). Posting the same, still-unverified phone number again overwrites the earlier attempt rather than erroring (handles an abandoned/retry signup); posting an ALREADY-VERIFIED phone number returns the error below instead. `email`/`dateOfBirth`/`gender` are optional. `gender` is an int: 0=Unspecified, 1=Male, 2=Female. NOT verified live yet (host wasn't running when this was generated) — shapes reflect the actual controller/DTO code, not curl output.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"userName\": \"sara.customer\",\n  \"emailAddress\": \"sara.customer@example.com\",\n  \"password\": \"P@ssw0rd!2026\",\n  \"appName\": \"Angular\"\n}",
+              "raw": "{\n  \"phoneNumber\": \"+966501112222\",\n  \"firstName\": \"Layla\",\n  \"lastName\": \"Haddad\",\n  \"email\": \"layla@example.com\",\n  \"dateOfBirth\": \"1995-04-12T00:00:00Z\",\n  \"gender\": 2,\n  \"password\": \"P@ssw0rd!2026\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -926,19 +927,20 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/account/register",
+                  "raw": "{{baseUrl}}/app/otp/register",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
-                    "account",
+                    "app",
+                    "otp",
                     "register"
                   ]
                 },
-                "description": "`[AllowAnonymous]`, standard ABP self-registration. Note there is no `phoneNumber` field here — set it afterwards via **Profile > Update My Account Profile**, then use Send OTP + Login (OTP grant) to enable phone/OTP sign-in. `appName` must match a registered OpenIddict client display context; use `\"Angular\"` (the seeded public client's name). Verified live: returns 200 (not 201) with the full `IdentityUserDto` including audit fields.",
+                "description": "Field set matches `prototype/customer/register.html` exactly. Creates the Host-realm `IdentityUser` **and** a fully-populated `CustomerProfile` (name/email/dob/gender) immediately — not blank like the old stock self-registration below used to leave it — but the account stays unusable (`phoneNumberConfirmed: false`) until you follow up with **Login (OTP grant)** using the code this call sends (same SMS mechanism as **Send OTP**, no separate request needed). Posting the same, still-unverified phone number again overwrites the earlier attempt rather than erroring (handles an abandoned/retry signup); posting an ALREADY-VERIFIED phone number returns the error below instead. `email`/`dateOfBirth`/`gender` are optional. `gender` is an int: 0=Unspecified, 1=Male, 2=Female. NOT verified live yet (host wasn't running when this was generated) — shapes reflect the actual controller/DTO code, not curl output.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"userName\": \"sara.customer\",\n  \"emailAddress\": \"sara.customer@example.com\",\n  \"password\": \"P@ssw0rd!2026\",\n  \"appName\": \"Angular\"\n}",
+                  "raw": "{\n  \"phoneNumber\": \"+966501112222\",\n  \"firstName\": \"Layla\",\n  \"lastName\": \"Haddad\",\n  \"email\": \"layla@example.com\",\n  \"dateOfBirth\": \"1995-04-12T00:00:00Z\",\n  \"gender\": 2,\n  \"password\": \"P@ssw0rd!2026\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -949,8 +951,8 @@
                   "type": "noauth"
                 }
               },
-              "status": "OK",
-              "code": 200,
+              "status": "No Content",
+              "code": 204,
               "_postman_previewlanguage": "json",
               "header": [
                 {
@@ -959,7 +961,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"id\": \"5f3d8e2a-0000-4000-8000-000000000001\",\n  \"tenantId\": null,\n  \"userName\": \"sara.customer\",\n  \"name\": null,\n  \"surname\": null,\n  \"email\": \"sara.customer@example.com\",\n  \"emailConfirmed\": false,\n  \"phoneNumber\": null,\n  \"phoneNumberConfirmed\": false,\n  \"isActive\": true,\n  \"lockoutEnabled\": true,\n  \"accessFailedCount\": 0,\n  \"lockoutEnd\": null,\n  \"concurrencyStamp\": \"8be40c6cad184c0bb6ecd55e4f42a1e6\",\n  \"entityVersion\": 1,\n  \"creationTime\": \"2025-11-08T10:00:00Z\"\n}"
+              "body": ""
             },
             {
               "id": "00000000-0000-4000-8000-000000000012",
@@ -974,19 +976,20 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/account/register",
+                  "raw": "{{baseUrl}}/app/otp/register",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
-                    "account",
+                    "app",
+                    "otp",
                     "register"
                   ]
                 },
-                "description": "`[AllowAnonymous]`, standard ABP self-registration. Note there is no `phoneNumber` field here — set it afterwards via **Profile > Update My Account Profile**, then use Send OTP + Login (OTP grant) to enable phone/OTP sign-in. `appName` must match a registered OpenIddict client display context; use `\"Angular\"` (the seeded public client's name). Verified live: returns 200 (not 201) with the full `IdentityUserDto` including audit fields.",
+                "description": "Field set matches `prototype/customer/register.html` exactly. Creates the Host-realm `IdentityUser` **and** a fully-populated `CustomerProfile` (name/email/dob/gender) immediately — not blank like the old stock self-registration below used to leave it — but the account stays unusable (`phoneNumberConfirmed: false`) until you follow up with **Login (OTP grant)** using the code this call sends (same SMS mechanism as **Send OTP**, no separate request needed). Posting the same, still-unverified phone number again overwrites the earlier attempt rather than erroring (handles an abandoned/retry signup); posting an ALREADY-VERIFIED phone number returns the error below instead. `email`/`dateOfBirth`/`gender` are optional. `gender` is an int: 0=Unspecified, 1=Male, 2=Female. NOT verified live yet (host wasn't running when this was generated) — shapes reflect the actual controller/DTO code, not curl output.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"userName\": \"sara.customer\",\n  \"emailAddress\": \"sara.customer@example.com\",\n  \"password\": \"P@ssw0rd!2026\",\n  \"appName\": \"Angular\"\n}",
+                  "raw": "{\n  \"phoneNumber\": \"+966501112222\",\n  \"firstName\": \"Layla\",\n  \"lastName\": \"Haddad\",\n  \"email\": \"layla@example.com\",\n  \"dateOfBirth\": \"1995-04-12T00:00:00Z\",\n  \"gender\": 2,\n  \"password\": \"P@ssw0rd!2026\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1007,11 +1010,98 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"Your request is not valid!\",\n    \"details\": \"The following errors were detected during validation.\\r\\n - The AppName field is required.\\r\\n - The Password field is required.\\r\\n - The Username field is required.\\r\\n - The Email address field is required.\\r\\n\",\n    \"data\": null,\n    \"validationErrors\": [\n      {\n        \"message\": \"The AppName field is required.\",\n        \"members\": [\n          \"appName\"\n        ]\n      },\n      {\n        \"message\": \"The Password field is required.\",\n        \"members\": [\n          \"password\"\n        ]\n      },\n      {\n        \"message\": \"The Username field is required.\",\n        \"members\": [\n          \"userName\"\n        ]\n      },\n      {\n        \"message\": \"The Email address field is required.\",\n        \"members\": [\n          \"emailAddress\"\n        ]\n      }\n    ]\n  }\n}"
+              "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"Your request is not valid!\",\n    \"details\": \"The following errors were detected during validation.\\r\\n - 'phoneNumber' is required.\\r\\n - 'firstName' is required.\\r\\n - 'lastName' is required.\\r\\n - The field password must be a string with a minimum length of '8'.\\r\\n\",\n    \"data\": null,\n    \"validationErrors\": [\n      {\n        \"message\": \"'phoneNumber' is required.\",\n        \"members\": [\n          \"phoneNumber\"\n        ]\n      },\n      {\n        \"message\": \"'firstName' is required.\",\n        \"members\": [\n          \"firstName\"\n        ]\n      },\n      {\n        \"message\": \"'lastName' is required.\",\n        \"members\": [\n          \"lastName\"\n        ]\n      },\n      {\n        \"message\": \"The field password must be a string with a minimum length of '8'.\",\n        \"members\": [\n          \"password\"\n        ]\n      }\n    ]\n  }\n}"
             },
             {
               "id": "00000000-0000-4000-8000-000000000013",
-              "name": "403 Forbidden - Username already taken",
+              "name": "403 Forbidden - Phone number already registered",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/app/otp/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "app",
+                    "otp",
+                    "register"
+                  ]
+                },
+                "description": "Field set matches `prototype/customer/register.html` exactly. Creates the Host-realm `IdentityUser` **and** a fully-populated `CustomerProfile` (name/email/dob/gender) immediately — not blank like the old stock self-registration below used to leave it — but the account stays unusable (`phoneNumberConfirmed: false`) until you follow up with **Login (OTP grant)** using the code this call sends (same SMS mechanism as **Send OTP**, no separate request needed). Posting the same, still-unverified phone number again overwrites the earlier attempt rather than erroring (handles an abandoned/retry signup); posting an ALREADY-VERIFIED phone number returns the error below instead. `email`/`dateOfBirth`/`gender` are optional. `gender` is an int: 0=Unspecified, 1=Male, 2=Female. NOT verified live yet (host wasn't running when this was generated) — shapes reflect the actual controller/DTO code, not curl output.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phoneNumber\": \"+966501112222\",\n  \"firstName\": \"Layla\",\n  \"lastName\": \"Haddad\",\n  \"email\": \"layla@example.com\",\n  \"dateOfBirth\": \"1995-04-12T00:00:00Z\",\n  \"gender\": 2,\n  \"password\": \"P@ssw0rd!2026\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"This phone number is already registered. Please log in instead.\",\n    \"details\": null,\n    \"data\": null,\n    \"validationErrors\": null\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Register (ABP self-registration — DISABLED, reference only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account",
+                "register"
+              ]
+            },
+            "description": "Kept for reference only — do not use. This stock ABP endpoint is now switched OFF platform-wide (`Abp.Account.IsSelfRegistrationEnabled = false`, set on every Host/DbMigrator startup by `src/Eksabli.Application/Data/Seeders/SelfRegistrationDisabledDataSeederContributor.cs`). It used to create a bare `IdentityUser` with no `CustomerProfile` at all — exactly what caused customers to show up as \"Unnamed\" everywhere in the Business/Admin portals, since phone/OTP (via **Register Customer** above) is this app's real identity path and this endpoint never participated in it. Not re-verified live since being disabled — the rejection body below is inferred from ABP's own setting check, not curl-observed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userName\": \"sara.customer\",\n  \"emailAddress\": \"sara.customer@example.com\",\n  \"password\": \"P@ssw0rd!2026\",\n  \"appName\": \"Angular\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [
+            {
+              "id": "00000000-0000-4000-8000-000000000014",
+              "name": "403 Forbidden - Self-registration disabled (inferred)",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -1031,7 +1121,7 @@
                     "register"
                   ]
                 },
-                "description": "`[AllowAnonymous]`, standard ABP self-registration. Note there is no `phoneNumber` field here — set it afterwards via **Profile > Update My Account Profile**, then use Send OTP + Login (OTP grant) to enable phone/OTP sign-in. `appName` must match a registered OpenIddict client display context; use `\"Angular\"` (the seeded public client's name). Verified live: returns 200 (not 201) with the full `IdentityUserDto` including audit fields.",
+                "description": "Kept for reference only — do not use. This stock ABP endpoint is now switched OFF platform-wide (`Abp.Account.IsSelfRegistrationEnabled = false`, set on every Host/DbMigrator startup by `src/Eksabli.Application/Data/Seeders/SelfRegistrationDisabledDataSeederContributor.cs`). It used to create a bare `IdentityUser` with no `CustomerProfile` at all — exactly what caused customers to show up as \"Unnamed\" everywhere in the Business/Admin portals, since phone/OTP (via **Register Customer** above) is this app's real identity path and this endpoint never participated in it. Not re-verified live since being disabled — the rejection body below is inferred from ABP's own setting check, not curl-observed.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"userName\": \"sara.customer\",\n  \"emailAddress\": \"sara.customer@example.com\",\n  \"password\": \"P@ssw0rd!2026\",\n  \"appName\": \"Angular\"\n}",
@@ -1055,7 +1145,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"Username 'sara.customer' is already taken.\",\n    \"details\": null,\n    \"data\": null,\n    \"validationErrors\": null\n  }\n}"
+              "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"Self registration is not enabled.\",\n    \"details\": null,\n    \"data\": null,\n    \"validationErrors\": null\n  }\n}"
             }
           ]
         },
@@ -1096,7 +1186,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000014",
+              "id": "00000000-0000-4000-8000-000000000015",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "POST",
@@ -1144,7 +1234,7 @@
               "body": ""
             },
             {
-              "id": "00000000-0000-4000-8000-000000000015",
+              "id": "00000000-0000-4000-8000-000000000016",
               "name": "400 Bad Request - Validation Error",
               "originalRequest": {
                 "method": "POST",
@@ -1192,7 +1282,7 @@
               "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"Your request is not valid!\",\n    \"details\": \"The following errors were detected during validation.\\r\\n - 'email' is not a valid email address.\\r\\n\",\n    \"data\": null,\n    \"validationErrors\": [\n      {\n        \"message\": \"'email' is not a valid email address.\",\n        \"members\": [\n          \"email\"\n        ]\n      }\n    ]\n  }\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000016",
+              "id": "00000000-0000-4000-8000-000000000017",
               "name": "403 Forbidden - No account with this email",
               "originalRequest": {
                 "method": "POST",
@@ -1278,7 +1368,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000017",
+              "id": "00000000-0000-4000-8000-000000000018",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "POST",
@@ -1363,7 +1453,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000018",
+              "id": "00000000-0000-4000-8000-000000000019",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "POST",
@@ -1410,7 +1500,7 @@
               "body": ""
             },
             {
-              "id": "00000000-0000-4000-8000-000000000019",
+              "id": "00000000-0000-4000-8000-000000000020",
               "name": "404 Not Found - Bad userId",
               "originalRequest": {
                 "method": "POST",
@@ -1493,7 +1583,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000020",
+              "id": "00000000-0000-4000-8000-000000000021",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "GET",
@@ -1539,7 +1629,7 @@
               "body": ""
             },
             {
-              "id": "00000000-0000-4000-8000-000000000021",
+              "id": "00000000-0000-4000-8000-000000000022",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "GET",
@@ -1626,7 +1716,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000022",
+              "id": "00000000-0000-4000-8000-000000000023",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "GET",
@@ -1671,7 +1761,7 @@
               "body": "{\n  \"userName\": \"sara.customer\",\n  \"email\": \"sara.customer@example.com\",\n  \"name\": null,\n  \"surname\": null,\n  \"phoneNumber\": null,\n  \"isExternal\": false,\n  \"hasPassword\": true,\n  \"concurrencyStamp\": \"a1b2c3d4e5f6\"\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000023",
+              "id": "00000000-0000-4000-8000-000000000024",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "GET",
@@ -1761,7 +1851,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000024",
+              "id": "00000000-0000-4000-8000-000000000025",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "PUT",
@@ -1816,7 +1906,7 @@
               "body": "{\n  \"userName\": \"sara.customer\",\n  \"email\": \"sara.customer@example.com\",\n  \"name\": \"Sara\",\n  \"surname\": \"Al-Amri\",\n  \"phoneNumber\": \"+966501112222\",\n  \"isExternal\": false,\n  \"hasPassword\": true,\n  \"concurrencyStamp\": \"b2c3d4e5f6a1\"\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000025",
+              "id": "00000000-0000-4000-8000-000000000026",
               "name": "400 Bad Request - Validation Error",
               "originalRequest": {
                 "method": "PUT",
@@ -1871,7 +1961,7 @@
               "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"Your request is not valid!\",\n    \"details\": \"The following errors were detected during validation.\\r\\n - 'email' is not a valid email address.\\r\\n\",\n    \"data\": null,\n    \"validationErrors\": [\n      {\n        \"message\": \"'email' is not a valid email address.\",\n        \"members\": [\n          \"email\"\n        ]\n      }\n    ]\n  }\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000026",
+              "id": "00000000-0000-4000-8000-000000000027",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "PUT",
@@ -1926,7 +2016,7 @@
               "body": ""
             },
             {
-              "id": "00000000-0000-4000-8000-000000000027",
+              "id": "00000000-0000-4000-8000-000000000028",
               "name": "403 Forbidden - Stale concurrencyStamp (verified live)",
               "originalRequest": {
                 "method": "PUT",
@@ -2027,7 +2117,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000028",
+              "id": "00000000-0000-4000-8000-000000000029",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "POST",
@@ -2083,7 +2173,7 @@
               "body": ""
             },
             {
-              "id": "00000000-0000-4000-8000-000000000029",
+              "id": "00000000-0000-4000-8000-000000000030",
               "name": "400 Bad Request - Validation Error",
               "originalRequest": {
                 "method": "POST",
@@ -2139,7 +2229,7 @@
               "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"Your request is not valid!\",\n    \"details\": \"The following errors were detected during validation.\\r\\n - Passwords must be at least 6 characters, contain a digit and an uppercase letter.\\r\\n\",\n    \"data\": null,\n    \"validationErrors\": [\n      {\n        \"message\": \"Passwords must be at least 6 characters, contain a digit and an uppercase letter.\",\n        \"members\": [\n          \"newPassword\"\n        ]\n      }\n    ]\n  }\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000030",
+              "id": "00000000-0000-4000-8000-000000000031",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "POST",
@@ -2195,7 +2285,7 @@
               "body": ""
             },
             {
-              "id": "00000000-0000-4000-8000-000000000031",
+              "id": "00000000-0000-4000-8000-000000000032",
               "name": "403 Forbidden - Wrong current password (verified live)",
               "originalRequest": {
                 "method": "POST",
@@ -2274,7 +2364,7 @@
                 "my"
               ]
             },
-            "description": "Verified live: `CustomerProfile` is auto-created at registration with `firstName`/`lastName` null and `gender` defaulting to 0 (Unspecified).",
+            "description": "If the account came from **Register Customer**, this is already filled in with what was submitted there. Verified live (against the older, pre-Register-Customer flow): for an account that only ever went through plain OTP login with no prior registration call, `CustomerProfile` is auto-created blank — `firstName`/`lastName` null, `gender` defaulting to 0 (Unspecified) — and this endpoint self-heals a missing row either way if one somehow still doesn't exist.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -2288,7 +2378,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000032",
+              "id": "00000000-0000-4000-8000-000000000033",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "GET",
@@ -2310,7 +2400,7 @@
                     "my"
                   ]
                 },
-                "description": "Verified live: `CustomerProfile` is auto-created at registration with `firstName`/`lastName` null and `gender` defaulting to 0 (Unspecified).",
+                "description": "If the account came from **Register Customer**, this is already filled in with what was submitted there. Verified live (against the older, pre-Register-Customer flow): for an account that only ever went through plain OTP login with no prior registration call, `CustomerProfile` is auto-created blank — `firstName`/`lastName` null, `gender` defaulting to 0 (Unspecified) — and this endpoint self-heals a missing row either way if one somehow still doesn't exist.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -2335,7 +2425,7 @@
               "body": "{\n  \"userId\": \"5f3d8e2a-0000-4000-8000-000000000001\",\n  \"firstName\": null,\n  \"lastName\": null,\n  \"dateOfBirth\": null,\n  \"gender\": 0\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000033",
+              "id": "00000000-0000-4000-8000-000000000034",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "GET",
@@ -2357,7 +2447,7 @@
                     "my"
                   ]
                 },
-                "description": "Verified live: `CustomerProfile` is auto-created at registration with `firstName`/`lastName` null and `gender` defaulting to 0 (Unspecified).",
+                "description": "If the account came from **Register Customer**, this is already filled in with what was submitted there. Verified live (against the older, pre-Register-Customer flow): for an account that only ever went through plain OTP login with no prior registration call, `CustomerProfile` is auto-created blank — `firstName`/`lastName` null, `gender` defaulting to 0 (Unspecified) — and this endpoint self-heals a missing row either way if one somehow still doesn't exist.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -2428,7 +2518,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000034",
+              "id": "00000000-0000-4000-8000-000000000035",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "PUT",
@@ -2484,7 +2574,7 @@
               "body": "{\n  \"id\": \"3a22db37-38fa-02bd-a8be-7c8740b92c28\",\n  \"userId\": \"5f3d8e2a-0000-4000-8000-000000000001\",\n  \"firstName\": \"Sara\",\n  \"lastName\": \"Al-Amri\",\n  \"dateOfBirth\": \"1996-04-12T00:00:00Z\",\n  \"gender\": 2\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000035",
+              "id": "00000000-0000-4000-8000-000000000036",
               "name": "400 Bad Request - Validation Error",
               "originalRequest": {
                 "method": "PUT",
@@ -2540,7 +2630,7 @@
               "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"Your request is not valid!\",\n    \"details\": \"The following errors were detected during validation.\\r\\n - 'firstName' must not be longer than 64 characters.\\r\\n\",\n    \"data\": null,\n    \"validationErrors\": [\n      {\n        \"message\": \"'firstName' must not be longer than 64 characters.\",\n        \"members\": [\n          \"firstName\"\n        ]\n      }\n    ]\n  }\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000036",
+              "id": "00000000-0000-4000-8000-000000000037",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "PUT",
@@ -2641,7 +2731,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000037",
+              "id": "00000000-0000-4000-8000-000000000038",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "POST",
@@ -2696,7 +2786,7 @@
               "body": "{\n  \"id\": \"c5163baa-0000-4000-8000-000000001101\",\n  \"customerId\": \"5f3d8e2a-0000-4000-8000-000000000001\",\n  \"platform\": 0,\n  \"pushToken\": \"fcm-push-token-abc123\",\n  \"lastActiveAt\": \"2025-11-08T09:00:00Z\",\n  \"appVersion\": \"1.4.2\"\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000038",
+              "id": "00000000-0000-4000-8000-000000000039",
               "name": "400 Bad Request - Validation Error",
               "originalRequest": {
                 "method": "POST",
@@ -2751,7 +2841,7 @@
               "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"Your request is not valid!\",\n    \"details\": \"The following errors were detected during validation.\\r\\n - 'pushToken' is required.\\r\\n\",\n    \"data\": null,\n    \"validationErrors\": [\n      {\n        \"message\": \"'pushToken' is required.\",\n        \"members\": [\n          \"pushToken\"\n        ]\n      }\n    ]\n  }\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000039",
+              "id": "00000000-0000-4000-8000-000000000040",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "POST",
@@ -2842,7 +2932,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000040",
+              "id": "00000000-0000-4000-8000-000000000041",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "GET",
@@ -2888,7 +2978,7 @@
               "body": "[\n  {\n    \"id\": \"c5163baa-0000-4000-8000-000000001101\",\n    \"customerId\": \"5f3d8e2a-0000-4000-8000-000000000001\",\n    \"platform\": 0,\n    \"pushToken\": \"fcm-push-token-abc123\",\n    \"lastActiveAt\": \"2025-11-08T09:00:00Z\",\n    \"appVersion\": \"1.4.2\"\n  }\n]"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000041",
+              "id": "00000000-0000-4000-8000-000000000042",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "GET",
@@ -2978,7 +3068,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000042",
+              "id": "00000000-0000-4000-8000-000000000043",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "DELETE",
@@ -3032,7 +3122,7 @@
               "body": ""
             },
             {
-              "id": "00000000-0000-4000-8000-000000000043",
+              "id": "00000000-0000-4000-8000-000000000044",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "DELETE",
@@ -3086,7 +3176,7 @@
               "body": ""
             },
             {
-              "id": "00000000-0000-4000-8000-000000000044",
+              "id": "00000000-0000-4000-8000-000000000045",
               "name": "404 Not Found",
               "originalRequest": {
                 "method": "DELETE",
@@ -3140,7 +3230,7 @@
               "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"There is no entity Device with id = c5163baa-0000-4000-8000-000000001101!\",\n    \"details\": null,\n    \"data\": null,\n    \"validationErrors\": null\n  }\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000045",
+              "id": "00000000-0000-4000-8000-000000000046",
               "name": "403 Forbidden - Not your device",
               "originalRequest": {
                 "method": "DELETE",
@@ -3246,7 +3336,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000046",
+              "id": "00000000-0000-4000-8000-000000000047",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "POST",
@@ -3302,7 +3392,7 @@
               "body": "{\n  \"id\": \"4d9eb322-0000-4000-8000-000000000301\",\n  \"customerId\": \"5f3d8e2a-0000-4000-8000-000000000001\",\n  \"tenantId\": \"{{businessId}}\",\n  \"joinedAt\": \"2025-11-08T10:00:00Z\",\n  \"status\": 0\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000047",
+              "id": "00000000-0000-4000-8000-000000000048",
               "name": "400 Bad Request - Validation Error",
               "originalRequest": {
                 "method": "POST",
@@ -3358,7 +3448,7 @@
               "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"Your request is not valid!\",\n    \"details\": \"The following errors were detected during validation.\\r\\n - 'tenantId' is required.\\r\\n\",\n    \"data\": null,\n    \"validationErrors\": [\n      {\n        \"message\": \"'tenantId' is required.\",\n        \"members\": [\n          \"tenantId\"\n        ]\n      }\n    ]\n  }\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000048",
+              "id": "00000000-0000-4000-8000-000000000049",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "POST",
@@ -3414,7 +3504,7 @@
               "body": ""
             },
             {
-              "id": "00000000-0000-4000-8000-000000000049",
+              "id": "00000000-0000-4000-8000-000000000050",
               "name": "403 Forbidden - Already a member (inferred, not individually verified)",
               "originalRequest": {
                 "method": "POST",
@@ -3507,7 +3597,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000050",
+              "id": "00000000-0000-4000-8000-000000000051",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "GET",
@@ -3554,7 +3644,7 @@
               "body": "[\n  {\n    \"id\": \"4d9eb322-0000-4000-8000-000000000301\",\n    \"customerId\": \"5f3d8e2a-0000-4000-8000-000000000001\",\n    \"tenantId\": \"2b7c9a10-0000-4000-8000-000000000101\",\n    \"joinedAt\": \"2025-11-02T09:15:00Z\",\n    \"status\": 0\n  }\n]"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000051",
+              "id": "00000000-0000-4000-8000-000000000052",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "GET",
@@ -3645,7 +3735,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000052",
+              "id": "00000000-0000-4000-8000-000000000053",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "GET",
@@ -3693,7 +3783,7 @@
               "body": "[\n  {\n    \"id\": \"5eafc433-0000-4000-8000-000000000401\",\n    \"membershipId\": \"4d9eb322-0000-4000-8000-000000000301\",\n    \"tenantId\": \"2b7c9a10-0000-4000-8000-000000000101\",\n    \"balance\": 1280,\n    \"lifetimeEarned\": 6420,\n    \"lifetimeRedeemed\": 5140,\n    \"currentTierId\": \"70c1e655-0000-4000-8000-000000000601\",\n    \"currentTierName\": \"Gold\"\n  }\n]"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000053",
+              "id": "00000000-0000-4000-8000-000000000054",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "GET",
@@ -3779,7 +3869,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000054",
+              "id": "00000000-0000-4000-8000-000000000055",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "POST",
@@ -3827,7 +3917,7 @@
               "body": "{\n  \"token\": \"3a22db390efb5e53c01c8babcfc03727\",\n  \"expiresInSeconds\": 90\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000055",
+              "id": "00000000-0000-4000-8000-000000000056",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "POST",
@@ -3938,7 +4028,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000056",
+              "id": "00000000-0000-4000-8000-000000000057",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "GET",
@@ -4011,7 +4101,7 @@
               "body": "{\n  \"totalCount\": 214,\n  \"items\": [\n    {\n      \"id\": \"6fb0d544-0000-4000-8000-000000000501\",\n      \"walletId\": \"5eafc433-0000-4000-8000-000000000401\",\n      \"type\": 0,\n      \"points\": 120,\n      \"source\": 0,\n      \"referenceId\": null,\n      \"expiresAt\": \"2026-11-03T00:00:00Z\",\n      \"createdByEmployeeId\": null,\n      \"reason\": null,\n      \"tierMultiplierSnapshot\": 1.5,\n      \"creationTime\": \"2025-11-03T14:22:10Z\"\n    }\n  ]\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000057",
+              "id": "00000000-0000-4000-8000-000000000058",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "GET",
@@ -4084,7 +4174,7 @@
               "body": ""
             },
             {
-              "id": "00000000-0000-4000-8000-000000000058",
+              "id": "00000000-0000-4000-8000-000000000059",
               "name": "403 Forbidden - Not a member of this business",
               "originalRequest": {
                 "method": "GET",
@@ -4226,7 +4316,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000059",
+              "id": "00000000-0000-4000-8000-000000000060",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "GET",
@@ -4299,7 +4389,7 @@
               "body": "{\n  \"totalCount\": 1,\n  \"items\": [\n    {\n      \"id\": \"{{rewardId}}\",\n      \"tenantId\": \"{{businessId}}\",\n      \"nameAr\": \"مشروب غراندي مجاني\",\n      \"nameEn\": \"Free Grande Beverage\",\n      \"type\": 1,\n      \"pointsCost\": 450,\n      \"stockRemaining\": 37,\n      \"validFrom\": \"2025-10-01T00:00:00Z\",\n      \"validTo\": \"2026-03-31T23:59:59Z\",\n      \"imageBlobName\": \"rewards/grande-beverage.png\",\n      \"approvalThresholdPoints\": null\n    }\n  ]\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000060",
+              "id": "00000000-0000-4000-8000-000000000061",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "GET",
@@ -4423,7 +4513,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000061",
+              "id": "00000000-0000-4000-8000-000000000062",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "POST",
@@ -4478,7 +4568,7 @@
               "body": "{\n  \"id\": \"92e30877-0000-4000-8000-000000000801\",\n  \"rewardId\": \"{{rewardId}}\",\n  \"rewardNameAr\": \"مشروب غراندي مجاني\",\n  \"rewardNameEn\": \"Free Grande Beverage\",\n  \"membershipId\": \"4d9eb322-0000-4000-8000-000000000301\",\n  \"tenantId\": \"{{businessId}}\",\n  \"code\": \"EKS-9F3K-7QRT\",\n  \"status\": 0,\n  \"issuedAt\": \"2025-11-08T10:00:00Z\",\n  \"redeemedAt\": null,\n  \"redeemedByEmployeeId\": null,\n  \"redeemedBranchId\": null\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000062",
+              "id": "00000000-0000-4000-8000-000000000063",
               "name": "400 Bad Request - Validation Error",
               "originalRequest": {
                 "method": "POST",
@@ -4533,7 +4623,7 @@
               "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"Your request is not valid!\",\n    \"details\": \"The following errors were detected during validation.\\r\\n - 'rewardId' is required.\\r\\n\",\n    \"data\": null,\n    \"validationErrors\": [\n      {\n        \"message\": \"'rewardId' is required.\",\n        \"members\": [\n          \"rewardId\"\n        ]\n      }\n    ]\n  }\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000063",
+              "id": "00000000-0000-4000-8000-000000000064",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "POST",
@@ -4588,7 +4678,7 @@
               "body": ""
             },
             {
-              "id": "00000000-0000-4000-8000-000000000064",
+              "id": "00000000-0000-4000-8000-000000000065",
               "name": "404 Not Found",
               "originalRequest": {
                 "method": "POST",
@@ -4643,7 +4733,7 @@
               "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"There is no entity Reward with id = {{rewardId}}!\",\n    \"details\": null,\n    \"data\": null,\n    \"validationErrors\": null\n  }\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000065",
+              "id": "00000000-0000-4000-8000-000000000066",
               "name": "403 Forbidden - Insufficient points (inferred from confirmed 403-for-business-rules pattern)",
               "originalRequest": {
                 "method": "POST",
@@ -4698,7 +4788,7 @@
               "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"You do not have enough points to redeem this reward.\",\n    \"details\": null,\n    \"data\": null,\n    \"validationErrors\": null\n  }\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000066",
+              "id": "00000000-0000-4000-8000-000000000067",
               "name": "403 Forbidden - Out of stock (inferred)",
               "originalRequest": {
                 "method": "POST",
@@ -4798,7 +4888,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000067",
+              "id": "00000000-0000-4000-8000-000000000068",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "GET",
@@ -4853,7 +4943,7 @@
               "body": "[\n  {\n    \"id\": \"92e30877-0000-4000-8000-000000000801\",\n    \"rewardId\": \"{{rewardId}}\",\n    \"rewardNameAr\": \"مشروب غراندي مجاني\",\n    \"rewardNameEn\": \"Free Grande Beverage\",\n    \"membershipId\": \"4d9eb322-0000-4000-8000-000000000301\",\n    \"tenantId\": \"{{businessId}}\",\n    \"code\": \"EKS-9F3K-7QRT\",\n    \"status\": 0,\n    \"issuedAt\": \"2025-11-08T10:00:00Z\",\n    \"redeemedAt\": null,\n    \"redeemedByEmployeeId\": null,\n    \"redeemedBranchId\": null\n  }\n]"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000068",
+              "id": "00000000-0000-4000-8000-000000000069",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "GET",
@@ -4966,7 +5056,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000069",
+              "id": "00000000-0000-4000-8000-000000000070",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "GET",
@@ -5064,7 +5154,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000070",
+              "id": "00000000-0000-4000-8000-000000000071",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "GET",
@@ -5110,7 +5200,7 @@
               "body": "{\n  \"id\": \"095a7fee-0000-4000-8000-000000001501\",\n  \"nameAr\": \"مقهى\",\n  \"nameEn\": \"Cafe\",\n  \"iconBlobName\": \"categories/cafe.png\",\n  \"parentCategoryId\": null\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000071",
+              "id": "00000000-0000-4000-8000-000000000072",
               "name": "404 Not Found",
               "originalRequest": {
                 "method": "GET",
@@ -5206,7 +5296,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000072",
+              "id": "00000000-0000-4000-8000-000000000073",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "POST",
@@ -5260,7 +5350,7 @@
               "body": ""
             },
             {
-              "id": "00000000-0000-4000-8000-000000000073",
+              "id": "00000000-0000-4000-8000-000000000074",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "POST",
@@ -5357,7 +5447,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000074",
+              "id": "00000000-0000-4000-8000-000000000075",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "DELETE",
@@ -5410,7 +5500,7 @@
               "body": ""
             },
             {
-              "id": "00000000-0000-4000-8000-000000000075",
+              "id": "00000000-0000-4000-8000-000000000076",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "DELETE",
@@ -5500,7 +5590,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000076",
+              "id": "00000000-0000-4000-8000-000000000077",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "GET",
@@ -5547,7 +5637,7 @@
               "body": "[\n  {\n    \"id\": \"11111111-2222-4000-8000-000000000001\",\n    \"customerId\": \"5f3d8e2a-0000-4000-8000-000000000001\",\n    \"tenantId\": \"2b7c9a10-0000-4000-8000-000000000101\",\n    \"followedAt\": \"2025-09-12T10:00:00Z\"\n  }\n]"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000077",
+              "id": "00000000-0000-4000-8000-000000000078",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "GET",
@@ -5645,7 +5735,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000078",
+              "id": "00000000-0000-4000-8000-000000000079",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "GET",
@@ -5700,7 +5790,7 @@
               "body": "{\n  \"code\": \"d6274cbb-0000-4000-8000-000000001201\"\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000079",
+              "id": "00000000-0000-4000-8000-000000000080",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "GET",
@@ -5792,7 +5882,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000080",
+              "id": "00000000-0000-4000-8000-000000000081",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "GET",
@@ -5839,7 +5929,7 @@
               "body": "[\n  {\n    \"id\": \"d6274cbb-0000-4000-8000-000000001201\",\n    \"referrerMembershipId\": \"4d9eb322-0000-4000-8000-000000000301\",\n    \"refereeCustomerId\": \"22222222-3333-4000-8000-000000000001\",\n    \"tenantId\": \"2b7c9a10-0000-4000-8000-000000000101\",\n    \"status\": 1\n  }\n]"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000081",
+              "id": "00000000-0000-4000-8000-000000000082",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "GET",
@@ -5939,7 +6029,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000082",
+              "id": "00000000-0000-4000-8000-000000000083",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "GET",
@@ -5996,7 +6086,7 @@
               "body": "{\n  \"totalCount\": 1,\n  \"items\": [\n    {\n      \"id\": \"e7385dcc-0000-4000-8000-000000001301\",\n      \"tenantId\": \"2b7c9a10-0000-4000-8000-000000000101\",\n      \"name\": \"Coffee Enthusiast\",\n      \"criteriaJson\": \"{\\\"visits\\\":10,\\\"withinDays\\\":30}\"\n    }\n  ]\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000083",
+              "id": "00000000-0000-4000-8000-000000000084",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "GET",
@@ -6053,7 +6143,7 @@
               "body": ""
             },
             {
-              "id": "00000000-0000-4000-8000-000000000084",
+              "id": "00000000-0000-4000-8000-000000000085",
               "name": "403 Forbidden (missing permission: Eksabli.Achievements (Default) — confirmed live: an ordinary customer 403s here)",
               "originalRequest": {
                 "method": "GET",
@@ -6156,7 +6246,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000085",
+              "id": "00000000-0000-4000-8000-000000000086",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "GET",
@@ -6212,7 +6302,7 @@
               "body": "[\n  {\n    \"id\": \"33333333-4444-4000-8000-000000000001\",\n    \"membershipId\": \"4d9eb322-0000-4000-8000-000000000301\",\n    \"achievementId\": \"e7385dcc-0000-4000-8000-000000001301\",\n    \"awardedAt\": \"2025-10-15T00:00:00Z\"\n  }\n]"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000086",
+              "id": "00000000-0000-4000-8000-000000000087",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "GET",
@@ -6268,7 +6358,7 @@
               "body": ""
             },
             {
-              "id": "00000000-0000-4000-8000-000000000087",
+              "id": "00000000-0000-4000-8000-000000000088",
               "name": "403 Forbidden (missing permission: Eksabli.Achievements (Default) — see folder note)",
               "originalRequest": {
                 "method": "GET",
@@ -6375,7 +6465,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000088",
+              "id": "00000000-0000-4000-8000-000000000089",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "POST",
@@ -6430,7 +6520,7 @@
               "body": "{\n  \"id\": \"f8496edd-0000-4000-8000-000000001401\",\n  \"tenantId\": null,\n  \"customerId\": \"5f3d8e2a-0000-4000-8000-000000000001\",\n  \"subject\": \"Points missing from last purchase\",\n  \"status\": 0,\n  \"priority\": 1,\n  \"messages\": []\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000089",
+              "id": "00000000-0000-4000-8000-000000000090",
               "name": "400 Bad Request - Validation Error",
               "originalRequest": {
                 "method": "POST",
@@ -6485,7 +6575,7 @@
               "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"Your request is not valid!\",\n    \"details\": \"The following errors were detected during validation.\\r\\n - 'subject' is required.\\r\\n\",\n    \"data\": null,\n    \"validationErrors\": [\n      {\n        \"message\": \"'subject' is required.\",\n        \"members\": [\n          \"subject\"\n        ]\n      }\n    ]\n  }\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000090",
+              "id": "00000000-0000-4000-8000-000000000091",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "POST",
@@ -6583,7 +6673,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000091",
+              "id": "00000000-0000-4000-8000-000000000092",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "GET",
@@ -6636,7 +6726,7 @@
               "body": "{\n  \"id\": \"f8496edd-0000-4000-8000-000000001401\",\n  \"tenantId\": null,\n  \"customerId\": \"5f3d8e2a-0000-4000-8000-000000000001\",\n  \"subject\": \"Points missing from last purchase\",\n  \"status\": 0,\n  \"priority\": 1,\n  \"messages\": [\n    {\n      \"id\": \"44444444-5555-4000-8000-000000000001\",\n      \"ticketId\": \"f8496edd-0000-4000-8000-000000001401\",\n      \"senderId\": \"5f3d8e2a-0000-4000-8000-000000000001\",\n      \"body\": \"I made a purchase yesterday but only got half the points I expected.\",\n      \"createdAt\": \"2025-11-06T16:40:00Z\"\n    }\n  ]\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000092",
+              "id": "00000000-0000-4000-8000-000000000093",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "GET",
@@ -6689,7 +6779,7 @@
               "body": ""
             },
             {
-              "id": "00000000-0000-4000-8000-000000000093",
+              "id": "00000000-0000-4000-8000-000000000094",
               "name": "404 Not Found",
               "originalRequest": {
                 "method": "GET",
@@ -6742,7 +6832,7 @@
               "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"There is no entity SupportTicket with id = f8496edd-0000-4000-8000-000000001401!\",\n    \"details\": null,\n    \"data\": null,\n    \"validationErrors\": null\n  }\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000094",
+              "id": "00000000-0000-4000-8000-000000000095",
               "name": "403 Forbidden - Not your ticket",
               "originalRequest": {
                 "method": "GET",
@@ -6848,7 +6938,7 @@
           },
           "response": [
             {
-              "id": "00000000-0000-4000-8000-000000000095",
+              "id": "00000000-0000-4000-8000-000000000096",
               "name": "200 OK / Success",
               "originalRequest": {
                 "method": "POST",
@@ -6911,7 +7001,7 @@
               "body": "{\n  \"id\": \"55555555-6666-4000-8000-000000000001\",\n  \"ticketId\": \"f8496edd-0000-4000-8000-000000001401\",\n  \"senderId\": \"5f3d8e2a-0000-4000-8000-000000000001\",\n  \"body\": \"Following up - still hasn't been resolved.\",\n  \"createdAt\": \"2025-11-08T11:00:00Z\"\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000096",
+              "id": "00000000-0000-4000-8000-000000000097",
               "name": "401 Unauthorized (missing/invalid Bearer token)",
               "originalRequest": {
                 "method": "POST",
@@ -6974,7 +7064,7 @@
               "body": ""
             },
             {
-              "id": "00000000-0000-4000-8000-000000000097",
+              "id": "00000000-0000-4000-8000-000000000098",
               "name": "404 Not Found",
               "originalRequest": {
                 "method": "POST",
@@ -7037,7 +7127,7 @@
               "body": "{\n  \"error\": {\n    \"code\": null,\n    \"message\": \"There is no entity SupportTicket with id = f8496edd-0000-4000-8000-000000001401!\",\n    \"details\": null,\n    \"data\": null,\n    \"validationErrors\": null\n  }\n}"
             },
             {
-              "id": "00000000-0000-4000-8000-000000000098",
+              "id": "00000000-0000-4000-8000-000000000099",
               "name": "403 Forbidden - Not your ticket",
               "originalRequest": {
                 "method": "POST",

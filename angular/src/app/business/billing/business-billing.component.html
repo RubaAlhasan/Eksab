@@ -1,0 +1,70 @@
+<app-page-header
+  [title]="'::BusinessPanel:Billing:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:Billing:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::BusinessPanel:Billing:Title' | abpLocalization) }]"
+>
+</app-page-header>
+
+@if (!nextInvoiceLoading()) {
+  <div class="card p-4 mb-4">
+    <h6 class="fw-bold mb-1">{{ '::BusinessPanel:Billing:NextInvoice' | abpLocalization }}</h6>
+    @if (nextInvoice(); as invoice) {
+      <p class="text-muted small mb-3">
+        {{ '::BusinessPanel:Billing:DuePrefix' | abpLocalization }} {{ invoice.dueDate | date: 'longDate' }}
+      </p>
+      <div class="d-flex align-items-center justify-content-between">
+        <p class="fs-3 fw-extrabold mb-0">{{ invoice.amount | number: '1.0-2' }}</p>
+        <app-status-badge [label]="statusLabelKey(invoice.status) | abpLocalization" [variant]="statusVariant(invoice.status)"></app-status-badge>
+      </div>
+    } @else {
+      <p class="text-muted small mb-0">{{ '::BusinessPanel:Billing:NoUpcomingInvoice' | abpLocalization }}</p>
+    }
+  </div>
+}
+
+<div class="card p-4">
+  <h6 class="fw-bold mb-3">{{ '::BusinessPanel:Billing:InvoiceHistory' | abpLocalization }}</h6>
+
+  @if (isLoading()) {
+    <app-loading-spinner [label]="'::BusinessPanel:Billing:Loading' | abpLocalization"></app-loading-spinner>
+  } @else if (loadFailed()) {
+    <app-error-state
+      [message]="'::BusinessPanel:Billing:LoadErrorMessage' | abpLocalization"
+      [retryLabel]="'::BusinessPanel:Billing:TryAgain' | abpLocalization"
+      (retry)="retry()"
+    >
+    </app-error-state>
+  } @else if (invoices().length === 0) {
+    <app-empty-state
+      icon="fa-receipt"
+      [title]="'::BusinessPanel:Billing:EmptyTitle' | abpLocalization"
+      [description]="'::BusinessPanel:Billing:EmptyDescription' | abpLocalization"
+    >
+    </app-empty-state>
+  } @else {
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>{{ '::BusinessPanel:Billing:ColPeriod' | abpLocalization }}</th>
+            <th>{{ '::BusinessPanel:Billing:ColAmount' | abpLocalization }}</th>
+            <th>{{ '::BusinessPanel:Billing:ColStatus' | abpLocalization }}</th>
+            <th>{{ '::BusinessPanel:Billing:ColPaid' | abpLocalization }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (invoice of invoices(); track invoice.id) {
+            <tr>
+              <td class="fw-semibold">{{ invoice.dueDate | date: 'MMMM y' }}</td>
+              <td>{{ invoice.amount | number: '1.0-2' }}</td>
+              <td><app-status-badge [label]="statusLabelKey(invoice.status) | abpLocalization" [variant]="statusVariant(invoice.status)"></app-status-badge></td>
+              <td class="text-muted">{{ invoice.paidAt ? (invoice.paidAt | date: 'mediumDate') : '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)"></app-pagination>
+  }
+</div>

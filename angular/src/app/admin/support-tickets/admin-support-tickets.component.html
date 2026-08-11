@@ -1,0 +1,183 @@
+<app-page-header
+  [title]="'::AdminPanel:SupportTickets:Title' | abpLocalization"
+  [subtitle]="'::AdminPanel:SupportTickets:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Admin Portal', link: '/admin/businesses' }, { label: ('::AdminPanel:SupportTickets:Title' | abpLocalization) }]"
+>
+</app-page-header>
+
+<div class="card mb-4">
+  <div class="card-body d-flex flex-wrap gap-3 align-items-center">
+    <select class="form-select eks-filter-select" (change)="onStatusFilterChange($event)">
+      <option value="">{{ '::AdminPanel:SupportTickets:AllStatuses' | abpLocalization }}</option>
+      <option value="0">{{ '::AdminPanel:SupportTickets:StatusOpen' | abpLocalization }}</option>
+      <option value="1">{{ '::AdminPanel:SupportTickets:StatusInProgress' | abpLocalization }}</option>
+      <option value="2">{{ '::AdminPanel:SupportTickets:StatusResolved' | abpLocalization }}</option>
+      <option value="3">{{ '::AdminPanel:SupportTickets:StatusClosed' | abpLocalization }}</option>
+    </select>
+    <select class="form-select eks-filter-select" (change)="onPriorityFilterChange($event)">
+      <option value="">{{ '::AdminPanel:SupportTickets:AllPriorities' | abpLocalization }}</option>
+      <option value="0">{{ '::AdminPanel:SupportTickets:PriorityLow' | abpLocalization }}</option>
+      <option value="1">{{ '::AdminPanel:SupportTickets:PriorityMedium' | abpLocalization }}</option>
+      <option value="2">{{ '::AdminPanel:SupportTickets:PriorityHigh' | abpLocalization }}</option>
+      <option value="3">{{ '::AdminPanel:SupportTickets:PriorityUrgent' | abpLocalization }}</option>
+    </select>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{{ '::AdminPanel:SupportTickets:ColumnSubject' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:SupportTickets:ColumnFrom' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:SupportTickets:ColumnPriority' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:SupportTickets:ColumnStatus' | abpLocalization }}</th>
+          <th>{{ '::AdminPanel:SupportTickets:ColumnUpdated' | abpLocalization }}</th>
+          <th class="text-end"><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (isLoading()) {
+          <tr>
+            <td colspan="6">
+              <app-loading-spinner [label]="'::AdminPanel:SupportTickets:Loading' | abpLocalization"></app-loading-spinner>
+            </td>
+          </tr>
+        } @else if (loadFailed()) {
+          <tr>
+            <td colspan="6">
+              <app-error-state
+                [message]="'::AdminPanel:SupportTickets:LoadErrorMessage' | abpLocalization"
+                [retryLabel]="'::AdminPanel:SupportTickets:TryAgain' | abpLocalization"
+                (retry)="retry()"
+              >
+              </app-error-state>
+            </td>
+          </tr>
+        } @else if (tickets().length === 0) {
+          <tr>
+            <td colspan="6">
+              <app-empty-state icon="fa-life-ring" [title]="'::AdminPanel:SupportTickets:EmptyTitle' | abpLocalization"></app-empty-state>
+            </td>
+          </tr>
+        } @else {
+          @for (ticket of tickets(); track ticket.id) {
+            <tr class="eks-clickable-row" (click)="openDetail(ticket)">
+              <td class="fw-semibold">{{ ticket.subject }}</td>
+              <td class="text-muted">
+                @if (ticket.tenantId) {
+                  {{ tenantName(ticket.tenantId) }}
+                } @else {
+                  {{ '::AdminPanel:SupportTickets:FromCustomer' | abpLocalization }}
+                }
+              </td>
+              <td>
+                <app-status-badge
+                  [label]="priorityLabelKey(ticket.priority) | abpLocalization"
+                  [variant]="priorityVariant(ticket.priority)"
+                >
+                </app-status-badge>
+              </td>
+              <td>
+                <app-status-badge
+                  [label]="statusLabelKey(ticket.status) | abpLocalization"
+                  [variant]="statusVariant(ticket.status)"
+                >
+                </app-status-badge>
+              </td>
+              <td class="text-muted">{{ (ticket.lastModificationTime ?? ticket.creationTime) | date: 'medium' }}</td>
+              <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="openDetail(ticket); $event.stopPropagation()">
+                  {{ '::AdminPanel:SupportTickets:View' | abpLocalization }}
+                </button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (!isLoading() && !loadFailed()) {
+    <div class="card-footer">
+      <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)"></app-pagination>
+    </div>
+  }
+</div>
+
+<app-modal
+  [open]="detailModalOpen()"
+  [title]="detailTicket()?.subject ?? ('::AdminPanel:SupportTickets:Title' | abpLocalization)"
+  (closed)="closeDetail()"
+>
+  @if (detailLoading()) {
+    <app-loading-spinner [label]="'::AdminPanel:SupportTickets:ThreadLoading' | abpLocalization"></app-loading-spinner>
+  } @else if (detailFailed()) {
+    <app-error-state
+      [message]="'::AdminPanel:SupportTickets:ThreadLoadError' | abpLocalization"
+      [retryLabel]="'::AdminPanel:SupportTickets:TryAgain' | abpLocalization"
+      (retry)="retryDetail()"
+    >
+    </app-error-state>
+  } @else if (detailTicket(); as ticket) {
+    <div class="d-flex gap-2 mb-3">
+      <app-status-badge [label]="priorityLabelKey(ticket.priority) | abpLocalization" [variant]="priorityVariant(ticket.priority)"></app-status-badge>
+      <app-status-badge [label]="statusLabelKey(ticket.status) | abpLocalization" [variant]="statusVariant(ticket.status)"></app-status-badge>
+    </div>
+
+    <div class="eks-thread mb-3">
+      @for (message of ticket.messages ?? []; track message.id; let first = $first) {
+        <div class="eks-thread__message" [class.eks-thread__message--mine]="isFromCurrentUser(message)">
+          <div class="eks-thread__meta small text-muted">
+            @if (first) {
+              {{ '::AdminPanel:SupportTickets:OriginalMessageLabel' | abpLocalization }}
+            } @else if (isFromCurrentUser(message)) {
+              {{ '::AdminPanel:SupportTickets:YouLabel' | abpLocalization }}
+            } @else {
+              {{ '::AdminPanel:SupportTickets:ReporterLabel' | abpLocalization }}
+            }
+            · {{ message.createdAt | date: 'short' }}
+          </div>
+          <div class="eks-thread__body">{{ message.body }}</div>
+        </div>
+      }
+    </div>
+
+    @if (ticket.status === Status.Closed) {
+      <p class="text-muted small mb-0">{{ '::AdminPanel:SupportTickets:ClosedNotice' | abpLocalization }}</p>
+    } @else {
+      <form [formGroup]="replyForm" (ngSubmit)="sendReply()">
+        <textarea
+          class="form-control"
+          rows="3"
+          formControlName="body"
+          [placeholder]="'::AdminPanel:SupportTickets:ReplyPlaceholder' | abpLocalization"
+        ></textarea>
+      </form>
+    }
+  }
+
+  <div slot="footer" class="d-flex gap-2 justify-content-end w-100">
+    @if (detailTicket(); as ticket) {
+      @if (canResolve(ticket)) {
+        <button type="button" class="btn btn-outline-success" [disabled]="isResolving()" (click)="resolveTicket()">
+          @if (isResolving()) {
+            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+          }
+          {{ '::AdminPanel:SupportTickets:MarkResolved' | abpLocalization }}
+        </button>
+      }
+      @if (ticket.status !== Status.Closed) {
+        <button type="button" class="btn btn-primary" [disabled]="isSendingReply() || replyForm.invalid" (click)="sendReply()">
+          @if (isSendingReply()) {
+            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+          }
+          {{ '::AdminPanel:SupportTickets:SendReply' | abpLocalization }}
+        </button>
+      }
+    }
+    <button type="button" class="btn btn-secondary" (click)="closeDetail()">
+      {{ '::AdminPanel:SupportTickets:CloseModal' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

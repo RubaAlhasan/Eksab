@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -10,6 +11,10 @@ namespace Eksabli.Billing;
 public interface IAdminSubscriptionAppService : IApplicationService
 {
     Task<PagedResultDto<TenantSubscriptionDto>> GetListAsync(AdminSubscriptionFilterDto input);
+
+    Task<AdminSubscriptionStatsDto> GetStatsAsync();
+
+    Task<List<MrrTrendPointDto>> GetMrrTrendAsync();
 
     Task<PagedResultDto<InvoiceDto>> GetInvoicesAsync(AdminInvoiceFilterDto input);
 

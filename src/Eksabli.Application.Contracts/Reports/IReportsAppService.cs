@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Eksabli.Shared;
 using Volo.Abp;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Content;
 
@@ -38,4 +39,6 @@ public interface IReportsAppService : IApplicationService
     Task<DownloadTokenResultDto> GetTransactionsDownloadTokenAsync();
 
     Task<IRemoteStreamContent> GetTransactionsAsExcelFileAsync(TransactionsExcelDownloadDto input);
+
+    Task<PagedResultDto<TransactionListItemDto>> GetTransactionsListAsync(TransactionFilterDto input);
 }

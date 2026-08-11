@@ -51,7 +51,8 @@
       <div class="space-y-3">
         <div>
           <label class="field-label">Campaign name</label>
-          <input class="input" placeholder="e.g. Weekend Double Points">
+          <input id="campaign-name-input" class="input" placeholder="e.g. Weekend Double Points">
+          <p class="field-error hidden" id="campaign-name-error"></p>
         </div>
         <div>
           <label class="field-label">Type</label>
@@ -61,9 +62,10 @@
           </select>
         </div>
         <div class="grid grid-cols-2 gap-3">
-          <div><label class="field-label">Start date</label><input type="date" class="input"></div>
-          <div><label class="field-label">End date</label><input type="date" class="input"></div>
+          <div><label class="field-label">Start date</label><input id="campaign-start-input" type="date" class="input"></div>
+          <div><label class="field-label">End date</label><input id="campaign-end-input" type="date" class="input"></div>
         </div>
+        <p class="field-error hidden" id="campaign-dates-error"></p>
       </div>
     </div>
 
@@ -156,7 +158,14 @@
     document.getElementById('next-step').textContent = step === 3 ? 'Activate Campaign' : 'Next';
     document.getElementById('back-step').textContent = step === 1 ? 'Cancel' : 'Back';
   }
-  function openBuilder() { step = 1; renderStep(); Eksabli.openModal('campaign-form'); }
+  function resetCampaignForm() {
+    document.getElementById('campaign-name-input').value = '';
+    document.getElementById('campaign-start-input').value = '';
+    document.getElementById('campaign-end-input').value = '';
+    ['campaign-name-error', 'campaign-dates-error'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    document.getElementById('campaign-name-input').classList.remove('input-error');
+  }
+  function openBuilder() { step = 1; resetCampaignForm(); renderStep(); Eksabli.openModal('campaign-form'); }
   document.getElementById('new-campaign-btn').addEventListener('click', openBuilder);
   document.getElementById('empty-new-btn').addEventListener('click', openBuilder);
 
@@ -168,6 +177,31 @@
     if (step > 1) { e.preventDefault(); step--; renderStep(); }
   });
   document.getElementById('next-step').addEventListener('click', () => {
+    if (step === 1) {
+      const nameInput = document.getElementById('campaign-name-input');
+      const nameError = document.getElementById('campaign-name-error');
+      const startVal = document.getElementById('campaign-start-input').value;
+      const endVal = document.getElementById('campaign-end-input').value;
+      const datesError = document.getElementById('campaign-dates-error');
+      let valid = true;
+      if (!nameInput.value.trim()) {
+        nameError.textContent = 'Campaign name is required.';
+        nameError.classList.remove('hidden');
+        nameInput.classList.add('input-error');
+        valid = false;
+      } else {
+        nameError.classList.add('hidden');
+        nameInput.classList.remove('input-error');
+      }
+      if (startVal && endVal && endVal < startVal) {
+        datesError.textContent = 'End date cannot be before the start date.';
+        datesError.classList.remove('hidden');
+        valid = false;
+      } else {
+        datesError.classList.add('hidden');
+      }
+      if (!valid) return;
+    }
     if (step < 3) { step++; renderStep(); return; }
     Eksabli.closeModal('campaign-form');
     Eksabli.showToast({ type: 'success', title: 'Campaign activated', message: 'Notifications are being queued to the target segment.' });

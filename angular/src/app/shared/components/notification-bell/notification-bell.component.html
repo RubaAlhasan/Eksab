@@ -1,0 +1,53 @@
+<button
+  type="button"
+  class="btn btn-icon position-relative"
+  [attr.aria-label]="'::NotificationHub:ToggleButton' | abpLocalization"
+  (click)="toggle()"
+>
+  <i class="fas fa-bell"></i>
+  @if (hub.hasUnread()) {
+    <span class="badge rounded-pill bg-danger eks-notification-bell__badge">{{ unreadBadge() }}</span>
+  }
+</button>
+
+@if (open()) {
+  <div class="eks-notification-bell__panel">
+    <div class="eks-notification-bell__header">
+      <span>{{ '::NotificationHub:Title' | abpLocalization }}</span>
+      <div class="d-flex align-items-center gap-2">
+        @if (hub.connectionState() === 'reconnecting') {
+          <span class="eks-notification-bell__reconnecting">{{ '::NotificationHub:Reconnecting' | abpLocalization }}</span>
+        }
+        @if (hub.hasUnread()) {
+          <button type="button" class="eks-notification-bell__mark-all" (click)="markAllAsRead()">
+            {{ '::NotificationHub:MarkAllAsRead' | abpLocalization }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="eks-notification-bell__list">
+      @if (hub.isLoading()) {
+        <div class="eks-notification-bell__state">
+          <span class="eks-notification-bell__spinner"></span>
+        </div>
+      } @else {
+        @for (item of hub.recentNotifications(); track item.id) {
+          <button type="button" class="eks-notification-bell__item" [class.unread]="!item.isRead" (click)="onItemClick(item)">
+            <i class="fas eks-notification-bell__item-icon {{ iconFor(item.type) }}"></i>
+            <span class="eks-notification-bell__item-body">
+              <span class="eks-notification-bell__item-title">{{ item.title }}</span>
+              <span class="eks-notification-bell__item-message">{{ item.message }}</span>
+              <span class="eks-notification-bell__item-time">{{ item.creationTime | date: 'short' }}</span>
+            </span>
+          </button>
+        } @empty {
+          <div class="eks-notification-bell__state">
+            <i class="fas fa-bell-slash"></i>
+            <span>{{ '::NotificationHub:Empty' | abpLocalization }}</span>
+          </div>
+        }
+      }
+    </div>
+  </div>
+}

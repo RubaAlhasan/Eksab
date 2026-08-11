@@ -1,0 +1,189 @@
+<app-page-header
+  [title]="'::BusinessPanel:Points:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:Points:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::BusinessPanel:Points:Title' | abpLocalization) }]"
+>
+</app-page-header>
+
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item">
+    <button type="button" class="nav-link" [class.active]="activeTab() === 'award'" (click)="selectTab('award')">
+      {{ '::BusinessPanel:Points:TabAward' | abpLocalization }}
+    </button>
+  </li>
+  @if (canViewRules()) {
+    <li class="nav-item">
+      <button type="button" class="nav-link" [class.active]="activeTab() === 'rules'" (click)="selectTab('rules')">
+        {{ '::BusinessPanel:Points:TabRules' | abpLocalization }}
+      </button>
+    </li>
+  }
+  @if (canViewTiers()) {
+    <li class="nav-item">
+      <button type="button" class="nav-link" [class.active]="activeTab() === 'tiers'" (click)="selectTab('tiers')">
+        {{ '::BusinessPanel:Points:TabTiers' | abpLocalization }}
+      </button>
+    </li>
+  }
+</ul>
+
+@if (activeTab() === 'award') {
+  <div class="row g-4">
+    <div class="col-12 col-lg-6">
+      <div class="card p-4 h-100">
+        <h2 class="fw-bold small mb-3">{{ '::BusinessPanel:Points:IdentifyTitle' | abpLocalization }}</h2>
+        <form [formGroup]="phoneForm" (ngSubmit)="lookup()" class="d-flex gap-2 align-items-start mb-3">
+          <div class="flex-grow-1">
+            <label class="form-label" for="phoneNumber">{{ '::BusinessPanel:Points:PhoneLabel' | abpLocalization }}</label>
+            <input
+              id="phoneNumber"
+              type="tel"
+              class="form-control"
+              formControlName="phoneNumber"
+              [placeholder]="'::BusinessPanel:Points:PhonePlaceholder' | abpLocalization"
+            />
+            <p class="text-muted small mt-1 mb-0">{{ '::BusinessPanel:Points:PhoneHint' | abpLocalization }}</p>
+          </div>
+          <button type="submit" class="btn btn-secondary flex-shrink-0" [disabled]="isLookingUp()">
+            @if (isLookingUp()) {
+              <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+            }
+            {{ '::BusinessPanel:Points:LookUp' | abpLocalization }}
+          </button>
+        </form>
+
+        @if (lookupFailed()) {
+          <p class="text-danger small mb-0">{{ '::BusinessPanel:Points:LookupErrorMessage' | abpLocalization }}</p>
+        }
+
+        @if (customer(); as customer) {
+          <div class="card bg-success-subtle border-success-subtle p-3 d-flex flex-row align-items-center gap-3">
+            <span class="eks-avatar-sm">{{ customerInitials(customer) }}</span>
+            <div class="flex-grow-1">
+              @if (customerName(customer); as name) {
+                <p class="small fw-bold mb-0">{{ name }}</p>
+              } @else {
+                <p class="small fw-bold mb-0 fst-italic">{{ '::BusinessPanel:Points:UnknownCustomer' | abpLocalization }}</p>
+              }
+              <p class="text-muted small mb-0">
+                {{ '::BusinessPanel:Points:BalanceLabel' | abpLocalization }}: {{ customer.balance }} pts
+              </p>
+            </div>
+            <i class="fas fa-circle-check text-success"></i>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+      <div class="card p-4 h-100">
+        <h2 class="fw-bold small mb-3">{{ '::BusinessPanel:Points:AwardTitle' | abpLocalization }}</h2>
+        <label class="form-label" for="saleAmount">{{ '::BusinessPanel:Points:SaleAmount' | abpLocalization }}</label>
+        <input id="saleAmount" type="number" step="0.01" min="0" class="form-control mb-3" [formControl]="saleAmount" placeholder="e.g. 24.50" />
+
+        @if (lastAward(); as award) {
+          <div class="alert alert-success small mb-3">
+            {{ '::BusinessPanel:Points:LastAwardPrefix' | abpLocalization }}
+            <strong>{{ award.pointsAwarded }}</strong> {{ '::BusinessPanel:Points:PointsWord' | abpLocalization }}.
+            {{ '::BusinessPanel:Points:NewBalancePrefix' | abpLocalization }} <strong>{{ award.newBalance }}</strong>.
+            @if (award.newTierName) {
+              {{ '::BusinessPanel:Points:TierPrefix' | abpLocalization }} <strong>{{ award.newTierName }}</strong>.
+            }
+          </div>
+        }
+
+        <button
+          type="button"
+          class="btn btn-primary btn-lg w-100 mt-auto"
+          [disabled]="!customer() || isAwarding()"
+          (click)="award()"
+        >
+          @if (isAwarding()) {
+            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+          }
+          {{ (customer() ? '::BusinessPanel:Points:AwardButton' : '::BusinessPanel:Points:SelectCustomerFirst') | abpLocalization }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (activeTab() === 'rules') {
+  <div class="card p-4">
+    <h2 class="fw-bold small mb-3">{{ '::BusinessPanel:Points:RulesTitle' | abpLocalization }}</h2>
+    @if (rulesLoading()) {
+      <app-loading-spinner [label]="'::BusinessPanel:Points:Loading' | abpLocalization"></app-loading-spinner>
+    } @else if (rulesFailed()) {
+      <app-error-state
+        [message]="'::BusinessPanel:Points:LoadErrorMessage' | abpLocalization"
+        [retryLabel]="'::BusinessPanel:Points:TryAgain' | abpLocalization"
+        (retry)="retryRules()"
+      >
+      </app-error-state>
+    } @else if (rules().length === 0) {
+      <p class="text-muted small mb-0">{{ '::BusinessPanel:Points:NoRules' | abpLocalization }}</p>
+    } @else {
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>{{ '::BusinessPanel:Points:ColumnRuleType' | abpLocalization }}</th>
+              <th>{{ '::BusinessPanel:Points:ColumnPointsPerUnit' | abpLocalization }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (rule of rules(); track rule.id) {
+              <tr>
+                <td class="fw-semibold">{{ ruleTypeLabelKey(rule.ruleType) | abpLocalization }}</td>
+                <td class="text-muted">{{ rule.pointsPerUnit }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    <div class="alert alert-info d-flex align-items-start gap-2 mt-4 mb-0">
+      <i class="fas fa-circle-info mt-1"></i>
+      <p class="mb-0">{{ '::BusinessPanel:Points:RoundingNote' | abpLocalization }}</p>
+    </div>
+  </div>
+}
+
+@if (activeTab() === 'tiers') {
+  <div class="card p-4">
+    <h2 class="fw-bold small mb-3">{{ '::BusinessPanel:Points:TiersTitle' | abpLocalization }}</h2>
+    @if (tiersLoading()) {
+      <app-loading-spinner [label]="'::BusinessPanel:Points:Loading' | abpLocalization"></app-loading-spinner>
+    } @else if (tiersFailed()) {
+      <app-error-state
+        [message]="'::BusinessPanel:Points:LoadErrorMessage' | abpLocalization"
+        [retryLabel]="'::BusinessPanel:Points:TryAgain' | abpLocalization"
+        (retry)="retryTiers()"
+      >
+      </app-error-state>
+    } @else if (tiers().length === 0) {
+      <p class="text-muted small mb-0">{{ '::BusinessPanel:Points:NoTiers' | abpLocalization }}</p>
+    } @else {
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>{{ '::BusinessPanel:Points:ColumnTier' | abpLocalization }}</th>
+              <th>{{ '::BusinessPanel:Points:ColumnMinPoints' | abpLocalization }}</th>
+              <th>{{ '::BusinessPanel:Points:ColumnMultiplier' | abpLocalization }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (tier of tiers(); track tier.id) {
+              <tr>
+                <td class="fw-semibold">{{ tier.name }}</td>
+                <td class="text-muted">{{ tier.minLifetimePoints }} pts</td>
+                <td class="text-muted">×{{ tier.multiplier }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+}

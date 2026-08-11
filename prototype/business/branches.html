@@ -60,8 +60,8 @@
   <div class="modal-panel p-6" style="max-width:30rem">
     <h3 class="font-bold text-base mb-4" id="branch-modal-title">Add Branch</h3>
     <div class="space-y-3">
-      <div><label class="field-label">Branch name</label><input class="input" placeholder="e.g. Al Barsha"></div>
-      <div><label class="field-label">Address</label><input class="input" placeholder="Street, City"></div>
+      <div><label class="field-label">Branch name</label><input id="branch-name-input" class="input" placeholder="e.g. Al Barsha"><p class="field-error hidden" id="branch-name-error"></p></div>
+      <div><label class="field-label">Address</label><input id="branch-address-input" class="input" placeholder="Street, City"><p class="field-error hidden" id="branch-address-error"></p></div>
       <div class="grid grid-cols-2 gap-3">
         <div><label class="field-label">Phone</label><input class="input" placeholder="+971 4 000 0000"></div>
         <div><label class="field-label">Opening hours</label><input class="input" placeholder="9:00 AM – 10:00 PM"></div>
@@ -115,9 +115,42 @@
   });
   document.getElementById('download-qr').addEventListener('click', () => Eksabli.showToast({ type: 'success', title: 'QR code downloaded' }));
 
-  document.getElementById('add-branch-btn').addEventListener('click', () => { document.getElementById('branch-modal-title').textContent = 'Add Branch'; Eksabli.openModal('branch-form'); });
-  document.querySelectorAll('.edit-branch').forEach(btn => btn.addEventListener('click', () => { document.getElementById('branch-modal-title').textContent = 'Edit Branch'; Eksabli.openModal('branch-form'); }));
-  document.getElementById('save-branch-btn').addEventListener('click', () => { Eksabli.closeModal('branch-form'); Eksabli.showToast({ type: 'success', title: 'Branch saved' }); });
+  function resetBranchForm() {
+    document.getElementById('branch-name-input').value = '';
+    document.getElementById('branch-address-input').value = '';
+    ['branch-name-error', 'branch-address-error'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    ['branch-name-input', 'branch-address-input'].forEach(id => document.getElementById(id).classList.remove('input-error'));
+  }
+  document.getElementById('add-branch-btn').addEventListener('click', () => { document.getElementById('branch-modal-title').textContent = 'Add Branch'; resetBranchForm(); Eksabli.openModal('branch-form'); });
+  document.querySelectorAll('.edit-branch').forEach(btn => btn.addEventListener('click', () => { document.getElementById('branch-modal-title').textContent = 'Edit Branch'; resetBranchForm(); Eksabli.openModal('branch-form'); }));
+  document.getElementById('save-branch-btn').addEventListener('click', () => {
+    const nameInput = document.getElementById('branch-name-input');
+    const addressInput = document.getElementById('branch-address-input');
+    const nameError = document.getElementById('branch-name-error');
+    const addressError = document.getElementById('branch-address-error');
+    let valid = true;
+    if (!nameInput.value.trim()) {
+      nameError.textContent = 'Branch name is required.';
+      nameError.classList.remove('hidden');
+      nameInput.classList.add('input-error');
+      valid = false;
+    } else {
+      nameError.classList.add('hidden');
+      nameInput.classList.remove('input-error');
+    }
+    if (!addressInput.value.trim()) {
+      addressError.textContent = 'Address is required.';
+      addressError.classList.remove('hidden');
+      addressInput.classList.add('input-error');
+      valid = false;
+    } else {
+      addressError.classList.add('hidden');
+      addressInput.classList.remove('input-error');
+    }
+    if (!valid) return;
+    Eksabli.closeModal('branch-form');
+    Eksabli.showToast({ type: 'success', title: 'Branch saved' });
+  });
 </script>
 </body>
 </html>

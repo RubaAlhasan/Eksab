@@ -1,0 +1,4 @@
+// .eks-stat-card is a global utility now (see styles.scss) — promoted out of this component's scoped
+// styles when Dashboard needed the identical stat-tile rule too.
+// .eks-clickable-row is a global utility now too (see styles.scss) — promoted out of here once
+// business-support-tickets.component.html needed the identical rule a third time.
