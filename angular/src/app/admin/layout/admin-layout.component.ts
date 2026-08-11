@@ -177,6 +177,7 @@ export class AdminLayoutComponent {
   protected readonly mobileNavOpen = signal(false);
   protected readonly darkMode = signal(false);
   protected readonly langMenuOpen = signal(false);
+  protected readonly userMenuOpen = signal(false);
 
   /** Per-group permission filter, then drop any group left with zero visible items (e.g. a viewer
    *  without Billing.ManagePlatform shouldn't see an empty "Billing" header). Realm itself is already
@@ -233,7 +234,19 @@ export class AdminLayoutComponent {
     this.cultureUrlService.applyLanguageSelection(cultureName);
   }
 
+  // Same manual-toggle shape as toggleLangMenu() above, for the same reason — see this component's
+  // own file comment: this shell can't rely on Bootstrap's CSS bundle being present, and it turns out
+  // it can't rely on Bootstrap's JS being present either. There is no `bootstrap` package (nor
+  // `bootstrap.bundle.js`/Popper) anywhere in this project — confirmed via package.json/angular.json —
+  // so the user-menu button's `data-bs-toggle="dropdown"` was dead markup: nothing in this app ever
+  // initializes it, so clicking the avatar did nothing and Logout was unreachable. Fixed the same way
+  // the language switcher already works, right next to it in the same topbar.
+  protected toggleUserMenu(): void {
+    this.userMenuOpen.update((open) => !open);
+  }
+
   protected logout(): void {
+    this.userMenuOpen.set(false);
     this.authService.logout().subscribe();
   }
 }

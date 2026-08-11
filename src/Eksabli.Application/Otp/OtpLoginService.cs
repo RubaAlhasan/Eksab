@@ -38,7 +38,13 @@ public class OtpLoginService : IOtpLoginService, ITransientDependency
 
     public async Task<OtpValidationResult> ValidateAndResolveUserAsync(string phoneNumber, string code)
     {
-        var cached = await _otpCache.GetAsync(phoneNumber);
+        // Normalized once, used for the cache key, the lookup, AND (for a brand-new customer) the
+        // IdentityUser.UserName itself — see PhoneNumberNormalizer's own comment for why this needs to
+        // be the exact same value PosAppService.LookupCustomerByPhoneAsync normalizes to later, not
+        // just internally consistent within this one method.
+        var normalizedPhoneNumber = PhoneNumberNormalizer.Normalize(phoneNumber);
+
+        var cached = await _otpCache.GetAsync(normalizedPhoneNumber);
         if (cached == null)
         {
             return new OtpValidationResult { IsValid = false, ErrorCode = "expired_code" };
@@ -50,18 +56,18 @@ public class OtpLoginService : IOtpLoginService, ITransientDependency
             return new OtpValidationResult { IsValid = false, ErrorCode = "invalid_code" };
         }
 
-        await _otpCache.RemoveAsync(phoneNumber); // single-use — burn only on a successful match
+        await _otpCache.RemoveAsync(normalizedPhoneNumber); // single-use — burn only on a successful match
 
         using (_currentTenant.Change(null)) // customers are Host-realm, same identity space as Membership.CustomerId
         {
-            var user = await _identityUserRepository.FindByNormalizedUserNameAsync(phoneNumber.ToUpperInvariant());
+            var user = await _identityUserRepository.FindByNormalizedUserNameAsync(normalizedPhoneNumber.ToUpperInvariant());
             var isNew = false;
 
             if (user == null)
             {
-                user = new IdentityUser(_guidGenerator.Create(), phoneNumber, $"{Guid.NewGuid():N}@otp.eksabli.local", tenantId: null);
+                user = new IdentityUser(_guidGenerator.Create(), normalizedPhoneNumber, $"{Guid.NewGuid():N}@otp.eksabli.local", tenantId: null);
                 (await _identityUserManager.CreateAsync(user)).CheckErrors();
-                await _identityUserManager.SetPhoneNumberAsync(user, phoneNumber);
+                await _identityUserManager.SetPhoneNumberAsync(user, normalizedPhoneNumber);
 
                 var profile = CustomerProfile.Create(_guidGenerator.Create(), user.Id);
                 await _customerProfileRepository.InsertAsync(profile, autoSave: true);

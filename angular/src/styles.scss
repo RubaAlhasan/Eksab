@@ -1,5 +1,62 @@
 /* You can add global styles to this file, and also import other style files */
 
+// ---------------------------------------------------------------------------
+// Prototype-matched elevated card look. Bootstrap's own `.card` ships flat by design (thin
+// 1px border, no shadow, ~0.375rem radius) — the prototype's own `.card` (design-system.css) is
+// deliberately "raised": 1rem radius + a two-layer soft shadow (`--shadow-soft`). Every Eksabli page
+// screenshot so far has read noticeably flatter than the prototype because of this one gap. Fixed
+// once, globally, rather than per-card, and scoped to the two Eksabli portal shells (`.eks-admin-shell`/
+// `.eks-biz-shell`, set on AdminLayoutComponent/BusinessLayoutComponent's own root — see those
+// components' scss) so stock ABP pages rendered outside either shell (e.g. `/account/login`) keep
+// Lepton-X's own card look untouched, matching this repo's existing "don't reskin stock ABP chrome"
+// rule. Dark mode mirrors the shells' own `.dark` class toggle (not a `prefers-color-scheme` query —
+// that's a manual sun/moon button in each topbar, see admin-layout.component.ts's `darkMode` signal),
+// same shadow values as design-system.css's own dark-mode `--shadow-soft` override.
+.eks-admin-shell .card,
+.eks-biz-shell .card {
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04), 0 8px 24px -8px rgba(15, 23, 42, 0.1);
+}
+
+.eks-admin-shell.dark .card,
+.eks-biz-shell.dark .card {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+}
+
+// ---------------------------------------------------------------------------
+// Global responsive safety net. Every page already uses Bootstrap's own
+// responsive grid/utilities correctly (row-cols-*, col-12 col-sm-*, flex-wrap
+// filter rows, table-responsive on every data table), so this isn't a
+// per-page rewrite — just two cross-cutting gaps closed once, globally:
+// ---------------------------------------------------------------------------
+
+// 1) A stray wide element (a long unbroken table value, a chart tooltip, ...) should never be able
+//    to force the whole PAGE to scroll sideways — only the specific scrollable region (a
+//    `.table-responsive`) should. `body` sets the outer boundary; children that genuinely need
+//    horizontal scroll (tables) already opt into it via their own `overflow-x`, unaffected by this.
+body {
+  overflow-x: hidden;
+}
+
+// 2) `.card p-4`/`.card p-5` (Bootstrap's *static* spacing utilities — no responsive `p-4-sm`
+//    variant exists to reach for instead) is used directly as the card's own padding on a couple
+//    dozen pages in this app (Dashboard tiles, Analytics charts, Points/Rewards/Campaigns forms, …).
+//    1.5–3rem of padding on each side eats a meaningful chunk of a 320–360px phone's width; tightened
+//    here, once, for every page that uses the pattern, rather than hunting down each `p-4`/`p-5`
+//    individually. `!important` only because overriding a same-specificity utility class from a
+//    later-loaded global sheet needs it — this file loads after Bootstrap's own utilities.
+@media (max-width: 420px) {
+  .card.p-4,
+  .card > .p-4 {
+    padding: 1.125rem !important;
+  }
+
+  .card.p-5,
+  .card > .p-5 {
+    padding: 1.5rem !important;
+  }
+}
+
 
 :root {
   --lpx-theme-light-bg: url('assets/images/login/login-bg-img-light.svg');

@@ -16,7 +16,36 @@
       }
       <button class="btn btn-primary" type="button">{{ '::Landing:StartTrial' | abpLocalization }}</button>
     </div>
+    <button
+      type="button"
+      class="menu-toggle"
+      [attr.aria-expanded]="mobileMenuOpen()"
+      [attr.aria-label]="'::Landing:ToggleMenu' | abpLocalization"
+      (click)="toggleMobileMenu()"
+    >
+      <i class="fas" [class.fa-bars]="!mobileMenuOpen()" [class.fa-xmark]="mobileMenuOpen()"></i>
+    </button>
   </div>
+
+  @if (mobileMenuOpen()) {
+    <div class="mobile-menu">
+      <nav class="mobile-menu-nav">
+        <a href="#how-it-works" (click)="closeMobileMenu()">{{ '::Landing:NavHowItWorks' | abpLocalization }}</a>
+        <a href="#features" (click)="closeMobileMenu()">{{ '::Landing:NavFeatures' | abpLocalization }}</a>
+        <a href="#pricing" (click)="closeMobileMenu()">{{ '::Landing:NavPricing' | abpLocalization }}</a>
+      </nav>
+      <div class="mobile-menu-actions">
+        <div class="lang-switch" role="group" aria-label="Language">
+          <button type="button" [class.active]="currentLang() === 'en'" (click)="setLang('en')">EN</button>
+          <button type="button" [class.active]="currentLang() === 'ar'" (click)="setLang('ar')">ع</button>
+        </div>
+        @if (!hasLoggedIn) {
+          <a class="login-link" (click)="login()">{{ '::Landing:Login' | abpLocalization }}</a>
+        }
+      </div>
+      <button class="btn btn-primary" type="button" (click)="closeMobileMenu()">{{ '::Landing:StartTrial' | abpLocalization }}</button>
+    </div>
+  }
 </header>
 
 <main>

@@ -50,8 +50,18 @@
 
   // Same reasoning as .eks-mini-stat__value above — explicit color so every row's value renders
   // identically dark, not whatever each span's own inherited default happens to resolve to.
+  // min-width: 0 + truncation: this column is only ~300px wide on mobile (col-12 at narrow
+  // viewports), and the value side can be a long, unbroken string (the owner's email, in
+  // particular) — flex items don't shrink below their content's intrinsic width by default, so
+  // without this a long email would push the row wider than the card. Safe to truncate since the
+  // template already puts the full value in a `[title]` tooltip on this same span.
   span:last-child {
     color: var(--eks-text, #0f172a);
+    min-width: 0;
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 

@@ -32,7 +32,11 @@ public class PosAppService : ApplicationService, IPosAppService
     private readonly IRepository<CustomerProfile, Guid> _customerProfileRepository;
     private readonly ICouponRepository _couponRepository;
     private readonly IRewardRepository _rewardRepository;
-    private readonly IIdentityUserRepository _identityUserRepository;
+    // NOT IIdentityUserRepository — that's ABP's curated interface (no predicate/queryable access, per
+    // AdminUserAppService's own comment on the same constraint) and can only look things up by id or by
+    // NormalizedUserName/NormalizedEmail. A phone lookup needs to query the actual
+    // IdentityUser.PhoneNumber column, so this needs the full generic repository instead.
+    private readonly IRepository<IdentityUser, Guid> _identityUserRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDistributedCache _qrCache;
     private readonly ICampaignRulesEngine _campaignRulesEngine;
@@ -49,7 +53,7 @@ public class PosAppService : ApplicationService, IPosAppService
         IRepository<CustomerProfile, Guid> customerProfileRepository,
         ICouponRepository couponRepository,
         IRewardRepository rewardRepository,
-        IIdentityUserRepository identityUserRepository,
+        IRepository<IdentityUser, Guid> identityUserRepository,
         ICurrentTenant currentTenant,
         IDistributedCache qrCache,
         ICampaignRulesEngine campaignRulesEngine,
@@ -77,10 +81,20 @@ public class PosAppService : ApplicationService, IPosAppService
     {
         await CheckStaffRoleAsync(EmployeeRole.Owner, EmployeeRole.BranchManager, EmployeeRole.Cashier);
 
+        // Queries the real IdentityUser.PhoneNumber column directly — not UserName. UserName happens
+        // to also be set to the same normalized phone number today (see OtpLoginService), but that's
+        // an implementation detail of how a customer's account gets created, not something a phone
+        // lookup should depend on; PhoneNumber is the actual, semantically-correct field, and this
+        // stays correct even if that UserName convention ever changes. Still normalized the same way
+        // on both sides (see PhoneNumberNormalizer's own comment) — a cashier typing a number in by
+        // hand ("+966 50 111 2222") has to resolve to the same string as whatever the customer's own
+        // app sent at registration ("+966501112222") for either field to match.
+        var normalizedPhoneNumber = PhoneNumberNormalizer.Normalize(input.PhoneNumber);
+
         IdentityUser? user;
         using (_currentTenant.Change(null)) // Host-realm identity space, same shape as OtpLoginService
         {
-            user = await _identityUserRepository.FindByNormalizedUserNameAsync(input.PhoneNumber.ToUpperInvariant());
+            user = await _identityUserRepository.FirstOrDefaultAsync(u => u.PhoneNumber == normalizedPhoneNumber);
         }
 
         // Ambient tenant is still the caller's own tenant here — Membership's IMultiTenant filter

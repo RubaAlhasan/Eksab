@@ -77,13 +77,13 @@
         <button
           type="button"
           class="btn btn-icon dropdown-toggle"
-          data-bs-toggle="dropdown"
-          aria-expanded="false"
+          [attr.aria-expanded]="userMenuOpen()"
+          (click)="toggleUserMenu()"
         >
           <i class="fas fa-user-circle"></i>
           <span class="d-none d-sm-inline ms-1">{{ currentUserName() }}</span>
         </button>
-        <ul class="dropdown-menu dropdown-menu-end">
+        <ul class="dropdown-menu dropdown-menu-end" [class.show]="userMenuOpen()">
           <li>
             <button type="button" class="dropdown-item" (click)="logout()">
               {{ 'AbpUi::Logout' | abpLocalization }}

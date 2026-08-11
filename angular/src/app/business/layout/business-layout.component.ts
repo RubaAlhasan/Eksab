@@ -53,6 +53,7 @@ export class BusinessLayoutComponent {
   protected readonly mobileNavOpen = signal(false);
   protected readonly darkMode = signal(false);
   protected readonly langMenuOpen = signal(false);
+  protected readonly userMenuOpen = signal(false);
 
   /** Only real, already-built pages — no placeholder/disabled entries (same rule as Admin Portal's
    *  own `ADMIN_NAV`). Add each new page's entry here the same turn it's build-verified. */
@@ -120,7 +121,15 @@ export class BusinessLayoutComponent {
     this.cultureUrlService.applyLanguageSelection(cultureName);
   }
 
+  // Same manual-toggle shape as toggleLangMenu() above — see admin-layout.component.ts's identical
+  // fix for the full reasoning: `data-bs-toggle="dropdown"` was dead markup, this app has no
+  // Bootstrap JS/Popper anywhere, so the user-menu button did nothing and Logout was unreachable.
+  protected toggleUserMenu(): void {
+    this.userMenuOpen.update((open) => !open);
+  }
+
   protected logout(): void {
+    this.userMenuOpen.set(false);
     this.authService.logout().subscribe();
   }
 }
