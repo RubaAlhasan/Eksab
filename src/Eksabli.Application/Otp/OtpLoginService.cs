@@ -65,12 +65,26 @@ public class OtpLoginService : IOtpLoginService, ITransientDependency
 
             if (user == null)
             {
+                // No prior OtpAppService.RegisterAsync call for this number at all — e.g. a business
+                // added this customer directly via POS, or the app's "log in with OTP" was used for a
+                // number that was never formally registered. Keep the old auto-create-blank-profile
+                // fallback so OTP login still works standalone, without forcing registration first.
                 user = new IdentityUser(_guidGenerator.Create(), normalizedPhoneNumber, $"{Guid.NewGuid():N}@otp.eksabli.local", tenantId: null);
                 (await _identityUserManager.CreateAsync(user)).CheckErrors();
                 await _identityUserManager.SetPhoneNumberAsync(user, normalizedPhoneNumber);
 
                 var profile = CustomerProfile.Create(_guidGenerator.Create(), user.Id);
                 await _customerProfileRepository.InsertAsync(profile, autoSave: true);
+
+                isNew = true;
+            }
+            else if (!user.PhoneNumberConfirmed)
+            {
+                // Completes a registration started via OtpAppService.RegisterAsync — the IdentityUser
+                // and its CustomerProfile (name/email/dob/gender) already exist, they just needed this
+                // phone number proven. First real, usable login for this account.
+                user.SetPhoneNumberConfirmed(true);
+                (await _identityUserManager.UpdateAsync(user)).CheckErrors();
 
                 isNew = true;
             }

@@ -42,6 +42,12 @@ public class SeedService : ISingletonDependency
         var adminPermissionDataSeederContributor = scope.ServiceProvider.GetRequiredService<AdminPermissionDataSeederContributor>();
         await adminPermissionDataSeederContributor.SeedAsync(new DataSeedContext());
 
+        // See this contributor's own file comment: stock self-registration bypasses CustomerProfile
+        // creation entirely, orphaning the account (name/etc. can never show anywhere in this app).
+        // OTP is the only real customer-registration path; this closes the other one.
+        var selfRegistrationDisabledDataSeederContributor = scope.ServiceProvider.GetRequiredService<SelfRegistrationDisabledDataSeederContributor>();
+        await selfRegistrationDisabledDataSeederContributor.SeedAsync(new DataSeedContext());
+
         var openIddictDataSeedContributor = scope.ServiceProvider.GetRequiredService<OpenIddictDataSeedContributor>();
         await openIddictDataSeedContributor.SeedAsync(new DataSeedContext());
 

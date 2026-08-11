@@ -2,7 +2,7 @@ using System.Threading.Tasks;
 using Volo.Abp.Account.Settings;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
-using Volo.Abp.Settings;
+using Volo.Abp.SettingManagement;
 
 namespace Eksabli.Data.Seeders;
 
@@ -27,6 +27,9 @@ namespace Eksabli.Data.Seeders;
 // account gets created in this app; nothing else should be creating Host-realm users on a customer's
 // behalf. CustomerProfileAppService.GetOrCreateAsync's own "defensive create-if-missing insurance"
 // stays as a second layer for the update-profile path, but the real fix for "register" is here.
+//
+// Lives in the Application layer, not Domain, alongside DemoBusinessDataSeederContributor — needs
+// Volo.Abp.Account.Application(.Contracts) for AccountSettingNames, only referenced at this layer.
 //
 // Global (host-level) default — no TenantId, applies platform-wide. Idempotent: SetGlobalAsync just
 // upserts the value, safe to run on every startup like every other contributor in this folder.

@@ -9,4 +9,8 @@ namespace Eksabli.Otp;
 public interface IOtpAppService : IApplicationService
 {
     Task RequestOtpAsync(RequestOtpDto input);
+
+    // Not a login/token endpoint by itself — see RegisterCustomerDto's own comment. Call this, then
+    // still finish sign-in the normal way via POST /connect/token (grant_type=otp).
+    Task RegisterAsync(RegisterCustomerDto input);
 }
