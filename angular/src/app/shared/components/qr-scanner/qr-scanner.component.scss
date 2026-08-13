@@ -1,0 +1,53 @@
+// Dashed-box "waiting for a scan" look, matching prototype/business/points-management.html's own
+// `border-2 border-dashed rounded-2xl` QR box — translated to plain CSS since Bootstrap 5 has no
+// dashed-border utility. `--eks-border`/`--eks-bg`/`--eks-text-muted` fall back to the same light-mode
+// hex values used elsewhere in this file (see styles.scss's `.eks-*` custom-property convention).
+.eks-qr-box {
+  position: relative;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 2px dashed var(--eks-border, #e2e8f0);
+  border-radius: 1rem;
+  background-color: var(--eks-bg, #f8fafc);
+
+  video {
+    width: 100%;
+    height: 100%;
+    min-height: 220px;
+    object-fit: cover;
+  }
+}
+
+.eks-qr-box--scanning {
+  border-style: solid;
+  border-color: var(--bs-primary, #4f46e5);
+}
+
+.eks-qr-box__overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1.5rem;
+
+  i {
+    font-size: 2rem;
+    color: var(--eks-text-muted, #94a3b8);
+    margin-bottom: 0.5rem;
+  }
+}
+
+// The classic camera-viewfinder frame: a bright square in the middle, everything outside it dimmed —
+// purely cosmetic (the actual decode reads the whole frame, not just this box) but it's what tells a
+// cashier where to line the customer's phone screen up.
+.eks-qr-box__frame {
+  position: absolute;
+  inset: 12%;
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  border-radius: 0.75rem;
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.25);
+  pointer-events: none;
+}

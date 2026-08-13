@@ -338,6 +338,17 @@ export const APP_ROUTES: Routes = [
         data: { requiredPolicy: 'Eksabli.Reports' },
       },
       {
+        path: 'reports',
+        loadComponent: () =>
+          import('./business/reports/business-reports.component').then(c => c.BusinessReportsComponent),
+        canActivate: [permissionGuard],
+        // Same broad "can view reports" permission as Dashboard/Analytics/Transactions above — this
+        // page's own real content (GetCustomerSegmentsAsync/GetTopCustomersAsync) falls under the same
+        // controller-level Eksabli.Reports.Default (string value "Eksabli.Reports", no ".Default"
+        // suffix — see the Transactions route's own comment on this exact gotcha).
+        data: { requiredPolicy: 'Eksabli.Reports' },
+      },
+      {
         // No `canActivate`/`requiredPolicy` — same shape as `points` above. SupportTicketsController's
         // GetListAsync/CreateAsync/AddMessageAsync have no ABP permission beyond the class-level
         // [Authorize] (self-scoped server-side to the caller's own tenant, not a permission check —

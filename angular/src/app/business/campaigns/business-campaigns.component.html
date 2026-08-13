@@ -41,10 +41,24 @@
               {{ campaign.startDate | date: 'mediumDate' }} – {{ campaign.endDate | date: 'mediumDate' }}
             </p>
           </div>
-          @if (canActivate() && campaign.status === Status.Draft) {
-            <button type="button" class="btn btn-primary btn-sm" [disabled]="isActivating()" (click)="activate(campaign)">
-              {{ '::BusinessPanel:Campaigns:Activate' | abpLocalization }}
-            </button>
+          @if (campaign.status === Status.Draft || campaign.status === Status.Active) {
+            <div class="d-flex gap-2">
+              @if (canEdit()) {
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary"
+                  [attr.aria-label]="'::BusinessPanel:Campaigns:Edit' | abpLocalization"
+                  (click)="openEditWizard(campaign)"
+                >
+                  <i class="fas fa-pen"></i>
+                </button>
+              }
+              @if (canActivate() && campaign.status === Status.Draft) {
+                <button type="button" class="btn btn-primary btn-sm" [disabled]="isActivating()" (click)="activate(campaign)">
+                  {{ '::BusinessPanel:Campaigns:Activate' | abpLocalization }}
+                </button>
+              }
+            </div>
           }
         </div>
 
@@ -71,7 +85,7 @@
 
 <app-modal
   [open]="modalOpen()"
-  [title]="'::BusinessPanel:Campaigns:WizardTitle' | abpLocalization"
+  [title]="(editingCampaignId ? '::BusinessPanel:Campaigns:WizardEditTitle' : '::BusinessPanel:Campaigns:WizardTitle') | abpLocalization"
   (closed)="closeWizard()"
 >
   <p class="text-muted small mb-3">
@@ -113,7 +127,16 @@
       <div class="row g-3">
         <div class="col-12 col-sm-6">
           <label class="form-label" for="campaignStart">{{ '::BusinessPanel:Campaigns:FieldStartDate' | abpLocalization }}</label>
-          <input id="campaignStart" type="date" class="form-control" formControlName="startDate" />
+          <input id="campaignStart" type="date" class="form-control" formControlName="startDate" [min]="todayIso" />
+          @if (step1Form.controls.startDate.disabled) {
+            <p class="text-muted small mt-1">{{ '::BusinessPanel:Campaigns:StartDateLockedHint' | abpLocalization }}</p>
+          } @else if (step1Form.controls.startDate.touched) {
+            @if (step1Form.controls.startDate.errors?.['required']) {
+              <p class="text-danger small mt-1">{{ '::BusinessPanel:Campaigns:FieldRequired' | abpLocalization }}</p>
+            } @else if (step1Form.controls.startDate.errors?.['pastDate']) {
+              <p class="text-danger small mt-1">{{ '::BusinessPanel:Campaigns:FieldStartDateInvalid' | abpLocalization }}</p>
+            }
+          }
         </div>
         <div class="col-12 col-sm-6">
           <label class="form-label" for="campaignEnd">{{ '::BusinessPanel:Campaigns:FieldEndDate' | abpLocalization }}</label>
@@ -205,7 +228,7 @@
     <div class="alert alert-success d-flex align-items-start gap-2 mb-0">
       <i class="fas fa-circle-check mt-1"></i>
       <div>
-        <p class="mb-1">{{ '::BusinessPanel:Campaigns:DraftSavedMessage' | abpLocalization }}</p>
+        <p class="mb-1">{{ (editingCampaignId ? '::BusinessPanel:Campaigns:ChangesSavedMessage' : '::BusinessPanel:Campaigns:DraftSavedMessage') | abpLocalization }}</p>
         @if (previewCount() !== null) {
           <p class="mb-0">
             {{ '::BusinessPanel:Campaigns:EstimatedAudiencePrefix' | abpLocalization }}
@@ -241,15 +264,21 @@
       </button>
     }
     @if (wizardStep() === 3) {
-      <button type="button" class="btn btn-secondary" (click)="saveAsDraft()">
-        {{ '::BusinessPanel:Campaigns:SaveAsDraft' | abpLocalization }}
-      </button>
-      @if (canActivate()) {
-        <button type="button" class="btn btn-primary" [disabled]="isActivating()" (click)="activateFromWizard()">
-          @if (isActivating()) {
-            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-          }
-          {{ '::BusinessPanel:Campaigns:ActivateNow' | abpLocalization }}
+      @if (createdCampaign()?.status === Status.Draft) {
+        <button type="button" class="btn btn-secondary" (click)="finishWizard()">
+          {{ '::BusinessPanel:Campaigns:SaveAsDraft' | abpLocalization }}
+        </button>
+        @if (canActivate()) {
+          <button type="button" class="btn btn-primary" [disabled]="isActivating()" (click)="activateFromWizard()">
+            @if (isActivating()) {
+              <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+            }
+            {{ '::BusinessPanel:Campaigns:ActivateNow' | abpLocalization }}
+          </button>
+        }
+      } @else {
+        <button type="button" class="btn btn-primary" (click)="finishWizard()">
+          {{ '::BusinessPanel:Campaigns:Done' | abpLocalization }}
         </button>
       }
     }

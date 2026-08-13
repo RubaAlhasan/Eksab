@@ -1,0 +1,101 @@
+<app-page-header
+  [title]="'::BusinessPanel:Reports:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:Reports:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::BusinessPanel:Reports:Title' | abpLocalization) }]"
+>
+</app-page-header>
+
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::BusinessPanel:Reports:Loading' | abpLocalization"></app-loading-spinner>
+} @else if (loadFailed()) {
+  <app-error-state
+    [message]="'::BusinessPanel:Reports:LoadErrorMessage' | abpLocalization"
+    [retryLabel]="'::BusinessPanel:Reports:TryAgain' | abpLocalization"
+    (retry)="retry()"
+  >
+  </app-error-state>
+} @else {
+  <div class="card p-4 mb-4">
+    <h2 class="fw-bold small mb-1">{{ '::BusinessPanel:Reports:CustomerReportTitle' | abpLocalization }}</h2>
+    <p class="text-muted small mb-4">{{ '::BusinessPanel:Reports:CustomerReportSubtitle' | abpLocalization }}</p>
+
+    <div class="row g-4">
+      <div class="col-12 col-lg-5">
+        <h3 class="fw-semibold small text-muted text-uppercase mb-3">{{ '::BusinessPanel:Reports:SegmentsHeading' | abpLocalization }}</h3>
+        @if (segmentTotal() === 0) {
+          <p class="text-muted small mb-0">{{ '::BusinessPanel:Reports:NoSegmentData' | abpLocalization }}</p>
+        } @else {
+          <div class="d-flex flex-column gap-3">
+            @for (bar of segmentBars(); track bar.key) {
+              <div>
+                <div class="d-flex align-items-center justify-content-between small mb-1">
+                  <span class="fw-semibold d-flex align-items-center gap-2">
+                    <span class="eks-segment-dot" [style.background-color]="bar.color"></span>
+                    {{ bar.labelKey | abpLocalization }}
+                  </span>
+                  <span class="text-muted">{{ bar.value }} · {{ bar.pct }}%</span>
+                </div>
+                <div class="eks-progress-track">
+                  <div class="eks-progress-fill" role="progressbar" [style.width.%]="bar.pct" [style.background-color]="bar.color"></div>
+                </div>
+                <p class="text-muted small mt-1 mb-0">{{ bar.definitionKey | abpLocalization }}</p>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="col-12 col-lg-7">
+        <h3 class="fw-semibold small text-muted text-uppercase mb-3">{{ '::BusinessPanel:Reports:TopCustomersHeading' | abpLocalization }}</h3>
+        @if (topCustomers().length === 0) {
+          <p class="text-muted small mb-0">{{ '::BusinessPanel:Reports:NoTopCustomers' | abpLocalization }}</p>
+        } @else {
+          <div class="d-flex flex-column gap-2">
+            @for (customer of topCustomers(); track customer.membershipId; let i = $index) {
+              <div class="d-flex align-items-center gap-3">
+                <span class="eks-rank">{{ i + 1 }}</span>
+                <span class="eks-avatar-initials">{{ customerInitials(customer) }}</span>
+                <span class="flex-grow-1 small fw-semibold">
+                  {{ customerName(customer) ?? ('::BusinessPanel:Reports:UnknownCustomer' | abpLocalization) }}
+                </span>
+                <span class="small fw-bold text-primary">{{ customer.lifetimeEarned ?? 0 }} {{ '::BusinessPanel:Reports:PointsWord' | abpLocalization }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <h2 class="fw-bold small mb-3">{{ '::BusinessPanel:Reports:MoreReportsHeading' | abpLocalization }}</h2>
+  <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-4">
+    <div class="col">
+      <a routerLink="/business/analytics" class="card p-4 h-100 eks-report-card text-decoration-none">
+        <span class="eks-report-card__icon"><i class="fas fa-chart-line"></i></span>
+        <p class="fw-bold small mb-1">{{ '::BusinessPanel:Reports:BusinessReportTitle' | abpLocalization }}</p>
+        <p class="text-muted small mb-0">{{ '::BusinessPanel:Reports:BusinessReportDescription' | abpLocalization }}</p>
+      </a>
+    </div>
+    <div class="col">
+      <a routerLink="/business/billing" class="card p-4 h-100 eks-report-card text-decoration-none">
+        <span class="eks-report-card__icon"><i class="fas fa-receipt"></i></span>
+        <p class="fw-bold small mb-1">{{ '::BusinessPanel:Reports:FinancialReportTitle' | abpLocalization }}</p>
+        <p class="text-muted small mb-0">{{ '::BusinessPanel:Reports:FinancialReportDescription' | abpLocalization }}</p>
+      </a>
+    </div>
+    <div class="col">
+      <a routerLink="/business/campaigns" class="card p-4 h-100 eks-report-card text-decoration-none">
+        <span class="eks-report-card__icon"><i class="fas fa-bullhorn"></i></span>
+        <p class="fw-bold small mb-1">{{ '::BusinessPanel:Reports:MarketingReportTitle' | abpLocalization }}</p>
+        <p class="text-muted small mb-0">{{ '::BusinessPanel:Reports:MarketingReportDescription' | abpLocalization }}</p>
+      </a>
+    </div>
+    <div class="col">
+      <a routerLink="/business/transactions" class="card p-4 h-100 eks-report-card text-decoration-none">
+        <span class="eks-report-card__icon"><i class="fas fa-file-arrow-down"></i></span>
+        <p class="fw-bold small mb-1">{{ '::BusinessPanel:Reports:ExportReportTitle' | abpLocalization }}</p>
+        <p class="text-muted small mb-0">{{ '::BusinessPanel:Reports:ExportReportDescription' | abpLocalization }}</p>
+      </a>
+    </div>
+  </div>
+}

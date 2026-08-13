@@ -1,0 +1,38 @@
+<div class="eks-qr-box" [class.eks-qr-box--scanning]="phase() === 'scanning'">
+  <video #video playsinline muted [style.display]="phase() === 'scanning' ? 'block' : 'none'"></video>
+
+  @if (phase() === 'idle') {
+    <div class="eks-qr-box__overlay">
+      <i class="fas fa-qrcode"></i>
+      <p class="text-muted small mb-3">{{ idleLabel() }}</p>
+      <button type="button" class="btn btn-outline-primary btn-sm" [disabled]="busy()" (click)="start()">
+        {{ startLabel() }}
+      </button>
+    </div>
+  }
+
+  @if (phase() === 'scanning') {
+    <div class="eks-qr-box__frame" aria-hidden="true"></div>
+  }
+
+  @if (phase() === 'captured') {
+    <div class="eks-qr-box__overlay">
+      <i class="fas fa-circle-check text-success"></i>
+      <p class="text-muted small mb-3">{{ capturedLabel() }}</p>
+      <button type="button" class="btn btn-outline-primary btn-sm" [disabled]="busy()" (click)="scanAgain()">
+        @if (busy()) {
+          <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+        }
+        {{ scanAgainLabel() }}
+      </button>
+    </div>
+  }
+</div>
+
+@if (phase() === 'scanning') {
+  <div class="d-flex align-items-center justify-content-center gap-2 mt-2">
+    <span class="spinner-grow spinner-grow-sm text-primary" role="status" aria-hidden="true"></span>
+    <span class="text-muted small">{{ scanningLabel() }}</span>
+    <button type="button" class="btn btn-link btn-sm p-0 ms-2" (click)="stop()">{{ cancelLabel() }}</button>
+  </div>
+}
