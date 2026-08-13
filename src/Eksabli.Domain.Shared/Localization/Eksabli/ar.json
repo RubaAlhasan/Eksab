@@ -2,6 +2,17 @@
   "culture": "ar",
   "texts": {
     "AppName": "Eksabli",
+
+    "Login:BusinessPill": "الأعمال",
+    "Login:Headline": "أدر برنامج ولاء عملائك كقناة نمو حقيقية، لا كبطاقة ختم تقليدية.",
+    "Login:Subhead": "الفروع، الموظفون، المكافآت، الحملات، والتقارير — كل ما تحتاجه لتحويل عملائك المتكررين إلى قناتك الأكثر ربحية.",
+    "Login:FeatureRealtime": "نقاط ومستويات ومكافآت لحظية",
+    "Login:FeatureCampaigns": "حملات تستهدف الأعضاء المناسبين",
+    "Login:FeatureReports": "تقارير مبنية على بيانات حقيقية، لا تخمينات",
+    "Login:Footer": "© {0} Eksabli.",
+    "Login:Eyebrow": "بوابة الأعمال",
+    "Login:WelcomeBack": "مرحبًا بعودتك",
+
     "Menu:Home": "منزل، بيت",
     "Menu:ContactUs": "اتصل بنا",
     "Menu:ArticleSample": "عينة المادة",

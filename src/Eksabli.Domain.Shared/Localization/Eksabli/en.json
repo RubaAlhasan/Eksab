@@ -2,6 +2,17 @@
   "Culture": "en",
   "Texts": {
     "AppName": "Eksabli",
+
+    "Login:BusinessPill": "Business",
+    "Login:Headline": "Run your loyalty program like a growth channel, not a punch card.",
+    "Login:Subhead": "Branches, staff, rewards, campaigns, and reporting — everything you need to turn repeat customers into your most profitable channel.",
+    "Login:FeatureRealtime": "Real-time points, tiers, and rewards",
+    "Login:FeatureCampaigns": "Campaigns targeted at the right members",
+    "Login:FeatureReports": "Reports grounded in real data, not guesses",
+    "Login:Footer": "© {0} Eksabli.",
+    "Login:Eyebrow": "Business Portal",
+    "Login:WelcomeBack": "Welcome back",
+
     "Menu:Eksabli": "Eksabli",
     "Menu:BusinessProfile": "Business Profile",
     "Menu:Branches": "Branches",
