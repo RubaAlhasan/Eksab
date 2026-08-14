@@ -24,7 +24,7 @@ export class CouponAuditService {
     this.restService.request<any, PagedResultDto<CouponDto>>({
       method: 'GET',
       url: '/api/app/coupon-audit',
-      params: { status: input.status, branchId: input.branchId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { status: input.status, branchId: input.branchId, membershipId: input.membershipId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   

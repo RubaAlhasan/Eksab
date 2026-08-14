@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Eksabli.Memberships;
@@ -26,6 +27,13 @@ public class MembershipsController : EksabliController
     public Task<PagedResultDto<MemberDto>> GetMembersAsync([FromQuery] MemberFilterDto input)
     {
         return _membershipAppService.GetMembersAsync(input);
+    }
+
+    [Authorize(EksabliPermissions.Memberships.View)]
+    [HttpGet("{id}")]
+    public Task<MemberDto> GetMemberAsync(Guid id)
+    {
+        return _membershipAppService.GetMemberAsync(id);
     }
 
     [HttpPost("join")]

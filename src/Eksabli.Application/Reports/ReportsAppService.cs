@@ -404,10 +404,26 @@ public class ReportsAppService : ApplicationService, IReportsAppService
                 .ToList();
         }
 
+        // Same "resolve to a real id before the main query" shape as BranchId above — PointsTransaction
+        // has no MembershipId of its own either, only WalletId. A membership with no wallet can't
+        // happen by construction (MembershipAppService.JoinAsync creates both together), but fail closed
+        // (empty result) rather than silently returning every transaction if it ever did.
+        Guid? walletIdForMembership = null;
+        if (input.MembershipId.HasValue)
+        {
+            var wallet = await _walletRepository.FirstOrDefaultAsync(w => w.MembershipId == input.MembershipId.Value);
+            if (wallet == null)
+            {
+                return new PagedResultDto<TransactionListItemDto>(0, new List<TransactionListItemDto>());
+            }
+            walletIdForMembership = wallet.Id;
+        }
+
         var (page, totalCount) = await _transactionRepository.GetListAsync(
             type: input.Type,
             createdByEmployeeId: input.StaffId,
             createdByEmployeeIds: staffIdsForBranch,
+            walletId: walletIdForMembership,
             from: input.From,
             to: input.To,
             skipCount: input.SkipCount,

@@ -88,6 +88,7 @@ export interface TransactionFilterDto extends PagedAndSortedResultRequestDto {
   type?: PointsTransactionType | null;
   branchId?: string | null;
   staffId?: string | null;
+  membershipId?: string | null;
   from?: string | null;
   to?: string | null;
 }

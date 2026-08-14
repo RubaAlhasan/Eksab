@@ -1,0 +1,205 @@
+<app-page-header
+  [title]="member() ? (customerName(member()!) ?? ('::BusinessPanel:Customers:UnknownCustomer' | abpLocalization)) : ('::BusinessPanel:CustomerDetails:Title' | abpLocalization)"
+  [breadcrumbs]="[
+    { label: 'Business Portal', link: '/business/dashboard' },
+    { label: ('::BusinessPanel:Customers:Title' | abpLocalization), link: '/business/customers' },
+    { label: member() ? (customerName(member()!) ?? ('::BusinessPanel:Customers:UnknownCustomer' | abpLocalization)) : '' }
+  ]"
+>
+</app-page-header>
+
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::BusinessPanel:CustomerDetails:Loading' | abpLocalization"></app-loading-spinner>
+} @else if (loadFailed() || !member()) {
+  <app-error-state
+    [message]="'::BusinessPanel:CustomerDetails:LoadErrorMessage' | abpLocalization"
+    [retryLabel]="'::BusinessPanel:CustomerDetails:TryAgain' | abpLocalization"
+    (retry)="retry()"
+  >
+  </app-error-state>
+} @else {
+  <div class="row g-4">
+    <div class="col-12 col-lg-4">
+      <div class="card p-4">
+        <div class="d-flex flex-column align-items-center text-center mb-4">
+          <span class="eks-avatar-xl mb-3">{{ initials(member()!) }}</span>
+          <p class="fw-bold mb-0">{{ customerName(member()!) ?? ('::BusinessPanel:Customers:UnknownCustomer' | abpLocalization) }}</p>
+          <p class="text-muted small mb-2">{{ member()!.phoneNumber ?? '—' }}</p>
+          @if (member()!.tierName) {
+            <app-status-badge [label]="member()!.tierName!" variant="info"></app-status-badge>
+          }
+        </div>
+
+        <div class="row g-2 text-center mb-4">
+          <div class="col-6">
+            <div class="eks-stat-tile">
+              <p class="fw-bold fs-5 mb-0">{{ member()!.balance ?? 0 }}</p>
+              <p class="text-muted small mb-0">{{ '::BusinessPanel:CustomerDetails:Balance' | abpLocalization }}</p>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="eks-stat-tile">
+              <app-status-badge [label]="statusLabelKey(member()!.status) | abpLocalization" [variant]="statusVariant(member()!.status)"></app-status-badge>
+              <p class="text-muted small mb-0 mt-1">{{ '::BusinessPanel:CustomerDetails:Status' | abpLocalization }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex flex-column gap-2 small mb-4">
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">{{ '::BusinessPanel:CustomerDetails:Joined' | abpLocalization }}</span>
+            <span class="fw-semibold">{{ member()!.joinedAt | date: 'mediumDate' }}</span>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">{{ '::BusinessPanel:CustomerDetails:LastActive' | abpLocalization }}</span>
+            <span class="fw-semibold">{{ member()!.lastActiveAt ? (member()!.lastActiveAt | date: 'mediumDate') : ('::BusinessPanel:CustomerDetails:Never' | abpLocalization) }}</span>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-primary w-100" (click)="openAdjustModal()">
+          <i class="fas fa-pen me-1"></i>{{ '::BusinessPanel:CustomerDetails:AdjustButton' | abpLocalization }}
+        </button>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-8">
+      <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+          <button type="button" class="nav-link" [class.active]="activeTab() === 'transactions'" (click)="selectTab('transactions')">
+            {{ '::BusinessPanel:CustomerDetails:TabTransactions' | abpLocalization }}
+          </button>
+        </li>
+        <li class="nav-item">
+          <button type="button" class="nav-link" [class.active]="activeTab() === 'coupons'" (click)="selectTab('coupons')">
+            {{ '::BusinessPanel:CustomerDetails:TabCoupons' | abpLocalization }}
+          </button>
+        </li>
+      </ul>
+
+      @if (activeTab() === 'transactions') {
+        @if (transactionsLoading()) {
+          <app-loading-spinner [label]="'::BusinessPanel:CustomerDetails:Loading' | abpLocalization"></app-loading-spinner>
+        } @else if (transactionsFailed()) {
+          <app-error-state
+            [message]="'::BusinessPanel:CustomerDetails:LoadErrorMessage' | abpLocalization"
+            [retryLabel]="'::BusinessPanel:CustomerDetails:TryAgain' | abpLocalization"
+            (retry)="retryTransactions()"
+          >
+          </app-error-state>
+        } @else if (transactions().length === 0) {
+          <app-empty-state
+            icon="fa-file-invoice-dollar"
+            [title]="'::BusinessPanel:CustomerDetails:NoTransactionsTitle' | abpLocalization"
+            [description]="'::BusinessPanel:CustomerDetails:NoTransactionsDescription' | abpLocalization"
+          >
+          </app-empty-state>
+        } @else {
+          <div class="card overflow-hidden mb-3">
+            <div class="table-responsive">
+              <table class="table mb-0">
+                <thead>
+                  <tr>
+                    <th>{{ '::BusinessPanel:Transactions:ColumnType' | abpLocalization }}</th>
+                    <th>{{ '::BusinessPanel:Transactions:ColumnPoints' | abpLocalization }}</th>
+                    <th>{{ '::BusinessPanel:Transactions:ColumnSource' | abpLocalization }}</th>
+                    <th>{{ '::BusinessPanel:Transactions:ColumnDate' | abpLocalization }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (txn of transactions(); track txn.id) {
+                    <tr>
+                      <td><app-status-badge [label]="typeLabelKey(txn.type) | abpLocalization" [variant]="typeVariant(txn.type)"></app-status-badge></td>
+                      <td class="fw-semibold" [class.text-success]="(txn.points ?? 0) > 0" [class.text-danger]="(txn.points ?? 0) < 0">
+                        {{ (txn.points ?? 0) > 0 ? '+' : '' }}{{ txn.points }}
+                      </td>
+                      <td class="text-muted">{{ sourceLabelKey(txn.source) | abpLocalization }}</td>
+                      <td class="text-muted">{{ txn.creationTime | date: 'mediumDate' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <app-pagination [pageIndex]="transactionsPageIndex()" [totalPages]="transactionsTotalPages()" (pageChange)="goToTransactionsPage($event)"></app-pagination>
+        }
+      }
+
+      @if (activeTab() === 'coupons') {
+        @if (couponsLoading()) {
+          <app-loading-spinner [label]="'::BusinessPanel:CustomerDetails:Loading' | abpLocalization"></app-loading-spinner>
+        } @else if (couponsFailed()) {
+          <app-error-state
+            [message]="'::BusinessPanel:CustomerDetails:LoadErrorMessage' | abpLocalization"
+            [retryLabel]="'::BusinessPanel:CustomerDetails:TryAgain' | abpLocalization"
+            (retry)="retryCoupons()"
+          >
+          </app-error-state>
+        } @else if (coupons().length === 0) {
+          <app-empty-state
+            icon="fa-ticket"
+            [title]="'::BusinessPanel:CustomerDetails:NoCouponsTitle' | abpLocalization"
+            [description]="'::BusinessPanel:CustomerDetails:NoCouponsDescription' | abpLocalization"
+          >
+          </app-empty-state>
+        } @else {
+          <div class="card divide-y mb-3">
+            @for (coupon of coupons(); track coupon.id) {
+              <div class="d-flex align-items-center gap-3 p-3 eks-coupon-row">
+                <span class="flex-grow-1">
+                  <span class="d-block fw-semibold small">{{ coupon.rewardNameEn }}</span>
+                  <span class="d-block text-muted small font-monospace">{{ coupon.code }}</span>
+                </span>
+                <app-status-badge [label]="couponStatusLabelKey(coupon.status) | abpLocalization" [variant]="couponStatusVariant(coupon.status)"></app-status-badge>
+              </div>
+            }
+          </div>
+          <app-pagination [pageIndex]="couponsPageIndex()" [totalPages]="couponsTotalPages()" (pageChange)="goToCouponsPage($event)"></app-pagination>
+        }
+      }
+    </div>
+  </div>
+}
+
+<app-modal
+  [open]="adjustModalOpen()"
+  [title]="'::BusinessPanel:Customers:AdjustTitle' | abpLocalization"
+  (closed)="closeAdjustModal()"
+>
+  <form [formGroup]="adjustForm" class="d-flex flex-column gap-3">
+    <div>
+      <label class="form-label">{{ '::BusinessPanel:Customers:FieldDirection' | abpLocalization }}</label>
+      <div class="btn-group w-100" role="group">
+        <input type="radio" class="btn-check" id="detailDirectionAdd" formControlName="direction" value="add" />
+        <label class="btn btn-outline-primary" for="detailDirectionAdd">{{ '::BusinessPanel:Customers:DirectionAdd' | abpLocalization }}</label>
+        <input type="radio" class="btn-check" id="detailDirectionRemove" formControlName="direction" value="remove" />
+        <label class="btn btn-outline-primary" for="detailDirectionRemove">{{ '::BusinessPanel:Customers:DirectionRemove' | abpLocalization }}</label>
+      </div>
+    </div>
+    <div>
+      <label class="form-label" for="detailAdjustAmount">{{ '::BusinessPanel:Customers:FieldAmount' | abpLocalization }}</label>
+      <input id="detailAdjustAmount" type="number" min="1" class="form-control" formControlName="amount" placeholder="e.g. 50" />
+      @if (adjustForm.controls.amount.invalid && adjustForm.controls.amount.touched) {
+        <p class="text-danger small mt-1">{{ '::BusinessPanel:Customers:FieldAmountInvalid' | abpLocalization }}</p>
+      }
+    </div>
+    <div>
+      <label class="form-label" for="detailAdjustReason">{{ '::BusinessPanel:Customers:FieldReason' | abpLocalization }}</label>
+      <textarea id="detailAdjustReason" class="form-control" rows="2" formControlName="reason" placeholder="e.g. Goodwill gesture for delayed order"></textarea>
+    </div>
+    <div class="alert alert-info small mb-0">
+      <i class="fas fa-circle-info me-1"></i>{{ '::BusinessPanel:Customers:AdjustCapNote' | abpLocalization }}
+    </div>
+  </form>
+
+  <div slot="footer" class="d-flex gap-2 justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeAdjustModal()">
+      {{ '::BusinessPanel:Customers:Cancel' | abpLocalization }}
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="isAdjusting()" (click)="submitAdjust()">
+      @if (isAdjusting()) {
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+      }
+      {{ '::BusinessPanel:Customers:ApplyAdjustment' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

@@ -5,6 +5,7 @@ import type { RewardType } from './reward-type.enum';
 export interface CouponAuditFilterDto extends PagedAndSortedResultRequestDto {
   status?: CouponStatus | null;
   branchId?: string | null;
+  membershipId?: string | null;
 }
 
 export interface CouponDto extends AuditedEntityDto<string> {

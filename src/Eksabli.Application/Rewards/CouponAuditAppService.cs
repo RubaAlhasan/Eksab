@@ -47,6 +47,7 @@ public class CouponAuditAppService : ApplicationService, ICouponAuditAppService
         var (coupons, totalCount) = await _couponRepository.GetListAsync(
             status: input.Status,
             branchId: input.BranchId,
+            membershipId: input.MembershipId,
             sorting: input.Sorting,
             skipCount: input.SkipCount,
             maxResultCount: input.MaxResultCount);

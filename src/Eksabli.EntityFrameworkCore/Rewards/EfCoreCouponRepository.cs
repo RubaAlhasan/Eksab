@@ -21,12 +21,13 @@ public class EfCoreCouponRepository : EfCoreRepository<EksabliDbContext, Coupon,
     public async Task<(List<Coupon> Items, int TotalCount)> GetListAsync(
         CouponStatus? status = null,
         Guid? branchId = null,
+        Guid? membershipId = null,
         string? sorting = null,
         int skipCount = 0,
         int maxResultCount = int.MaxValue,
         CancellationToken cancellationToken = default)
     {
-        var queryable = ApplyFilter(await GetQueryableAsync(), status, branchId);
+        var queryable = ApplyFilter(await GetQueryableAsync(), status, branchId, membershipId);
 
         var totalCount = await AsyncExecuter.CountAsync(queryable, GetCancellationToken(cancellationToken));
 
@@ -40,7 +41,7 @@ public class EfCoreCouponRepository : EfCoreRepository<EksabliDbContext, Coupon,
         return (items, totalCount);
     }
 
-    protected virtual IQueryable<Coupon> ApplyFilter(IQueryable<Coupon> query, CouponStatus? status, Guid? branchId)
+    protected virtual IQueryable<Coupon> ApplyFilter(IQueryable<Coupon> query, CouponStatus? status, Guid? branchId, Guid? membershipId = null)
     {
         if (status.HasValue)
         {
@@ -50,6 +51,11 @@ public class EfCoreCouponRepository : EfCoreRepository<EksabliDbContext, Coupon,
         if (branchId.HasValue)
         {
             query = query.Where(x => x.RedeemedBranchId == branchId.Value);
+        }
+
+        if (membershipId.HasValue)
+        {
+            query = query.Where(x => x.MembershipId == membershipId.Value);
         }
 
         return query;

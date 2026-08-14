@@ -238,6 +238,13 @@ export const APP_ROUTES: Routes = [
         data: { requiredPolicy: 'Eksabli.Memberships.View' },
       },
       {
+        path: 'customers/:id',
+        loadComponent: () =>
+          import('./business/customers/business-customer-details.component').then(c => c.BusinessCustomerDetailsComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Memberships.View' },
+      },
+      {
         path: 'employees',
         loadComponent: () =>
           import('./business/employees/business-employees.component').then(c => c.BusinessEmployeesComponent),
