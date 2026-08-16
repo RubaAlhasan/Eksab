@@ -149,6 +149,18 @@ export const APP_ROUTES: Routes = [
         // required a hand-written app service instead of a commercial ABP module).
         data: { requiredPolicy: 'Eksabli.AuditLogs' },
       },
+      {
+        // Admin-triggered Notification Hub send (UserNotificationsController.SendAsync) — distinct
+        // from the Business Portal's '/business/notifications' (campaign channel, different
+        // controller/permission). Whole action is gated on Eksabli.Notifications.Broadcast, no lesser
+        // read permission to fall back to (there's no cross-recipient send history to view either —
+        // see admin-notifications.component.ts's own file comment).
+        path: 'notifications',
+        loadComponent: () =>
+          import('./admin/notifications/admin-notifications.component').then(c => c.AdminNotificationsComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Notifications.Broadcast' },
+      },
       // Stock ABP UI (Users/Roles/My Profile/Settings), nested here — not just linked at their
       // existing top-level '/identity', '/account', '/setting-management' paths below — so they
       // render inside AdminLayoutComponent's own shell instead of Lepton-X's stock SideMenu chrome.
