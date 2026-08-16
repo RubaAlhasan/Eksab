@@ -149,6 +149,18 @@ export const APP_ROUTES: Routes = [
         // required a hand-written app service instead of a commercial ABP module).
         data: { requiredPolicy: 'Eksabli.AuditLogs' },
       },
+      {
+        // Admin-triggered Notification Hub send (UserNotificationsController.SendAsync) — distinct
+        // from the Business Portal's '/business/notifications' (campaign channel, different
+        // controller/permission). Whole action is gated on Eksabli.Notifications.Broadcast, no lesser
+        // read permission to fall back to (there's no cross-recipient send history to view either —
+        // see admin-notifications.component.ts's own file comment).
+        path: 'notifications',
+        loadComponent: () =>
+          import('./admin/notifications/admin-notifications.component').then(c => c.AdminNotificationsComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Notifications.Broadcast' },
+      },
       // Stock ABP UI (Users/Roles/My Profile/Settings), nested here — not just linked at their
       // existing top-level '/identity', '/account', '/setting-management' paths below — so they
       // render inside AdminLayoutComponent's own shell instead of Lepton-X's stock SideMenu chrome.
@@ -234,6 +246,13 @@ export const APP_ROUTES: Routes = [
         path: 'customers',
         loadComponent: () =>
           import('./business/customers/business-customers.component').then(c => c.BusinessCustomersComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Memberships.View' },
+      },
+      {
+        path: 'customers/:id',
+        loadComponent: () =>
+          import('./business/customers/business-customer-details.component').then(c => c.BusinessCustomerDetailsComponent),
         canActivate: [permissionGuard],
         data: { requiredPolicy: 'Eksabli.Memberships.View' },
       },
@@ -335,6 +354,17 @@ export const APP_ROUTES: Routes = [
         // requiredPolicy above) so a viewer without .Export can still browse the table; the Export
         // button itself is hidden without .Export via the component's own canExport() check (same
         // "route on the lesser permission, tighter control inside" shape Coupons/BusinessProfile use).
+        data: { requiredPolicy: 'Eksabli.Reports' },
+      },
+      {
+        path: 'reports',
+        loadComponent: () =>
+          import('./business/reports/business-reports.component').then(c => c.BusinessReportsComponent),
+        canActivate: [permissionGuard],
+        // Same broad "can view reports" permission as Dashboard/Analytics/Transactions above — this
+        // page's own real content (GetCustomerSegmentsAsync/GetTopCustomersAsync) falls under the same
+        // controller-level Eksabli.Reports.Default (string value "Eksabli.Reports", no ".Default"
+        // suffix — see the Transactions route's own comment on this exact gotcha).
         data: { requiredPolicy: 'Eksabli.Reports' },
       },
       {

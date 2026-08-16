@@ -22,4 +22,9 @@ public interface IMembershipAppService : IApplicationService
     // Business Portal > Customers "Members" tab (Eksabli.Memberships.View) — ambient tenant, this
     // business's own members only, same realm-scoping shape as FollowAppService.GetFollowersAsync.
     Task<PagedResultDto<MemberDto>> GetMembersAsync(MemberFilterDto input);
+
+    // Business Portal > Customer Details (Eksabli.Memberships.View, same permission as the list) — the
+    // single-row counterpart GetMembersAsync never had; a details page needs a stable, direct-URL-
+    // loadable fetch, not a client-side scan of the full member list.
+    Task<MemberDto> GetMemberAsync(System.Guid id);
 }

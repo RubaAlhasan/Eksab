@@ -97,14 +97,14 @@
             @for (member of members(); track member.id) {
               <tr>
                 <td class="fw-semibold">
-                  <div class="d-flex align-items-center gap-2">
+                  <a [routerLink]="['/business/customers', member.id]" class="d-flex align-items-center gap-2 text-decoration-none text-reset">
                     <span class="eks-avatar-sm">{{ initials(member) }}</span>
                     @if (customerName(member); as name) {
                       <span>{{ name }}</span>
                     } @else {
                       <span class="text-muted fst-italic">{{ '::BusinessPanel:Customers:UnknownCustomer' | abpLocalization }}</span>
                     }
-                  </div>
+                  </a>
                 </td>
                 <td class="text-muted">{{ member.phoneNumber ?? '—' }}</td>
                 <td>

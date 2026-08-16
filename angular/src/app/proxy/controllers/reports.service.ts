@@ -111,7 +111,7 @@ export class ReportsService {
     this.restService.request<any, PagedResultDto<TransactionListItemDto>>({
       method: 'GET',
       url: '/api/app/report/transactions',
-      params: { type: input.type, branchId: input.branchId, staffId: input.staffId, from: input.from, to: input.to, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { type: input.type, branchId: input.branchId, staffId: input.staffId, membershipId: input.membershipId, from: input.from, to: input.to, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
 }

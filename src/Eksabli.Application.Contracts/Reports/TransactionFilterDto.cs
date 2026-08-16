@@ -16,6 +16,11 @@ public class TransactionFilterDto : PagedAndSortedResultRequestDto
 
     public Guid? StaffId { get; set; }
 
+    // Customer Details page's "Transactions" tab. Not a real column on PointsTransaction either —
+    // resolved to the member's WalletId server-side (GetTransactionsListAsync), same "derive it,
+    // don't expose the internal id" shape BranchId already uses.
+    public Guid? MembershipId { get; set; }
+
     public DateTime? From { get; set; }
 
     public DateTime? To { get; set; }

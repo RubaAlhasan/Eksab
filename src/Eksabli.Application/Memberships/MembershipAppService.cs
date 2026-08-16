@@ -234,6 +234,50 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
         return new PagedResultDto<MemberDto>(totalCount, paged);
     }
 
+    // Single-row counterpart to GetMembersAsync, for the Customer Details page — same real join
+    // (Membership -> PointsWallet/Tier -> CustomerProfile/IdentityUser), just for one membership
+    // instead of the whole tenant's set. Not refactored to share GetMembersAsync's batched-lookup
+    // internals — that method's dictionaries are built for N rows; duplicating the join for a single
+    // row here is clearer than threading a "just one" mode through the batch path.
+    public async Task<MemberDto> GetMemberAsync(Guid id)
+    {
+        var membership = await _membershipRepository.GetAsync(id);
+        var wallet = await _walletRepository.FirstOrDefaultAsync(w => w.MembershipId == membership.Id);
+
+        string? tierName = null;
+        if (wallet?.CurrentTierId != null)
+        {
+            var tier = await _tierRepository.FindAsync(wallet.CurrentTierId.Value);
+            tierName = tier?.Name;
+        }
+
+        IdentityUser? user;
+        CustomerProfile? profile;
+        using (_currentTenant.Change(null)) // IdentityUser/CustomerProfile are Host-realm
+        {
+            user = await _identityUserRepository.FindAsync(membership.CustomerId);
+            // CustomerProfile.Id is its own generated key, NOT the same as UserId (soft reference,
+            // no EF FK — same convention as Membership.CustomerId) — FindAsync(customerId) would look
+            // up the wrong column entirely; must filter by UserId explicitly.
+            profile = await _customerProfileRepository.FirstOrDefaultAsync(p => p.UserId == membership.CustomerId);
+        }
+
+        return new MemberDto
+        {
+            Id = membership.Id,
+            CustomerId = membership.CustomerId,
+            FirstName = profile?.FirstName,
+            LastName = profile?.LastName,
+            PhoneNumber = user?.PhoneNumber,
+            JoinedAt = membership.JoinedAt,
+            Status = membership.Status,
+            Balance = wallet?.Balance ?? 0,
+            TierId = wallet?.CurrentTierId,
+            TierName = tierName,
+            LastActiveAt = wallet?.LastModificationTime
+        };
+    }
+
     // Called only from within GetMyWalletsAsync's own Disable<IMultiTenant> block — no need to
     // re-disable the filter here.
     private async Task SetTierNamesAsync(List<PointsWalletDto> dtos)

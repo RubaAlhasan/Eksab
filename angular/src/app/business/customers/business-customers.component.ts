@@ -1,5 +1,6 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LocalizationPipe, PermissionService } from '@abp/ng.core';
 import { ToasterService } from '@abp/ng.theme.shared';
@@ -58,28 +59,25 @@ const TIER_VARIANTS: StatusBadgeVariant[] = ['neutral', 'info', 'warning', 'succ
  * - "Convert to Campaign Target" per follower — `Eksabli.Followers.ConvertToCampaign` permission
  *   exists but is explicitly "defined for parity/future use" (see EksabliPermissions.cs), no endpoint
  *   backs it. Not rendered — a button with nothing behind it is a dead end, not a feature.
- * - A separate customer-details DRILL-DOWN PAGE (`prototype/business/customer-details.html`) was
- *   checked and found not real-buildable as its own `/business/customers/:id` route: there is no
- *   single-member `GetAsync(id)` (only the paged `GetMembersAsync`), no staff-facing per-member
- *   transaction history (`IWalletAppService.GetMyTransactionHistoryAsync` is self-service-only), and
- *   `CouponAuditFilterDto` has no `MembershipId` filter to scope a "Coupons Redeemed" tab. Customer
- *   names stay plain text, not links to a page that doesn't exist.
  * - Real `MembershipStatus` is only Active/Frozen (confirmed in the domain enum) — the prototype's
  *   "At Risk"/"Churned" statuses don't exist anywhere in the backend and are not reproduced; the
  *   status filter only offers the two real values.
  *
- * **One real piece of `customer-details.html` WAS pulled forward into this page instead**: its
- * "Manual Point Adjustment" modal is real (`PosAppService.ManualAdjustAsync`, same
- * no-ABP-permission/custom-staff-role-check shape as `business-points.component.ts`'s Award tab —
- * Owner/BranchManager only, confirmed by reading `CheckStaffRoleAsync`'s call site there) — added here
- * as a real per-row action instead of a drill-down page, since every field it needs (`MemberDto
- * .customerId`, already loaded) is already on hand. **The prototype's own "Daily adjustment cap: 200
- * pts per staff member" copy is WRONG relative to the real backend** — confirmed by reading
- * `PosAppService.ManualAdjustAsync`/`PointsTransactionConsts`: the real cap is 20 ADJUSTMENTS per
- * employee per day (a count, not a cumulative points ceiling), so this page does not reproduce the
- * prototype's "200 pts" copy or attempt a client-side points cap — the real count cap has no live
- * "X used today" query to show proactively, so it just surfaces as the real `UserFriendlyException`
- * toast if hit, same pattern as every other plan/quota limit in this app.
+ * **UPDATE, later session**: the customer-details drill-down page this comment used to say wasn't
+ * real-buildable now exists (`business-customer-details.component.ts`, `/business/customers/:id`) —
+ * every gap listed above (`GetMemberAsync`, `TransactionFilterDto.MembershipId`,
+ * `CouponAuditFilterDto.MembershipId`) was closed with small, justified backend additions; see that
+ * component's own doc comment for the details. Each member row here is now a real link to it.
+ *
+ * This page's own **"Manual Point Adjustment" modal stays as its own per-row action too**, not removed
+ * in favor of the details page's copy — same real `PosAppService.ManualAdjustAsync` call, intentionally
+ * duplicated (not extracted into a shared component this pass) rather than risking a regression here
+ * for a refactor that wasn't asked for. **The prototype's own "Daily adjustment cap: 200 pts per staff
+ * member" copy is WRONG relative to the real backend** — confirmed by reading `PosAppService
+ * .ManualAdjustAsync`/`PointsTransactionConsts`: the real cap is 20 ADJUSTMENTS per employee per day (a
+ * count, not a cumulative points ceiling), so neither page reproduces the "200 pts" copy or attempts a
+ * client-side count cap — it surfaces as the real `UserFriendlyException` toast if hit, same pattern as
+ * every other plan/quota limit in this app.
  */
 @Component({
   selector: 'app-business-customers',
@@ -89,6 +87,7 @@ const TIER_VARIANTS: StatusBadgeVariant[] = ['neutral', 'info', 'warning', 'succ
   imports: [
     DatePipe,
     DecimalPipe,
+    RouterLink,
     ReactiveFormsModule,
     LocalizationPipe,
     PageHeaderComponent,

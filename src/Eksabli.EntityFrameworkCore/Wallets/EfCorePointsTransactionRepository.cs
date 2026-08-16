@@ -22,6 +22,7 @@ public class EfCorePointsTransactionRepository : EfCoreRepository<EksabliDbConte
         PointsTransactionType? type = null,
         Guid? createdByEmployeeId = null,
         ICollection<Guid>? createdByEmployeeIds = null,
+        Guid? walletId = null,
         DateTime? from = null,
         DateTime? to = null,
         string? sorting = null,
@@ -29,7 +30,7 @@ public class EfCorePointsTransactionRepository : EfCoreRepository<EksabliDbConte
         int maxResultCount = int.MaxValue,
         CancellationToken cancellationToken = default)
     {
-        var queryable = ApplyFilter(await GetQueryableAsync(), type, createdByEmployeeId, createdByEmployeeIds, from, to);
+        var queryable = ApplyFilter(await GetQueryableAsync(), type, createdByEmployeeId, createdByEmployeeIds, walletId, from, to);
 
         var totalCount = await AsyncExecuter.CountAsync(queryable, GetCancellationToken(cancellationToken));
 
@@ -48,6 +49,7 @@ public class EfCorePointsTransactionRepository : EfCoreRepository<EksabliDbConte
         PointsTransactionType? type,
         Guid? createdByEmployeeId,
         ICollection<Guid>? createdByEmployeeIds,
+        Guid? walletId,
         DateTime? from,
         DateTime? to)
     {
@@ -64,6 +66,11 @@ public class EfCorePointsTransactionRepository : EfCoreRepository<EksabliDbConte
         if (createdByEmployeeIds != null)
         {
             query = query.Where(t => t.CreatedByEmployeeId.HasValue && createdByEmployeeIds.Contains(t.CreatedByEmployeeId.Value));
+        }
+
+        if (walletId.HasValue)
+        {
+            query = query.Where(t => t.WalletId == walletId.Value);
         }
 
         if (from.HasValue)

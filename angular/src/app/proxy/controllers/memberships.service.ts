@@ -12,6 +12,14 @@ export class MembershipsService {
   apiName = 'Default';
 
 
+  get = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, MemberDto>({
+      method: 'GET',
+      url: `/api/app/memberships/${id}`,
+    },
+    { apiName: this.apiName,...config });
+
+
   getMembers = (input: MemberFilterDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PagedResultDto<MemberDto>>({
       method: 'GET',

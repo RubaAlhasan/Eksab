@@ -1,0 +1,106 @@
+<app-page-header
+  [title]="'::AdminPanel:Notifications:Title' | abpLocalization"
+  [subtitle]="'::AdminPanel:Notifications:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Admin Portal', link: '/admin/businesses' }, { label: ('::AdminPanel:Notifications:Title' | abpLocalization) }]"
+>
+</app-page-header>
+
+<div class="card p-4" style="max-width: 640px">
+  <form [formGroup]="form" (ngSubmit)="submitSend()" class="d-flex flex-column gap-3">
+    <div>
+      <label class="form-label">{{ '::AdminPanel:Notifications:FieldRecipient' | abpLocalization }}</label>
+      <div class="btn-group w-100" role="group">
+        <button
+          type="button"
+          class="btn btn-sm"
+          [class.btn-primary]="recipientMode() === 'tenant'"
+          [class.btn-outline-secondary]="recipientMode() !== 'tenant'"
+          (click)="setRecipientMode('tenant')"
+        >
+          {{ '::AdminPanel:Notifications:RecipientOneBusiness' | abpLocalization }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm"
+          [class.btn-primary]="recipientMode() === 'broadcast'"
+          [class.btn-outline-secondary]="recipientMode() !== 'broadcast'"
+          (click)="setRecipientMode('broadcast')"
+        >
+          {{ '::AdminPanel:Notifications:RecipientAllBusinesses' | abpLocalization }}
+        </button>
+      </div>
+    </div>
+
+    @if (recipientMode() === 'tenant') {
+      <div>
+        @if (selectedTenant(); as tenant) {
+          <div class="d-flex align-items-center justify-content-between border rounded p-2">
+            <span class="small fw-semibold">{{ tenant.tenantName }}</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="changeTenant()">
+              {{ '::AdminPanel:Notifications:ChangeBusiness' | abpLocalization }}
+            </button>
+          </div>
+        } @else {
+          <input
+            type="text"
+            class="form-control"
+            [value]="tenantQuery()"
+            (input)="onTenantQueryInput($event)"
+            [placeholder]="'::AdminPanel:Notifications:BusinessSearchPlaceholder' | abpLocalization"
+          />
+          @if (isSearchingTenants()) {
+            <p class="text-muted small mt-1 mb-0">{{ '::AdminPanel:Notifications:Searching' | abpLocalization }}</p>
+          } @else if (tenantResults().length) {
+            <ul class="list-group mt-1">
+              @for (tenant of tenantResults(); track tenant.tenantId) {
+                <li class="list-group-item list-group-item-action small" role="button" (click)="selectTenant(tenant)">
+                  {{ tenant.tenantName }}
+                </li>
+              }
+            </ul>
+          }
+          @if (form.touched && !selectedTenant()) {
+            <p class="text-danger small mt-1 mb-0">{{ '::AdminPanel:Notifications:BusinessRequired' | abpLocalization }}</p>
+          }
+        }
+      </div>
+    } @else {
+      <p class="text-muted small mb-0">{{ '::AdminPanel:Notifications:AllBusinessesHint' | abpLocalization }}</p>
+    }
+
+    <div>
+      <label class="form-label" for="notifType">{{ '::AdminPanel:Notifications:FieldType' | abpLocalization }}</label>
+      <select id="notifType" class="form-select" formControlName="type">
+        <option [ngValue]="Type.Info">{{ '::AdminPanel:Notifications:TypeInfo' | abpLocalization }}</option>
+        <option [ngValue]="Type.Success">{{ '::AdminPanel:Notifications:TypeSuccess' | abpLocalization }}</option>
+        <option [ngValue]="Type.Warning">{{ '::AdminPanel:Notifications:TypeWarning' | abpLocalization }}</option>
+        <option [ngValue]="Type.Error">{{ '::AdminPanel:Notifications:TypeError' | abpLocalization }}</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="form-label" for="notifTitle">{{ '::AdminPanel:Notifications:FieldTitle' | abpLocalization }}</label>
+      <input id="notifTitle" type="text" class="form-control" formControlName="title" maxlength="128" />
+      @if (form.controls.title.invalid && form.controls.title.touched) {
+        <p class="text-danger small mt-1">{{ '::AdminPanel:Notifications:FieldRequired' | abpLocalization }}</p>
+      }
+    </div>
+
+    <div>
+      <label class="form-label" for="notifMessage">{{ '::AdminPanel:Notifications:FieldMessage' | abpLocalization }}</label>
+      <textarea id="notifMessage" class="form-control" formControlName="message" rows="4" maxlength="1000"></textarea>
+      @if (form.controls.message.invalid && form.controls.message.touched) {
+        <p class="text-danger small mt-1">{{ '::AdminPanel:Notifications:FieldRequired' | abpLocalization }}</p>
+      }
+    </div>
+
+    <div class="d-flex justify-content-end">
+      <button type="submit" class="btn btn-primary" [disabled]="isSending()">
+        @if (isSending()) {
+          <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+        }
+        {{ '::AdminPanel:Notifications:SendNow' | abpLocalization }}
+      </button>
+    </div>
+  </form>
+</div>

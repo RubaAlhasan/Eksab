@@ -1,0 +1,418 @@
+@page
+@using Microsoft.AspNetCore.Mvc.Localization
+@using Microsoft.Extensions.Localization
+@using Volo.Abp.Account.Localization
+@using Volo.Abp.Account.Settings
+@using Volo.Abp.Account.Web.Pages.Account;
+@using Volo.Abp.AspNetCore.Mvc.UI.Theming;
+@using Volo.Abp.Identity;
+@using Volo.Abp.Settings
+@using Eksabli.Localization
+@model Volo.Abp.Account.Web.Pages.Account.LoginModel
+@inject IHtmlLocalizer<AccountResource> L
+@inject IStringLocalizer<EksabliResource> LApp
+@inject IThemeManager ThemeManager
+@inject Volo.Abp.Settings.ISettingProvider SettingProvider
+
+@*
+    Re-skin of the STOCK Volo.Abp.Account.Web Login page (view-override convention: a loose .cshtml at
+    the identical virtual path — /Pages/Account/Login.cshtml — takes precedence over the compiled one
+    shipped inside the Volo.Abp.Account.Web package). This is the real page every user hits; nothing
+    about the auth flow itself changed, only the presentation. Matches prototype/business/login.html's
+    split-screen shape, adapted to real constraints:
+
+    - `Layout` is deliberately left untouched (`ThemeManager.CurrentTheme.GetAccountLayout()`, the
+      LeptonXLite account layout — decompiled and read via ilspycmd against the actual installed 5.5.0
+      package, since its source isn't in the abpframework/abp monorepo). That layout is what renders
+      the language-switch dropdown, the tenant-switch box ("TENANT / switch"), and the text logo
+      ("Eksabli") BEFORE this page's own RenderBody() content — all real, all still needed (this is a
+      genuinely multi-tenant app; switching tenant here is how a business's own staff reach their
+      tenant's login at all). Overriding the layout too would touch Register/ForgotPassword/ResetPassword
+      /Manage/LoggedOut as well, well beyond what was asked — instead, the `@@section styles` block below
+      uses CSS alone (page-scoped: `RenderSectionAsync("styles")` only pulls from whichever content page
+      is currently rendering, so this never leaks onto any other Account page) to turn the layout's own
+      real markup into the second column of a two-panel layout, and a `position: fixed` panel (added
+      here, in this page's own content) supplies the first. No DOM restructuring of the layout itself.
+    - The prototype's live "Active members / Redemption rate / Growth" stat trio is dropped, not
+      faked — this is a PRE-AUTH page; no endpoint exposes platform-wide marketing stats anonymously,
+      and a specific tenant's own numbers obviously can't be known before its owner has even logged in.
+      Replaced with three honest, static feature lines instead of fabricated numbers.
+    - The prototype's "New business? Start a free trial" link is dropped, not linked to a stub —
+      self-registration is deliberately globally disabled in this app
+      (SelfRegistrationDisabledDataSeederContributor, a real documented security fix, not an oversight),
+      and the real business-signup flow (BusinessAppService.RegisterAsync) has no Angular UI yet either
+      — nothing correct to link to. The original `@@if (IsSelfRegistrationEnabled)` block is kept
+      (restyled) rather than deleted, so this comes back automatically, correctly, if that setting is
+      ever re-enabled — never re-derive that condition by hand.
+    - Every functional element (form POST, `asp-for`/`asp-validation-for` bindings, the password-
+      visibility toggle's DOM contract with the stock `Login.js` — the button must stay `input`'s
+      sibling inside the same `.input-group`, confirmed by reading that script directly — external-
+      login-provider loop, the require-migrate-seed alert, the cancel button for prompt=login flows)
+      is preserved verbatim from the original source (fetched from
+      github.com/abpframework/abp/tree/10.5.0, the exact installed version) — only the surrounding
+      markup/classes/copy changed.
+    - New copy (headline, tagline, "Welcome back") is plain hardcoded English, NOT run through
+      `AccountResource`/`L[...]` like the real functional labels still are — a real, acknowledged scope
+      boundary: it won't translate when the language dropdown is used, unlike every original label.
+      No external font — system font stack, consistent with the rest of this MVC-served chrome (no
+      Google Fonts dependency was introduced elsewhere in this app either).
+*@
+
+@{
+    Layout = ThemeManager.CurrentTheme.GetAccountLayout();
+}
+
+@section scripts
+    {
+    <abp-script-bundle name="@typeof(LoginModel).FullName">
+        <abp-script src="/Pages/Account/Login.js" />
+    </abp-script-bundle>
+}
+
+@section styles
+    {
+    <style>
+        /* ---- Layout takeover: turn the real .col-md-8.col-lg-5.mx-auto (logo + tenant/language card
+           + this page's own form, in that real DOM order) into the right-hand "form" column, and this
+           page's own .eks-login__brand (position: fixed) into the left-hand "brand" column. Scoped to
+           this page only via @@section styles' own per-page rendering — never touches Register/
+           ForgotPassword/etc. */
+        body.abp-account-layout {
+            background: #f7f8fb;
+        }
+
+        body.abp-account-layout .lpx-content-container,
+        body.abp-account-layout .lpx-content {
+            min-height: 100vh;
+        }
+
+        body.abp-account-layout .lpx-content > .container {
+            max-width: none !important;
+            padding: 0 !important;
+        }
+
+        body.abp-account-layout .lpx-content > .container > .row {
+            margin: 0 !important;
+        }
+
+        /* !important throughout: Bootstrap 5's own utility classes (`.mx-auto` here) are themselves
+           marked !important by design — a plain-specificity override silently loses to it, which is
+           exactly what happened here (found live: the column never actually moved, it just sat
+           roughly centered, so the fixed brand panel visually covered part of it — confirmed via
+           getBoundingClientRect() showing it start at x:364 instead of the intended 50% mark). */
+        body.abp-account-layout .col-md-8.col-lg-5.mx-auto {
+            margin-inline-start: 50% !important;
+            width: 50% !important;
+            max-width: 50% !important;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 3rem clamp(1.5rem, 5vw, 5rem);
+            background: #fff;
+        }
+
+        .eks-login__brand {
+            position: fixed;
+            inset-inline-start: 0;
+            top: 0;
+            bottom: 0;
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: clamp(1.5rem, 4vw, 3.5rem);
+            color: #fff;
+            background: linear-gradient(160deg, #2b4fd6 0%, #22389c 55%, #0f172a 100%);
+            background-image:
+                radial-gradient(circle, rgba(255,255,255,.08) 1px, transparent 1px),
+                linear-gradient(160deg, #2b4fd6 0%, #22389c 55%, #0f172a 100%);
+            background-size: 24px 24px, auto;
+            overflow: hidden;
+        }
+
+        .eks-login__brand-header {
+            display: flex;
+            align-items: center;
+            gap: .625rem;
+        }
+
+        .eks-login__brand-badge {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: .75rem;
+            background: rgba(255,255,255,.15);
+            backdrop-filter: blur(4px);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: .9rem;
+        }
+
+        .eks-login__brand-name {
+            font-weight: 800;
+            font-size: 1.125rem;
+        }
+
+        .eks-login__brand-pill {
+            background: rgba(255,255,255,.15);
+            border-radius: 999px;
+            padding: .125rem .625rem;
+            font-size: .75rem;
+            font-weight: 600;
+        }
+
+        .eks-login__brand-main {
+            max-width: 30rem;
+        }
+
+        .eks-login__brand-main h1 {
+            font-size: clamp(1.5rem, 2.5vw, 1.875rem);
+            font-weight: 800;
+            letter-spacing: -.01em;
+            line-height: 1.25;
+            margin: 0 0 1rem;
+        }
+
+        .eks-login__brand-main p {
+            color: rgba(255,255,255,.72);
+            font-size: .875rem;
+            margin: 0 0 1.5rem;
+        }
+
+        .eks-login__brand-features {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: .625rem;
+        }
+
+        .eks-login__brand-features li {
+            display: flex;
+            align-items: center;
+            gap: .625rem;
+            font-size: .8125rem;
+            color: rgba(255,255,255,.85);
+        }
+
+        .eks-login__brand-features i {
+            width: 1.25rem;
+            text-align: center;
+            color: rgba(255,255,255,.65);
+        }
+
+        .eks-login__brand-footer {
+            position: relative;
+            font-size: .6875rem;
+            color: rgba(255,255,255,.4);
+            margin: 0;
+        }
+
+        /* ---- Right column: real language/tenant-switch chrome from the layout, restyled.
+           The theme's own logo lockup (.lpx-logo-container, two separately block-level, individually
+           `.mx-auto`'d children) fought every attempt to compact it into a small inline mark — hidden
+           outright rather than chased further; `.eks-login__mark` below (this page's own markup, full
+           control) replaces it with one consistent badge+wordmark matching the brand panel's own. */
+        .lpx-logo-container.lpx-login-brand-text {
+            display: none;
+        }
+
+        .eks-login__mark {
+            display: flex;
+            align-items: center;
+            gap: .625rem;
+            margin-bottom: 2rem;
+        }
+
+        .eks-login__mark-badge {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: .75rem;
+            background: var(--bs-primary, #355dff);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: .9rem;
+            flex-shrink: 0;
+        }
+
+        .eks-login__mark-name {
+            font-weight: 800;
+            font-size: 1.125rem;
+        }
+
+        .col-md-8.col-lg-5.mx-auto > .card {
+            border: none;
+            box-shadow: none;
+            margin-bottom: 1rem !important;
+        }
+
+        .col-md-8.col-lg-5.mx-auto > .card .card-body {
+            padding: 0;
+        }
+
+        .lpx-main-title.lpx-login-title {
+            display: none; /* real, but always empty (PageLayout.Content.Title is never set) */
+        }
+
+        .col-md-8.col-lg-5.mx-auto > .card hr {
+            margin: .75rem 0 1rem;
+        }
+
+        /* ---- This page's own content ---- */
+        .eks-login__eyebrow {
+            font-size: .8125rem;
+            color: #6b7280;
+            margin: 0 0 .25rem;
+        }
+
+        .eks-login__title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -.01em;
+            margin: 0 0 1.5rem;
+        }
+
+        .eks-login__form .form-label {
+            font-weight: 600;
+            font-size: .8125rem;
+        }
+
+        .eks-login__form .form-control {
+            padding: .625rem .875rem;
+            border-radius: .5rem;
+        }
+
+        .eks-login__form .input-group .form-control {
+            border-inline-end: none;
+        }
+
+        .eks-login__form .input-group .btn-secondary {
+            background: #fff;
+            border-color: #dee2e6;
+            border-inline-start: none;
+            color: #6b7280;
+        }
+
+        .eks-login__submit {
+            border-radius: .5rem;
+            font-weight: 700;
+        }
+
+        @@media (max-width: 991.98px) {
+            .eks-login__brand {
+                display: none;
+            }
+
+            body.abp-account-layout .col-md-8.col-lg-5.mx-auto {
+                margin-inline-start: auto !important;
+                width: 100% !important;
+                max-width: 28rem !important;
+                min-height: auto;
+                padding: 3rem 1.5rem;
+            }
+        }
+    </style>
+}
+
+<div class="eks-login__brand" aria-hidden="true">
+    <div class="eks-login__brand-header">
+        <span class="eks-login__brand-badge">E</span>
+        <span class="eks-login__brand-name">Eksabli</span>
+        <span class="eks-login__brand-pill">@LApp["Login:BusinessPill"]</span>
+    </div>
+    <div class="eks-login__brand-main">
+        <h1>@LApp["Login:Headline"]</h1>
+        <p>@LApp["Login:Subhead"]</p>
+        <ul class="eks-login__brand-features">
+            <li><i class="fas fa-bolt"></i> @LApp["Login:FeatureRealtime"]</li>
+            <li><i class="fas fa-bullseye"></i> @LApp["Login:FeatureCampaigns"]</li>
+            <li><i class="fas fa-chart-line"></i> @LApp["Login:FeatureReports"]</li>
+        </ul>
+    </div>
+    <p class="eks-login__brand-footer">@LApp["Login:Footer", DateTime.Now.Year]</p>
+</div>
+
+@if (Model.ShowRequireMigrateSeedMessage)
+{
+    <div class="alert alert-danger">
+        <h4 class="alert-heading">@L["RequireMigrateSeedTitle"]</h4>
+        <p>@L["RequireMigrateSeedMessage"]</p>
+    </div>
+}
+
+<div class="eks-login__mark">
+    <span class="eks-login__mark-badge">E</span>
+    <span class="eks-login__mark-name">Eksabli</span>
+</div>
+
+<div class="eks-login__eyebrow">@LApp["Login:Eyebrow"]</div>
+<h2 class="eks-login__title">@LApp["Login:WelcomeBack"]</h2>
+
+@if (await SettingProvider.IsTrueAsync(AccountSettingNames.IsSelfRegistrationEnabled))
+{
+    <strong>
+        @L["AreYouANewUser"]
+        <a href="@Url.Page("./Register", new {returnUrl = Model.ReturnUrl, returnUrlHash = Model.ReturnUrlHash})" class="text-decoration-none">@L["Register"]</a>
+    </strong>
+}
+@if (Model.EnableLocalLogin)
+{
+    <form method="post" class="eks-login__form mt-4">
+        <div class="mb-3">
+            <label asp-for="LoginInput.UserNameOrEmailAddress" class="form-label"></label>
+            <input asp-for="LoginInput.UserNameOrEmailAddress" class="form-control" />
+            <span asp-validation-for="LoginInput.UserNameOrEmailAddress" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="LoginInput.Password" class="form-label"></label>
+            <div class="input-group">
+                <input type="password" class="form-control" autocomplete="new-password" maxlength="@IdentityUserConsts.MaxPasswordLength" asp-for="LoginInput.Password" />
+                <button class="btn btn-secondary" type="button" id="PasswordVisibilityButton"><i class="fa fa-eye-slash" aria-hidden="true"></i></button>
+            </div>
+            <span asp-validation-for="LoginInput.Password"></span>
+        </div>
+        <abp-row>
+            <abp-column>
+                <abp-input asp-for="LoginInput.RememberMe" class="mb-4" />
+            </abp-column>
+            <abp-column class="text-end">
+                <a href="@Url.Page("./ForgotPassword", new {returnUrl = Model.ReturnUrl, returnUrlHash = Model.ReturnUrlHash})">@L["ForgotPassword"]</a>
+            </abp-column>
+        </abp-row>
+        <div class="d-grid gap-2">
+            <abp-button type="submit" button-type="Primary" name="Action" value="Login" class="eks-login__submit btn-lg mt-3">@L["Login"]</abp-button>
+            @if (Model.ShowCancelButton)
+            {
+                <abp-button type="submit" button-type="Secondary" formnovalidate="formnovalidate" name="Action" value="Cancel" class="btn-lg mt-3">@L["Cancel"]</abp-button>
+            }
+        </div>
+    </form>
+}
+
+@if (Model.VisibleExternalProviders.Any())
+{
+    <div class="mt-4">
+        <h5>@L["OrLoginWith"]</h5>
+        <form asp-page="./Login" asp-page-handler="ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" asp-route-returnUrlHash="@Model.ReturnUrlHash" method="post">
+            @foreach (var provider in Model.VisibleExternalProviders)
+            {
+                <button type="submit" class="btn btn-primary m-1" name="provider" value="@provider.AuthenticationScheme" title="@L["LogInUsingYourProviderAccount", provider.DisplayName]">@provider.DisplayName</button>
+            }
+        </form>
+    </div>
+}
+
+@if (!Model.EnableLocalLogin && !Model.VisibleExternalProviders.Any())
+{
+    <div class="alert alert-warning">
+        <strong>@L["InvalidLoginRequest"]</strong>
+        @L["ThereAreNoLoginSchemesConfiguredForThisClient"]
+    </div>
+}
