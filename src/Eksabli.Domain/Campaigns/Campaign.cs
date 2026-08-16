@@ -47,6 +47,16 @@ public class Campaign : FullAuditedAggregateRoot<Guid>, IMultiTenant
         NameAr = Check.NotNullOrWhiteSpace(nameAr, nameof(nameAr), CampaignConsts.MaxNameLength);
         NameEn = Check.NotNullOrWhiteSpace(nameEn, nameof(nameEn), CampaignConsts.MaxNameLength);
         Type = type;
+
+        // Only checked at creation, not inside SetDateRange itself — SetDateRange is also called from
+        // UpdateAsync, and an already-Active/Ended campaign legitimately has a StartDate that's now in
+        // the past; re-validating "not in the past" there would break editing anything else about it.
+        // A brand-new Draft, on the other hand, should never start out already-expired-looking.
+        if (startDate.Date < DateTime.UtcNow.Date)
+        {
+            throw new UserFriendlyException("The campaign's start date can't be in the past.");
+        }
+
         SetDateRange(startDate, endDate);
         Status = CampaignStatus.Draft;
     }

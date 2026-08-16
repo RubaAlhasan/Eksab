@@ -1,0 +1,30 @@
+.eks-avatar-xl {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.25rem;
+  background-color: rgba(var(--bs-primary-rgb, 53, 93, 255), 0.15);
+  color: var(--bs-primary, #355dff);
+}
+
+.eks-stat-tile {
+  padding: 0.625rem;
+  border-radius: 0.75rem;
+  background-color: var(--bs-tertiary-bg, #f8f9fa);
+}
+
+.divide-y > * {
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.eks-coupon-row:hover {
+  background-color: var(--bs-tertiary-bg, #f8f9fa);
+}

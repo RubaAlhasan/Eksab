@@ -1,2 +1,46 @@
 // .eks-avatar-sm is a global utility now (see styles.scss) — promoted out of here once it turned out
 // to be duplicated verbatim across six components; see styles.scss's own comment for the full list.
+
+// Identify-mode pill toggle (Scan QR / Phone Lookup) — matches the prototype's own `.tabs-pill`/
+// `.tab-pill-trigger` (design-system.css): a muted track with the active option rendered as a plain
+// white/raised chip, inactive options staying uncolored. Deliberately NOT Bootstrap's `.btn-group` +
+// `.btn-check` + `.btn-outline-primary` combo (tried first) — that renders the checked option as a
+// solid indigo fill, a "radio button group" look the prototype never actually uses here. First use of
+// this pill shape in the app, so kept local rather than promoted to styles.scss (same "promote on the
+// second use" convention as .eks-avatar-sm above).
+.eks-tabs-pill {
+  display: inline-flex;
+  width: 100%;
+  gap: 0.125rem;
+  padding: 0.25rem;
+  background-color: var(--eks-bg, #f1f5f9);
+  border-radius: 0.75rem;
+}
+
+.eks-tab-pill-trigger {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.4375rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--eks-text-muted, #64748b);
+  background: transparent;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+
+  &.active {
+    background-color: #fff;
+    color: #392a7d;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+
+    @media (prefers-color-scheme: dark) {
+      background-color: #334155;
+      color: #f1f5f9;
+    }
+  }
+}

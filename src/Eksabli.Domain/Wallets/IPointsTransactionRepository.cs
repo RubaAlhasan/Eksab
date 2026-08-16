@@ -20,6 +20,7 @@ public interface IPointsTransactionRepository : IRepository<PointsTransaction, G
         PointsTransactionType? type = null,
         Guid? createdByEmployeeId = null,
         ICollection<Guid>? createdByEmployeeIds = null,
+        Guid? walletId = null,
         DateTime? from = null,
         DateTime? to = null,
         string? sorting = null,

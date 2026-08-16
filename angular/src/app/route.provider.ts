@@ -86,6 +86,14 @@ function configureRoutes() {
         layout: eLayoutType.empty,
         requiredPolicy: 'Eksabli.AuditLogs',
       },
+      {
+        path: '/admin/notifications',
+        name: '::AdminPanel:Notifications:Title',
+        iconClass: 'fas fa-bullhorn',
+        order: 9,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.Notifications.Broadcast',
+      },
       // Layout-resolution anchors ONLY for the stock ABP pages nested under /admin in app.routes.ts
       // (Users/Roles/My Profile/Settings) — `invisible: true` so these do NOT become their own menu
       // item (real permission checks already live inside each package's own routes, not here); they
@@ -243,6 +251,14 @@ function configureRoutes() {
         order: 32,
         layout: eLayoutType.empty,
         requiredPolicy: 'Eksabli.Reports.Export',
+      },
+      {
+        path: '/business/reports',
+        name: '::BusinessPanel:Layout:NavReports',
+        iconClass: 'fas fa-file-arrow-down',
+        order: 32.5,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.Reports',
       },
       {
         // No requiredPolicy — same shape as '/business/points' above; no ABP permission gates this

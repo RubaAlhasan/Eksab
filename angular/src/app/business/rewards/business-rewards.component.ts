@@ -45,8 +45,8 @@ type RewardStatus = 'active' | 'scheduled' | 'expired';
  *   (`CouponAuditService` exists but wasn't found to expose a per-reward rate) — dropped entirely.
  * - **No reward image** — the prototype uses a random emoji per reward, not a real image. No blob
  *   upload UI/pattern exists anywhere in this app yet (unlike Categories' `iconBlobName`, which is
- *   captured but has no upload widget either — same established gap). A generic per-type icon is
- *   shown instead of pretending an image exists.
+ *   captured but has no upload widget either — same established gap). A deterministic per-*type*
+ *   emoji (`typeEmoji`) stands in instead of pretending a per-item image exists.
  * - No delete action exposed — `DeleteAsync` exists server-side (`Eksabli.Rewards.Delete`) but the
  *   prototype itself has no delete button either; matches prototype scope.
  */
@@ -154,14 +154,19 @@ export class BusinessRewardsComponent implements OnInit {
     }
   }
 
-  protected typeIcon(type: RewardType | undefined): string {
+  /** Matches the prototype's own per-reward emoji (`r.image`) in spirit — no real image/upload field
+   *  exists on `Reward` (see class doc comment), so a deterministic per-*type* emoji stands in for a
+   *  per-item one. Chosen over a FontAwesome-icon-in-a-tinted-box: Bootstrap 5.3's `-bg-subtle`/
+   *  `-text-emphasis` tokens desaturate to near-gray at this size (confirmed live), while a plain
+   *  emoji glyph is inherently colorful and needs no color tuning to read as such. */
+  protected typeEmoji(type: RewardType | undefined): string {
     switch (type) {
       case RewardType.FreeProduct:
-        return 'fa-gift';
+        return '🎁';
       case RewardType.GiftCard:
-        return 'fa-money-bill-wave';
+        return '💳';
       default:
-        return 'fa-tag';
+        return '🏷️';
     }
   }
 
