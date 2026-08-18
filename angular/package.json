@@ -36,6 +36,7 @@
     "@angular/router": "~21.2.0",
     "@microsoft/signalr": "~10.0.0",
     "jsqr": "^1.4.0",
+    "libphonenumber-js": "^1.13.11",
     "rxjs": "~7.8.0",
     "tslib": "^2.0.0",
     "zone.js": "~0.15.0"

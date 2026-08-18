@@ -18,6 +18,7 @@
   --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", "Roboto Mono", monospace;
 
   display: block;
+  overflow-x: clip;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
@@ -46,10 +47,32 @@
 
 a { color: inherit; cursor: pointer; }
 
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 0.6rem;
+  inset-inline-start: 0.6rem;
+  transform: translateY(-150%);
+  background: var(--brand);
+  color: var(--paper-raised);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.6rem 1rem;
+  border-radius: 0.6rem;
+  text-decoration: none;
+  transition: transform 0.2s ease;
+}
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
 [data-reveal] { opacity: 0; transform: translateY(16px); transition: opacity 0.7s ease, transform 0.7s ease; }
 [data-reveal].in-view { opacity: 1; transform: translateY(0); }
 @media (prefers-reduced-motion: reduce) {
   [data-reveal] { opacity: 1; transform: none; transition: none; }
+  .stamp { opacity: 1 !important; transform: rotate(-14deg) scale(1) !important; transition: none !important; }
+  .hero::before { animation: none !important; }
+  .mobile-menu { animation: none !important; }
 }
 
 /* Header */
@@ -60,13 +83,38 @@ a { color: inherit; cursor: pointer; }
   backdrop-filter: blur(10px);
   background-color: color-mix(in srgb, var(--paper) 82%, transparent);
   border-bottom: 1px solid var(--line);
+  box-shadow: 0 0 0 0 transparent;
+  transition: box-shadow 0.3s ease, background-color 0.3s ease;
+}
+.site-header.scrolled {
+  background-color: color-mix(in srgb, var(--paper) 94%, transparent);
+  box-shadow: 0 0.6rem 1.6rem -1.1rem hsl(var(--shadow) / 0.35);
 }
 .header-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 0.85rem; }
 .wordmark { display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; letter-spacing: -0.01em; }
 .wordmark .dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--gold); }
 .main-nav { display: flex; align-items: center; gap: 1.6rem; }
-.main-nav a { font-size: 0.86rem; font-weight: 600; color: var(--ink-muted); text-decoration: none; }
+.main-nav a {
+  position: relative;
+  padding-block: 0.25rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.main-nav a::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  bottom: 0;
+  height: 2px;
+  width: 0;
+  background: var(--brand);
+  transition: width 0.25s ease;
+}
 .main-nav a:hover { color: var(--ink); }
+.main-nav a:hover::after { width: 100%; }
 .header-actions { display: flex; align-items: center; gap: 0.7rem; }
 .login-link { font-size: 0.86rem; font-weight: 600; color: var(--ink-muted); text-decoration: none; }
 .login-link:hover { color: var(--ink); }
@@ -105,6 +153,13 @@ a { color: inherit; cursor: pointer; }
   border-top: 1px solid var(--line);
   background: var(--paper);
 }
+@media (prefers-reduced-motion: no-preference) {
+  .mobile-menu { animation: mobile-menu-in 0.22s ease; }
+}
+@keyframes mobile-menu-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .mobile-menu-nav { display: flex; flex-direction: column; gap: 0.15rem; }
 .mobile-menu-nav a {
   padding: 0.6rem 0.25rem;
@@ -135,11 +190,18 @@ a { color: inherit; cursor: pointer; }
   border: none; border-radius: 0.65rem; padding: 0.65rem 1.15rem;
   font-size: 0.88rem; font-weight: 700; cursor: pointer; font-family: inherit;
   text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 .btn-primary { background: var(--brand); color: var(--paper-raised); }
-.btn-primary:hover { filter: brightness(1.07); }
+.btn-primary:hover {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+  box-shadow: 0 0.9rem 1.7rem -0.9rem color-mix(in srgb, var(--brand) 65%, transparent);
+}
+.btn-primary:active { transform: translateY(0); box-shadow: none; }
 .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
-.btn-ghost:hover { border-color: var(--brand); color: var(--brand); }
+.btn-ghost:hover { border-color: var(--brand); color: var(--brand); transform: translateY(-1px); }
+.btn-ghost:active { transform: translateY(0); }
 
 button:focus-visible, a:focus-visible {
   outline: 2px solid var(--brand);
@@ -160,8 +222,26 @@ button:focus-visible, a:focus-visible {
 }
 
 /* Hero */
-.hero { padding-block: 4.5rem 3.5rem; }
-.hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 3rem; align-items: center; }
+.hero { position: relative; overflow: hidden; padding-block: 4.5rem 3.5rem; }
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: -15% -10% auto -10%;
+  height: 30rem;
+  background-image:
+    radial-gradient(38rem 22rem at 82% 15%, color-mix(in srgb, var(--brand) 16%, transparent), transparent 70%),
+    radial-gradient(26rem 20rem at 8% 85%, color-mix(in srgb, var(--gold) 14%, transparent), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero::before { animation: hero-glow-drift 18s ease-in-out infinite alternate; }
+}
+@keyframes hero-glow-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-1.5%, 2%, 0) scale(1.04); }
+}
+.hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 3rem; align-items: center; }
 @media (max-width: 860px) { .hero-grid { grid-template-columns: 1fr; } }
 
 .kicker {
@@ -227,8 +307,14 @@ button:focus-visible, a:focus-visible {
   display: flex; align-items: center; justify-content: center;
   text-align: center;
   font-size: 0.56rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
-  transform: rotate(-14deg);
   background: var(--paper-raised);
+  opacity: 0;
+  transform: rotate(-14deg) scale(0.6);
+  transition: opacity 0.4s ease 0.5s, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s;
+}
+[data-reveal].in-view .stamp {
+  opacity: 1;
+  transform: rotate(-14deg) scale(1);
 }
 .stamp::before { content: ""; position: absolute; inset: 3px; border: 1px solid var(--brand); border-radius: 50%; opacity: 0.55; }
 
@@ -253,7 +339,19 @@ button:focus-visible, a:focus-visible {
   border-radius: 1rem;
   padding: 1.6rem 1.4rem 1.4rem;
   position: relative;
+  /* Replaces (rather than adds to) the generic [data-reveal] transition below, since a `.step-card`
+     rule of equal specificity wins the cascade by source order — so it re-lists opacity/transform
+     itself (matching the entrance timing) alongside the hover-only box-shadow/border-color pair. */
+  transition: opacity 0.5s ease, transform 0.5s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
+.step-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 1.4rem 2.6rem -1.4rem hsl(var(--shadow) / 0.35);
+  border-color: color-mix(in srgb, var(--brand) 35%, var(--line));
+}
+.steps > .step-card:nth-child(1) { transition-delay: 0s; }
+.steps > .step-card:nth-child(2) { transition-delay: 0.08s; }
+.steps > .step-card:nth-child(3) { transition-delay: 0.16s; }
 .step-stamp {
   width: 2.6rem; height: 2.6rem; border-radius: 50%;
   border: 2px solid var(--gold); color: var(--gold);
@@ -272,7 +370,16 @@ button:focus-visible, a:focus-visible {
   border-radius: 1rem;
   padding: 1.4rem;
   border-inline-start: 3px solid var(--brand);
+  transition: opacity 0.5s ease, transform 0.5s ease, box-shadow 0.25s ease;
 }
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 1.4rem 2.6rem -1.4rem hsl(var(--shadow) / 0.35);
+}
+.features-grid > .feature-card:nth-child(1) { transition-delay: 0s; }
+.features-grid > .feature-card:nth-child(2) { transition-delay: 0.08s; }
+.features-grid > .feature-card:nth-child(3) { transition-delay: 0.16s; }
+.features-grid > .feature-card:nth-child(4) { transition-delay: 0.24s; }
 .feature-card h3 { font-size: 0.96rem; font-weight: 700; margin: 0 0 0.45rem; }
 .feature-card p { font-size: 0.85rem; color: var(--ink-muted); margin: 0; line-height: 1.5; }
 
@@ -301,8 +408,28 @@ button:focus-visible, a:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+  position: relative;
+  overflow: hidden;
+  transition: opacity 0.5s ease, transform 0.5s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
+.price-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 1.4rem 2.6rem -1.4rem hsl(var(--shadow) / 0.35);
+  border-color: color-mix(in srgb, var(--brand) 35%, var(--line));
+}
+.pricing-grid > .price-card:nth-child(1) { transition-delay: 0s; }
+.pricing-grid > .price-card:nth-child(2) { transition-delay: 0.08s; }
+.pricing-grid > .price-card:nth-child(3) { transition-delay: 0.16s; }
 .price-card.featured { border-color: var(--brand); box-shadow: 0 1rem 2.4rem -1.2rem hsl(var(--shadow) / 0.3); }
+.price-card.featured::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--brand), var(--gold));
+}
+.price-card.featured:hover { transform: translateY(-6px); }
 .price-tag { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--brand); background: var(--brand-soft); padding: 0.2rem 0.55rem; border-radius: 999px; align-self: flex-start; }
 .price-card h3 { font-family: var(--font-display); font-size: 1.25rem; font-weight: 800; margin: 0; }
 .price-card .price-desc { font-size: 0.85rem; color: var(--ink-muted); margin: -0.4rem 0 0; }
@@ -314,7 +441,9 @@ button:focus-visible, a:focus-visible {
 /* CTA banner */
 .cta-wrap { padding-block: 1rem 4rem; }
 .cta-banner {
-  background: var(--brand);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--brand), color-mix(in srgb, var(--brand) 78%, black 14%));
   color: var(--paper-raised);
   border-radius: 1.25rem;
   padding: 3rem 2rem;
@@ -324,8 +453,18 @@ button:focus-visible, a:focus-visible {
   align-items: center;
   gap: 1.3rem;
 }
+.cta-banner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(28rem 16rem at 85% 15%, color-mix(in srgb, var(--gold) 55%, transparent), transparent 60%);
+  opacity: 0.4;
+  pointer-events: none;
+}
+.cta-banner > * { position: relative; z-index: 1; }
 .cta-banner h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 2.4vw + 0.8rem, 2.2rem); font-weight: 800; margin: 0; max-width: 24ch; text-wrap: balance; }
 .cta-banner .btn-primary { background: var(--paper-raised); color: var(--brand); }
+.cta-banner .btn-primary:hover { box-shadow: 0 0.9rem 1.7rem -0.9rem hsl(var(--shadow) / 0.45); }
 
 /* Footer */
 .site-footer { padding-block: 3.2rem 2.6rem; border-top: 1px solid var(--line); margin-top: 3rem; }
@@ -351,9 +490,10 @@ button:focus-visible, a:focus-visible {
   display: flex; align-items: center; justify-content: center;
   color: var(--ink-muted);
   text-decoration: none;
+  transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 .footer-social a svg { width: 1.05rem; height: 1.05rem; }
-.footer-social a:hover { color: var(--brand); border-color: var(--brand); }
+.footer-social a:hover { color: var(--brand); border-color: var(--brand); transform: translateY(-2px); }
 
 .footer-col { display: flex; flex-direction: column; gap: 0.65rem; }
 .footer-col-title {
@@ -369,3 +509,17 @@ button:focus-visible, a:focus-visible {
 .footer-col a:hover { color: var(--ink); }
 
 .footer-copyright { font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-faint); margin: 1.6rem 0 0; }
+
+/* Small-screen tightening — the auto-fit grids above already reflow on their own; this trims outer
+   rhythm (wrap padding, section/hero/banner padding) so content doesn't feel cramped edge-to-edge
+   on phones under ~420px, without changing layout structure. */
+@media (max-width: 480px) {
+  .wrap { padding-inline: 1.1rem; }
+  .hero { padding-block: 3.2rem 2.4rem; }
+  .hero-ctas { flex-direction: column; align-items: stretch; }
+  .hero-ctas .btn { width: 100%; }
+  .page { padding-block: 2.8rem; }
+  .cta-banner { padding: 2.4rem 1.4rem; border-radius: 1rem; }
+  .ledger-strip { padding: 1.3rem 1.2rem; }
+  .step-card, .feature-card, .price-card { padding-inline: 1.15rem; }
+}
