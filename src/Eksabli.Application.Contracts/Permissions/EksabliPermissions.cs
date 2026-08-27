@@ -169,6 +169,14 @@ public static class EksabliPermissions
         public const string Default = GroupName + ".AuditLogs";
     }
 
+    // Dev/testing-only "Verification Codes" page (Admin Portal > Operations) — browses SmsLog, the
+    // table NullSmsSender writes to in place of a real SMS provider (see that class's own comment).
+    // Host-realm only, same sensitivity class as AuditLogs/Users (it can show OTP codes verbatim).
+    public static class SmsLogs
+    {
+        public const string Default = GroupName + ".SmsLogs";
+    }
+
     //Add your own permission names. Example:
     //public const string MyPermission1 = GroupName + ".MyPermission1";
 }

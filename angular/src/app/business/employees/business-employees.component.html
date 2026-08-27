@@ -97,56 +97,89 @@
   [title]="'::BusinessPanel:Employees:InviteModalTitle' | abpLocalization"
   (closed)="closeInviteModal()"
 >
-  <form [formGroup]="inviteForm" (ngSubmit)="submitInviteForm()" class="d-flex flex-column gap-3">
-    <div>
-      <label class="form-label" for="email">{{ '::BusinessPanel:Employees:FieldEmail' | abpLocalization }}</label>
-      <input
-        id="email"
-        type="email"
-        class="form-control"
-        formControlName="email"
-        [placeholder]="'::BusinessPanel:Employees:FieldEmailPlaceholder' | abpLocalization"
-      />
-      @if (inviteForm.controls.email.invalid && inviteForm.controls.email.touched) {
-        <p class="text-danger small mt-1">
-          @if (inviteForm.controls.email.errors?.['required']) {
-            {{ '::BusinessPanel:Employees:FieldRequired' | abpLocalization }}
-          } @else {
-            {{ '::BusinessPanel:Employees:FieldInvalidEmail' | abpLocalization }}
-          }
-        </p>
-      }
+  @if (inviteResult(); as result) {
+    <div class="d-flex flex-column gap-3">
+      <div class="alert alert-warning mb-0">
+        <i class="fas fa-triangle-exclamation me-1"></i>
+        {{ '::BusinessPanel:Employees:CredentialsWarning' | abpLocalization }}
+      </div>
+      <div>
+        <label class="form-label">{{ '::BusinessPanel:Employees:FieldEmail' | abpLocalization }}</label>
+        <input type="text" class="form-control" readonly [value]="result.assignment.userEmail" />
+      </div>
+      <div>
+        <label class="form-label">{{ '::BusinessPanel:Employees:FieldTemporaryPassword' | abpLocalization }}</label>
+        <div class="d-flex gap-2">
+          <input type="text" class="form-control" dir="ltr" readonly [value]="result.temporaryPassword" />
+          <button type="button" class="btn btn-outline-secondary flex-shrink-0" (click)="copyTemporaryPassword()">
+            @if (passwordCopied()) {
+              <i class="fas fa-check me-1"></i>{{ '::BusinessPanel:Employees:Copied' | abpLocalization }}
+            } @else {
+              <i class="fas fa-copy me-1"></i>{{ '::BusinessPanel:Employees:Copy' | abpLocalization }}
+            }
+          </button>
+        </div>
+      </div>
+      <p class="text-muted small mb-0">{{ '::BusinessPanel:Employees:CredentialsHint' | abpLocalization }}</p>
     </div>
-
-    <div>
-      <label class="form-label" for="role">{{ '::BusinessPanel:Employees:FieldRole' | abpLocalization }}</label>
-      <select id="role" class="form-select" formControlName="role">
-        <option [ngValue]="Role.BranchManager">{{ '::BusinessPanel:Employees:RoleBranchManager' | abpLocalization }}</option>
-        <option [ngValue]="Role.Cashier">{{ '::BusinessPanel:Employees:RoleCashier' | abpLocalization }}</option>
-        <option [ngValue]="Role.MarketingManager">{{ '::BusinessPanel:Employees:RoleMarketingManager' | abpLocalization }}</option>
-      </select>
-    </div>
-
-    <div>
-      <label class="form-label" for="branchId">{{ '::BusinessPanel:Employees:FieldBranch' | abpLocalization }}</label>
-      <select id="branchId" class="form-select" formControlName="branchId">
-        <option value="">{{ '::BusinessPanel:Employees:AllBranches' | abpLocalization }}</option>
-        @for (branch of branches(); track branch.id) {
-          <option [value]="branch.id">{{ branch.name }}</option>
+  } @else {
+    <form [formGroup]="inviteForm" (ngSubmit)="submitInviteForm()" class="d-flex flex-column gap-3">
+      <div>
+        <label class="form-label" for="email">{{ '::BusinessPanel:Employees:FieldEmail' | abpLocalization }}</label>
+        <input
+          id="email"
+          type="email"
+          class="form-control"
+          formControlName="email"
+          [placeholder]="'::BusinessPanel:Employees:FieldEmailPlaceholder' | abpLocalization"
+        />
+        @if (inviteForm.controls.email.invalid && inviteForm.controls.email.touched) {
+          <p class="text-danger small mt-1">
+            @if (inviteForm.controls.email.errors?.['required']) {
+              {{ '::BusinessPanel:Employees:FieldRequired' | abpLocalization }}
+            } @else {
+              {{ '::BusinessPanel:Employees:FieldInvalidEmail' | abpLocalization }}
+            }
+          </p>
         }
-      </select>
-    </div>
-  </form>
+      </div>
+
+      <div>
+        <label class="form-label" for="role">{{ '::BusinessPanel:Employees:FieldRole' | abpLocalization }}</label>
+        <select id="role" class="form-select" formControlName="role">
+          <option [ngValue]="Role.BranchManager">{{ '::BusinessPanel:Employees:RoleBranchManager' | abpLocalization }}</option>
+          <option [ngValue]="Role.Cashier">{{ '::BusinessPanel:Employees:RoleCashier' | abpLocalization }}</option>
+          <option [ngValue]="Role.MarketingManager">{{ '::BusinessPanel:Employees:RoleMarketingManager' | abpLocalization }}</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="form-label" for="branchId">{{ '::BusinessPanel:Employees:FieldBranch' | abpLocalization }}</label>
+        <select id="branchId" class="form-select" formControlName="branchId">
+          <option value="">{{ '::BusinessPanel:Employees:AllBranches' | abpLocalization }}</option>
+          @for (branch of branches(); track branch.id) {
+            <option [value]="branch.id">{{ branch.name }}</option>
+          }
+        </select>
+      </div>
+    </form>
+  }
 
   <div slot="footer" class="d-flex gap-2 justify-content-end w-100">
-    <button type="button" class="btn btn-secondary" (click)="closeInviteModal()">
-      {{ '::BusinessPanel:Employees:Cancel' | abpLocalization }}
-    </button>
-    <button type="button" class="btn btn-primary" [disabled]="isInviting()" (click)="submitInviteForm()">
-      @if (isInviting()) {
-        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-      }
-      {{ '::BusinessPanel:Employees:SendInvite' | abpLocalization }}
-    </button>
+    @if (inviteResult()) {
+      <button type="button" class="btn btn-primary" (click)="finishInvite()">
+        {{ '::BusinessPanel:Employees:Done' | abpLocalization }}
+      </button>
+    } @else {
+      <button type="button" class="btn btn-secondary" (click)="closeInviteModal()">
+        {{ '::BusinessPanel:Employees:Cancel' | abpLocalization }}
+      </button>
+      <button type="button" class="btn btn-primary" [disabled]="isInviting()" (click)="submitInviteForm()">
+        @if (isInviting()) {
+          <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+        }
+        {{ '::BusinessPanel:Employees:SendInvite' | abpLocalization }}
+      </button>
+    }
   </div>
 </app-modal>

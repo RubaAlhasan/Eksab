@@ -14,6 +14,7 @@ using Eksabli.Offers;
 using Eksabli.Notifications;
 using Eksabli.Engagement;
 using Eksabli.Platform;
+using Eksabli.Sms;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;
 using Volo.Abp.Data;
@@ -94,6 +95,8 @@ public class EksabliDbContext :
     public DbSet<Category> Categories { get; set; }
 
     public DbSet<SupportTicket> SupportTickets { get; set; }
+
+    public DbSet<SmsLog> SmsLogs { get; set; }
 
     #region Entities from the modules
 
@@ -439,6 +442,16 @@ public class EksabliDbContext :
             b.ConfigureByConvention(); //auto configure for the base class props
             b.Property(x => x.Body).IsRequired().HasMaxLength(SupportTicketMessageConsts.MaxBodyLength);
             b.HasIndex(x => new { x.TicketId, x.CreatedAt });
+        });
+
+        builder.Entity<SmsLog>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "SmsLogs", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.PhoneNumber).IsRequired().HasMaxLength(SmsLogConsts.MaxPhoneNumberLength);
+            b.Property(x => x.Message).IsRequired().HasMaxLength(SmsLogConsts.MaxMessageLength);
+            b.HasIndex(x => x.CreationTime);
+            b.HasIndex(x => x.PhoneNumber);
         });
     }
 }

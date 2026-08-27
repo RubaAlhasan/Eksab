@@ -1,7 +1,7 @@
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedAndSortedResultRequestDto, PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { EmployeeAssignmentDto, InviteEmployeeDto, UpdateEmployeeAssignmentDto } from '../employee-assignments/models';
+import type { EmployeeAssignmentDto, InviteEmployeeDto, InviteEmployeeResultDto, UpdateEmployeeAssignmentDto } from '../employee-assignments/models';
 
 @Injectable({
   providedIn: 'root',
@@ -21,7 +21,7 @@ export class EmployeeAssignmentsService {
   
 
   invite = (input: InviteEmployeeDto, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, EmployeeAssignmentDto>({
+    this.restService.request<any, InviteEmployeeResultDto>({
       method: 'POST',
       url: '/api/app/employee-assignments/invite',
       body: input,

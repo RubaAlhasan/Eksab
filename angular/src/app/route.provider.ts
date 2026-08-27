@@ -87,6 +87,14 @@ function configureRoutes() {
         requiredPolicy: 'Eksabli.AuditLogs',
       },
       {
+        path: '/admin/sms-logs',
+        name: '::AdminPanel:SmsLogs:Title',
+        iconClass: 'fas fa-key',
+        order: 8.5,
+        layout: eLayoutType.empty,
+        requiredPolicy: 'Eksabli.SmsLogs',
+      },
+      {
         path: '/admin/notifications',
         name: '::AdminPanel:Notifications:Title',
         iconClass: 'fas fa-bullhorn',
