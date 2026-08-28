@@ -1,0 +1,140 @@
+<app-page-header
+  [title]="'::AdminPanel:Reports:Title' | abpLocalization"
+  [subtitle]="'::AdminPanel:Reports:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Admin Portal', link: '/admin/dashboard' }, { label: ('::AdminPanel:Reports:Title' | abpLocalization) }]"
+>
+</app-page-header>
+
+<div class="d-flex flex-wrap gap-3 mb-4">
+  <div class="card eks-stat-card">
+    <div class="card-body">
+      <div class="eks-stat-card__value">{{ businessesLoading() ? '—' : (totalBusinesses() ?? 0) }}</div>
+      <div class="eks-stat-card__label">{{ '::AdminPanel:Reports:StatTotalBusinesses' | abpLocalization }}</div>
+    </div>
+  </div>
+  @if (canViewMrr() && !mrrLoading() && mrr() !== null) {
+    <div class="card eks-stat-card">
+      <div class="card-body">
+        <div class="eks-stat-card__value">${{ mrr() | number: '1.0-0' }}</div>
+        <div class="eks-stat-card__label">{{ '::AdminPanel:Reports:StatMrr' | abpLocalization }}</div>
+      </div>
+    </div>
+  }
+  @if (!ticketsLoading() && ticketMetrics() !== null) {
+    <div class="card eks-stat-card">
+      <div class="card-body">
+        <div class="eks-stat-card__value">{{ ticketMetrics()!.totalOpen }}</div>
+        <div class="eks-stat-card__label">{{ '::AdminPanel:Reports:StatOpenTickets' | abpLocalization }}</div>
+      </div>
+    </div>
+  }
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-12 col-lg-8">
+    <div class="card p-4 h-100">
+      <h2 class="fw-bold small mb-3">{{ '::AdminPanel:Reports:TenantGrowthTitle' | abpLocalization }}</h2>
+      @if (growthLoading()) {
+        <app-loading-spinner [label]="'::AdminPanel:Reports:Loading' | abpLocalization"></app-loading-spinner>
+      } @else if (growthFailed()) {
+        <app-error-state
+          [message]="'::AdminPanel:Reports:LoadErrorMessage' | abpLocalization"
+          [retryLabel]="'::AdminPanel:Reports:TryAgain' | abpLocalization"
+          (retry)="retryGrowth()"
+        >
+        </app-error-state>
+      } @else if (growthBars().length === 0) {
+        <p class="text-muted small mb-0">{{ '::AdminPanel:Reports:NoGrowthData' | abpLocalization }}</p>
+      } @else {
+        <div class="eks-growth-chart">
+          @for (bar of growthBars(); track bar.label) {
+            <div class="eks-growth-chart__col" [title]="bar.label + ': ' + bar.value">
+              <div class="eks-growth-chart__bar" [style.height.%]="(bar.value / growthMax()) * 100"></div>
+              <span class="eks-growth-chart__label">{{ bar.label }}</span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-4">
+    <div class="card p-4 h-100">
+      <h2 class="fw-bold small mb-3">{{ '::AdminPanel:Reports:CategoryMixTitle' | abpLocalization }}</h2>
+      @if (categoriesLoading()) {
+        <app-loading-spinner [label]="'::AdminPanel:Reports:Loading' | abpLocalization"></app-loading-spinner>
+      } @else if (topCategories().length === 0) {
+        <p class="text-muted small mb-0">{{ '::AdminPanel:Reports:NoCategories' | abpLocalization }}</p>
+      } @else {
+        <div class="d-flex flex-column gap-3">
+          @for (category of topCategories(); track category.id) {
+            <div>
+              <div class="d-flex align-items-center justify-content-between small mb-1">
+                <span class="fw-semibold">{{ category.nameEn }}</span>
+                <span class="text-muted">{{ category.businessCount }}</span>
+              </div>
+              <div class="progress" style="height: 6px">
+                <div class="progress-bar" role="progressbar" [style.width.%]="(category.businessCount / categoryMixMax()) * 100"></div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-6">
+    <div class="card p-4 h-100">
+      <h2 class="fw-bold small mb-3">{{ '::AdminPanel:Reports:TicketsByStatusTitle' | abpLocalization }}</h2>
+      @if (ticketsLoading()) {
+        <app-loading-spinner [label]="'::AdminPanel:Reports:Loading' | abpLocalization"></app-loading-spinner>
+      } @else if (ticketsFailed()) {
+        <app-error-state
+          [message]="'::AdminPanel:Reports:LoadErrorMessage' | abpLocalization"
+          [retryLabel]="'::AdminPanel:Reports:TryAgain' | abpLocalization"
+          (retry)="retryTickets()"
+        >
+        </app-error-state>
+      } @else {
+        <div class="d-flex flex-column gap-3">
+          @for (row of statusRows(); track row.status) {
+            <div>
+              <div class="d-flex align-items-center justify-content-between small mb-1">
+                <span class="fw-semibold">{{ ticketStatusLabelKey(row.status) | abpLocalization }}</span>
+                <span class="text-muted">{{ row.count }}</span>
+              </div>
+              <div class="progress" style="height: 6px">
+                <div class="progress-bar" role="progressbar" [style.width.%]="row.pct"></div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card p-4 h-100">
+      <h2 class="fw-bold small mb-3">{{ '::AdminPanel:Reports:TicketsByPriorityTitle' | abpLocalization }}</h2>
+      @if (ticketsLoading()) {
+        <app-loading-spinner [label]="'::AdminPanel:Reports:Loading' | abpLocalization"></app-loading-spinner>
+      } @else if (!ticketsFailed()) {
+        <div class="d-flex flex-column gap-3">
+          @for (row of priorityRows(); track row.priority) {
+            <div>
+              <div class="d-flex align-items-center justify-content-between small mb-1">
+                <span class="fw-semibold">{{ ticketPriorityLabelKey(row.priority) | abpLocalization }}</span>
+                <span class="text-muted">{{ row.count }}</span>
+              </div>
+              <div class="progress" style="height: 6px">
+                <div class="progress-bar" role="progressbar" [style.width.%]="row.pct"></div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

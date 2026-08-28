@@ -177,6 +177,15 @@ public static class EksabliPermissions
         public const string Default = GroupName + ".SmsLogs";
     }
 
+    // Platform-wide Reports (tenant growth, support-ticket volume — see AdminPlatformReportAppService).
+    // Deliberately its own group, NOT a reuse of the tenant-realm Reports.* above: that group gates
+    // ReportsController, which is CurrentTenant-implicit and would silently return empty/wrong data for
+    // a Host caller. Host-realm only, same class as AuditLogs/Users/SmsLogs.
+    public static class PlatformReports
+    {
+        public const string Default = GroupName + ".PlatformReports";
+    }
+
     //Add your own permission names. Example:
     //public const string MyPermission1 = GroupName + ".MyPermission1";
 }

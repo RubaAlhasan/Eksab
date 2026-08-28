@@ -6,6 +6,7 @@ using Eksabli.Billing;
 using Eksabli.BusinessProfiles;
 using Eksabli.Branches;
 using Eksabli.EmployeeAssignments;
+using Eksabli.Settings;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Data;
@@ -13,6 +14,7 @@ using Volo.Abp.Domain.Repositories;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
+using Volo.Abp.Settings;
 using Volo.Abp.TenantManagement;
 
 namespace Eksabli.Businesses;
@@ -31,6 +33,7 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
     private readonly ITenantSubscriptionRepository _tenantSubscriptionRepository;
     private readonly ISubscriptionPlanRepository _subscriptionPlanRepository;
     private readonly IFeatureManager _featureManager;
+    private readonly ISettingProvider _settingProvider;
 
     public BusinessAppService(
         TenantManager tenantManager,
@@ -43,7 +46,8 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
         IRepository<EmployeeAssignment, Guid> employeeAssignmentRepository,
         ITenantSubscriptionRepository tenantSubscriptionRepository,
         ISubscriptionPlanRepository subscriptionPlanRepository,
-        IFeatureManager featureManager)
+        IFeatureManager featureManager,
+        ISettingProvider settingProvider)
     {
         _tenantManager = tenantManager;
         _tenantRepository = tenantRepository;
@@ -56,6 +60,7 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
         _tenantSubscriptionRepository = tenantSubscriptionRepository;
         _subscriptionPlanRepository = subscriptionPlanRepository;
         _featureManager = featureManager;
+        _settingProvider = settingProvider;
     }
 
     public async Task<BusinessRegistrationResultDto> RegisterAsync(RegisterBusinessDto input)
@@ -116,11 +121,16 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
         var trialPlan = await _subscriptionPlanRepository.FirstOrDefaultAsync(p => p.IsTrialDefault)
             ?? throw new AbpException("No subscription plan is flagged as the trial default.");
 
+        // Configurable via Setting Management (Eksabli.Trial.LengthDays) rather than the fixed
+        // BillingConsts.TrialDurationDays constant — falls back to that constant's value as the
+        // setting's own default, so behavior is unchanged until someone actually edits it.
+        var trialLengthDays = await _settingProvider.GetAsync(EksabliSettings.Trial.LengthDays, BillingConsts.TrialDurationDays);
+
         var subscription = TenantSubscription.Create(
             GuidGenerator.Create(),
             trialPlan.Id,
             Clock.Now,
-            Clock.Now.AddDays(BillingConsts.TrialDurationDays),
+            Clock.Now.AddDays(trialLengthDays),
             TenantSubscriptionStatus.Trialing);
         await _tenantSubscriptionRepository.InsertAsync(subscription, autoSave: true);
 

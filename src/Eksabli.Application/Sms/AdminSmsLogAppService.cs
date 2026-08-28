@@ -27,9 +27,8 @@ public class AdminSmsLogAppService : ApplicationService, IAdminSmsLogAppService
 
         if (!input.FilterText.IsNullOrWhiteSpace())
         {
-            var filterText = input.FilterText!;
             queryable = queryable.Where(x =>
-                x.PhoneNumber.Contains(filterText) || x.Message.Contains(filterText));
+                x.PhoneNumber.Contains(input.FilterText!) || x.Message.Contains(input.FilterText!));
         }
 
         var totalCount = await AsyncExecuter.CountAsync(queryable);
@@ -40,22 +39,11 @@ public class AdminSmsLogAppService : ApplicationService, IAdminSmsLogAppService
                 .Skip(input.SkipCount)
                 .Take(input.MaxResultCount));
 
-        return new PagedResultDto<SmsLogDto>(totalCount, MapToDtos(logs));
+        return new PagedResultDto<SmsLogDto>(totalCount, ObjectMapper.Map<List<SmsLog>, List<SmsLogDto>>(logs));
     }
 
     public async Task ClearAsync()
     {
         await _smsLogRepository.DeleteDirectAsync(x => true);
-    }
-
-    private static List<SmsLogDto> MapToDtos(List<SmsLog> logs)
-    {
-        return logs.Select(log => new SmsLogDto
-        {
-            Id = log.Id,
-            PhoneNumber = log.PhoneNumber,
-            Message = log.Message,
-            CreationTime = log.CreationTime,
-        }).ToList();
     }
 }

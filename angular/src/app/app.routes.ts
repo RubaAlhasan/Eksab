@@ -160,6 +160,17 @@ export const APP_ROUTES: Routes = [
         data: { requiredPolicy: 'Eksabli.SmsLogs' },
       },
       {
+        path: 'reports',
+        loadComponent: () =>
+          import('./admin/reports/admin-reports.component').then(c => c.AdminReportsComponent),
+        canActivate: [permissionGuard],
+        // AdminPlatformReportsController is gated on Eksabli.PlatformReports, no child permissions —
+        // same single-view-only-capability shape as AuditLogs/SmsLogs above. The category-mix and MRR
+        // widgets on this page reuse Categories'/Subscriptions' own already-granted endpoints instead
+        // of duplicating them, so no extra policy is needed for those pieces specifically.
+        data: { requiredPolicy: 'Eksabli.PlatformReports' },
+      },
+      {
         // Admin-triggered Notification Hub send (UserNotificationsController.SendAsync) — distinct
         // from the Business Portal's '/business/notifications' (campaign channel, different
         // controller/permission). Whole action is gated on Eksabli.Notifications.Broadcast, no lesser
