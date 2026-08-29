@@ -35,4 +35,21 @@ export class BusinessService {
       body: input,
     },
     { apiName: this.apiName,...config });
+
+
+  uploadLogo = (file: Blob, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, BusinessProfileDto>({
+      method: 'PUT',
+      url: '/api/app/business/profile/logo',
+      body: file,
+    },
+    { apiName: this.apiName,...config });
+
+
+  removeLogo = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, BusinessProfileDto>({
+      method: 'DELETE',
+      url: '/api/app/business/profile/logo',
+    },
+    { apiName: this.apiName,...config });
 }
