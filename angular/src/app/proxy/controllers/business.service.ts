@@ -37,13 +37,20 @@ export class BusinessService {
     { apiName: this.apiName,...config });
 
 
-  uploadLogo = (file: Blob, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, BusinessProfileDto>({
+  // multipart/form-data, not a raw Blob body — matches [Consumes("multipart/form-data")] +
+  // [FromForm] IRemoteStreamContent file on BusinessController.UploadLogoAsync; a raw Blob body sent
+  // with Content-Type: application/json (RestService's default) gets rejected as 415 Unsupported Media
+  // Type before it ever reaches that action. The field name "file" must match the parameter name.
+  uploadLogo = (file: Blob, config?: Partial<Rest.Config>) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.restService.request<any, BusinessProfileDto>({
       method: 'PUT',
       url: '/api/app/business/profile/logo',
-      body: file,
+      body: formData,
     },
     { apiName: this.apiName,...config });
+  };
 
 
   removeLogo = (config?: Partial<Rest.Config>) =>
