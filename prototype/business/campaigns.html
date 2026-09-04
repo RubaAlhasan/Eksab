@@ -33,7 +33,7 @@
         <div id="empty-state" class="empty-state hidden">
           <div class="empty-state-icon" id="empty-icon"></div>
           <p class="font-bold text-sm mb-1">No campaigns yet</p>
-          <p class="text-xs text-slate-400 mb-4">Create your first campaign to start driving repeat visits.</p>
+          <p class="text-xs text-slate-500 mb-4">Create your first campaign to start driving repeat visits.</p>
           <button class="btn btn-primary btn-sm" id="empty-new-btn">New Campaign</button>
         </div>
       </div>
@@ -45,7 +45,7 @@
 <div class="modal-overlay" data-modal="campaign-form">
   <div class="modal-panel p-6" style="max-width:34rem">
     <h3 class="font-bold text-base mb-1">New Campaign</h3>
-    <p class="text-xs text-slate-400 mb-4">Step <span id="step-num">1</span> of 3</p>
+    <p class="text-xs text-slate-500 mb-4">Step <span id="step-num">1</span> of 3</p>
 
     <div id="step-1">
       <div class="space-y-3">
@@ -131,7 +131,7 @@
               <p class="font-bold text-sm">${c.name}</p>
               <span class="badge ${statusBadge[c.status]}">${c.status}</span>
             </div>
-            <p class="text-xs text-slate-400">${c.type.replace(/([A-Z])/g, ' $1').trim()} · ${new Date(c.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${new Date(c.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+            <p class="text-xs text-slate-500">${c.type.replace(/([A-Z])/g, ' $1').trim()} · ${new Date(c.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${new Date(c.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
           </div>
           <div class="flex gap-2">
             ${c.status === 'Draft' ? `<button class="btn btn-primary btn-sm activate-btn" data-name="${c.name}">Activate</button>` : ''}
@@ -140,9 +140,9 @@
         </div>
         <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">${c.description}</p>
         <div class="grid grid-cols-3 gap-3 text-center">
-          <div><p class="text-base font-extrabold">${c.sent.toLocaleString()}</p><p class="text-xs text-slate-400">Sent</p></div>
-          <div><p class="text-base font-extrabold">${c.opened.toLocaleString()}</p><p class="text-xs text-slate-400">Opened</p></div>
-          <div><p class="text-base font-extrabold text-success-600 dark:text-success-400">${c.redeemed.toLocaleString()}</p><p class="text-xs text-slate-400">Redeemed</p></div>
+          <div><p class="text-base font-extrabold">${c.sent.toLocaleString()}</p><p class="text-xs text-slate-500">Sent</p></div>
+          <div><p class="text-base font-extrabold">${c.opened.toLocaleString()}</p><p class="text-xs text-slate-500">Opened</p></div>
+          <div><p class="text-base font-extrabold text-success-600 dark:text-success-400">${c.redeemed.toLocaleString()}</p><p class="text-xs text-slate-500">Redeemed</p></div>
         </div>
       </div>`).join('');
     document.querySelectorAll('.activate-btn').forEach(btn => {

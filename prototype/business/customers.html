@@ -41,7 +41,7 @@
         <div class="tab-panel active space-y-4" data-tab-panel="customers" data-tab-id="members">
           <div class="card p-4 flex flex-wrap items-center gap-3">
             <div class="relative flex-1 min-w-[200px]">
-              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" id="search-icon"></span>
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" id="search-icon"></span>
               <input id="search-input" class="input pl-9" placeholder="Search by name or phone…">
             </div>
             <select id="tier-filter" class="select w-40">
@@ -64,10 +64,10 @@
             <div id="empty-state" class="empty-state hidden">
               <div class="empty-state-icon" id="empty-icon"></div>
               <p class="font-bold text-sm mb-1">No customers found</p>
-              <p class="text-xs text-slate-400">Try a different search or clear your filters.</p>
+              <p class="text-xs text-slate-500">Try a different search or clear your filters.</p>
             </div>
             <div class="flex items-center justify-between p-4 border-t border-slate-100 dark:border-slate-800">
-              <p class="text-xs text-slate-400">Showing <span id="result-count"></span> of <span id="total-count"></span> customers</p>
+              <p class="text-xs text-slate-500">Showing <span id="result-count"></span> of <span id="total-count"></span> customers</p>
               <div class="pagination">
                 <span class="page-btn" id="page-prev"></span>
                 <span class="page-btn active">1</span><span class="page-btn">2</span><span class="page-btn">3</span>
@@ -79,7 +79,7 @@
 
         <!-- Following panel -->
         <div class="tab-panel space-y-3" data-tab-panel="customers" data-tab-id="following">
-          <p class="text-xs text-slate-400">Customers following your business but not yet members — good campaign-conversion targets.</p>
+          <p class="text-xs text-slate-500">Customers following your business but not yet members — good campaign-conversion targets.</p>
           <div class="card divide-y divide-slate-100 dark:divide-slate-800" id="following-list"></div>
         </div>
       </div>
@@ -114,8 +114,8 @@
       <td class="text-slate-500 dark:text-slate-400">${c.phone}</td>
       <td><span class="badge ${tierBadge[c.tier]}">${c.tier}</span></td>
       <td class="font-semibold">${c.balance.toLocaleString()}</td>
-      <td class="text-slate-400">${new Date(c.joined).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</td>
-      <td class="text-slate-400">${new Date(c.lastActive).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
+      <td class="text-slate-500">${new Date(c.joined).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+      <td class="text-slate-500">${new Date(c.lastActive).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
       <td><span class="badge ${statusBadge[c.status]}">${c.status}</span></td>
       <td><a href="customer-details.html?id=${c.id}" class="text-slate-300 hover:text-primary-600">${Icons.html('chevron-right', { size: 16 })}</a></td>
     </tr>`).join('');
@@ -132,7 +132,7 @@
       <div class="avatar avatar-sm">${f.name.split(' ').map(w => w[0]).join('')}</div>
       <div class="flex-1">
         <p class="text-sm font-semibold">${f.name}</p>
-        <p class="text-xs text-slate-400">${f.phone} · Following since ${new Date(f.followedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+        <p class="text-xs text-slate-500">${f.phone} · Following since ${new Date(f.followedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
       </div>
       <button class="btn btn-outline btn-sm convert-btn">Convert to Campaign Target</button>
     </div>`).join('');

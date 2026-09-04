@@ -33,7 +33,7 @@
           <h1 class="text-xl font-extrabold tracking-tight" id="biz-name"></h1>
           <span id="member-badge"></span>
         </div>
-        <p class="text-sm text-slate-400 mb-3" id="biz-meta"></p>
+        <p class="text-sm text-slate-500 mb-3" id="biz-meta"></p>
         <div class="flex items-center gap-4 text-sm mb-5">
           <span class="flex items-center gap-1"><span class="text-warning-500">★</span> <span id="rating"></span></span>
           <span class="text-slate-300 dark:text-slate-700">·</span>
@@ -109,7 +109,7 @@
     ctaWrap.innerHTML = `
       <div class="card p-4 flex items-center justify-between">
         <div>
-          <p class="text-xs text-slate-400">Your balance</p>
+          <p class="text-xs text-slate-500">Your balance</p>
           <p class="text-lg font-extrabold text-primary-600 dark:text-primary-400">${membership.balance.toLocaleString()} pts</p>
         </div>
         <a href="my-points.html?id=${biz.id}" class="btn btn-primary btn-md">View My Points</a>
@@ -128,7 +128,7 @@
         <span class="badge badge-success">Active</span>
       </div>
       <p class="text-xs text-slate-500 dark:text-slate-400">${c.description}</p>
-    </div>`).join('') : `<p class="text-sm text-slate-400 text-center py-6">No active offers right now — check back soon.</p>`;
+    </div>`).join('') : `<p class="text-sm text-slate-500 text-center py-6">No active offers right now — check back soon.</p>`;
 
   // Rewards preview
   const rewardsPanel = document.getElementById('rewards-panel');
@@ -138,7 +138,7 @@
       <div class="text-3xl mb-2">${r.image}</div>
       <p class="text-xs font-bold truncate">${r.name}</p>
       <p class="text-xs text-primary-600 dark:text-primary-400 font-semibold mt-0.5">${r.pointsCost} pts</p>
-    </a>`).join('') : `<p class="text-sm text-slate-400 text-center py-6 col-span-2">No rewards published yet.</p>`;
+    </a>`).join('') : `<p class="text-sm text-slate-500 text-center py-6 col-span-2">No rewards published yet.</p>`;
 
   // Branches
   const branchesPanel = document.getElementById('branches-panel');
@@ -148,7 +148,7 @@
       <div class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400" id="pin-${i}"></div>
       <div class="flex-1">
         <p class="text-sm font-semibold">${names[i % names.length]}</p>
-        <p class="text-xs text-slate-400">Open until 10:00 PM</p>
+        <p class="text-xs text-slate-500">Open until 10:00 PM</p>
       </div>
     </div>`).join('');
   branchesPanel.querySelectorAll('[id^="pin-"]').forEach(el => el.innerHTML = Icons.html('map-pin', { size: 16 }));

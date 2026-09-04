@@ -33,7 +33,7 @@
               <div class="w-10 h-7 rounded bg-slate-900 dark:bg-slate-700 flex items-center justify-center text-white text-[10px] font-bold">VISA</div>
               <div class="flex-1">
                 <p class="text-sm font-semibold">•••• •••• •••• 4242</p>
-                <p class="text-xs text-slate-400">Expires 09/28</p>
+                <p class="text-xs text-slate-500">Expires 09/28</p>
               </div>
             </div>
             <button class="btn btn-secondary w-full btn-sm" id="update-card-btn">Update Payment Method</button>
@@ -41,11 +41,11 @@
 
           <div class="card p-6 lg:col-span-2">
             <h2 class="font-bold text-sm mb-1">Next Invoice</h2>
-            <p class="text-xs text-slate-400 mb-4">Due September 1, 2026</p>
+            <p class="text-xs text-slate-500 mb-4">Due September 1, 2026</p>
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-3xl font-extrabold">$178.00</p>
-                <p class="text-xs text-slate-400 mt-1">$149 base + $29 branch overage</p>
+                <p class="text-xs text-slate-500 mt-1">$149 base + $29 branch overage</p>
               </div>
               <span class="badge badge-warning">Due Soon</span>
             </div>
@@ -84,7 +84,7 @@
       <td class="font-semibold">${i.period}</td>
       <td>$${i.amount.toFixed(2)}</td>
       <td><span class="badge ${statusBadge[i.status]}">${i.status}</span></td>
-      <td class="text-slate-400">${i.paidAt ? new Date(i.paidAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</td>
+      <td class="text-slate-500">${i.paidAt ? new Date(i.paidAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</td>
       <td><button class="text-primary-600 dark:text-primary-400 font-semibold text-xs">Download</button></td>
     </tr>`).join('');
 

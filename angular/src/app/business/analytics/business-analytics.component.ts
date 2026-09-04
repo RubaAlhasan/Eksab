@@ -12,7 +12,19 @@ interface Bar {
   value: number;
 }
 
-const TIER_COLORS = ['#B45309', '#94A3B8', '#F59E0B', '#6248E3', '#0EA5E9', '#10B981'];
+// Tier colors come from the ORDINAL `--eks-tier-*` ramp in src/styles/_tokens.scss (one hue,
+// deepening as the tier rises) rather than a bag of unrelated hues — tiers are tenant-configurable
+// and always sorted by ascending `minLifetimePoints`, so slot N means "Nth tier up" and the ramp
+// has to read as a ladder. CSS variables rather than hex so dark mode re-steps them (on a dark
+// ground the ramp inverts — higher tier gets brighter) without this file knowing about themes.
+const TIER_COLORS = [
+  'var(--eks-tier-1)',
+  'var(--eks-tier-2)',
+  'var(--eks-tier-3)',
+  'var(--eks-tier-4)',
+  'var(--eks-tier-5)',
+  'var(--eks-tier-6)',
+];
 
 /**
  * Business Portal > Analytics — mirrors prototype/business/analytics.html, built from real endpoints
@@ -85,8 +97,10 @@ export class BusinessAnalyticsComponent implements OnInit {
     this.load();
   }
 
+  // Clamps rather than wrapping with `%`: a tenant with more tiers than the ramp has steps should
+  // flatten at the top, not restart at the lightest step and make tier 7 look like tier 1.
   protected tierColor(index: number): string {
-    return TIER_COLORS[index % TIER_COLORS.length];
+    return TIER_COLORS[Math.min(index, TIER_COLORS.length - 1)];
   }
 
   private load(): void {

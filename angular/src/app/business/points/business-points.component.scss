@@ -13,7 +13,7 @@
   width: 100%;
   gap: 0.125rem;
   padding: 0.25rem;
-  background-color: var(--eks-bg, #f1f5f9);
+  background-color: var(--eks-surface-2);
   border-radius: 0.75rem;
 }
 
@@ -26,7 +26,7 @@
   padding: 0.4375rem 0.875rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--eks-text-muted, #64748b);
+  color: var(--eks-text-muted);
   background: transparent;
   border: none;
   border-radius: 0.5rem;
@@ -34,13 +34,13 @@
   transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
 
   &.active {
-    background-color: #fff;
-    color: #392a7d;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    background-color: var(--eks-primary-fg);
+    color: var(--eks-primary-subtle-fg);
+    box-shadow: var(--eks-shadow-sm);
 
     @media (prefers-color-scheme: dark) {
-      background-color: #334155;
-      color: #f1f5f9;
+      background-color: var(--eks-surface-2);
+      color: var(--eks-surface-2);
     }
   }
 }

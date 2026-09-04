@@ -55,7 +55,7 @@ const AdminShell = (() => {
       <nav class="flex-1 overflow-y-auto px-2 pb-4 space-y-0.5">${groups}</nav>
       <div class="p-3 border-t border-slate-100 dark:border-slate-800">
         <div class="flex items-center gap-2.5 p-2 rounded-xl">
-          <div class="avatar avatar-sm flex-shrink-0" style="background:linear-gradient(135deg,#334155,#0F172A)">SA</div>
+          <div class="avatar avatar-sm flex-shrink-0" style="background:linear-gradient(135deg,#433E37,#1B1815)">SA</div>
           <div class="min-w-0 sidebar-label-text">
             <p class="text-xs font-bold truncate">Super Admin</p>
             <p class="text-[11px] text-slate-400">Host Realm</p>
@@ -96,7 +96,7 @@ const AdminShell = (() => {
       </div>
       <div class="relative">
         <button data-dropdown-trigger="topbar-user" class="flex items-center gap-2" aria-label="Account menu">
-          <div class="avatar avatar-sm" style="background:linear-gradient(135deg,#334155,#0F172A)">SA</div>
+          <div class="avatar avatar-sm" style="background:linear-gradient(135deg,#433E37,#1B1815)">SA</div>
         </button>
         <div class="dropdown-menu right-0 mt-2 w-56" data-dropdown-menu="topbar-user">
           <div class="px-2 py-2"><p class="text-sm font-bold">Super Admin</p><p class="text-xs text-slate-400">platform@eksabli.app</p></div>

@@ -31,7 +31,7 @@
       <div id="empty-state" class="empty-state hidden">
         <div class="empty-state-icon" id="empty-icon"></div>
         <p class="font-bold text-sm mb-1">No active campaigns</p>
-        <p class="text-xs text-slate-400 max-w-[16rem]">Follow more businesses to see their offers here.</p>
+        <p class="text-xs text-slate-500 max-w-[16rem]">Follow more businesses to see their offers here.</p>
       </div>
     </div>
 
@@ -71,7 +71,7 @@
           </div>
           <div class="p-4">
             <p class="text-sm text-slate-500 dark:text-slate-400 mb-2">${c.description}</p>
-            <p class="text-xs text-slate-400">Ends ${new Date(c.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+            <p class="text-xs text-slate-500">Ends ${new Date(c.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
           </div>
         </a>`;
     }).join('');

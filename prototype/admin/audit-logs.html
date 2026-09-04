@@ -28,7 +28,7 @@
 
         <div class="card p-4 flex flex-wrap items-center gap-3">
           <div class="relative flex-1 min-w-[220px]">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" id="search-icon"></span>
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" id="search-icon"></span>
             <input id="search-input" class="input pl-9" placeholder="Search by actor or action…">
           </div>
           <input type="date" class="input w-40">
@@ -64,7 +64,7 @@
         <td class="font-mono text-xs text-slate-500 dark:text-slate-400">${l.actor}</td>
         <td class="font-semibold">${l.action}</td>
         <td class="text-slate-500 dark:text-slate-400">${l.target}</td>
-        <td class="text-slate-400">${new Date(l.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+        <td class="text-slate-500">${new Date(l.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
       </tr>`).join('');
   }
   document.getElementById('search-input').addEventListener('input', render);

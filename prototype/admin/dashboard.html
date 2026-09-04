@@ -31,11 +31,11 @@
         <div class="grid lg:grid-cols-3 gap-6">
           <div class="card p-6 lg:col-span-2">
             <div class="flex items-center justify-between mb-6">
-              <div><h2 class="font-bold text-sm">Platform MRR</h2><p class="text-xs text-slate-400">Last 7 months</p></div>
+              <div><h2 class="font-bold text-sm">Platform MRR</h2><p class="text-xs text-slate-500">Last 7 months</p></div>
               <span class="badge badge-success" id="mrr-badge"></span>
             </div>
             <div class="chart-placeholder h-48" id="mrr-chart"></div>
-            <div class="flex justify-between mt-2 text-[10px] text-slate-400" id="mrr-labels"></div>
+            <div class="flex justify-between mt-2 text-[10px] text-slate-500" id="mrr-labels"></div>
           </div>
 
           <div class="card p-6">
@@ -84,7 +84,7 @@
     <div class="card stat-card">
       <div class="stat-icon-wrap bg-${s.color}-50 dark:bg-${s.color}-500/10 text-${s.color}-600 dark:text-${s.color}-300 mb-3">${Icons.html(s.icon, { size: 18 })}</div>
       <p class="text-2xl font-extrabold tabular-nums">${s.value}</p>
-      <p class="text-xs text-slate-400 mt-1">${s.label}</p>
+      <p class="text-xs text-slate-500 mt-1">${s.label}</p>
     </div>`).join('');
 
   const trend = admin.mrrTrend;
@@ -96,7 +96,7 @@
   const catTotal = admin.categories.reduce((a, c) => a + c.businesses, 0);
   document.getElementById('category-bars').innerHTML = admin.categories.slice(0, 5).map(c => `
     <div>
-      <div class="flex items-center justify-between text-xs mb-1"><span class="font-semibold">${c.name}</span><span class="text-slate-400">${c.businesses}</span></div>
+      <div class="flex items-center justify-between text-xs mb-1"><span class="font-semibold">${c.name}</span><span class="text-slate-500">${c.businesses}</span></div>
       <div class="progress-track"><div class="progress-fill" style="width:${(c.businesses / catTotal * 100 * 3).toFixed(0)}%"></div></div>
     </div>`).join('');
 
@@ -106,17 +106,17 @@
       <div class="avatar avatar-sm">${t.name.split(' ').map(w => w[0]).join('').slice(0, 2)}</div>
       <div class="flex-1 min-w-0">
         <p class="text-sm font-semibold truncate">${t.name}</p>
-        <p class="text-xs text-slate-400">${t.category}</p>
+        <p class="text-xs text-slate-500">${t.category}</p>
       </div>
       <span class="badge ${t.status === 'Pending Approval' ? 'badge-warning' : 'badge-info'}">${t.status}</span>
-    </div>`).join('') || `<p class="text-sm text-slate-400 text-center py-6">No approvals pending.</p>`;
+    </div>`).join('') || `<p class="text-sm text-slate-500 text-center py-6">No approvals pending.</p>`;
 
   const statusBadge = { Open: 'badge-danger', Pending: 'badge-warning', Resolved: 'badge-success' };
   document.getElementById('tickets-list').innerHTML = admin.supportTickets.slice(0, 4).map(t => `
     <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60">
       <div class="flex-1 min-w-0">
         <p class="text-sm font-semibold truncate">${t.subject}</p>
-        <p class="text-xs text-slate-400">${t.from} · ${t.type}</p>
+        <p class="text-xs text-slate-500">${t.from} · ${t.type}</p>
       </div>
       <span class="badge ${statusBadge[t.status]}">${t.status}</span>
     </div>`).join('');

@@ -1,4 +1,104 @@
+@use './styles/tokens';
+
 /* You can add global styles to this file, and also import other style files */
+
+// ---------------------------------------------------------------------------
+// Primary-color unification.
+//
+// The app had THREE primaries fighting on the same screen: the Eksabli brand violet
+// (#6248e3, in the shells and the prototype), Lepton-X's Bootstrap blue (#355dff), and
+// Lepton-X's pink (#f72585). Lepton's `bootstrap-dim.css` hardcodes those two in ~60
+// places instead of deriving them from `--bs-primary`, so setting that one variable
+// recolors almost nothing — each rule below mirrors one of the hardcoded sites.
+//
+// Scoped to the two portal shells, so stock ABP pages (/account/login, tenant
+// management) keep Lepton-X's own look — same rule the rest of this file follows.
+// Semantic colors (success / warning / danger / info) are left alone: they carry
+// meaning, not brand.
+// ---------------------------------------------------------------------------
+.eks-admin-shell,
+.eks-biz-shell {
+  --bs-primary: var(--eks-primary);
+  --bs-primary-rgb: 98, 72, 227;
+  --bs-primary-text-emphasis: var(--eks-primary-subtle-fg);
+  --bs-primary-bg-subtle: var(--eks-primary-subtle-bg);
+  --bs-primary-border-subtle: var(--eks-primary-200);
+  --bs-link-color: var(--eks-primary);
+  --bs-link-color-rgb: 98, 72, 227;
+  --bs-link-hover-color: var(--eks-primary-hover);
+
+  --bs-body-bg: var(--eks-bg);
+  --bs-body-color: var(--eks-text);
+  --bs-secondary-color: var(--eks-text-muted);
+  --bs-border-color: var(--eks-border);
+  --bs-tertiary-bg: var(--eks-surface-2);
+
+  .btn-primary {
+    --bs-btn-color: var(--eks-primary-fg);
+    --bs-btn-bg: var(--eks-primary);
+    --bs-btn-border-color: var(--eks-primary);
+    --bs-btn-hover-color: var(--eks-primary-fg);
+    --bs-btn-hover-bg: var(--eks-primary-hover);
+    --bs-btn-hover-border-color: var(--eks-primary-hover);
+    --bs-btn-focus-shadow-rgb: 98, 72, 227;
+    --bs-btn-active-color: var(--eks-primary-fg);
+    --bs-btn-active-bg: var(--eks-primary-active);
+    --bs-btn-active-border-color: var(--eks-primary-active);
+    --bs-btn-disabled-color: var(--eks-primary-fg);
+    --bs-btn-disabled-bg: var(--eks-primary);
+    --bs-btn-disabled-border-color: var(--eks-primary);
+  }
+
+  .btn-outline-primary {
+    --bs-btn-color: var(--eks-primary);
+    --bs-btn-border-color: var(--eks-primary);
+    --bs-btn-hover-color: var(--eks-primary-fg);
+    --bs-btn-hover-bg: var(--eks-primary);
+    --bs-btn-hover-border-color: var(--eks-primary);
+    --bs-btn-focus-shadow-rgb: 98, 72, 227;
+    --bs-btn-active-color: var(--eks-primary-fg);
+    --bs-btn-active-bg: var(--eks-primary);
+    --bs-btn-active-border-color: var(--eks-primary);
+    --bs-btn-disabled-color: var(--eks-primary);
+    --bs-btn-disabled-border-color: var(--eks-primary);
+  }
+
+  // `!important` on these three only because Lepton's own rules are themselves
+  // `!important` with a hardcoded hex — there is no variable to override instead.
+  .text-primary {
+    color: var(--eks-primary) !important;
+  }
+
+  .bg-primary,
+  .badge.bg-primary {
+    background-color: var(--eks-primary) !important;
+  }
+
+  .badge.bg-primary {
+    color: var(--eks-primary-fg) !important;
+  }
+
+  // Lepton paints checked checkboxes/radios pink (#f72585) — the third primary.
+  .form-check-input:checked {
+    background-color: var(--eks-primary);
+    border-color: var(--eks-primary);
+  }
+
+  .form-check-input:focus,
+  .custom-select-display:focus {
+    border-color: var(--eks-primary);
+    box-shadow: 0 0 0 0.25rem var(--eks-primary-ring);
+  }
+
+  .custom-option.active {
+    background-color: var(--eks-primary-subtle-bg);
+    color: var(--eks-primary-subtle-fg);
+  }
+
+  .progress {
+    --bs-progress-bar-bg: var(--eks-primary);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Prototype-matched elevated card look. Bootstrap's own `.card` ships flat by design (thin
@@ -9,18 +109,12 @@
 // `.eks-biz-shell`, set on AdminLayoutComponent/BusinessLayoutComponent's own root — see those
 // components' scss) so stock ABP pages rendered outside either shell (e.g. `/account/login`) keep
 // Lepton-X's own card look untouched, matching this repo's existing "don't reskin stock ABP chrome"
-// rule. Dark mode mirrors the shells' own `.dark` class toggle (not a `prefers-color-scheme` query —
-// that's a manual sun/moon button in each topbar, see admin-layout.component.ts's `darkMode` signal),
-// same shadow values as design-system.css's own dark-mode `--shadow-soft` override.
+// rule. The dark variant is no longer spelled out here: `--eks-shadow-md` already re-points itself
+// under the shells' own `.dark` class (see _tokens.scss), so one rule now covers both themes.
 .eks-admin-shell .card,
 .eks-biz-shell .card {
-  border-radius: 1rem;
-  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04), 0 8px 24px -8px rgba(15, 23, 42, 0.1);
-}
-
-.eks-admin-shell.dark .card,
-.eks-biz-shell.dark .card {
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+  border-radius: var(--eks-radius-lg);
+  box-shadow: var(--eks-shadow-md);
 }
 
 // ---------------------------------------------------------------------------
@@ -152,7 +246,7 @@ body {
 
   &__label {
     font-size: 0.8125rem;
-    color: var(--bs-secondary-color, #6c757d);
+    color: var(--eks-text-muted);
   }
 }
 
@@ -176,17 +270,19 @@ body {
     gap: 0.375rem;
   }
 
+  // Chart series color, NOT --eks-primary: the accent means "actionable", and a bar is
+  // data, not a button. Single-series chart, so it takes categorical slot 1.
   &__bar {
     width: 100%;
     max-width: 2.5rem;
     min-height: 2px;
     border-radius: 0.375rem 0.375rem 0 0;
-    background: var(--bs-primary, #6248e3);
+    background: var(--eks-chart-1);
   }
 
   &__label {
     font-size: 0.6875rem;
-    color: var(--bs-secondary-color, #6c757d);
+    color: var(--eks-text-muted);
   }
 }
 
@@ -212,11 +308,11 @@ body {
     max-width: 85%;
     padding: 0.5rem 0.75rem;
     border-radius: 0.5rem;
-    background-color: var(--bs-tertiary-bg, #f8f9fa);
+    background-color: var(--eks-surface-2);
 
     &--mine {
       align-self: flex-end;
-      background-color: var(--bs-primary-bg-subtle, #cfe2ff);
+      background-color: var(--eks-primary-subtle-bg);
     }
   }
 
@@ -245,11 +341,11 @@ body {
   border: none;
   background: transparent;
   border-radius: 0.75rem;
-  color: var(--eks-text-muted, #64748b);
+  color: var(--eks-text-muted);
 
   &:hover {
-    background: var(--eks-bg, #f8fafc);
-    color: var(--eks-text, #0f172a);
+    background: var(--eks-surface-2);
+    color: var(--eks-text);
   }
 }
 
@@ -267,8 +363,8 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   white-space: nowrap;
-  color: var(--eks-text-muted, #64748b);
-  background-color: var(--eks-bg, #f8fafc);
+  color: var(--eks-text-muted);
+  background-color: var(--eks-surface-2);
 }
 
 // Small circular initials avatar — was independently duplicated verbatim in SIX component-scoped scss
@@ -288,8 +384,8 @@ body {
   justify-content: center;
   font-size: 0.75rem;
   font-weight: 700;
-  background-color: var(--bs-primary-bg-subtle, #cfe2ff);
-  color: var(--bs-primary-text-emphasis, #084298);
+  background-color: var(--eks-primary-subtle-bg);
+  color: var(--eks-primary-subtle-fg);
 }
 
 // Restyles Bootstrap's `.nav-tabs` (boxed/pill look by default) to match the prototype's own
@@ -297,7 +393,7 @@ body {
 // becoming primary-colored on the active tab, no background/box at all. Global since `.nav-tabs` is
 // already reused as-is on Customers/Points/Admin Business Details, same reasoning as the rules above.
 .nav-tabs {
-  border-bottom: 1px solid var(--eks-border, #e2e8f0);
+  border-bottom: 1px solid var(--eks-border);
 
   // Lepton-X's own theme (bootstrap-dim.css) ships a SECOND, more specific `.nav-tabs .nav-item
   // .nav-link` rule set — a hardcoded (non-variable) pink active-tab color (`#f72585`) plus a
@@ -315,7 +411,7 @@ body {
     padding: 0.75rem 1rem;
     font-size: 0.8125rem;
     font-weight: 600;
-    color: var(--eks-text-muted, #64748b);
+    color: var(--eks-text-muted);
     background: transparent;
     border: none;
     border-bottom: 2px solid transparent;
@@ -323,14 +419,14 @@ body {
     margin-bottom: -1px;
 
     &:hover {
-      color: var(--eks-text, #0f172a);
+      color: var(--eks-text);
       border-bottom-color: transparent !important;
       background: transparent;
     }
 
     &.active {
-      color: var(--bs-primary, #6248e3);
-      border-bottom-color: var(--bs-primary, #6248e3) !important;
+      color: var(--eks-primary);
+      border-bottom-color: var(--eks-primary) !important;
       background: transparent;
     }
   }

@@ -52,12 +52,12 @@
             <div class="flex items-center justify-between mb-6">
               <div>
                 <h2 class="font-bold text-sm">Member Growth</h2>
-                <p class="text-xs text-slate-400">Last 7 months</p>
+                <p class="text-xs text-slate-500">Last 7 months</p>
               </div>
               <span class="badge badge-success" id="growth-badge"></span>
             </div>
             <div class="chart-placeholder h-48" id="growth-chart"></div>
-            <div class="flex justify-between mt-2 text-[10px] text-slate-400" id="growth-labels"></div>
+            <div class="flex justify-between mt-2 text-[10px] text-slate-500" id="growth-labels"></div>
           </div>
 
           <!-- Quick links -->
@@ -108,7 +108,7 @@
         <div class="stat-icon-wrap bg-${s.color}-50 dark:bg-${s.color}-500/10 text-${s.color}-600 dark:text-${s.color}-300">${Icons.html(s.icon, { size: 18 })}</div>
       </div>
       <p class="text-2xl font-extrabold tabular-nums">${s.value}</p>
-      <p class="text-xs text-slate-400 mt-1">${s.label} <span class="text-success-600 dark:text-success-400 font-semibold">${s.delta}</span></p>
+      <p class="text-xs text-slate-500 mt-1">${s.label} <span class="text-success-600 dark:text-success-400 font-semibold">${s.delta}</span></p>
     </div>`).join('');
 
   const growth = biz.monthlyGrowth;
@@ -140,7 +140,7 @@
         <td class="font-semibold text-slate-900 dark:text-slate-50">${c.name}</td>
         <td><span class="badge ${typeBadge[type]}">${type}</span></td>
         <td class="font-semibold ${pts > 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'}">${pts > 0 ? '+' : ''}${pts}</td>
-        <td class="text-slate-400">${new Date(Date.now() - i * 86400000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
+        <td class="text-slate-500">${new Date(Date.now() - i * 86400000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
       </tr>`;
   }).join('');
 

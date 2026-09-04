@@ -50,7 +50,7 @@
             </table>
           </div>
           <div class="flex items-center justify-between p-4 border-t border-slate-100 dark:border-slate-800">
-            <p class="text-xs text-slate-400">Showing 1–<span id="row-count"></span> of 4,820 transactions</p>
+            <p class="text-xs text-slate-500">Showing 1–<span id="row-count"></span> of 4,820 transactions</p>
             <div class="pagination">
               <span class="page-btn" id="prev"></span>
               <span class="page-btn active">1</span><span class="page-btn">2</span><span class="page-btn">3</span><span class="page-btn">…</span><span class="page-btn">241</span>
@@ -91,9 +91,9 @@
       <td><span class="badge ${typeBadge[r.type]}">${r.type}</span></td>
       <td class="font-semibold ${r.points > 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'}">${r.points > 0 ? '+' : ''}${r.points}</td>
       <td class="text-slate-500 dark:text-slate-400">${r.source}</td>
-      <td class="text-slate-400">${r.branch}</td>
-      <td class="text-slate-400">${r.staff}</td>
-      <td class="text-slate-400">${r.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ${r.date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</td>
+      <td class="text-slate-500">${r.branch}</td>
+      <td class="text-slate-500">${r.staff}</td>
+      <td class="text-slate-500">${r.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ${r.date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</td>
     </tr>`).join('');
 
   document.getElementById('export-btn').addEventListener('click', () => Eksabli.showToast({ type: 'success', title: 'Export started', message: 'Large exports are emailed to you when ready.' }));

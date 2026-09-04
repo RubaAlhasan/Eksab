@@ -13,8 +13,8 @@
   justify-content: center;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #fff;
-  background: linear-gradient(135deg, #7c6af0, #4f37c4);
+  color: var(--eks-primary-fg);
+  background: linear-gradient(135deg, var(--eks-primary-500), var(--eks-primary-700));
 }
 
 .eks-avatar-img {
@@ -30,7 +30,7 @@
 .eks-mini-stat {
   padding: 0.75rem;
   border-radius: 0.75rem;
-  background-color: var(--eks-bg, #f8fafc);
+  background-color: var(--eks-bg);
 
   &__value {
     font-size: 1.125rem;
@@ -39,12 +39,12 @@
     // Explicit rather than inherited — this theme's default body color reads as a muted slate, not
     // the near-black the detail rows below use; matching them here means both actually reference the
     // same token instead of two different sources of "dark text" that happen to render differently.
-    color: var(--eks-text, #0f172a);
+    color: var(--eks-text);
   }
 
   &__label {
     font-size: 0.75rem;
-    color: var(--eks-text-muted, #64748b);
+    color: var(--eks-text-muted);
     margin-bottom: 0;
   }
 }
@@ -64,7 +64,7 @@
   // without this a long email would push the row wider than the card. Safe to truncate since the
   // template already puts the full value in a `[title]` tooltip on this same span.
   span:last-child {
-    color: var(--eks-text, #0f172a);
+    color: var(--eks-text);
     min-width: 0;
     flex-shrink: 1;
     overflow: hidden;
@@ -84,6 +84,6 @@
 
   &__label {
     font-size: 0.8125rem;
-    color: var(--bs-secondary-color, #6c757d);
+    color: var(--eks-text-muted);
   }
 }

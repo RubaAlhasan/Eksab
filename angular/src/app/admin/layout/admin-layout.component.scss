@@ -1,23 +1,8 @@
-// Eksabli brand accent (matches the purple used throughout prototype/assets/css/design-system.css),
-// scoped to this shell rather than global styles.scss so it doesn't bleed into ABP's own
-// account/tenant-management pages, which keep Lepton-X's default look.
+// Shell chrome only — every color here comes from src/styles/_tokens.scss, which is where the
+// `--eks-*` values (including this shell's own `.dark` overrides) now live. They used to be
+// declared locally in this file AND duplicated verbatim in business-layout.component.scss; two
+// copies of one palette is exactly the drift this move removes. Do not reintroduce raw hexes here.
 .eks-admin-shell {
-  --eks-primary: #6248e3;
-  --eks-primary-dark: #4f37c4;
-  --eks-bg: #f8fafc;
-  --eks-surface: #ffffff;
-  --eks-border: #e2e8f0;
-  --eks-text: #0f172a;
-  --eks-text-muted: #64748b;
-
-  &.dark {
-    --eks-bg: #0f172a;
-    --eks-surface: #1e293b;
-    --eks-border: #334155;
-    --eks-text: #f1f5f9;
-    --eks-text-muted: #94a3b8;
-  }
-
   min-height: 100vh;
   width: 100%;
   background: var(--eks-bg);
@@ -27,7 +12,7 @@
 .eks-admin-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.5);
+  background: var(--eks-overlay);
   z-index: 1040;
 }
 
@@ -73,7 +58,7 @@
     height: 2.25rem;
     border-radius: 0.75rem;
     background: linear-gradient(135deg, var(--eks-primary), var(--eks-primary-dark));
-    color: #fff;
+    color: var(--eks-primary-fg);
     font-weight: 800;
     display: flex;
     align-items: center;
@@ -142,7 +127,7 @@
 
     &.active {
       background: var(--eks-primary);
-      color: #fff;
+      color: var(--eks-primary-fg);
     }
   }
 }
@@ -188,7 +173,7 @@
     background: var(--eks-surface);
     border: 1px solid var(--eks-border);
     border-radius: 0.75rem;
-    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+    box-shadow: var(--eks-shadow-lg);
     list-style: none;
     z-index: 1050;
 

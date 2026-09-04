@@ -1,11 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Security.Cryptography.X509Certificates;
+using Eksabli.EntityFrameworkCore;
+using Eksabli.HealthChecks;
+using Eksabli.MultiTenancy;
+using Eksabli.Notifications;
+using Eksabli.OpenIddict;
+using Eksabli.StartupTasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,33 +24,38 @@ using Eksabli.Notifications;
 using Eksabli.Filters;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi;
+using OpenIddict.Server.AspNetCore;
+using OpenIddict.Validation.AspNetCore;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using Volo.Abp;
-using Volo.Abp.Studio;
 using Volo.Abp.Account;
 using Volo.Abp.Account.Web;
 using Volo.Abp.AspNetCore.MultiTenancy;
 using Volo.Abp.AspNetCore.Mvc;
-using Volo.Abp.AspNetCore.SignalR;
-using Volo.Abp.Autofac;
-using Volo.Abp.Localization;
-using Volo.Abp.Modularity;
-using Volo.Abp.UI.Navigation.Urls;
-using Volo.Abp.VirtualFileSystem;
+using Volo.Abp.AspNetCore.Mvc.Libs;
 using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
-using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling;
-using Microsoft.AspNetCore.Hosting;
+using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
+using Volo.Abp.AspNetCore.SignalR;
+using Volo.Abp.Auditing;
+using Volo.Abp.Autofac;
 using Volo.Abp.Identity;
+using Volo.Abp.Localization;
+using Volo.Abp.Modularity;
 using Volo.Abp.OpenIddict;
 using Volo.Abp.OpenIddict.ExtensionGrantTypes;
-using Volo.Abp.Swashbuckle;
-using Volo.Abp.Studio.Client.AspNetCore;
 using Volo.Abp.Security.Claims;
-using Eksabli.OpenIddict;
-using Volo.Abp.Auditing;
-using Eksabli.StartupTasks;
+using Volo.Abp.Studio;
+using Volo.Abp.Studio.Client.AspNetCore;
+using Volo.Abp.Swashbuckle;
+using Volo.Abp.UI.Navigation.Urls;
+using Volo.Abp.VirtualFileSystem;
 
 namespace Eksabli;
 
@@ -149,6 +157,11 @@ public class EksabliHttpApiHostModule : AbpModule
         ConfigureStartupTasks(context);
         ConfigureNotificationHub(context);
         ConfigureAuditing();
+
+        Configure<AbpMvcLibsOptions>(options =>
+        {
+            options.CheckLibs = false;
+        });
     }
 
     // ABP defaults IsEnabledForGetRequests to false — routine GET traffic (list/dashboard/detail

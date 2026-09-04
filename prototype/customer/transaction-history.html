@@ -30,7 +30,7 @@
       <div id="empty-state" class="empty-state hidden">
         <div class="empty-state-icon" id="empty-icon"></div>
         <p class="font-bold text-sm mb-1">No transactions</p>
-        <p class="text-xs text-slate-400 max-w-[16rem]">Nothing matches this filter yet.</p>
+        <p class="text-xs text-slate-500 max-w-[16rem]">Nothing matches this filter yet.</p>
       </div>
     </div>
 
@@ -87,7 +87,7 @@
           <div class="w-9 h-9 rounded-xl ${meta.bg} ${meta.color} flex items-center justify-center flex-shrink-0">${Icons.html(meta.icon, { size: 16 })}</div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-semibold truncate">${t.description}</p>
-            <p class="text-xs text-slate-400">${t.type} · ${new Date(t.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+            <p class="text-xs text-slate-500">${t.type} · ${new Date(t.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
           </div>
           <p class="text-sm font-bold ${t.points > 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'} flex-shrink-0">${t.points > 0 ? '+' : ''}${t.points}</p>
         </div>`;
