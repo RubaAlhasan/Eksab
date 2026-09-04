@@ -1,12 +1,14 @@
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Eksabli.BusinessProfiles;
 using Eksabli.Localization;
 using Eksabli.MultiTenancy;
 using Eksabli.Notifications;
 using Eksabli.Wallets;
 using System;
 using Volo.Abp;
+using Volo.Abp.BlobStoring;
 using Volo.Abp.Localization;
 using Volo.Abp.Modularity;
 using Volo.Abp.MultiTenancy;
@@ -57,6 +59,21 @@ public class EksabliDomainModule : AbpModule
 #endif
 
         ConfigureFcm(context);
+        ConfigureBlobStoring();
+    }
+
+    // Only consumer of BlobStoringDatabaseDomainModule so far — that dependency (and the DatabaseBlob/
+    // DatabaseBlobContainer tables it already migrated) has existed since the very first migration, but
+    // nothing in this codebase actually used IBlobContainer<T> until the business logo upload feature.
+    private void ConfigureBlobStoring()
+    {
+        Configure<AbpBlobStoringOptions>(options =>
+        {
+            options.Containers.Configure<BusinessLogoContainer>(container =>
+            {
+                container.UseDatabase();
+            });
+        });
     }
 
     // Swaps NullPushNotificationSender for the real FCM sender once a provider is actually configured —

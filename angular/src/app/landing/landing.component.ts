@@ -1,6 +1,7 @@
 import {
   AuthService,
   LocalizationPipe,
+  LocalizationService,
   RouteBasedCultureUrlService,
   SessionStateService,
   getLocaleDirection,
@@ -12,10 +13,12 @@ import {
   Renderer2,
   afterNextRender,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { Meta, Title } from '@angular/platform-browser';
 
 interface WalletCard {
   tenant: 't1' | 't2' | 't3';
@@ -60,12 +63,19 @@ export class LandingComponent {
   private readonly routeBasedCultureUrl = inject(RouteBasedCultureUrlService);
   private readonly renderer = inject(Renderer2);
   private readonly elementRef: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly localization = inject(LocalizationService);
+  private readonly titleService = inject(Title);
+  private readonly metaService = inject(Meta);
 
   /** Reflects ABP's actual active culture (session state), not component-local UI state. */
   readonly currentLang = toSignal(this.sessionState.getLanguage$(), {
     initialValue: this.sessionState.getLanguage() ?? 'en',
   });
   readonly dir = computed(() => getLocaleDirection(this.currentLang() ?? 'en'));
+
+  /** Toggled once the page scrolls past the hero — gives the sticky header a slightly stronger
+   *  elevation once there's content "under" it, a common affordance on modern marketing sites. */
+  readonly scrolled = signal(false);
 
   /** Mobile header collapse — below the breakpoint where `.main-nav` + `.header-actions` no longer
    *  fit alongside the wordmark in one row (see landing.component.scss's `.menu-toggle`/`.mobile-menu`
@@ -126,7 +136,13 @@ export class LandingComponent {
   ];
 
   constructor() {
-    afterNextRender(() => this.setupScrollReveal());
+    afterNextRender(() => {
+      this.setupScrollReveal();
+      this.setupHeaderScrollState();
+    });
+    // Re-runs whenever the ABP session culture flips (EN/AR toggle), keeping <title>, meta tags,
+    // <html lang>, and the JSON-LD block in sync with what's actually on screen.
+    effect(() => this.updateSeo(this.currentLang() ?? 'en'));
   }
 
   get hasLoggedIn(): boolean {
@@ -172,5 +188,80 @@ export class LandingComponent {
     );
 
     targets.forEach(el => observer.observe(el));
+  }
+
+  /** Adds a `.scrolled` affordance to the sticky header once the page has moved past the hero. */
+  private setupHeaderScrollState(): void {
+    const onScroll = () => this.scrolled.set(window.scrollY > 8);
+    onScroll();
+    this.renderer.listen('window', 'scroll', onScroll);
+  }
+
+  /** Keeps `<title>`, meta description/Open Graph/Twitter tags, `<html lang>`, the canonical link,
+   *  and the JSON-LD block aligned with the currently active locale. There's no SSR in this app, so
+   *  the DOM-touching parts are guarded rather than deferred — see `setupScrollReveal` above for the
+   *  same `window`-availability caution applied elsewhere in this component. */
+  private updateSeo(lang: string): void {
+    const title = this.localization.instant('::Landing:MetaTitle');
+    const description = this.localization.instant('::Landing:MetaDescription');
+
+    this.titleService.setTitle(title);
+    this.metaService.updateTag({ name: 'description', content: description });
+    this.metaService.updateTag({ property: 'og:title', content: title });
+    this.metaService.updateTag({ property: 'og:description', content: description });
+    this.metaService.updateTag({ property: 'og:locale', content: lang === 'ar' ? 'ar_SA' : 'en_US' });
+    this.metaService.updateTag({ name: 'twitter:title', content: title });
+    this.metaService.updateTag({ name: 'twitter:description', content: description });
+
+    if (typeof window === 'undefined') return;
+
+    document.documentElement.lang = lang;
+
+    const pageUrl = `${window.location.origin}${window.location.pathname}`;
+    this.metaService.updateTag({ property: 'og:url', content: pageUrl });
+    this.updateCanonicalLink(pageUrl);
+    this.updateStructuredData(pageUrl, title, description);
+  }
+
+  private updateCanonicalLink(href: string): void {
+    let link = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!link) {
+      link = this.renderer.createElement('link');
+      this.renderer.setAttribute(link, 'rel', 'canonical');
+      this.renderer.appendChild(document.head, link);
+    }
+    this.renderer.setAttribute(link, 'href', href);
+  }
+
+  /** Organization + WebSite structured data — deliberately free of ratings/reviews/pricing, since
+   *  none of those are published facts (see the pricing section's own "illustrative tiers" copy). */
+  private updateStructuredData(pageUrl: string, title: string, description: string): void {
+    const structuredData = {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Organization',
+          name: 'Eksabli',
+          url: pageUrl,
+          description,
+        },
+        {
+          '@type': 'WebSite',
+          name: title,
+          url: pageUrl,
+          description,
+          inLanguage: this.currentLang() === 'ar' ? 'ar' : 'en',
+        },
+      ],
+    };
+
+    let script = document.getElementById('landing-structured-data') as HTMLScriptElement | null;
+    if (!script) {
+      script = this.renderer.createElement('script');
+      this.renderer.setAttribute(script, 'type', 'application/ld+json');
+      this.renderer.setAttribute(script, 'id', 'landing-structured-data');
+      this.renderer.appendChild(document.head, script);
+    }
+    script.textContent = JSON.stringify(structuredData);
   }
 }

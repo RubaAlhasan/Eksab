@@ -47,6 +47,21 @@ Full ERD: [Database Design → Identity & business core](../../03-database-desig
   Credentials). OTP login via a custom OpenIddict grant backed by a short-lived, single-use
   Redis-cached code — same shape as the download-token pattern already in this repo's
   `BookAppService`/`AuthorAppService`.
+- **Employee invite is a one-shot temp password, never email.** `EmployeeAssignmentAppService
+  .InviteAsync` creates the new tenant-realm `IdentityUser`, generates a random temp password, sets
+  ABP's built-in `ShouldChangePasswordOnNextLogin` flag on the account, and returns the temp password
+  exactly once in `InviteEmployeeResultDto` (deliberately kept separate from `EmployeeAssignmentDto`
+  so it can never leak out of an unrelated list/read call). No SMTP sender exists anywhere in this
+  codebase — the inviting admin is expected to relay the password to the new hire out-of-band (Slack,
+  in person, etc.), matching the "flag a real gap rather than build UI theater" convention this repo
+  already follows for other not-yet-provisioned integrations (`NullSmsSender`, `NullPaymentGateway`).
+- **`ShouldChangePasswordOnNextLogin` is read generically, not employee-specific.** A standalone
+  `AccountStatusController`/`IAccountStatusAppService` (`GET /api/app/account-status/must-change-
+  password`) exposes the flag for any authenticated `IdentityUser`, and the Angular
+  `mustChangePasswordGuard` (mounted on the Business Portal shell route) redirects to ABP's own
+  stock change-password page when it's set. Neither piece knows `InviteAsync` is what set the flag —
+  it's a generic ABP Identity capability this feature happens to be the first caller of, not a
+  purpose-built "invite" mechanism.
 
 ## API surface
 
@@ -61,7 +76,8 @@ Full ERD: [Database Design → Identity & business core](../../03-database-desig
 out per device). See [Product Experience → Mobile screen inventory](../../04-product-experience.md#5-mobile-app-screen-inventory).
 
 **Angular (business dashboard):** Business sign-up/onboarding (name, category, logo, first branch),
-Branches management, Employees management (invite staff, assign role + branch). See
+Branches management, Employees management — built, including invite staff (temp password + forced
+change on first login, see Business rules above), assign role + branch. See
 [Dashboards & Admin → Business dashboard](../../06-dashboards-admin.md#6-business-dashboard-tenant-realm).
 
 No mockup built yet for this feature — the mockups so far cover Home, POS award-points, and

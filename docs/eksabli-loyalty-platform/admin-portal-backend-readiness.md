@@ -3,6 +3,16 @@
 [← Back to platform docs index](README.md) · builds on
 [Admin Portal Implementation Plan](admin-portal-implementation-plan.md)
 
+> ⚠️ **SUPERSEDED — historical gap analysis, not current status.** Most gaps this document flags are now
+> closed: the routing guard is fixed, Audit Logs shipped (via a hand-written service, not the stock
+> `Volo.Abp.AuditLogging.HttpApi` package this doc suggested), a Payment read endpoint now exists
+> (`GET /api/app/admin-subscriptions/payments`), and a Platform Reports page covers the "cheap" subset
+> this doc named as Phase 2 (tenant growth, ticket volume). Campaigns and DAU/MAU-style analytics remain
+> correctly out of scope, for the reasons this document already gives. For current status, see
+> [`features/08-admin-panel/README.md`](features/08-admin-panel/README.md). Kept here as a record of the
+> original analysis and its `Disable<IMultiTenant>()` methodology (§3.1/§5 are still good reference
+> material for reviewing new Host-realm services), not as a live status doc.
+
 **Status:** Analysis only. No Angular, HTML, CSS, or backend code was written or modified to produce this
 document — every claim below was verified by reading the real `src/` code (controllers, application
 services, domain entities, `.csproj` package references, `EksabliPermissions.cs`,

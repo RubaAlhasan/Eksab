@@ -2,6 +2,13 @@
 
 [← Back to platform docs index](README.md)
 
+> ⚠️ **SUPERSEDED — historical planning snapshot, not current status.** This document was written when
+> only the Businesses page existed. The Admin Portal has since shipped well past this plan's 14-page
+> MVP — Audit Logs, Notifications, SMS Logs, and a Platform Reports page all now exist, and the routing
+> bug this doc flags (every login landing on `/home` instead of `/admin`) is fixed. For what's actually
+> built today, see [`features/08-admin-panel/README.md`](features/08-admin-panel/README.md). Kept here
+> as a record of the original reasoning, not as a live status doc — don't plan new work from this file.
+
 **Status:** Planning only — no Angular/HTML/CSS in this document, per the request that produced it.
 **Audience:** whoever implements the Admin Portal Angular screens next.
 

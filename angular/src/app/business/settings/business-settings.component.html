@@ -17,16 +17,39 @@
 } @else {
   <div class="card p-4" style="max-width: 42rem">
     <div class="d-flex align-items-center gap-3 mb-4">
-      <div class="eks-logo-placeholder"><i class="fas fa-building"></i></div>
+      @if (logoUrl(); as url) {
+        <img [src]="url" alt="" class="eks-logo-preview" />
+      } @else {
+        <div class="eks-logo-placeholder"><i class="fas fa-building"></i></div>
+      }
       <div>
         <p class="fw-bold mb-0">{{ businessName() }}</p>
-        <p class="text-muted small mb-0">
-          @if (profile()?.logoBlobName) {
-            {{ profile()?.logoBlobName }}
-          } @else {
-            {{ '::BusinessPanel:Settings:NoLogo' | abpLocalization }}
-          }
-        </p>
+        @if (!profile()?.logoBlobName) {
+          <p class="text-muted small mb-1">{{ '::BusinessPanel:Settings:NoLogo' | abpLocalization }}</p>
+        }
+        @if (canEdit()) {
+          <div class="d-flex align-items-center gap-2 mt-1">
+            <label class="btn btn-sm btn-outline-secondary mb-0" [class.disabled]="isUploadingLogo()">
+              @if (isUploadingLogo()) {
+                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+              }
+              {{ (profile()?.logoBlobName ? '::BusinessPanel:Settings:ChangeLogo' : '::BusinessPanel:Settings:UploadLogo') | abpLocalization }}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                class="d-none"
+                [disabled]="isUploadingLogo()"
+                (change)="onLogoFileSelected($event)"
+              />
+            </label>
+            @if (profile()?.logoBlobName) {
+              <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="isUploadingLogo()" (click)="removeLogo()">
+                {{ '::BusinessPanel:Settings:RemoveLogo' | abpLocalization }}
+              </button>
+            }
+          </div>
+          <p class="text-muted small mb-0 mt-1">{{ '::BusinessPanel:Settings:LogoHint' | abpLocalization }}</p>
+        }
       </div>
     </div>
 

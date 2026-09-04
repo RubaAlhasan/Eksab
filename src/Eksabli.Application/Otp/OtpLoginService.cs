@@ -73,6 +73,14 @@ public class OtpLoginService : IOtpLoginService, ITransientDependency
                 (await _identityUserManager.CreateAsync(user)).CheckErrors();
                 await _identityUserManager.SetPhoneNumberAsync(user, normalizedPhoneNumber);
 
+                // SetPhoneNumberAsync alone leaves PhoneNumberConfirmed false (Identity's default
+                // behavior on any phone number change) — without this, EVERY subsequent login for this
+                // same user would fall into the "else if (!user.PhoneNumberConfirmed)" branch below and
+                // keep reporting IsNewUser = true, not just the first one. A correct OTP match here IS
+                // the confirmation proof, same as the registered-user path below.
+                user.SetPhoneNumberConfirmed(true);
+                (await _identityUserManager.UpdateAsync(user)).CheckErrors();
+
                 var profile = CustomerProfile.Create(_guidGenerator.Create(), user.Id);
                 await _customerProfileRepository.InsertAsync(profile, autoSave: true);
 

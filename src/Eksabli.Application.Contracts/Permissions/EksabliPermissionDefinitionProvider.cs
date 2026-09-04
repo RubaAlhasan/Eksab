@@ -103,6 +103,8 @@ public class EksabliPermissionDefinitionProvider : PermissionDefinitionProvider
         supportTicketsPermission.AddChild(EksabliPermissions.SupportTickets.Manage, L("Permission:SupportTickets.Manage"), MultiTenancySides.Host);
 
         myGroup.AddPermission(EksabliPermissions.AuditLogs.Default, L("Permission:AuditLogs"), MultiTenancySides.Host);
+        myGroup.AddPermission(EksabliPermissions.SmsLogs.Default, L("Permission:SmsLogs"), MultiTenancySides.Host);
+        myGroup.AddPermission(EksabliPermissions.PlatformReports.Default, L("Permission:PlatformReports"), MultiTenancySides.Host);
         //Define your own permissions here. Example:
         //myGroup.AddPermission(EksabliPermissions.MyPermission1, L("Permission:MyPermission1"));
     }

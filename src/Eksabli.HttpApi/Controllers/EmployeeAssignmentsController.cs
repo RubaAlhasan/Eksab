@@ -28,7 +28,7 @@ public class EmployeeAssignmentsController : EksabliController
 
     [Authorize(EksabliPermissions.EmployeeAssignments.Create)]
     [HttpPost("invite")]
-    public Task<EmployeeAssignmentDto> InviteAsync(InviteEmployeeDto input)
+    public Task<InviteEmployeeResultDto> InviteAsync(InviteEmployeeDto input)
     {
         return _employeeAssignmentAppService.InviteAsync(input);
     }

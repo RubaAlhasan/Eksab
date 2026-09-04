@@ -49,4 +49,10 @@ public class AdminSubscriptionsController : EksabliController
     {
         return _adminSubscriptionAppService.RecordManualPaymentAsync(input);
     }
+
+    [HttpGet("payments")]
+    public Task<PagedResultDto<PaymentDto>> GetPaymentsAsync([FromQuery] AdminPaymentFilterDto input)
+    {
+        return _adminSubscriptionAppService.GetPaymentsAsync(input);
+    }
 }

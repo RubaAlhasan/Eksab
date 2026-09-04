@@ -14,6 +14,7 @@ using Eksabli.Offers;
 using Eksabli.Notifications;
 using Eksabli.Engagement;
 using Eksabli.Platform;
+using Eksabli.Sms;
 
 namespace Eksabli;
 
@@ -145,6 +146,22 @@ public partial class EksabliInvoiceToInvoiceDtoMapper : MapperBase<Invoice, Invo
     public override partial InvoiceDto Map(Invoice source);
 
     public override partial void Map(Invoice source, InvoiceDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliPaymentToPaymentDtoMapper : MapperBase<Payment, PaymentDto>
+{
+    public override partial PaymentDto Map(Payment source);
+
+    public override partial void Map(Payment source, PaymentDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliSmsLogToSmsLogDtoMapper : MapperBase<SmsLog, SmsLogDto>
+{
+    public override partial SmsLogDto Map(SmsLog source);
+
+    public override partial void Map(SmsLog source, SmsLogDto destination);
 }
 
 // TargetRules is mapped manually in CampaignAppService (source is IReadOnlyCollection<CampaignTargetRule>,

@@ -61,17 +61,16 @@
         }
 
         @if (identifyMode() === 'phone') {
-          <form [formGroup]="phoneForm" (ngSubmit)="lookup()" class="mb-3">
-            <label class="form-label" for="phoneNumber">{{ '::BusinessPanel:Points:PhoneLabel' | abpLocalization }}</label>
-            <div class="d-flex gap-2">
-              <input
-                id="phoneNumber"
-                type="tel"
-                class="form-control"
-                formControlName="phoneNumber"
-                [placeholder]="'::BusinessPanel:Points:PhonePlaceholder' | abpLocalization"
-              />
-              <button type="submit" class="btn btn-secondary flex-shrink-0" [disabled]="isLookingUp()">
+          <form (submit)="onSubmit($event)" class="mb-3">
+            <label class="form-label">{{ '::BusinessPanel:Points:PhoneLabel' | abpLocalization }}</label>
+            <div class="d-flex gap-2 align-items-start">
+              <div class="flex-grow-1">
+                <!-- No [placeholder] override — app-phone-input generates a real, correctly-shaped
+                     example number for whichever country is selected (e.g. Syria -> "0944 567 890"),
+                     instead of a static hint that stays wrong once the selected country changes. -->
+                <app-phone-input (valueChange)="onPhoneChange($event)"></app-phone-input>
+              </div>
+              <button type="submit" class="btn btn-secondary flex-shrink-0" [disabled]="isLookingUp() || !phoneNumberValue()">
                 @if (isLookingUp()) {
                   <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                 }
@@ -151,7 +150,14 @@
 
 @if (activeTab() === 'rules') {
   <div class="card p-4">
-    <h2 class="fw-bold small mb-3">{{ '::BusinessPanel:Points:RulesTitle' | abpLocalization }}</h2>
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h2 class="fw-bold small mb-0">{{ '::BusinessPanel:Points:RulesTitle' | abpLocalization }}</h2>
+      @if (canCreateRules() && availableRuleTypesForCreate().length > 0) {
+        <button type="button" class="btn btn-primary btn-sm" (click)="openCreateRuleModal()">
+          <i class="fas fa-plus me-1"></i>{{ '::BusinessPanel:Points:NewRule' | abpLocalization }}
+        </button>
+      }
+    </div>
     @if (rulesLoading()) {
       <app-loading-spinner [label]="'::BusinessPanel:Points:Loading' | abpLocalization"></app-loading-spinner>
     } @else if (rulesFailed()) {
@@ -170,6 +176,7 @@
             <tr>
               <th>{{ '::BusinessPanel:Points:ColumnRuleType' | abpLocalization }}</th>
               <th>{{ '::BusinessPanel:Points:ColumnPointsPerUnit' | abpLocalization }}</th>
+              <th class="text-end"><span class="visually-hidden">Actions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -177,6 +184,28 @@
               <tr>
                 <td class="fw-semibold">{{ ruleTypeLabelKey(rule.ruleType) | abpLocalization }}</td>
                 <td class="text-muted">{{ rule.pointsPerUnit }}</td>
+                <td class="text-end">
+                  @if (canEditRules()) {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-secondary me-2"
+                      [attr.aria-label]="'::BusinessPanel:Points:EditRule' | abpLocalization"
+                      (click)="openEditRuleModal(rule)"
+                    >
+                      <i class="fas fa-pencil"></i>
+                    </button>
+                  }
+                  @if (canDeleteRules()) {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      [attr.aria-label]="'::BusinessPanel:Points:DeleteRule' | abpLocalization"
+                      (click)="deleteRule(rule)"
+                    >
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  }
+                </td>
               </tr>
             }
           </tbody>
@@ -192,7 +221,14 @@
 
 @if (activeTab() === 'tiers') {
   <div class="card p-4">
-    <h2 class="fw-bold small mb-3">{{ '::BusinessPanel:Points:TiersTitle' | abpLocalization }}</h2>
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h2 class="fw-bold small mb-0">{{ '::BusinessPanel:Points:TiersTitle' | abpLocalization }}</h2>
+      @if (canCreateTiers()) {
+        <button type="button" class="btn btn-primary btn-sm" (click)="openCreateTierModal()">
+          <i class="fas fa-plus me-1"></i>{{ '::BusinessPanel:Points:NewTier' | abpLocalization }}
+        </button>
+      }
+    </div>
     @if (tiersLoading()) {
       <app-loading-spinner [label]="'::BusinessPanel:Points:Loading' | abpLocalization"></app-loading-spinner>
     } @else if (tiersFailed()) {
@@ -212,6 +248,7 @@
               <th>{{ '::BusinessPanel:Points:ColumnTier' | abpLocalization }}</th>
               <th>{{ '::BusinessPanel:Points:ColumnMinPoints' | abpLocalization }}</th>
               <th>{{ '::BusinessPanel:Points:ColumnMultiplier' | abpLocalization }}</th>
+              <th class="text-end"><span class="visually-hidden">Actions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -220,6 +257,28 @@
                 <td class="fw-semibold">{{ tier.name }}</td>
                 <td class="text-muted">{{ tier.minLifetimePoints }} pts</td>
                 <td class="text-muted">×{{ tier.multiplier }}</td>
+                <td class="text-end">
+                  @if (canEditTiers()) {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-secondary me-2"
+                      [attr.aria-label]="'::BusinessPanel:Points:EditTier' | abpLocalization"
+                      (click)="openEditTierModal(tier)"
+                    >
+                      <i class="fas fa-pencil"></i>
+                    </button>
+                  }
+                  @if (canDeleteTiers()) {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      [attr.aria-label]="'::BusinessPanel:Points:DeleteTier' | abpLocalization"
+                      (click)="deleteTier(tier)"
+                    >
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  }
+                </td>
               </tr>
             }
           </tbody>
@@ -228,3 +287,77 @@
     }
   </div>
 }
+
+<app-modal [open]="ruleModalOpen()" [title]="ruleModalTitle() | abpLocalization" (closed)="closeRuleModal()">
+  <form [formGroup]="ruleForm" (ngSubmit)="submitRuleForm()" class="d-flex flex-column gap-3">
+    <div>
+      <label class="form-label" for="ruleType">{{ '::BusinessPanel:Points:FieldRuleType' | abpLocalization }}</label>
+      <select id="ruleType" class="form-select" formControlName="ruleType">
+        @for (type of availableRuleTypesForCreate(); track type) {
+          <option [ngValue]="type">{{ ruleTypeLabelKey(type) | abpLocalization }}</option>
+        }
+        @if (ruleForm.controls.ruleType.disabled) {
+          <option [ngValue]="ruleForm.controls.ruleType.value">{{ ruleTypeLabelKey(ruleForm.controls.ruleType.value) | abpLocalization }}</option>
+        }
+      </select>
+      @if (ruleForm.controls.ruleType.disabled) {
+        <p class="text-muted small mt-1 mb-0">{{ '::BusinessPanel:Points:RuleTypeLockedHint' | abpLocalization }}</p>
+      }
+    </div>
+    <div>
+      <label class="form-label" for="pointsPerUnit">{{ '::BusinessPanel:Points:FieldPointsPerUnit' | abpLocalization }}</label>
+      <input id="pointsPerUnit" type="number" step="0.01" min="0" class="form-control" formControlName="pointsPerUnit" />
+      @if (ruleForm.controls.pointsPerUnit.invalid && ruleForm.controls.pointsPerUnit.touched) {
+        <p class="text-danger small mt-1">{{ '::BusinessPanel:Points:FieldRequired' | abpLocalization }}</p>
+      }
+    </div>
+  </form>
+  <div slot="footer" class="d-flex gap-2 justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeRuleModal()">
+      {{ '::BusinessPanel:Points:Cancel' | abpLocalization }}
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="isSavingRule()" (click)="submitRuleForm()">
+      @if (isSavingRule()) {
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+      }
+      {{ '::BusinessPanel:Points:Save' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>
+
+<app-modal [open]="tierModalOpen()" [title]="tierModalTitle() | abpLocalization" (closed)="closeTierModal()">
+  <form [formGroup]="tierForm" (ngSubmit)="submitTierForm()" class="d-flex flex-column gap-3">
+    <div>
+      <label class="form-label" for="tierName">{{ '::BusinessPanel:Points:FieldTierName' | abpLocalization }}</label>
+      <input id="tierName" type="text" class="form-control" formControlName="name" maxlength="64" placeholder="e.g. Gold" />
+      @if (tierForm.controls.name.invalid && tierForm.controls.name.touched) {
+        <p class="text-danger small mt-1">{{ '::BusinessPanel:Points:FieldRequired' | abpLocalization }}</p>
+      }
+    </div>
+    <div>
+      <label class="form-label" for="minLifetimePoints">{{ '::BusinessPanel:Points:FieldMinLifetimePoints' | abpLocalization }}</label>
+      <input id="minLifetimePoints" type="number" step="1" min="0" class="form-control" formControlName="minLifetimePoints" />
+      @if (tierForm.controls.minLifetimePoints.invalid && tierForm.controls.minLifetimePoints.touched) {
+        <p class="text-danger small mt-1">{{ '::BusinessPanel:Points:FieldRequired' | abpLocalization }}</p>
+      }
+    </div>
+    <div>
+      <label class="form-label" for="multiplier">{{ '::BusinessPanel:Points:FieldMultiplier' | abpLocalization }}</label>
+      <input id="multiplier" type="number" step="0.01" min="0" class="form-control" formControlName="multiplier" placeholder="e.g. 1.25" />
+      @if (tierForm.controls.multiplier.invalid && tierForm.controls.multiplier.touched) {
+        <p class="text-danger small mt-1">{{ '::BusinessPanel:Points:FieldRequired' | abpLocalization }}</p>
+      }
+    </div>
+  </form>
+  <div slot="footer" class="d-flex gap-2 justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeTierModal()">
+      {{ '::BusinessPanel:Points:Cancel' | abpLocalization }}
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="isSavingTier()" (click)="submitTierForm()">
+      @if (isSavingTier()) {
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+      }
+      {{ '::BusinessPanel:Points:Save' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

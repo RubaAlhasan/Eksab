@@ -109,4 +109,63 @@ public abstract class AdminSubscriptionAppService_Tests<TStartupModule> : Eksabl
         result.Status.ShouldBe(InvoiceStatus.Paid);
         result.PaidAt.ShouldNotBeNull();
     }
+
+    [Fact]
+    public async Task GetPaymentsAsync_Should_Return_The_Payment_Recorded_For_An_Invoice()
+    {
+        var (tenantId, subscriptionId) = await CreateTenantWithSubscriptionAsync();
+
+        Guid invoiceId = default;
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var invoice = Invoice.Create(Guid.NewGuid(), subscriptionId, 49m, DateTime.UtcNow);
+                await _invoiceRepository.InsertAsync(invoice, autoSave: true);
+                invoiceId = invoice.Id;
+            }
+        });
+
+        await WithUnitOfWorkAsync(() => _adminSubscriptionAppService.RecordManualPaymentAsync(new RecordManualPaymentDto
+        {
+            InvoiceId = invoiceId,
+            ProviderTransactionRef = "wire-12345"
+        }));
+
+        var payments = await WithUnitOfWorkAsync(() => _adminSubscriptionAppService.GetPaymentsAsync(new AdminPaymentFilterDto { InvoiceId = invoiceId }));
+
+        payments.Items.ShouldHaveSingleItem();
+        var payment = payments.Items.Single();
+        payment.InvoiceId.ShouldBe(invoiceId);
+        payment.Provider.ShouldBe("Manual");
+        payment.ProviderTransactionRef.ShouldBe("wire-12345");
+        payment.Status.ShouldBe(PaymentStatus.Succeeded);
+    }
+
+    [Fact]
+    public async Task GetPaymentsAsync_Should_Not_Return_Payments_For_A_Different_Invoice()
+    {
+        var (tenantId, subscriptionId) = await CreateTenantWithSubscriptionAsync();
+
+        Guid invoiceAId = default, invoiceBId = default;
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var invoiceA = Invoice.Create(Guid.NewGuid(), subscriptionId, 49m, DateTime.UtcNow);
+                await _invoiceRepository.InsertAsync(invoiceA, autoSave: true);
+                invoiceAId = invoiceA.Id;
+
+                var invoiceB = Invoice.Create(Guid.NewGuid(), subscriptionId, 49m, DateTime.UtcNow);
+                await _invoiceRepository.InsertAsync(invoiceB, autoSave: true);
+                invoiceBId = invoiceB.Id;
+            }
+        });
+
+        await WithUnitOfWorkAsync(() => _adminSubscriptionAppService.RecordManualPaymentAsync(new RecordManualPaymentDto { InvoiceId = invoiceAId }));
+
+        var payments = await WithUnitOfWorkAsync(() => _adminSubscriptionAppService.GetPaymentsAsync(new AdminPaymentFilterDto { InvoiceId = invoiceBId }));
+
+        payments.Items.ShouldBeEmpty();
+    }
 }
