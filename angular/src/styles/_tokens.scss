@@ -1,0 +1,206 @@
+// =============================================================================
+// Eksabli design tokens — THE single source of truth for color in the Angular app.
+//
+// Everything is a CSS custom property on `:root`, so component `.scss` files can use
+// `var(--eks-…)` directly with no import and no fallback hex. Adding a raw hex to a
+// component stylesheet is a bug: add or reuse a token here instead.
+//
+// Dark mode is a `.dark` CLASS on each portal shell root (AdminLayoutComponent /
+// BusinessLayoutComponent set it from their own `darkMode` signal — it is NOT a
+// `prefers-color-scheme` query), so the dark overrides at the bottom are scoped to
+// `.eks-admin-shell.dark` / `.eks-biz-shell.dark`. Components inside either shell
+// inherit the right value automatically.
+//
+// Two things are deliberately NOT themed from here:
+//   * `LandingComponent` ships its own `:host`-scoped paper/teal/gold palette — it's a
+//     marketing page with a distinct look, not portal chrome.
+//   * Stock ABP pages (/account/login, tenant management) keep Lepton-X's own theme;
+//     that's why the overrides below are shell-scoped rather than global.
+// =============================================================================
+
+:root {
+  // ---------------------------------------------------------------------------
+  // Brand ramp — violet. `--eks-primary` is THE product's primary; see styles.scss
+  // for the block that forces Lepton-X's own hardcoded blue/pink onto it.
+  // ---------------------------------------------------------------------------
+  --eks-primary-50: #f4f3ff;
+  --eks-primary-100: #ebe9fe;
+  --eks-primary-200: #d9d6fd;
+  --eks-primary-300: #beb8fb;
+  --eks-primary-400: #9d8ff8;
+  --eks-primary-500: #7c6af0;
+  --eks-primary-600: #6248e3;
+  --eks-primary-700: #4f37c4;
+  --eks-primary-800: #422f9e;
+  --eks-primary-900: #392a7d;
+  --eks-primary-950: #241a52;
+
+  // Role aliases — use these, not the numbered steps, outside this file.
+  --eks-primary: var(--eks-primary-600);
+  --eks-primary-hover: var(--eks-primary-700);
+  --eks-primary-active: var(--eks-primary-800);
+  --eks-primary-fg: #ffffff; // 5.91:1 on --eks-primary
+  --eks-primary-subtle-bg: var(--eks-primary-100);
+  --eks-primary-subtle-fg: var(--eks-primary-900);
+  --eks-primary-ring: rgba(98, 72, 227, 0.25);
+
+  // ---------------------------------------------------------------------------
+  // Neutral ramp — a warm gray, lightness-matched step-for-step to the Tailwind
+  // `slate` it replaces (max drift 1.9% relative luminance), so this is a pure hue
+  // shift: nothing gets visually heavier or lighter, it just stops fighting the
+  // violet accent the way a blue-gray does.
+  // ---------------------------------------------------------------------------
+  --eks-neutral-50: #faf9f7;
+  --eks-neutral-100: #f5f3ef;
+  --eks-neutral-200: #ebe7e1;
+  --eks-neutral-300: #d8d3ca;
+  --eks-neutral-400: #a7a196;
+  --eks-neutral-500: #756f66;
+  --eks-neutral-600: #5b564d;
+  --eks-neutral-700: #433e37;
+  --eks-neutral-800: #2c2823;
+  --eks-neutral-900: #1b1815;
+  --eks-neutral-950: #0d0b09;
+
+  // ---------------------------------------------------------------------------
+  // Semantic surfaces & ink (light). Contrast ratios verified against the surface
+  // each one actually sits on; every text token clears WCAG AA (4.5:1).
+  // ---------------------------------------------------------------------------
+  --eks-bg: var(--eks-neutral-50); // page ground
+  --eks-surface: #ffffff; // cards, sidebar, topbar, popovers
+  --eks-surface-2: var(--eks-neutral-100); // table headers, hover rows, subtle fills
+  --eks-border: var(--eks-neutral-200);
+  --eks-border-strong: var(--eks-neutral-300);
+
+  --eks-text: var(--eks-neutral-900); // 16.8:1 on --eks-bg
+  --eks-text-muted: var(--eks-neutral-500); // 4.73:1 on --eks-bg, 4.97:1 on white
+  // Decorative ONLY — 2.7:1, below AA. Icons, dividers, disabled glyphs. Never body text.
+  --eks-text-faint: var(--eks-neutral-400);
+  --eks-text-on-dark: var(--eks-neutral-100);
+
+  --eks-overlay: rgba(27, 24, 21, 0.5);
+
+  // ---------------------------------------------------------------------------
+  // Status — reserved. These four mean good / warning / serious / info and are never
+  // reused as "chart series 5". Always paired with an icon or a label, never colour alone.
+  // ---------------------------------------------------------------------------
+  --eks-success: #059669;
+  --eks-success-subtle-bg: #d1fae5;
+  --eks-success-subtle-fg: #047857;
+  --eks-warning: #d97706;
+  --eks-warning-subtle-bg: #fef3c7;
+  --eks-warning-subtle-fg: #b45309;
+  --eks-danger: #dc2626;
+  --eks-danger-subtle-bg: #fee2e2;
+  --eks-danger-subtle-fg: #b91c1c;
+  --eks-info: #0284c7;
+  --eks-info-subtle-bg: #e0f2fe;
+  --eks-info-subtle-fg: #0369a1;
+
+  // ---------------------------------------------------------------------------
+  // Categorical chart series — assigned in fixed order, NEVER cycled. Deliberately
+  // excludes the brand violet: `--eks-primary` means "actionable", and a chart bar
+  // is not a button. A 7th series folds into "Other" rather than reusing slot 1.
+  //
+  // Validated (dataviz validator, light mode, surface #ffffff): lightness band PASS,
+  // chroma floor PASS, worst adjacent CVD ΔE 9.1 (protan) PASS, worst adjacent
+  // normal-vision ΔE 19.6 PASS. Slots 3/4/5 sit below 3:1 on white, which obligates
+  // the relief rule — every chart using them must carry visible labels or a table
+  // view. The existing charts do (axis labels + the data table beside them).
+  // ---------------------------------------------------------------------------
+  --eks-chart-1: #2a78d6; // blue
+  --eks-chart-2: #eb6834; // orange
+  --eks-chart-3: #1baf7a; // aqua
+  --eks-chart-4: #eda100; // yellow
+  --eks-chart-5: #e87ba4; // magenta
+  --eks-chart-6: #008300; // green
+  --eks-chart-grid: var(--eks-border);
+  --eks-chart-axis: var(--eks-text-muted);
+
+  // ---------------------------------------------------------------------------
+  // Membership tiers — ORDINAL, not categorical: tiers are tenant-configurable (no
+  // fixed Bronze/Silver/Gold name set) and are always sorted by ascending
+  // `minLifetimePoints`, so slot N means "Nth tier up", and the ramp deepens as the
+  // tier rises. One hue (the brand violet) so the ladder reads as a ladder.
+  //
+  // Validated (--ordinal, light, surface #ffffff): monotone lightness PASS, adjacent
+  // ΔL gaps PASS, light-end contrast 2.72:1 PASS (2:1 floor), single hue (6° spread) PASS.
+  // A tenant with >6 tiers clamps to slot 6 rather than cycling back to slot 1.
+  // ---------------------------------------------------------------------------
+  --eks-tier-1: var(--eks-primary-400);
+  --eks-tier-2: var(--eks-primary-500);
+  --eks-tier-3: var(--eks-primary-600);
+  --eks-tier-4: var(--eks-primary-700);
+  --eks-tier-5: var(--eks-primary-900);
+  --eks-tier-6: var(--eks-primary-950);
+
+  // ---------------------------------------------------------------------------
+  // Shape & elevation
+  // ---------------------------------------------------------------------------
+  --eks-radius-sm: 0.5rem;
+  --eks-radius-md: 0.75rem;
+  --eks-radius-lg: 1rem;
+  --eks-radius-pill: 999px;
+
+  --eks-shadow-sm: 0 1px 2px 0 rgba(27, 24, 21, 0.05);
+  --eks-shadow-md: 0 1px 2px 0 rgba(27, 24, 21, 0.05), 0 8px 24px -8px rgba(27, 24, 21, 0.12);
+  --eks-shadow-lg: 0 2px 4px 0 rgba(27, 24, 21, 0.05), 0 20px 48px -12px rgba(27, 24, 21, 0.2);
+}
+
+// =============================================================================
+// Dark theme. Scoped to the shells' own `.dark` class (see file header). Only the
+// role aliases flip — the ramps above are absolute and stay put.
+// =============================================================================
+.eks-admin-shell.dark,
+.eks-biz-shell.dark {
+  --eks-bg: var(--eks-neutral-900);
+  --eks-surface: var(--eks-neutral-800);
+  --eks-surface-2: var(--eks-neutral-700);
+  --eks-border: var(--eks-neutral-700);
+  --eks-border-strong: var(--eks-neutral-600);
+
+  --eks-text: var(--eks-neutral-100); // 15.8:1 on --eks-bg
+  --eks-text-muted: var(--eks-neutral-400); // 6.89:1 on --eks-bg — AA, unlike the light 400
+  --eks-text-faint: var(--eks-neutral-500);
+
+  --eks-primary: var(--eks-primary-500); // lifted a step: 600 is too dark on a dark ground
+  --eks-primary-hover: var(--eks-primary-400);
+  --eks-primary-active: var(--eks-primary-300);
+  --eks-primary-subtle-bg: rgba(98, 72, 227, 0.18);
+  --eks-primary-subtle-fg: var(--eks-primary-300);
+
+  --eks-overlay: rgba(13, 11, 9, 0.6);
+
+  --eks-success-subtle-bg: rgba(16, 185, 129, 0.15);
+  --eks-success-subtle-fg: #6ee7b7;
+  --eks-warning-subtle-bg: rgba(245, 158, 11, 0.15);
+  --eks-warning-subtle-fg: #fcd34d;
+  --eks-danger-subtle-bg: rgba(239, 68, 68, 0.15);
+  --eks-danger-subtle-fg: #fca5a5;
+  --eks-info-subtle-bg: rgba(14, 165, 233, 0.15);
+  --eks-info-subtle-fg: #7dd3fc;
+
+  // Same six hues, re-stepped for the dark surface (#2c2823) — not an automatic flip.
+  // Validated: lightness band PASS, chroma floor PASS, worst adjacent CVD ΔE 8.4 PASS,
+  // worst adjacent normal-vision ΔE 19.3 PASS.
+  --eks-chart-1: #3987e5;
+  --eks-chart-2: #d95926;
+  --eks-chart-3: #199e70;
+  --eks-chart-4: #c98500;
+  --eks-chart-5: #d55181;
+  --eks-chart-6: #008300;
+
+  // Tier ramp inverts on dark — a higher tier gets BRIGHTER, not darker, so the ladder
+  // still reads as ascending. Validated (--ordinal, dark, surface #2c2823): monotone
+  // PASS, ΔL gaps PASS, end contrast 2.48:1 PASS, single hue (7° spread) PASS.
+  --eks-tier-1: var(--eks-primary-600);
+  --eks-tier-2: var(--eks-primary-500);
+  --eks-tier-3: var(--eks-primary-400);
+  --eks-tier-4: var(--eks-primary-300);
+  --eks-tier-5: var(--eks-primary-200);
+  --eks-tier-6: var(--eks-primary-50);
+
+  --eks-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --eks-shadow-md: 0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+  --eks-shadow-lg: 0 2px 4px 0 rgba(0, 0, 0, 0.3), 0 20px 48px -12px rgba(0, 0, 0, 0.65);
+}

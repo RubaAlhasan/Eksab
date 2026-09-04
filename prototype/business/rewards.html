@@ -94,13 +94,13 @@
         <button class="text-slate-300 hover:text-primary-600 edit-reward" data-id="${r.id}">${Icons.html('pencil-square', { size: 16 })}</button>
       </div>
       <p class="font-bold text-sm mb-1">${r.name}</p>
-      <p class="text-xs text-slate-400 mb-3">${r.type} · ${r.stock !== null ? r.stock + ' in stock' : 'Unlimited'}</p>
+      <p class="text-xs text-slate-500 mb-3">${r.type} · ${r.stock !== null ? r.stock + ' in stock' : 'Unlimited'}</p>
       <div class="flex items-center justify-between mb-3">
         <span class="text-sm font-extrabold text-primary-600 dark:text-primary-400">${r.pointsCost} pts</span>
         ${r.stock !== null && r.stock < 10 ? '<span class="badge badge-warning">Low stock</span>' : '<span class="badge badge-success">Active</span>'}
       </div>
       <div class="progress-track"><div class="progress-fill" style="width:62%"></div></div>
-      <p class="text-xs text-slate-400 mt-1.5">62% redemption rate this month</p>
+      <p class="text-xs text-slate-500 mt-1.5">62% redemption rate this month</p>
     </div>`).join('');
 
   function resetRewardForm() {

@@ -31,17 +31,17 @@
             <div class="flex flex-col items-center text-center mb-5">
               <div class="avatar avatar-xl mb-3" id="avatar"></div>
               <p class="font-bold text-lg" id="name"></p>
-              <p class="text-sm text-slate-400" id="category"></p>
+              <p class="text-sm text-slate-500" id="category"></p>
               <span class="badge mt-2" id="status-badge"></span>
             </div>
             <div class="grid grid-cols-2 gap-3 text-center mb-5">
-              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60"><p class="text-lg font-extrabold" id="members"></p><p class="text-xs text-slate-400">Members</p></div>
-              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60"><p class="text-lg font-extrabold" id="plan"></p><p class="text-xs text-slate-400">Plan</p></div>
+              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60"><p class="text-lg font-extrabold" id="members"></p><p class="text-xs text-slate-500">Members</p></div>
+              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60"><p class="text-lg font-extrabold" id="plan"></p><p class="text-xs text-slate-500">Plan</p></div>
             </div>
             <div class="space-y-2 text-sm mb-5">
-              <div class="flex justify-between"><span class="text-slate-400">Signed up</span><span class="font-semibold" id="signup"></span></div>
-              <div class="flex justify-between"><span class="text-slate-400">Owner</span><span class="font-semibold">Marcus Reid</span></div>
-              <div class="flex justify-between"><span class="text-slate-400">Branches</span><span class="font-semibold">6</span></div>
+              <div class="flex justify-between"><span class="text-slate-500">Signed up</span><span class="font-semibold" id="signup"></span></div>
+              <div class="flex justify-between"><span class="text-slate-500">Owner</span><span class="font-semibold">Marcus Reid</span></div>
+              <div class="flex justify-between"><span class="text-slate-500">Branches</span><span class="font-semibold">6</span></div>
             </div>
             <div class="flex flex-col gap-2">
               <button id="viewas-btn" class="btn btn-secondary w-full"><span id="eye-icon"></span>View as Tenant</button>
@@ -63,10 +63,10 @@
             </div>
 
             <div class="tab-panel active grid sm:grid-cols-2 gap-4" data-tab-panel="detail" data-tab-id="overview">
-              <div class="card p-5"><p class="text-xs text-slate-400 mb-1">Points Issued (30d)</p><p class="text-xl font-extrabold">84,200</p></div>
-              <div class="card p-5"><p class="text-xs text-slate-400 mb-1">Points Redeemed (30d)</p><p class="text-xl font-extrabold">51,300</p></div>
-              <div class="card p-5"><p class="text-xs text-slate-400 mb-1">Active Campaigns</p><p class="text-xl font-extrabold">2</p></div>
-              <div class="card p-5"><p class="text-xs text-slate-400 mb-1">Support Tickets (open)</p><p class="text-xl font-extrabold">1</p></div>
+              <div class="card p-5"><p class="text-xs text-slate-500 mb-1">Points Issued (30d)</p><p class="text-xl font-extrabold">84,200</p></div>
+              <div class="card p-5"><p class="text-xs text-slate-500 mb-1">Points Redeemed (30d)</p><p class="text-xl font-extrabold">51,300</p></div>
+              <div class="card p-5"><p class="text-xs text-slate-500 mb-1">Active Campaigns</p><p class="text-xl font-extrabold">2</p></div>
+              <div class="card p-5"><p class="text-xs text-slate-500 mb-1">Support Tickets (open)</p><p class="text-xl font-extrabold">1</p></div>
             </div>
 
             <div class="tab-panel" data-tab-panel="detail" data-tab-id="billing">
@@ -137,7 +137,7 @@
     <div class="timeline-item">
       <div class="timeline-dot"></div>
       <p class="text-sm font-semibold">${e.text}</p>
-      <p class="text-xs text-slate-400">${e.who} · ${new Date(e.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+      <p class="text-xs text-slate-500">${e.who} · ${new Date(e.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
     </div>`).join('');
 </script>
 </body>

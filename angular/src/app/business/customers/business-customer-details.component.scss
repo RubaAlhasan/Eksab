@@ -7,18 +7,18 @@
   justify-content: center;
   font-weight: 700;
   font-size: 1.25rem;
-  background-color: rgba(var(--bs-primary-rgb, 53, 93, 255), 0.15);
-  color: var(--bs-primary, #355dff);
+  background-color: var(--eks-primary-subtle-bg);
+  color: var(--eks-primary);
 }
 
 .eks-stat-tile {
   padding: 0.625rem;
   border-radius: 0.75rem;
-  background-color: var(--bs-tertiary-bg, #f8f9fa);
+  background-color: var(--eks-surface-2);
 }
 
 .divide-y > * {
-  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+  border-bottom: 1px solid var(--eks-border);
 
   &:last-child {
     border-bottom: none;
@@ -26,5 +26,5 @@
 }
 
 .eks-coupon-row:hover {
-  background-color: var(--bs-tertiary-bg, #f8f9fa);
+  background-color: var(--eks-surface-2);
 }

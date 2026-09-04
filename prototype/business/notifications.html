@@ -32,17 +32,17 @@
         <div class="grid sm:grid-cols-3 gap-4">
           <div class="card stat-card">
             <p class="text-2xl font-extrabold">1,240</p>
-            <p class="text-xs text-slate-400">Sent this month</p>
+            <p class="text-xs text-slate-500">Sent this month</p>
           </div>
           <div class="card stat-card">
             <p class="text-2xl font-extrabold">64%</p>
-            <p class="text-xs text-slate-400">Open rate</p>
+            <p class="text-xs text-slate-500">Open rate</p>
           </div>
           <div class="card stat-card">
             <div class="flex items-center justify-between mb-1">
-              <p class="text-2xl font-extrabold">640<span class="text-sm text-slate-400 font-semibold">/1,000</span></p>
+              <p class="text-2xl font-extrabold">640<span class="text-sm text-slate-500 font-semibold">/1,000</span></p>
             </div>
-            <p class="text-xs text-slate-400 mb-2">SMS credits used</p>
+            <p class="text-xs text-slate-500 mb-2">SMS credits used</p>
             <div class="progress-track"><div class="progress-fill" style="width:64%"></div></div>
           </div>
         </div>
@@ -101,9 +101,9 @@
     <tr>
       <td class="font-semibold">${n.title}</td>
       <td><span class="badge ${channelBadge[n.channel]}">${n.channel}</span></td>
-      <td class="text-slate-400">${n.campaignId ? 'Linked' : '—'}</td>
+      <td class="text-slate-500">${n.campaignId ? 'Linked' : '—'}</td>
       <td><span class="badge badge-success">Sent</span></td>
-      <td class="text-slate-400">${new Date(n.sentAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
+      <td class="text-slate-500">${new Date(n.sentAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
     </tr>`).join('');
 
   document.getElementById('compose-btn').addEventListener('click', () => {

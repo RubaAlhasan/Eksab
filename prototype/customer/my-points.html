@@ -26,11 +26,11 @@
       <!-- Balance card -->
       <div class="card p-6 text-center" id="balance-card">
         <div class="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center text-white font-bold mb-3" id="logo"></div>
-        <p class="text-xs text-slate-400 mb-1">Current balance</p>
+        <p class="text-xs text-slate-500 mb-1">Current balance</p>
         <p class="text-4xl font-extrabold tracking-tight text-primary-600 dark:text-primary-400" id="balance"></p>
         <div class="flex items-center justify-center gap-2 mt-3">
           <span class="badge badge-primary" id="tier-badge"></span>
-          <span class="text-xs text-slate-400" id="progress-label"></span>
+          <span class="text-xs text-slate-500" id="progress-label"></span>
         </div>
         <div class="progress-track mt-3"><div class="progress-fill" id="progress-fill"></div></div>
       </div>
@@ -102,11 +102,11 @@
         <div class="w-9 h-9 rounded-xl ${meta.bg} ${meta.color} flex items-center justify-center flex-shrink-0">${Icons.html(meta.icon, { size: 16 })}</div>
         <div class="flex-1 min-w-0">
           <p class="text-sm font-semibold truncate">${t.description}</p>
-          <p class="text-xs text-slate-400">${new Date(t.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+          <p class="text-xs text-slate-500">${new Date(t.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
         </div>
         <p class="text-sm font-bold ${t.points > 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'} flex-shrink-0">${t.points > 0 ? '+' : ''}${t.points}</p>
       </div>`;
-  }).join('') : `<p class="text-sm text-slate-400 text-center py-6">No activity yet at ${biz.name}.</p>`;
+  }).join('') : `<p class="text-sm text-slate-500 text-center py-6">No activity yet at ${biz.name}.</p>`;
 </script>
 </body>
 </html>

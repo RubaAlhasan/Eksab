@@ -22,7 +22,7 @@
     <div data-top-bar data-title="My Memberships" data-back="profile.html"></div>
 
     <div class="flex-1 overflow-y-auto px-5 py-4">
-      <p class="text-xs text-slate-400 mb-4">Every business you've joined, and its membership status.</p>
+      <p class="text-xs text-slate-500 mb-4">Every business you've joined, and its membership status.</p>
       <div id="list" class="space-y-3"></div>
     </div>
 
@@ -48,7 +48,7 @@
         <div class="w-11 h-11 rounded-2xl bg-gradient-to-br ${biz.color} flex items-center justify-center text-white font-bold flex-shrink-0 text-sm">${biz.initials}</div>
         <div class="flex-1 min-w-0">
           <p class="text-sm font-bold truncate">${biz.name}</p>
-          <p class="text-xs text-slate-400">Joined ${fmtDate(m.joinedAt)} · ${biz.category}</p>
+          <p class="text-xs text-slate-500">Joined ${fmtDate(m.joinedAt)} · ${biz.category}</p>
         </div>
         <span class="badge ${m.status === 'Active' ? 'badge-success' : 'badge-neutral'} flex-shrink-0">${m.status}</span>
       </a>`;

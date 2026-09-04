@@ -60,7 +60,7 @@
       <div id="empty-state" class="empty-state hidden">
         <div class="empty-state-icon" id="empty-icon"></div>
         <p class="font-bold text-sm mb-1">No stores in this category</p>
-        <p class="text-xs text-slate-400 max-w-[16rem]">Try a different category, or clear the filter to see everything nearby.</p>
+        <p class="text-xs text-slate-500 max-w-[16rem]">Try a different category, or clear the filter to see everything nearby.</p>
         <button id="clear-filter" class="btn btn-outline btn-sm mt-4">Clear filter</button>
       </div>
     </div>
@@ -110,7 +110,7 @@
             <p class="text-sm font-bold truncate">${biz.name}</p>
             ${biz.member ? '<span class="badge badge-primary flex-shrink-0">Member</span>' : ''}
           </div>
-          <p class="text-xs text-slate-400 mb-1.5">${biz.category} · ${biz.branches} branches</p>
+          <p class="text-xs text-slate-500 mb-1.5">${biz.category} · ${biz.branches} branches</p>
           <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
             <span class="flex items-center gap-1"><span class="text-warning-500">★</span> ${biz.rating}</span>
             <span>${biz.distanceKm} km away</span>

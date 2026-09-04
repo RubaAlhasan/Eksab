@@ -33,22 +33,22 @@
             <div class="flex flex-col items-center text-center mb-5">
               <div class="avatar avatar-xl mb-3" id="avatar"></div>
               <p class="font-bold text-lg" id="name"></p>
-              <p class="text-sm text-slate-400" id="phone"></p>
+              <p class="text-sm text-slate-500" id="phone"></p>
               <span class="badge mt-2" id="tier-badge"></span>
             </div>
             <div class="grid grid-cols-2 gap-3 text-center mb-5">
               <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60">
                 <p class="text-lg font-extrabold" id="balance"></p>
-                <p class="text-xs text-slate-400">Balance</p>
+                <p class="text-xs text-slate-500">Balance</p>
               </div>
               <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60">
                 <p class="text-lg font-extrabold" id="status-val"></p>
-                <p class="text-xs text-slate-400">Status</p>
+                <p class="text-xs text-slate-500">Status</p>
               </div>
             </div>
             <div class="space-y-2 text-sm mb-5">
-              <div class="flex justify-between"><span class="text-slate-400">Joined</span><span class="font-semibold" id="joined"></span></div>
-              <div class="flex justify-between"><span class="text-slate-400">Last active</span><span class="font-semibold" id="last-active"></span></div>
+              <div class="flex justify-between"><span class="text-slate-500">Joined</span><span class="font-semibold" id="joined"></span></div>
+              <div class="flex justify-between"><span class="text-slate-500">Last active</span><span class="font-semibold" id="last-active"></span></div>
             </div>
             <button id="adjust-btn" class="btn btn-primary w-full">
               <span id="adjust-icon"></span> Manual Point Adjustment
@@ -148,7 +148,7 @@
       <td><span class="badge ${typeBadge[t.type]}">${t.type}</span></td>
       <td class="font-semibold ${t.points > 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'}">${t.points > 0 ? '+' : ''}${t.points}</td>
       <td class="text-slate-500 dark:text-slate-400">${t.source}</td>
-      <td class="text-slate-400">${new Date(Date.now() - i * 3 * 86400000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
+      <td class="text-slate-500">${new Date(Date.now() - i * 3 * 86400000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
     </tr>`).join('');
 
   document.getElementById('coupon-list').innerHTML = data.coupons.map(cp => {
@@ -158,7 +158,7 @@
         <span class="text-2xl">${reward.image || '🎟️'}</span>
         <div class="flex-1">
           <p class="text-sm font-semibold">${reward.name || 'Reward'}</p>
-          <p class="text-xs text-slate-400 font-mono">${cp.code}</p>
+          <p class="text-xs text-slate-500 font-mono">${cp.code}</p>
         </div>
         <span class="badge ${cp.status === 'Redeemed' ? 'badge-neutral' : cp.status === 'Issued' ? 'badge-success' : 'badge-danger'}">${cp.status}</span>
       </div>`;

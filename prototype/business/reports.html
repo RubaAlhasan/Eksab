@@ -59,7 +59,7 @@
     <div class="card p-5">
       <div class="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-300 flex items-center justify-center mb-3 report-icon"></div>
       <p class="font-bold text-sm mb-1">${r.name}</p>
-      <p class="text-xs text-slate-400 mb-4">${r.desc}</p>
+      <p class="text-xs text-slate-500 mb-4">${r.desc}</p>
       <div class="flex gap-2">
         <button class="btn btn-primary btn-sm generate-btn" data-name="${r.name}">Generate</button>
         <select class="select w-28 !py-1.5 text-xs"><option>Excel</option><option>CSV</option><option>PDF</option></select>
@@ -88,7 +88,7 @@
   document.getElementById('exports-body').innerHTML = exports.map(e => `
     <tr>
       <td class="font-semibold">${e.name}</td>
-      <td class="text-slate-400">${new Date(e.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
+      <td class="text-slate-500">${new Date(e.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
       <td class="text-slate-500 dark:text-slate-400">${e.format}</td>
       <td>${e.status === 'Ready' ? '<span class="badge badge-success">Ready</span>' : '<span class="badge badge-warning">Processing</span>'}</td>
       <td>${e.status === 'Ready' ? `<button class="text-primary-600 dark:text-primary-400 font-semibold text-xs">Download</button>` : ''}</td>

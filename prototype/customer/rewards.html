@@ -39,7 +39,7 @@
       <div id="empty-state" class="empty-state hidden">
         <div class="empty-state-icon" id="empty-icon"></div>
         <p class="font-bold text-sm mb-1">No rewards yet</p>
-        <p class="text-xs text-slate-400 max-w-[16rem]">This business hasn't published a rewards catalog yet.</p>
+        <p class="text-xs text-slate-500 max-w-[16rem]">This business hasn't published a rewards catalog yet.</p>
       </div>
     </div>
 
@@ -75,9 +75,9 @@
         <a href="reward-details.html?id=${r.id}" class="reward-card card ${affordable ? 'card-hover' : 'disabled'} p-4">
           <div class="text-4xl mb-3 text-center">${r.image}</div>
           <p class="text-sm font-bold leading-tight mb-1 line-clamp-2">${r.name}</p>
-          <p class="text-xs text-slate-400 mb-3">${r.stock !== null ? r.stock + ' left' : 'Unlimited'}</p>
+          <p class="text-xs text-slate-500 mb-3">${r.stock !== null ? r.stock + ' left' : 'Unlimited'}</p>
           <div class="flex items-center justify-between">
-            <span class="text-sm font-extrabold ${affordable ? 'text-primary-600 dark:text-primary-400' : 'text-slate-400'}">${r.pointsCost} pts</span>
+            <span class="text-sm font-extrabold ${affordable ? 'text-primary-600 dark:text-primary-400' : 'text-slate-500'}">${r.pointsCost} pts</span>
             ${!affordable ? '<span class="badge badge-neutral">Locked</span>' : ''}
           </div>
         </a>`;

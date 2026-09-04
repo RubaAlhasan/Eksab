@@ -27,10 +27,10 @@
         <div class="breadcrumbs"><a href="dashboard.html">Admin Portal</a><span id="sep1"></span><span class="current">Subscriptions</span></div>
 
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="card stat-card"><p class="text-2xl font-extrabold" id="stat-active"></p><p class="text-xs text-slate-400">Active</p></div>
-          <div class="card stat-card"><p class="text-2xl font-extrabold" id="stat-trial"></p><p class="text-xs text-slate-400">Trialing</p></div>
-          <div class="card stat-card"><p class="text-2xl font-extrabold" id="stat-mrr"></p><p class="text-xs text-slate-400">Total MRR</p></div>
-          <div class="card stat-card"><p class="text-2xl font-extrabold" id="stat-churn"></p><p class="text-xs text-slate-400">Churn (30d)</p></div>
+          <div class="card stat-card"><p class="text-2xl font-extrabold" id="stat-active"></p><p class="text-xs text-slate-500">Active</p></div>
+          <div class="card stat-card"><p class="text-2xl font-extrabold" id="stat-trial"></p><p class="text-xs text-slate-500">Trialing</p></div>
+          <div class="card stat-card"><p class="text-2xl font-extrabold" id="stat-mrr"></p><p class="text-xs text-slate-500">Total MRR</p></div>
+          <div class="card stat-card"><p class="text-2xl font-extrabold" id="stat-churn"></p><p class="text-xs text-slate-500">Churn (30d)</p></div>
         </div>
 
         <div class="card overflow-hidden">
@@ -67,7 +67,7 @@
       <td><a href="business-details.html?id=${t.id}" class="font-semibold hover:text-primary-600 dark:hover:text-primary-400">${t.name}</a></td>
       <td><span class="badge badge-neutral">${t.plan}</span></td>
       <td class="font-semibold">$${(planPrice[t.plan] || 0).toLocaleString()}</td>
-      <td class="text-slate-400">Sep 1, 2026</td>
+      <td class="text-slate-500">Sep 1, 2026</td>
       <td><span class="badge ${statusBadge[t.status]}">${t.status}</span></td>
     </tr>`).join('');
 </script>

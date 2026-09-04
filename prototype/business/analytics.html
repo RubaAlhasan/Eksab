@@ -39,29 +39,29 @@
         <div class="grid lg:grid-cols-2 gap-6">
           <div class="card p-6">
             <h2 class="font-bold text-sm mb-1">Member Growth</h2>
-            <p class="text-xs text-slate-400 mb-5">New + cumulative active members</p>
+            <p class="text-xs text-slate-500 mb-5">New + cumulative active members</p>
             <div class="chart-placeholder h-40" id="growth-chart"></div>
-            <div class="flex justify-between mt-2 text-[10px] text-slate-400" id="growth-labels"></div>
+            <div class="flex justify-between mt-2 text-[10px] text-slate-500" id="growth-labels"></div>
           </div>
 
           <div class="card p-6">
             <h2 class="font-bold text-sm mb-1">Redemption Rate Trend</h2>
-            <p class="text-xs text-slate-400 mb-5">Redeemed points ÷ earned points, per period</p>
+            <p class="text-xs text-slate-500 mb-5">Redeemed points ÷ earned points, per period</p>
             <div class="chart-placeholder h-40" id="redemption-chart"></div>
-            <div class="flex justify-between mt-2 text-[10px] text-slate-400" id="redemption-labels"></div>
+            <div class="flex justify-between mt-2 text-[10px] text-slate-500" id="redemption-labels"></div>
           </div>
         </div>
 
         <div class="grid lg:grid-cols-3 gap-6">
           <div class="card p-6 lg:col-span-2">
             <h2 class="font-bold text-sm mb-1">Branch Comparison</h2>
-            <p class="text-xs text-slate-400 mb-5">Active members by branch</p>
+            <p class="text-xs text-slate-500 mb-5">Active members by branch</p>
             <div class="space-y-3" id="branch-bars"></div>
           </div>
 
           <div class="card p-6">
             <h2 class="font-bold text-sm mb-1">Tier Distribution</h2>
-            <p class="text-xs text-slate-400 mb-5">Share of active members</p>
+            <p class="text-xs text-slate-500 mb-5">Share of active members</p>
             <div class="space-y-3" id="tier-bars"></div>
           </div>
         </div>
@@ -103,27 +103,28 @@
     <div>
       <div class="flex items-center justify-between text-xs mb-1">
         <span class="font-semibold">${b.name}</span>
-        <span class="text-slate-400">${b.members.toLocaleString()}</span>
+        <span class="text-slate-500">${b.members.toLocaleString()}</span>
       </div>
-      <div class="progress-track"><div class="progress-fill" style="width:${(b.members / branchMax * 100).toFixed(0)}%"></div></div>
+      <div class="progress-track"><div class="progress-fill bg-chart-1" style="width:${(b.members / branchMax * 100).toFixed(0)}%;background-image:none"></div></div>
     </div>`).join('');
 
   const tierCounts = { Bronze: 0, Silver: 0, Gold: 0, Platinum: 0 };
   biz.customers.forEach(c => { tierCounts[c.tier] = (tierCounts[c.tier] || 0) + 1; });
-  const tierColors = { Bronze: 'bg-amber-700', Silver: 'bg-slate-400', Gold: 'bg-warning-500', Platinum: 'bg-primary-600' };
+  const tierColors = { Bronze: 'bg-primary-400', Silver: 'bg-primary-500', Gold: 'bg-primary-600', Platinum: 'bg-primary-700' };
   const tierTotal = Object.values(tierCounts).reduce((a, b) => a + b, 0) || 1;
   document.getElementById('tier-bars').innerHTML = Object.entries(tierCounts).map(([tier, count]) => `
     <div>
       <div class="flex items-center justify-between text-xs mb-1">
         <span class="font-semibold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${tierColors[tier]}"></span>${tier}</span>
-        <span class="text-slate-400">${Math.round(count / tierTotal * 100)}%</span>
+        <span class="text-slate-500">${Math.round(count / tierTotal * 100)}%</span>
       </div>
       <div class="progress-track"><div class="progress-fill ${tierColors[tier]}" style="width:${(count / tierTotal * 100).toFixed(0)}%;background:none" ></div></div>
     </div>`).join('');
-  // apply solid tier colors to the fills (override the default gradient)
+  // apply solid tier colors to the fills (override the default gradient). Ordinal violet ramp —
+  // same steps as `--eks-tier-*` in angular/src/styles/_tokens.scss, so prototype and app agree.
   document.querySelectorAll('#tier-bars .progress-fill').forEach((el, i) => {
     const tier = Object.keys(tierCounts)[i];
-    const map = { Bronze: '#B45309', Silver: '#94A3B8', Gold: '#F59E0B', Platinum: '#6248E3' };
+    const map = { Bronze: '#9D8FF8', Silver: '#7C6AF0', Gold: '#6248E3', Platinum: '#4F37C4' };
     el.style.background = map[tier];
   });
 

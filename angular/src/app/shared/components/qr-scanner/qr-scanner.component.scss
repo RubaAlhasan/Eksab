@@ -9,9 +9,9 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border: 2px dashed var(--eks-border, #e2e8f0);
+  border: 2px dashed var(--eks-border);
   border-radius: 1rem;
-  background-color: var(--eks-bg, #f8fafc);
+  background-color: var(--eks-bg);
 
   video {
     width: 100%;
@@ -23,7 +23,7 @@
 
 .eks-qr-box--scanning {
   border-style: solid;
-  border-color: var(--bs-primary, #4f46e5);
+  border-color: var(--eks-primary);
 }
 
 .eks-qr-box__overlay {
@@ -35,7 +35,7 @@
 
   i {
     font-size: 2rem;
-    color: var(--eks-text-muted, #94a3b8);
+    color: var(--eks-text-muted);
     margin-bottom: 0.5rem;
   }
 }
@@ -46,8 +46,10 @@
 .eks-qr-box__frame {
   position: absolute;
   inset: 12%;
+  // Intentionally literal white, not a token: this ring sits on top of the live camera feed, not
+  // on an app surface, so it must stay white in both themes to remain visible against any frame.
   border: 3px solid rgba(255, 255, 255, 0.85);
   border-radius: 0.75rem;
-  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.25);
+  box-shadow: 0 0 0 9999px var(--eks-overlay);
   pointer-events: none;
 }

@@ -44,7 +44,7 @@
 <div class="modal-overlay" data-modal="branch-qr">
   <div class="modal-panel p-6 text-center">
     <h3 class="font-bold text-base mb-1" id="qr-branch-name"></h3>
-    <p class="text-xs text-slate-400 mb-5">Print or display this at the counter for member check-in</p>
+    <p class="text-xs text-slate-500 mb-5">Print or display this at the counter for member check-in</p>
     <div class="w-48 h-48 rounded-2xl bg-slate-900 flex items-center justify-center mx-auto mb-5">
       <div class="grid grid-cols-7 gap-1 p-4" id="qr-pattern"></div>
     </div>
@@ -91,10 +91,10 @@
         <span class="badge ${b.status === 'Active' ? 'badge-success' : 'badge-neutral'}">${b.status}</span>
       </div>
       <p class="font-bold text-sm mb-1">${b.name}</p>
-      <p class="text-xs text-slate-400 mb-1">${b.address}</p>
-      <p class="text-xs text-slate-400 mb-4">${b.phone}</p>
+      <p class="text-xs text-slate-500 mb-1">${b.address}</p>
+      <p class="text-xs text-slate-500 mb-4">${b.phone}</p>
       <div class="flex items-center justify-between text-xs mb-4">
-        <span class="text-slate-400">Members</span>
+        <span class="text-slate-500">Members</span>
         <span class="font-bold">${b.members.toLocaleString()}</span>
       </div>
       <div class="flex gap-2">

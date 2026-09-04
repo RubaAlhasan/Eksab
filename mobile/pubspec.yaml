@@ -1,0 +1,29 @@
+name: eksabli_mobile
+description: Eksabli — multi-business loyalty wallet for customers.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  flutter_riverpod: ^2.6.1
+  go_router: ^14.6.2
+  intl: any
+  # Auth + API. dio for the client/interceptors (per the architecture doc),
+  # flutter_secure_storage so refresh tokens land in Keychain/Keystore rather
+  # than shared preferences.
+  dio: ^5.7.0
+  flutter_secure_storage: ^9.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

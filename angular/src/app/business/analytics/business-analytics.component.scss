@@ -23,16 +23,16 @@
     // every bar chart on this page (Growth AND Redemption Trend both use it, undifferentiated, same
     // as the prototype). `--alt` used to be a flat Bootstrap-success green here, a color the prototype
     // never actually uses for either chart — removed so both charts render identically to it.
-    background: linear-gradient(180deg, #9d8ff8, #6248e3);
+    background: var(--eks-chart-1);
 
     @media (prefers-color-scheme: dark) {
-      background: linear-gradient(180deg, #7c6af0, #4f37c4);
+      background: var(--eks-chart-1);
     }
   }
 
   &__label {
     font-size: 0.6875rem;
-    color: var(--bs-secondary-color, #6c757d);
+    color: var(--eks-text-muted);
   }
 }
 
@@ -51,18 +51,18 @@
 // override the default gradient").
 .eks-progress-track {
   height: 0.5rem;
-  background-color: #f1f5f9;
+  background-color: var(--eks-surface-2);
   border-radius: 999px;
   overflow: hidden;
 
   @media (prefers-color-scheme: dark) {
-    background-color: #1e293b;
+    background-color: var(--eks-surface);
   }
 }
 
 .eks-progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #9d8ff8, #6248e3);
+  background: var(--eks-chart-1);
   transition: width 0.5s ease-out;
 }

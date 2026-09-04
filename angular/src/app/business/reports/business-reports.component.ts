@@ -17,11 +17,15 @@ interface SegmentBar {
   color: string;
 }
 
+// These four are lifecycle STATES, not chart series, so they take the reserved status tokens
+// (info / success / warning) plus a muted neutral for "churned" — never the `--eks-chart-*`
+// categorical slots, which are for identity. Each bar is labelled in the template, so state is
+// never carried by color alone.
 const SEGMENT_COLORS: Record<SegmentBar['key'], string> = {
-  new: '#0ea5e9',
-  active: '#10b981',
-  atRisk: '#f59e0b',
-  churned: '#94a3b8',
+  new: 'var(--eks-info)',
+  active: 'var(--eks-success)',
+  atRisk: 'var(--eks-warning)',
+  churned: 'var(--eks-text-faint)',
 };
 
 /**

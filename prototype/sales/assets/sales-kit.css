@@ -42,29 +42,29 @@ html[lang="ar"] .kit { letter-spacing: 0; }
 /* ---------------------------------------------------------------------- */
 .kit-header {
   position: sticky; top: 0; z-index: 40; background: rgba(255, 255, 255, .88);
-  backdrop-filter: blur(12px); border-bottom: 1px solid #E2E8F0;
+  backdrop-filter: blur(12px); border-bottom: 1px solid #EBE7E1;
 }
-html.dark .kit-header { background: rgba(2, 6, 23, .88); border-color: #1E293B; }
+html.dark .kit-header { background: rgba(13, 11, 9, .88); border-color: #2C2823; }
 
 .kit-tabs { display: flex; gap: .25rem; overflow-x: auto; }
 .kit-tab {
   display: inline-flex; align-items: center; gap: .5rem; padding: .5rem .875rem; border-radius: .75rem;
-  font-size: .8125rem; font-weight: 600; color: #64748B; white-space: nowrap; transition: all .15s;
+  font-size: .8125rem; font-weight: 600; color: #756F66; white-space: nowrap; transition: all .15s;
 }
-.kit-tab:hover { background: #F1F5F9; color: #1E293B; }
+.kit-tab:hover { background: #F5F3EF; color: #2C2823; }
 .kit-tab.active { background: #6248E3; color: #fff; box-shadow: var(--shadow-soft); }
-html.dark .kit-tab { color: #94A3B8; }
-html.dark .kit-tab:hover { background: #1E293B; color: #F1F5F9; }
+html.dark .kit-tab { color: #A7A196; }
+html.dark .kit-tab:hover { background: #2C2823; color: #F5F3EF; }
 html.dark .kit-tab.active { background: #6248E3; color: #fff; }
 
 /* In-page section rail */
 .kit-rail { position: sticky; top: 7.5rem; align-self: start; }
 .kit-rail a {
-  display: block; padding: .375rem .75rem; border-inline-start: 2px solid #E2E8F0;
-  font-size: .8125rem; font-weight: 500; color: #64748B; transition: all .15s;
+  display: block; padding: .375rem .75rem; border-inline-start: 2px solid #EBE7E1;
+  font-size: .8125rem; font-weight: 500; color: #756F66; transition: all .15s;
 }
 .kit-rail a:hover { color: #6248E3; border-color: #BEB8FB; }
-html.dark .kit-rail a { border-color: #1E293B; color: #94A3B8; }
+html.dark .kit-rail a { border-color: #2C2823; color: #A7A196; }
 
 .kit-section { scroll-margin-top: 8.5rem; }
 .kit-eyebrow {
@@ -80,9 +80,9 @@ html.dark .kit-eyebrow { color: #9D8FF8; }
   position: relative; overflow: hidden; flex-shrink: 0; background: #fff;
   width: calc(var(--tw) * 1px);
   height: calc(var(--sh) * var(--tw) / var(--sw) * 1px);
-  border-radius: .875rem; border: 1px solid #E2E8F0; box-shadow: var(--shadow-soft);
+  border-radius: .875rem; border: 1px solid #EBE7E1; box-shadow: var(--shadow-soft);
 }
-html.dark .screen-frame { background: #020617; border-color: #1E293B; }
+html.dark .screen-frame { background: #0D0B09; border-color: #2C2823; }
 
 .screen-frame iframe {
   position: absolute; top: 0; inset-inline-start: 0; border: 0;
@@ -118,9 +118,9 @@ html.dark .screen-frame { background: #020617; border-color: #1E293B; }
 /* ---------------------------------------------------------------------- */
 .script-step {
   display: grid; gap: 1.25rem; grid-template-columns: auto 1fr; align-items: start;
-  padding: 1.25rem 0; border-bottom: 1px dashed #E2E8F0;
+  padding: 1.25rem 0; border-bottom: 1px dashed #EBE7E1;
 }
-html.dark .script-step { border-color: #1E293B; }
+html.dark .script-step { border-color: #2C2823; }
 .script-step:last-child { border-bottom: 0; }
 @media (max-width: 767px) { .script-step { grid-template-columns: 1fr; } }
 
@@ -157,10 +157,10 @@ html.dark .internal-only { background: rgba(220, 38, 38, .08); border-color: rgb
 }
 .status-built    { background: #D1FAE5; color: #047857; }
 .status-designed { background: #E0F2FE; color: #0369A1; }
-.status-planned  { background: #F1F5F9; color: #475569; }
+.status-planned  { background: #F5F3EF; color: #5B564D; }
 html.dark .status-built    { background: rgba(5, 150, 105, .18);  color: #A7F3D0; }
 html.dark .status-designed { background: rgba(2, 132, 199, .18);  color: #BAE6FD; }
-html.dark .status-planned  { background: rgba(148, 163, 184, .16); color: #CBD5E1; }
+html.dark .status-planned  { background: rgba(148, 163, 184, .16); color: #D8D3CA; }
 
 /* Gain / Lose columns in the commercial-answers section */
 .value-col { border-radius: 1rem; padding: 1.25rem; height: 100%; }
@@ -179,7 +179,7 @@ html.dark .value-lose { background: rgba(239, 68, 68, .08);  border-color: rgba(
 @media print {
   .kit-header, .kit-rail, .no-print, .screen-frame { display: none !important; }
   .kit-section { break-inside: avoid; page-break-inside: avoid; }
-  .card { box-shadow: none !important; border: 1px solid #CBD5E1 !important; }
+  .card { box-shadow: none !important; border: 1px solid #D8D3CA !important; }
   a[href]::after { content: ""; }
   body { background: #fff !important; color: #000 !important; }
 }
