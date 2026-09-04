@@ -111,9 +111,10 @@ no permanent free tier.
 ### Hard rules
 
 1. **Never quote a price.** Pricing is explicitly unvalidated in the product docs.
-2. **Never commit to a launch date.** The platform is pre-launch: the design and this 61-screen
-   prototype are real; the backend is not built. The one piece of shipping code is the marketing
-   landing page.
+2. **Never commit to a launch date.** The platform is pre-launch for *customers*: a real ABP backend,
+   an Admin Portal, and a notification system are built and running, but none of it has shipped to a
+   paying business or end customer yet — no public signup, no App/Play Store listing. Say "the platform
+   is in active development, not yet generally available" — accurate and still commits to nothing.
 3. **Say "sample data"** if anyone asks whether the numbers on screen are a real customer.
 4. **Never show the admin portal to a small business.** It invites "so you can see my customers?"
 5. **Never send a link to this kit or the prototype** to a customer.
@@ -218,8 +219,10 @@ no permanent free tier.
 ### قواعد صارمة
 
 1. **لا تذكر سعرًا أبدًا.** التسعير غير مُتحقَّق منه صراحةً في وثائق المنتج.
-2. **لا تلتزم بتاريخ إطلاق.** المنصة قبل الإطلاق: التصميم وهذا النموذج ذو الـ٦١ شاشة حقيقيان، أما
-   الواجهة الخلفية فلم تُبنَ بعد. والجزء الوحيد من الشفرة العاملة هو الصفحة التعريفية.
+2. **لا تلتزم بتاريخ إطلاق.** المنصة قبل الإطلاق **للعملاء**: الواجهة الخلفية الحقيقية، وبوابة الإدارة،
+   ونظام الإشعارات، كلها مبنية وتعمل فعليًا — لكن لم يصل أي منها بعد إلى نشاط تجاري مشترك أو عميل نهائي
+   حقيقي (لا تسجيل عام، ولا إدراج على متجري التطبيقات). قل «المنصة قيد التطوير الفعلي، ولم تُطلق للعموم
+   بعد» — دقيق ولا يلتزم بشيء.
 3. **قل «بيانات تجريبية»** إذا سأل أحد إن كانت الأرقام لعميل حقيقي.
 4. **لا تعرض بوابة الإدارة على نشاط صغير.** فهي تثير سؤال «إذن ترون عملائي؟».
 5. **لا ترسل رابط هذا الدليل أو النموذج** إلى عميل.

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Eksabli.Reporting;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -92,9 +93,10 @@ public class AdminSubscriptionAppService : ApplicationService, IAdminSubscriptio
     {
         using (_dataFilter.Disable<IMultiTenant>())
         {
-            var queryable = await _invoiceRepository.GetQueryableAsync();
+            var months = TrailingMonths.Compute(Clock.Now);
+            var from = new DateTime(months[0].Year, months[0].Month, 1);
 
-            var from = new DateTime(Clock.Now.Year, Clock.Now.Month, 1).AddMonths(-6);
+            var queryable = await _invoiceRepository.GetQueryableAsync();
             var paidInvoices = await AsyncExecuter.ToListAsync(
                 queryable.Where(i => i.Status == InvoiceStatus.Paid && i.PaidAt != null && i.PaidAt >= from));
 
@@ -102,21 +104,14 @@ public class AdminSubscriptionAppService : ApplicationService, IAdminSubscriptio
                 .GroupBy(i => new { i.PaidAt!.Value.Year, i.PaidAt!.Value.Month })
                 .ToDictionary(g => (g.Key.Year, g.Key.Month), g => g.Sum(i => i.Amount));
 
-            var points = new List<MrrTrendPointDto>();
-            var cursor = from;
-            var end = new DateTime(Clock.Now.Year, Clock.Now.Month, 1);
-            while (cursor <= end)
-            {
-                points.Add(new MrrTrendPointDto
+            return months
+                .Select(m => new MrrTrendPointDto
                 {
-                    Year = cursor.Year,
-                    Month = cursor.Month,
-                    Amount = amountByMonth.GetValueOrDefault((cursor.Year, cursor.Month))
-                });
-                cursor = cursor.AddMonths(1);
-            }
-
-            return points;
+                    Year = m.Year,
+                    Month = m.Month,
+                    Amount = amountByMonth.GetValueOrDefault((m.Year, m.Month))
+                })
+                .ToList();
         }
     }
 
@@ -149,6 +144,38 @@ public class AdminSubscriptionAppService : ApplicationService, IAdminSubscriptio
             await _invoiceRepository.UpdateAsync(invoice);
 
             return ObjectMapper.Map<Invoice, InvoiceDto>(invoice);
+        }
+    }
+
+    // Closes the gap where RecordManualPaymentAsync writes a Payment row with no way to read it back —
+    // Payment has no dedicated repository (deliberately reached only through Invoice/this service, see
+    // the entity's own comment), so this queries the generic IRepository<Payment, Guid> directly, same
+    // DB-level-paging shape as GetStatsAsync/GetMrrTrendAsync above.
+    public async Task<PagedResultDto<PaymentDto>> GetPaymentsAsync(AdminPaymentFilterDto input)
+    {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var queryable = await _paymentRepository.GetQueryableAsync();
+
+            if (input.InvoiceId.HasValue)
+            {
+                queryable = queryable.Where(p => p.InvoiceId == input.InvoiceId.Value);
+            }
+
+            if (input.Status.HasValue)
+            {
+                queryable = queryable.Where(p => p.Status == input.Status.Value);
+            }
+
+            var totalCount = await AsyncExecuter.CountAsync(queryable);
+
+            var payments = await AsyncExecuter.ToListAsync(
+                queryable
+                    .OrderByDescending(p => p.CreationTime)
+                    .Skip(input.SkipCount)
+                    .Take(input.MaxResultCount));
+
+            return new PagedResultDto<PaymentDto>(totalCount, ObjectMapper.Map<List<Payment>, List<PaymentDto>>(payments));
         }
     }
 

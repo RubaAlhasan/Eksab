@@ -12,7 +12,7 @@ public interface IEmployeeAssignmentAppService : IApplicationService
 {
     Task<PagedResultDto<EmployeeAssignmentDto>> GetListAsync(PagedAndSortedResultRequestDto input);
 
-    Task<EmployeeAssignmentDto> InviteAsync(InviteEmployeeDto input);
+    Task<InviteEmployeeResultDto> InviteAsync(InviteEmployeeDto input);
 
     Task<EmployeeAssignmentDto> UpdateAsync(Guid id, UpdateEmployeeAssignmentDto input);
 

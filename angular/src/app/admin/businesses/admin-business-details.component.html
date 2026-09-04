@@ -28,7 +28,11 @@
     <div class="col-12 col-lg-4">
       <div class="card">
         <div class="card-body text-center p-4">
-          <div class="eks-avatar mx-auto mb-3">{{ (tenant.tenantName ?? '?').charAt(0).toUpperCase() }}</div>
+          @if (logoUrl() && !logoFailed()) {
+            <img [src]="logoUrl()" alt="" class="eks-avatar-img mx-auto mb-3" (error)="logoFailed.set(true)" />
+          } @else {
+            <div class="eks-avatar mx-auto mb-3">{{ (tenant.tenantName ?? '?').charAt(0).toUpperCase() }}</div>
+          }
           <p class="fw-bold mb-1">{{ tenant.tenantName }}</p>
           <p class="text-muted small mb-2">{{ categoryName() ?? '—' }}</p>
           <app-status-badge [label]="statusLabelKey(tenant.approvalStatus) | abpLocalization" [variant]="statusVariant(tenant.approvalStatus)"></app-status-badge>

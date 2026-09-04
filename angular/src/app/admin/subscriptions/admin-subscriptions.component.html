@@ -124,7 +124,10 @@
                         </thead>
                         <tbody>
                           @for (invoice of invoices(); track invoice.id) {
-                            <tr>
+                            <tr
+                              [class.eks-clickable-row]="invoice.status === InvStatus.Paid"
+                              (click)="invoice.status === InvStatus.Paid ? toggleInvoiceExpand(invoice) : null"
+                            >
                               <td>${{ invoice.amount }}</td>
                               <td>
                                 <app-status-badge
@@ -140,13 +143,69 @@
                                   <button
                                     type="button"
                                     class="btn btn-sm btn-outline-success"
-                                    (click)="openRecordPaymentModal(invoice)"
+                                    (click)="$event.stopPropagation(); openRecordPaymentModal(invoice)"
                                   >
                                     {{ '::AdminPanel:Subscriptions:RecordPayment' | abpLocalization }}
                                   </button>
+                                } @else if (invoice.status === InvStatus.Paid) {
+                                  <i
+                                    class="fas"
+                                    [class.fa-chevron-down]="expandedInvoiceId() !== invoice.id"
+                                    [class.fa-chevron-up]="expandedInvoiceId() === invoice.id"
+                                  ></i>
                                 }
                               </td>
                             </tr>
+                            @if (expandedInvoiceId() === invoice.id) {
+                              <tr>
+                                <td colspan="5" class="bg-body-tertiary">
+                                  <p class="fw-semibold small text-uppercase text-muted mb-2 mt-1">
+                                    {{ '::AdminPanel:Subscriptions:PaymentsHeading' | abpLocalization }}
+                                  </p>
+                                  @if (paymentsLoading()) {
+                                    <app-loading-spinner [label]="'::AdminPanel:Subscriptions:Loading' | abpLocalization"></app-loading-spinner>
+                                  } @else if (paymentsFailed()) {
+                                    <app-error-state
+                                      [message]="'::AdminPanel:Subscriptions:LoadErrorMessage' | abpLocalization"
+                                      [retryLabel]="'::AdminPanel:Subscriptions:TryAgain' | abpLocalization"
+                                      (retry)="retryPayments(invoice)"
+                                    >
+                                    </app-error-state>
+                                  } @else if (payments().length === 0) {
+                                    <p class="text-muted small mb-2">{{ '::AdminPanel:Subscriptions:NoPayments' | abpLocalization }}</p>
+                                  } @else {
+                                    <div class="table-responsive">
+                                      <table class="table table-sm mb-2">
+                                        <thead>
+                                          <tr>
+                                            <th>{{ '::AdminPanel:Subscriptions:ColumnProvider' | abpLocalization }}</th>
+                                            <th>{{ '::AdminPanel:Subscriptions:ColumnReference' | abpLocalization }}</th>
+                                            <th>{{ '::AdminPanel:Subscriptions:ColumnPaymentStatus' | abpLocalization }}</th>
+                                            <th>{{ '::AdminPanel:Subscriptions:ColumnDate' | abpLocalization }}</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          @for (payment of payments(); track payment.id) {
+                                            <tr>
+                                              <td>{{ payment.provider }}</td>
+                                              <td class="text-muted">{{ payment.providerTransactionRef ?? '—' }}</td>
+                                              <td>
+                                                <app-status-badge
+                                                  [label]="paymentStatusLabelKey(payment.status) | abpLocalization"
+                                                  [variant]="paymentStatusVariant(payment.status)"
+                                                >
+                                                </app-status-badge>
+                                              </td>
+                                              <td class="text-muted">{{ payment.creationTime | date: 'mediumDate' }}</td>
+                                            </tr>
+                                          }
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  }
+                                </td>
+                              </tr>
+                            }
                           }
                         </tbody>
                       </table>

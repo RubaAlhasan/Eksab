@@ -29,11 +29,15 @@ public abstract class EmployeeAssignmentAppService_Tests<TStartupModule> : Eksab
             Role = EmployeeRole.Cashier
         }));
 
-        invited.UserEmail.ShouldBe(email);
-        invited.Role.ShouldBe(EmployeeRole.Cashier);
+        invited.Assignment.UserEmail.ShouldBe(email);
+        invited.Assignment.Role.ShouldBe(EmployeeRole.Cashier);
+        // The only place this password is ever surfaced — no email is sent anywhere in this codebase,
+        // so InviteAsync's response is the sole hand-off point (see EmployeeAssignmentAppService's own
+        // comment on this).
+        invited.TemporaryPassword.ShouldNotBeNullOrWhiteSpace();
 
         var list = await WithUnitOfWorkAsync(() => _employeeAssignmentAppService.GetListAsync(new PagedAndSortedResultRequestDto()));
-        list.Items.ShouldContain(x => x.Id == invited.Id);
+        list.Items.ShouldContain(x => x.Id == invited.Assignment.Id);
     }
 
     [Fact]

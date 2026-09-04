@@ -4,7 +4,7 @@ import { LocalizationPipe, PermissionService } from '@abp/ng.core';
 import { Confirmation, ConfirmationService, ToasterService } from '@abp/ng.theme.shared';
 import { EmployeeAssignmentsService } from '../../proxy/controllers/employee-assignments.service';
 import { BranchesService } from '../../proxy/controllers/branches.service';
-import type { EmployeeAssignmentDto } from '../../proxy/employee-assignments/models';
+import type { EmployeeAssignmentDto, InviteEmployeeResultDto } from '../../proxy/employee-assignments/models';
 import type { BranchDto } from '../../proxy/branches/models';
 import { EmployeeRole } from '../../proxy/employee-assignments/employee-role.enum';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -61,6 +61,17 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
  *   Tickets queue); no edit-role/reassign-branch UI, even though `UpdateAsync` exists server-side — the
  *   prototype itself doesn't expose one either (no edit button in its table), so this matches prototype
  *   scope rather than being a gap this page introduces.
+ *
+ * **Invite result — temp password shown once**: `InviteAsync` now returns `InviteEmployeeResultDto`
+ * (`{ assignment, temporaryPassword }`), not just the assignment — confirmed live that no email is sent
+ * anywhere in this codebase (no SMTP sender configured), so this response is the *only* hand-off point
+ * for the invited person's credentials. After a successful invite, the modal swaps to a "credentials"
+ * view showing the email + temp password with a copy button, instead of closing immediately — closing
+ * without showing it would mean the account exists with no way for anyone to ever log into it. The
+ * invited `IdentityUser` also has `ShouldChangePasswordOnNextLogin = true` (a real, built-in ABP Identity
+ * column), so this temp password can only ever be used to get in once — enforced client-side by
+ * `mustChangePasswordGuard` (core/guards/must-change-password.guard.ts), which redirects to
+ * `/account/manage` on next login until they set a real password.
  */
 @Component({
   selector: 'app-business-employees',
@@ -106,6 +117,11 @@ export class BusinessEmployeesComponent implements OnInit {
 
   protected readonly inviteModalOpen = signal(false);
   protected readonly isInviting = signal(false);
+  // Set only after a successful invite — truthy value swaps the modal to the one-time "here's their
+  // password" view instead of the form. Cleared (and the list refreshed) only when the admin explicitly
+  // acknowledges it via finishInvite(), not on modal backdrop click, so it can't be dismissed by accident.
+  protected readonly inviteResult = signal<InviteEmployeeResultDto | null>(null);
+  protected readonly passwordCopied = signal(false);
 
   protected readonly revokeTargetId = signal<string | null>(null);
 
@@ -155,10 +171,16 @@ export class BusinessEmployeesComponent implements OnInit {
 
   protected openInviteModal(): void {
     this.inviteForm.reset({ email: '', role: EmployeeRole.BranchManager, branchId: '' });
+    this.inviteResult.set(null);
+    this.passwordCopied.set(false);
     this.inviteModalOpen.set(true);
   }
 
+  // Backdrop-click / X-button close — a no-op while the credentials view is showing (see inviteResult's
+  // own comment on why that view can only be dismissed via finishInvite()); otherwise closes the form
+  // normally.
   protected closeInviteModal(): void {
+    if (this.inviteResult()) return;
     this.inviteModalOpen.set(false);
   }
 
@@ -173,18 +195,40 @@ export class BusinessEmployeesComponent implements OnInit {
     this.employeesService
       .invite({ email: value.email, role: value.role, branchId: value.branchId || null })
       .subscribe({
-        next: () => {
+        next: (result) => {
           this.isInviting.set(false);
-          this.inviteModalOpen.set(false);
-          this.toaster.success('::BusinessPanel:Employees:InviteSentMessage');
-          this.pageIndex.set(0);
-          this.load();
+          // Deliberately does NOT close the modal or toast success yet — the modal swaps to the
+          // credentials view instead (see finishInvite()), since this response is the only place the
+          // temp password is ever shown.
+          this.inviteResult.set(result);
         },
         error: () => {
           this.isInviting.set(false);
           this.toaster.error('::BusinessPanel:Employees:InviteErrorMessage');
         },
       });
+  }
+
+  protected async copyTemporaryPassword(): Promise<void> {
+    const password = this.inviteResult()?.temporaryPassword;
+    if (!password) return;
+    try {
+      await navigator.clipboard.writeText(password);
+      this.passwordCopied.set(true);
+    } catch {
+      // Clipboard API can be unavailable (insecure context, denied permission, etc.) — the password is
+      // still fully visible/selectable in the modal either way, so this is a convenience, not the only
+      // way to get it.
+      this.toaster.error('::BusinessPanel:Employees:CopyFailedMessage');
+    }
+  }
+
+  protected finishInvite(): void {
+    this.inviteModalOpen.set(false);
+    this.inviteResult.set(null);
+    this.toaster.success('::BusinessPanel:Employees:InviteSentMessage');
+    this.pageIndex.set(0);
+    this.load();
   }
 
   protected revoke(employee: EmployeeAssignmentDto): void {

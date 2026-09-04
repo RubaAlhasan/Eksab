@@ -169,6 +169,23 @@ public static class EksabliPermissions
         public const string Default = GroupName + ".AuditLogs";
     }
 
+    // Dev/testing-only "Verification Codes" page (Admin Portal > Operations) — browses SmsLog, the
+    // table NullSmsSender writes to in place of a real SMS provider (see that class's own comment).
+    // Host-realm only, same sensitivity class as AuditLogs/Users (it can show OTP codes verbatim).
+    public static class SmsLogs
+    {
+        public const string Default = GroupName + ".SmsLogs";
+    }
+
+    // Platform-wide Reports (tenant growth, support-ticket volume — see AdminPlatformReportAppService).
+    // Deliberately its own group, NOT a reuse of the tenant-realm Reports.* above: that group gates
+    // ReportsController, which is CurrentTenant-implicit and would silently return empty/wrong data for
+    // a Host caller. Host-realm only, same class as AuditLogs/Users/SmsLogs.
+    public static class PlatformReports
+    {
+        public const string Default = GroupName + ".PlatformReports";
+    }
+
     //Add your own permission names. Example:
     //public const string MyPermission1 = GroupName + ".MyPermission1";
 }

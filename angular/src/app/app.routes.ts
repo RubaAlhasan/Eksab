@@ -3,6 +3,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router, Routes } from '@angular/router';
 import { adminGuard, isPlatformAdmin } from './core/guards/admin.guard';
 import { businessApprovalGuard, businessRealmGuard, isBusinessRealm } from './core/guards/business.guard';
+import { mustChangePasswordGuard } from './core/guards/must-change-password.guard';
 
 /**
  * OAuth redirectUri always lands back on '/' — figure out where an already-authenticated visitor
@@ -150,6 +151,26 @@ export const APP_ROUTES: Routes = [
         data: { requiredPolicy: 'Eksabli.AuditLogs' },
       },
       {
+        path: 'sms-logs',
+        loadComponent: () =>
+          import('./admin/sms-logs/admin-sms-logs.component').then(c => c.AdminSmsLogsComponent),
+        canActivate: [permissionGuard],
+        // Whole AdminSmsLogsController is gated on Eksabli.SmsLogs, no child permissions — same
+        // single-view-only-capability shape as AuditLogs above.
+        data: { requiredPolicy: 'Eksabli.SmsLogs' },
+      },
+      {
+        path: 'reports',
+        loadComponent: () =>
+          import('./admin/reports/admin-reports.component').then(c => c.AdminReportsComponent),
+        canActivate: [permissionGuard],
+        // AdminPlatformReportsController is gated on Eksabli.PlatformReports, no child permissions —
+        // same single-view-only-capability shape as AuditLogs/SmsLogs above. The category-mix and MRR
+        // widgets on this page reuse Categories'/Subscriptions' own already-granted endpoints instead
+        // of duplicating them, so no extra policy is needed for those pieces specifically.
+        data: { requiredPolicy: 'Eksabli.PlatformReports' },
+      },
+      {
         // Admin-triggered Notification Hub send (UserNotificationsController.SendAsync) — distinct
         // from the Business Portal's '/business/notifications' (campaign channel, different
         // controller/permission). Whole action is gated on Eksabli.Notifications.Broadcast, no lesser
@@ -212,12 +233,14 @@ export const APP_ROUTES: Routes = [
     // `businessRealmGuard` (core/guards/business.guard.ts) — real tenant-resolution (`currentTenant.id`
     // from ABP's own config state), not a permission heuristic; see that guard's own comment for why
     // this is reliable — and on `businessApprovalGuard`, which redirects a Pending/Suspended business's
-    // own staff to `/business/pending` (see that guard's comment) instead of the portal. Each child
-    // route still gates on its own real permission on top of that, same "coarse realm guard + per-page
-    // permission" shape as Admin.
+    // own staff to `/business/pending` (see that guard's comment) instead of the portal — and on
+    // `mustChangePasswordGuard` (core/guards/must-change-password.guard.ts), which redirects a newly
+    // invited staff member still on their one-time temp password to `/account/manage` until they set a
+    // real one. Each child route still gates on its own real permission on top of that, same "coarse
+    // realm guard + per-page permission" shape as Admin.
     path: 'business',
     loadComponent: () => import('./business/layout/business-layout.component').then(c => c.BusinessLayoutComponent),
-    canActivate: [authGuard, businessRealmGuard, businessApprovalGuard],
+    canActivate: [authGuard, businessRealmGuard, businessApprovalGuard, mustChangePasswordGuard],
     children: [
       {
         // Bare '/business' lands here — matches redirectAuthenticatedToHomeGuard's own destination

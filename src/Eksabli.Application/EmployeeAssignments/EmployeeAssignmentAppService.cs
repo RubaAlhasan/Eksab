@@ -42,7 +42,7 @@ public class EmployeeAssignmentAppService : ApplicationService, IEmployeeAssignm
         return new PagedResultDto<EmployeeAssignmentDto>(totalCount, dtos);
     }
 
-    public async Task<EmployeeAssignmentDto> InviteAsync(InviteEmployeeDto input)
+    public async Task<InviteEmployeeResultDto> InviteAsync(InviteEmployeeDto input)
     {
         var existingUser = await _identityUserRepository.FindByNormalizedUserNameAsync(input.Email.ToUpperInvariant());
         if (existingUser != null)
@@ -52,7 +52,13 @@ public class EmployeeAssignmentAppService : ApplicationService, IEmployeeAssignm
 
         var tempPassword = $"{Guid.NewGuid():N}Aa1!";
 
+        // No email is sent anywhere in this codebase (no SMTP sender configured) — this temp password is
+        // the ONLY way the invited person can ever get in, so it's handed back to the caller once, here,
+        // and never persisted/logged anywhere else. ShouldChangePasswordOnNextLogin (a real, built-in
+        // IdentityUser column — confirmed in the EF model) means it can't quietly become their permanent
+        // password either; ABP's own change-password flow clears this flag once they set a real one.
         var user = new IdentityUser(GuidGenerator.Create(), input.Email, input.Email, CurrentTenant.Id);
+        user.SetShouldChangePasswordOnNextLogin(true);
         (await _identityUserManager.CreateAsync(user, tempPassword)).CheckErrors();
 
         var assignment = EmployeeAssignment.Create(GuidGenerator.Create(), user.Id, input.Role, input.BranchId);
@@ -60,7 +66,7 @@ public class EmployeeAssignmentAppService : ApplicationService, IEmployeeAssignm
 
         var dto = ObjectMapper.Map<EmployeeAssignment, EmployeeAssignmentDto>(assignment);
         dto.UserEmail = user.Email;
-        return dto;
+        return new InviteEmployeeResultDto { Assignment = dto, TemporaryPassword = tempPassword };
     }
 
     public async Task<EmployeeAssignmentDto> UpdateAsync(Guid id, UpdateEmployeeAssignmentDto input)

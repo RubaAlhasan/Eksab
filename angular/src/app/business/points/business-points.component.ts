@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LocalizationPipe, PermissionService } from '@abp/ng.core';
-import { ToasterService } from '@abp/ng.theme.shared';
+import { Confirmation, ConfirmationService, ToasterService } from '@abp/ng.theme.shared';
 import { PosService } from '../../proxy/controllers/pos.service';
 import { PointRulesService } from '../../proxy/controllers/point-rules.service';
 import { TiersService } from '../../proxy/controllers/tiers.service';
@@ -12,6 +12,8 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { QrScannerComponent, QrScanErrorReason } from '../../shared/components/qr-scanner/qr-scanner.component';
+import { PhoneInputComponent } from '../../shared/components/phone-input/phone-input.component';
+import { ModalComponent } from '../../shared/components/modal/modal.component';
 
 type PointsTab = 'award' | 'rules' | 'tiers';
 type IdentifyMode = 'qr' | 'phone';
@@ -61,14 +63,21 @@ type IdentifyMode = 'qr' | 'phone';
  * `PointsPerUnit` are real fields — there is no rule "label"/name and no Active/Inactive status
  * anywhere on the entity (confirmed by reading `PointRuleDto`/`PointRule`). The prototype's "Rule"
  * name column and status badge are dropped; shown as "Per $1 spent" / "Per visit" (the `RuleType`
- * itself, humanized) with the real points-per-unit value. No "Add Rule" UI — the prototype's own
- * button is a stub (`Eksabli.showToast('This would open the rule builder form')`, not a built form
- * even in the mockup), so building a real one here would be new scope beyond parity, not attempted
- * this pass despite `PointRuleAppService.CreateAsync` existing server-side.
+ * itself, humanized) with the real points-per-unit value. Create/Edit/Delete are real, against
+ * `PointRuleAppService`, matching the Categories-style modal pattern used elsewhere in this app. Two
+ * real backend constraints the UI respects rather than fighting:
+ * - `CreateAsync` throws if a rule of that `RuleType` already exists (confirmed in
+ *   `PointRuleAppService.cs`) — at most one `PerCurrencyUnit` and one `PerVisit` rule per tenant. The
+ *   create form's Rule Type options exclude whichever type(s) are already configured.
+ * - `UpdateAsync` only ever calls `rule.SetPointsPerUnit(...)` — **`RuleType` cannot be changed on an
+ *   existing rule**, even though `CreateUpdatePointRuleDto` has the field (confirmed by reading the
+ *   method body — it never touches `RuleType`). The edit form disables that field rather than silently
+ *   accepting a value the backend would ignore; delete-and-recreate is the real way to change a rule's
+ *   type.
  *
- * **Tiers tab** — real via `TierService.getList()`, read-only (matches the prototype's own tab, which
- * is also read-only). No Add/Edit UI despite `TierAppService`'s real full CRUD, same "not attempted
- * this pass" reasoning as Point Rules.
+ * **Tiers tab** — real via `TierService.getList()`. Create/Edit/Delete are real, against
+ * `TierAppService`, which (unlike Point Rules) genuinely updates all three fields on edit — no
+ * analogous "ignored field" caveat here.
  *
  * The rounding-policy note ("fractional points always round down") is real — matches
  * `PosAppService.ComputePointsAsync`'s own `Math.Floor` behavior exactly, not just copied from the
@@ -79,7 +88,16 @@ type IdentifyMode = 'qr' | 'phone';
   templateUrl: './business-points.component.html',
   styleUrls: ['./business-points.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, LocalizationPipe, PageHeaderComponent, LoadingSpinnerComponent, ErrorStateComponent, QrScannerComponent],
+  imports: [
+    ReactiveFormsModule,
+    LocalizationPipe,
+    PageHeaderComponent,
+    LoadingSpinnerComponent,
+    ErrorStateComponent,
+    QrScannerComponent,
+    PhoneInputComponent,
+    ModalComponent,
+  ],
 })
 export class BusinessPointsComponent implements OnInit {
   private readonly posService = inject(PosService);
@@ -87,18 +105,26 @@ export class BusinessPointsComponent implements OnInit {
   private readonly tiersService = inject(TiersService);
   private readonly toaster = inject(ToasterService);
   private readonly permissionService = inject(PermissionService);
+  private readonly confirmation = inject(ConfirmationService);
 
   protected readonly RuleType = PointRuleType;
   protected readonly activeTab = signal<PointsTab>('award');
 
   protected readonly canViewRules = computed(() => this.permissionService.getGrantedPolicy('Eksabli.PointRules'));
   protected readonly canViewTiers = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Tiers'));
+  protected readonly canCreateRules = computed(() => this.permissionService.getGrantedPolicy('Eksabli.PointRules.Create'));
+  protected readonly canEditRules = computed(() => this.permissionService.getGrantedPolicy('Eksabli.PointRules.Edit'));
+  protected readonly canDeleteRules = computed(() => this.permissionService.getGrantedPolicy('Eksabli.PointRules.Delete'));
+  protected readonly canCreateTiers = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Tiers.Create'));
+  protected readonly canEditTiers = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Tiers.Edit'));
+  protected readonly canDeleteTiers = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Tiers.Delete'));
 
   // --- Award tab ---
   protected readonly identifyMode = signal<IdentifyMode>('qr');
-  protected readonly phoneForm = new FormGroup({
-    phoneNumber: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-  });
+  // Combined "+<countryCallingCode><digits>" value emitted by PhoneInputComponent — see that
+  // component's own comment for why this stays one plain string rather than a real FormGroup: it's the
+  // exact shape PosService.lookupCustomerByPhone/PhoneNumberNormalizer already expect, no DTO change.
+  protected readonly phoneNumberValue = signal('');
   protected readonly saleAmount = new FormControl<number | null>(null, { validators: [Validators.min(0)] });
 
   protected readonly isLookingUp = signal(false);
@@ -114,11 +140,39 @@ export class BusinessPointsComponent implements OnInit {
   protected readonly rulesFailed = signal(false);
   private rulesLoaded = false;
 
+  protected readonly ruleModalOpen = signal(false);
+  protected readonly ruleModalTitle = signal('');
+  protected readonly isSavingRule = signal(false);
+  private editingRuleId: string | null = null;
+
+  protected readonly ruleForm = new FormGroup({
+    ruleType: new FormControl(PointRuleType.PerCurrencyUnit, { nonNullable: true, validators: [Validators.required] }),
+    pointsPerUnit: new FormControl<number | null>(null, { validators: [Validators.required, Validators.min(0)] }),
+  });
+
+  // Create-mode options only — a rule of a type that already exists would be rejected server-side
+  // (PointRuleAppService.CreateAsync throws if one exists), so don't offer it in the first place.
+  protected readonly availableRuleTypesForCreate = computed(() => {
+    const usedTypes = new Set(this.rules().map((r) => r.ruleType));
+    return [PointRuleType.PerCurrencyUnit, PointRuleType.PerVisit].filter((type) => !usedTypes.has(type));
+  });
+
   // --- Tiers tab ---
   protected readonly tiers = signal<TierDto[]>([]);
   protected readonly tiersLoading = signal(false);
   protected readonly tiersFailed = signal(false);
   private tiersLoaded = false;
+
+  protected readonly tierModalOpen = signal(false);
+  protected readonly tierModalTitle = signal('');
+  protected readonly isSavingTier = signal(false);
+  private editingTierId: string | null = null;
+
+  protected readonly tierForm = new FormGroup({
+    name: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(64)] }),
+    minLifetimePoints: new FormControl<number | null>(null, { validators: [Validators.required, Validators.min(0)] }),
+    multiplier: new FormControl<number | null>(null, { validators: [Validators.required, Validators.min(0)] }),
+  });
 
   ngOnInit(): void {
     if (this.activeTab() === 'rules') this.loadRules();
@@ -195,9 +249,24 @@ export class BusinessPointsComponent implements OnInit {
     );
   }
 
+  protected onPhoneChange(value: string): void {
+    this.phoneNumberValue.set(value);
+  }
+
+  // Bound to (submit), not (ngSubmit) — (ngSubmit) only intercepts the native `submit` event (and stops
+  // the browser's own default full-page-reload/GET-navigation behavior) via a form directive
+  // (NgForm/FormGroupDirective), which requires either FormsModule or a real [formGroup] binding on the
+  // <form>. This form has neither (the phone value is a plain signal via app-phone-input, not a real
+  // FormGroup) — so with (ngSubmit), clicking the submit button silently fell through to the browser's
+  // default form submission, reloading the page before the lookup's HTTP response ever had a chance to
+  // render. preventDefault() here is what (ngSubmit) would otherwise have handled for us.
+  protected onSubmit(event: Event): void {
+    event.preventDefault();
+    this.lookup();
+  }
+
   protected lookup(): void {
-    if (this.phoneForm.invalid) {
-      this.phoneForm.markAllAsTouched();
+    if (!this.phoneNumberValue()) {
       return;
     }
 
@@ -206,7 +275,7 @@ export class BusinessPointsComponent implements OnInit {
     this.customer.set(null);
     this.lastAward.set(null);
 
-    this.posService.lookupCustomerByPhone({ phoneNumber: this.phoneForm.getRawValue().phoneNumber }).subscribe({
+    this.posService.lookupCustomerByPhone({ phoneNumber: this.phoneNumberValue() }).subscribe({
       next: (result) => {
         this.customer.set(result);
         this.isLookingUp.set(false);
@@ -246,6 +315,145 @@ export class BusinessPointsComponent implements OnInit {
 
   protected retryTiers(): void {
     this.loadTiers();
+  }
+
+  // --- Rules CRUD ---
+
+  protected openCreateRuleModal(): void {
+    this.editingRuleId = null;
+    this.ruleModalTitle.set('::BusinessPanel:Points:NewRuleTitle');
+    this.ruleForm.reset({ ruleType: this.availableRuleTypesForCreate()[0] ?? PointRuleType.PerCurrencyUnit, pointsPerUnit: null });
+    this.ruleForm.controls.ruleType.enable();
+    this.ruleModalOpen.set(true);
+  }
+
+  protected openEditRuleModal(rule: PointRuleDto): void {
+    this.editingRuleId = rule.id ?? null;
+    this.ruleModalTitle.set('::BusinessPanel:Points:EditRuleTitle');
+    this.ruleForm.reset({ ruleType: rule.ruleType ?? PointRuleType.PerCurrencyUnit, pointsPerUnit: rule.pointsPerUnit ?? null });
+    // RuleType can't actually change on an existing rule — PointRuleAppService.UpdateAsync never reads
+    // it (see this file's own top comment). Disable it here rather than let someone pick a different
+    // type and have the save silently not apply it.
+    this.ruleForm.controls.ruleType.disable();
+    this.ruleModalOpen.set(true);
+  }
+
+  protected closeRuleModal(): void {
+    this.ruleModalOpen.set(false);
+  }
+
+  protected submitRuleForm(): void {
+    if (this.ruleForm.invalid) {
+      this.ruleForm.markAllAsTouched();
+      return;
+    }
+
+    const value = this.ruleForm.getRawValue();
+    const payload = { ruleType: value.ruleType, pointsPerUnit: value.pointsPerUnit! };
+
+    this.isSavingRule.set(true);
+    const request = this.editingRuleId
+      ? this.pointRulesService.update(this.editingRuleId, payload)
+      : this.pointRulesService.create(payload);
+
+    request.subscribe({
+      next: () => {
+        this.isSavingRule.set(false);
+        this.ruleModalOpen.set(false);
+        this.toaster.success('::BusinessPanel:Points:RuleSavedMessage');
+        this.loadRules();
+      },
+      error: () => {
+        this.isSavingRule.set(false);
+        // A duplicate-type create (409-shaped UserFriendlyException) surfaces via the global ABP error
+        // interceptor's own toast — this generic one covers every other failure path.
+        this.toaster.error('::BusinessPanel:Points:RuleSaveErrorMessage');
+      },
+    });
+  }
+
+  protected deleteRule(rule: PointRuleDto): void {
+    if (!rule.id) return;
+    this.confirmation
+      .warn('::BusinessPanel:Points:DeleteRuleConfirmMessage', '::BusinessPanel:Points:DeleteRuleConfirmTitle')
+      .subscribe((status) => {
+        if (status !== Confirmation.Status.confirm || !rule.id) return;
+        this.pointRulesService.delete(rule.id).subscribe({
+          next: () => {
+            this.toaster.success('::BusinessPanel:Points:RuleDeletedMessage');
+            this.loadRules();
+          },
+          error: () => this.toaster.error('::BusinessPanel:Points:RuleDeleteErrorMessage'),
+        });
+      });
+  }
+
+  // --- Tiers CRUD ---
+
+  protected openCreateTierModal(): void {
+    this.editingTierId = null;
+    this.tierModalTitle.set('::BusinessPanel:Points:NewTierTitle');
+    this.tierForm.reset({ name: '', minLifetimePoints: null, multiplier: null });
+    this.tierModalOpen.set(true);
+  }
+
+  protected openEditTierModal(tier: TierDto): void {
+    this.editingTierId = tier.id ?? null;
+    this.tierModalTitle.set('::BusinessPanel:Points:EditTierTitle');
+    this.tierForm.reset({
+      name: tier.name ?? '',
+      minLifetimePoints: tier.minLifetimePoints ?? null,
+      multiplier: tier.multiplier ?? null,
+    });
+    this.tierModalOpen.set(true);
+  }
+
+  protected closeTierModal(): void {
+    this.tierModalOpen.set(false);
+  }
+
+  protected submitTierForm(): void {
+    if (this.tierForm.invalid) {
+      this.tierForm.markAllAsTouched();
+      return;
+    }
+
+    const value = this.tierForm.getRawValue();
+    const payload = { name: value.name, minLifetimePoints: value.minLifetimePoints!, multiplier: value.multiplier! };
+
+    this.isSavingTier.set(true);
+    const request = this.editingTierId
+      ? this.tiersService.update(this.editingTierId, payload)
+      : this.tiersService.create(payload);
+
+    request.subscribe({
+      next: () => {
+        this.isSavingTier.set(false);
+        this.tierModalOpen.set(false);
+        this.toaster.success('::BusinessPanel:Points:TierSavedMessage');
+        this.loadTiers();
+      },
+      error: () => {
+        this.isSavingTier.set(false);
+        this.toaster.error('::BusinessPanel:Points:TierSaveErrorMessage');
+      },
+    });
+  }
+
+  protected deleteTier(tier: TierDto): void {
+    if (!tier.id) return;
+    this.confirmation
+      .warn('::BusinessPanel:Points:DeleteTierConfirmMessage', '::BusinessPanel:Points:DeleteTierConfirmTitle')
+      .subscribe((status) => {
+        if (status !== Confirmation.Status.confirm || !tier.id) return;
+        this.tiersService.delete(tier.id).subscribe({
+          next: () => {
+            this.toaster.success('::BusinessPanel:Points:TierDeletedMessage');
+            this.loadTiers();
+          },
+          error: () => this.toaster.error('::BusinessPanel:Points:TierDeleteErrorMessage'),
+        });
+      });
   }
 
   private loadRules(): void {

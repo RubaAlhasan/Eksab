@@ -111,6 +111,12 @@ const ADMIN_NAV: AdminNavGroup[] = [
         permission: 'Eksabli.AuditLogs',
       },
       {
+        labelKey: '::AdminPanel:SmsLogs:Title',
+        icon: 'fa-key',
+        link: '/admin/sms-logs',
+        permission: 'Eksabli.SmsLogs',
+      },
+      {
         labelKey: '::AdminPanel:Notifications:Title',
         icon: 'fa-bullhorn',
         link: '/admin/notifications',
