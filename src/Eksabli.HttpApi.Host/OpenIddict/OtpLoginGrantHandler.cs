@@ -73,6 +73,21 @@ public class OtpLoginGrantHandler : ITokenExtensionGrant
 
         principal.SetScopes(request.GetScopes());
 
+        // Without this the token carries no `aud` claim, and every API call is
+        // rejected by the validation handler (configured with
+        // AddAudiences("Eksabli") in EksabliHttpApiHostModule). The built-in
+        // grants do this via OpenIddict's own handlers; a custom
+        // ITokenExtensionGrant has to map granted scopes to their resources
+        // itself — the "Eksabli" scope declares Resources = { "Eksabli" }.
+        var scopeManager = services.GetRequiredService<IOpenIddictScopeManager>();
+        var resources = new System.Collections.Generic.List<string>();
+        await foreach (var resource in scopeManager.ListResourcesAsync(principal.GetScopes()))
+        {
+            resources.Add(resource);
+        }
+
+        principal.SetResources(resources);
+
         foreach (var claim in principal.Claims)
         {
             claim.SetDestinations(OpenIddictConstants.Destinations.AccessToken);
