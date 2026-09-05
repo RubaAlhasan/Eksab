@@ -30,31 +30,8 @@ with:
 flutter run --dart-define=EKSABLI_API_URL=https://your-host
 ```
 
-### SDK compatibility
-
-The code currently targets **Flutter 3.24.3 / Dart 3.5** (`environment: sdk: ^3.5.0`).
-
-A newer SDK (3.47.1) is being installed at `C:\devlutter`; until it is ready, a working
-3.24.3 lives in a git worktree at `C:\devlutter-3.24` sharing the same object store, built
-from the already-cached Sep-2024 engine artifacts so it needed no download.
-
-Three APIs were stepped down to compile on 3.24. When moving to 3.47, reverse the first one —
-the other two are valid on both and can stay:
-
-| Now | On 3.27+ | Notes |
-|---|---|---|
-| `color.withOpacity(x)` | `color.withValues(alpha: x)` | 30 call sites; `withOpacity` is deprecated on newer SDKs |
-| `(_, __)` in callbacks | `(_, _)` | duplicate `_` needs Dart 3.7; `(_, __)` works everywhere |
-| `DialogTheme(...)` | `DialogThemeData(...)` | `ThemeData.dialogTheme` changed type in 3.27 |
-
-To flip back:
-
-```bash
-# from mobile/
-grep -rl 'withOpacity(' lib test | xargs sed -i -E 's/\.withOpacity\(([^)]+)\)/.withValues(alpha: )/g'
-sed -i 's/DialogTheme(/DialogThemeData(/' lib/app/theme/app_theme.dart
-sed -i 's/sdk: \^3.5.0/sdk: ^3.9.0/' pubspec.yaml
-```
+Requires Flutter **3.47+** (Dart 3.13+), which is what this targets
+(`environment: sdk: ^3.9.0`).
 
 ## Architecture
 
