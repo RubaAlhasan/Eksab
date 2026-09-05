@@ -5,9 +5,10 @@ import { LocalizationPipe, PermissionService } from '@abp/ng.core';
 import { ToasterService } from '@abp/ng.theme.shared';
 import { AdminSubscriptionsService } from '../../proxy/controllers/admin-subscriptions.service';
 import { AdminTenantsService } from '../../proxy/controllers/admin-tenants.service';
-import type { InvoiceDto, TenantSubscriptionDto } from '../../proxy/billing/models';
+import type { InvoiceDto, PaymentDto, TenantSubscriptionDto } from '../../proxy/billing/models';
 import { TenantSubscriptionStatus } from '../../proxy/billing/tenant-subscription-status.enum';
 import { InvoiceStatus } from '../../proxy/billing/invoice-status.enum';
+import { PaymentStatus } from '../../proxy/billing/payment-status.enum';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
@@ -22,14 +23,16 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
  * service body, not just the controller) to correctly wrap every query in
  * `_dataFilter.Disable<IMultiTenant>()` — see admin-portal-backend-readiness.md §5.
  *
- * Two real gaps, both documented rather than faked:
+ * Remaining real gap, documented rather than faked:
  * - `[MISSING BACKEND CAPABILITY]` No search — `AdminSubscriptionFilterDto` only has `status`, no
  *   `filterText`. No search box on this page.
- * - `[MISSING BACKEND CAPABILITY]` No `GetAsync(id)` for a single subscription — per the backend
- *   readiness doc's own recommendation (§3.6), "Subscription Details" is not a routed page here; it's
- *   an expandable row showing that subscription's invoices (`GetInvoicesAsync` DOES support filtering
- *   by `tenantSubscriptionId`, which is real), avoiding both the missing endpoint and a page that would
- *   break on refresh/deep-link.
+ *
+ * "Subscription Details" is not a routed page — per the backend readiness doc's recommendation
+ * (§3.6), it's an expandable row showing that subscription's invoices (`GetInvoicesAsync` supports
+ * filtering by `tenantSubscriptionId`), avoiding a missing-GetAsync endpoint and a page that would
+ * break on refresh/deep-link. Paid invoices nest one level further: `GetPaymentsAsync` (added to close
+ * the gap where `RecordManualPaymentAsync` wrote `Payment` rows with no read path) is called filtered
+ * by `invoiceId` when a Paid invoice's own row is expanded.
  *
  * Stats (`loadStats`) call a real, dedicated `GetStatsAsync` endpoint added specifically for this page —
  * previously this fired two extra concurrent `GetListAsync` calls against `/api/app/admin-subscriptions`
@@ -68,6 +71,7 @@ export class AdminSubscriptionsComponent implements OnInit {
 
   protected readonly SubStatus = TenantSubscriptionStatus;
   protected readonly InvStatus = InvoiceStatus;
+  protected readonly PayStatus = PaymentStatus;
   private readonly pageSize = 10;
 
   protected readonly subscriptions = signal<TenantSubscriptionDto[]>([]);
@@ -105,6 +109,11 @@ export class AdminSubscriptionsComponent implements OnInit {
   protected readonly invoices = signal<InvoiceDto[]>([]);
   protected readonly invoicesLoading = signal(false);
   protected readonly invoicesFailed = signal(false);
+
+  protected readonly expandedInvoiceId = signal<string | null>(null);
+  protected readonly payments = signal<PaymentDto[]>([]);
+  protected readonly paymentsLoading = signal(false);
+  protected readonly paymentsFailed = signal(false);
 
   protected readonly paymentModalOpen = signal(false);
   protected readonly isSavingPayment = signal(false);
@@ -201,12 +210,29 @@ export class AdminSubscriptionsComponent implements OnInit {
   protected toggleExpand(subscription: TenantSubscriptionDto): void {
     const id = subscription.id;
     if (!id) return;
+    this.expandedInvoiceId.set(null);
     if (this.expandedId() === id) {
       this.expandedId.set(null);
       return;
     }
     this.expandedId.set(id);
     this.loadInvoices(id);
+  }
+
+  protected toggleInvoiceExpand(invoice: InvoiceDto): void {
+    const id = invoice.id;
+    if (!id) return;
+    if (this.expandedInvoiceId() === id) {
+      this.expandedInvoiceId.set(null);
+      return;
+    }
+    this.expandedInvoiceId.set(id);
+    this.loadPayments(id);
+  }
+
+  protected retryPayments(invoice: InvoiceDto): void {
+    if (!invoice.id) return;
+    this.loadPayments(invoice.id);
   }
 
   protected openRecordPaymentModal(invoice: InvoiceDto): void {
@@ -232,12 +258,57 @@ export class AdminSubscriptionsComponent implements OnInit {
           this.isSavingPayment.set(false);
           this.paymentModalOpen.set(false);
           this.toaster.success('::AdminPanel:Subscriptions:PaymentRecordedMessage');
+          this.expandedInvoiceId.set(null);
           const expanded = this.expandedId();
           if (expanded) this.loadInvoices(expanded);
         },
         error: () => {
           this.isSavingPayment.set(false);
           this.toaster.error('::AdminPanel:Subscriptions:PaymentErrorMessage');
+        },
+      });
+  }
+
+  protected paymentStatusLabelKey(status: PaymentStatus | undefined): string {
+    switch (status) {
+      case PaymentStatus.Succeeded:
+        return '::AdminPanel:Subscriptions:PaymentSucceeded';
+      case PaymentStatus.Failed:
+        return '::AdminPanel:Subscriptions:PaymentFailed';
+      default:
+        return '::AdminPanel:Subscriptions:PaymentPending';
+    }
+  }
+
+  protected paymentStatusVariant(status: PaymentStatus | undefined): StatusBadgeVariant {
+    switch (status) {
+      case PaymentStatus.Succeeded:
+        return 'success';
+      case PaymentStatus.Failed:
+        return 'danger';
+      default:
+        return 'info';
+    }
+  }
+
+  private loadPayments(invoiceId: string): void {
+    this.paymentsLoading.set(true);
+    this.paymentsFailed.set(false);
+    this.subscriptionsService
+      .getPayments({ invoiceId, status: null, sorting: 'creationTime desc', skipCount: 0, maxResultCount: 50 })
+      .subscribe({
+        next: (result) => {
+          // Ignore a slow response for an invoice the admin has since collapsed/switched away from —
+          // without this check, expanding A then quickly expanding B before A's request resolves can
+          // let A's payments land under B's now-expanded row once A's response finally arrives.
+          if (this.expandedInvoiceId() !== invoiceId) return;
+          this.payments.set(result.items ?? []);
+          this.paymentsLoading.set(false);
+        },
+        error: () => {
+          if (this.expandedInvoiceId() !== invoiceId) return;
+          this.paymentsLoading.set(false);
+          this.paymentsFailed.set(true);
         },
       });
   }

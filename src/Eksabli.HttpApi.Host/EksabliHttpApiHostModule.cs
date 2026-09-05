@@ -14,6 +14,15 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Extensions.DependencyInjection;
+using OpenIddict.Validation.AspNetCore;
+using OpenIddict.Server.AspNetCore;
+using Eksabli.EntityFrameworkCore;
+using Eksabli.MultiTenancy;
+using Eksabli.HealthChecks;
+using Eksabli.Notifications;
+using Eksabli.Filters;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi;
 using OpenIddict.Server.AspNetCore;
 using OpenIddict.Validation.AspNetCore;
@@ -272,6 +281,13 @@ public class EksabliHttpApiHostModule : AbpModule
         Configure<AbpAspNetCoreMvcOptions>(options =>
         {
             options.ConventionalControllers.Create(typeof(EksabliApplicationModule).Assembly);
+        });
+
+        // Global — runs on every conventional/explicit controller action, not just the ones created
+        // above, so it also covers ABP's own module controllers (Account, Identity, ...).
+        Configure<MvcOptions>(options =>
+        {
+            options.Filters.Add<MustChangePasswordFilter>();
         });
     }
 

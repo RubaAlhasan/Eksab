@@ -13,6 +13,8 @@ public class BusinessProfile : AuditedAggregateRoot<Guid>, IMultiTenant
 
     public string? LogoBlobName { get; private set; }
 
+    public string? LogoContentType { get; private set; }
+
     public string? DescriptionAr { get; private set; }
 
     public string? DescriptionEn { get; private set; }
@@ -82,5 +84,9 @@ public class BusinessProfile : AuditedAggregateRoot<Guid>, IMultiTenant
 
     public void SetSocialLinks(string? socialLinksJson) => SocialLinksJson = socialLinksJson;
 
-    public void SetLogo(string? logoBlobName) => LogoBlobName = logoBlobName;
+    public void SetLogo(string? logoBlobName, string? logoContentType)
+    {
+        LogoBlobName = logoBlobName;
+        LogoContentType = logoContentType;
+    }
 }

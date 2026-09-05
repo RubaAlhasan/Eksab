@@ -22,6 +22,7 @@ import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
+import { environment } from '../../../environments/environment';
 
 type DetailTab = 'overview' | 'billing' | 'tickets';
 
@@ -45,6 +46,10 @@ type DetailTab = 'overview' | 'billing' | 'tickets';
  * this page already had, just also read once eagerly for the profile card.
  *
  * Real API surface, nothing invented:
+ * - Profile card logo: `AdminTenantDto.businessProfileId` (already present) points at
+ *   `BusinessController.GetLogoAsync` (anonymous, added for Business Portal Settings' own logo upload
+ *   feature) — no new DTO field needed, since that endpoint 404s when there's no logo and the `<img>`'s
+ *   own `(error)` handler is what falls back to the initial-letter avatar.
  * - Overview: `AdminTenantsController.GetAsync` (`AdminTenantDto` — the same fields the list page
  *   already shows) + category name (best-effort `CategoriesService.get`, read is `[AllowAnonymous]`)
  *   + the detail-stats endpoint above + "Open Support Tickets", via a `status=Open, maxResultCount:1`
@@ -118,6 +123,15 @@ export class AdminBusinessDetailsComponent implements OnInit {
   // than restructuring that tab's own lazy-load timing.
   protected readonly planName = signal<string | null>(null);
   protected readonly activeTab = signal<DetailTab>('overview');
+
+  // No LogoBlobName on AdminTenantDto (and no need to add one) — GetLogoAsync is anonymous and 404s
+  // when a business has no logo, so the <img>'s own (error) handler is what decides whether the
+  // initial-letter avatar shows instead. See admin-business-details.component.html.
+  protected readonly logoFailed = signal(false);
+  protected readonly logoUrl = computed(() => {
+    const businessProfileId = this.tenant()?.businessProfileId;
+    return businessProfileId ? `${environment.apis.default.url}/api/app/business/${businessProfileId}/logo` : null;
+  });
 
   protected readonly canApprove = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Tenants.Approve'));
   protected readonly canSuspend = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Tenants.Suspend'));
@@ -355,6 +369,7 @@ export class AdminBusinessDetailsComponent implements OnInit {
     this.openTicketsCount.set(null);
     this.detailStats.set(null);
     this.planName.set(null);
+    this.logoFailed.set(false);
 
     this.tenantsService.get(tenantId).subscribe({
       next: (tenant) => {

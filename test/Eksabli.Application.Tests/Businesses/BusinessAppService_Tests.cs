@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using Eksabli.Billing;
 using Eksabli.BusinessProfiles;
@@ -6,6 +7,9 @@ using Eksabli.Branches;
 using Eksabli.EmployeeAssignments;
 using Shouldly;
 using Volo.Abp;
+using Volo.Abp.BlobStoring;
+using Volo.Abp.Content;
+using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
@@ -27,6 +31,7 @@ public abstract class BusinessAppService_Tests<TStartupModule> : EksabliApplicat
     private readonly ITenantSubscriptionRepository _tenantSubscriptionRepository;
     private readonly ISubscriptionPlanRepository _subscriptionPlanRepository;
     private readonly ICurrentTenant _currentTenant;
+    private readonly IBlobContainer<BusinessLogoContainer> _logoContainer;
 
     protected BusinessAppService_Tests()
     {
@@ -39,7 +44,11 @@ public abstract class BusinessAppService_Tests<TStartupModule> : EksabliApplicat
         _tenantSubscriptionRepository = GetRequiredService<ITenantSubscriptionRepository>();
         _subscriptionPlanRepository = GetRequiredService<ISubscriptionPlanRepository>();
         _currentTenant = GetRequiredService<ICurrentTenant>();
+        _logoContainer = GetRequiredService<IBlobContainer<BusinessLogoContainer>>();
     }
+
+    private static RemoteStreamContent LogoFile(byte[] bytes, string contentType = "image/png") =>
+        new RemoteStreamContent(new MemoryStream(bytes), "logo.png", contentType);
 
     private static RegisterBusinessDto CreateInput(string businessName) => new RegisterBusinessDto
     {
@@ -143,5 +152,109 @@ public abstract class BusinessAppService_Tests<TStartupModule> : EksabliApplicat
                 profile.Id.ShouldBe(resultB.BusinessProfileId);
             }
         });
+    }
+
+    [Fact]
+    public async Task Should_Upload_A_Logo_And_Serve_It_Back_Anonymously_By_Id()
+    {
+        var result = await WithUnitOfWorkAsync(() => _businessAppService.RegisterAsync(CreateInput("Logo Biz " + Guid.NewGuid().ToString("N"))));
+        var bytes = new byte[] { 1, 2, 3, 4 };
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(result.TenantId))
+            {
+                var profile = await _businessAppService.UploadLogoAsync(LogoFile(bytes));
+                profile.LogoBlobName.ShouldNotBeNullOrWhiteSpace();
+            }
+        });
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var served = await _businessAppService.GetLogoAsync(result.BusinessProfileId);
+            served.ContentType.ShouldBe("image/png");
+
+            using var memoryStream = new MemoryStream();
+            await served.GetStream().CopyToAsync(memoryStream);
+            memoryStream.ToArray().ShouldBe(bytes);
+        });
+    }
+
+    [Fact]
+    public async Task Should_Delete_The_Old_Blob_When_Replacing_The_Logo()
+    {
+        var result = await WithUnitOfWorkAsync(() => _businessAppService.RegisterAsync(CreateInput("Logo Replace Biz " + Guid.NewGuid().ToString("N"))));
+
+        string? firstBlobName = null;
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(result.TenantId))
+            {
+                var profile = await _businessAppService.UploadLogoAsync(LogoFile(new byte[] { 1 }));
+                firstBlobName = profile.LogoBlobName;
+            }
+        });
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(result.TenantId))
+            {
+                await _businessAppService.UploadLogoAsync(LogoFile(new byte[] { 2, 2 }));
+            }
+        });
+
+        (await WithUnitOfWorkAsync(() => _logoContainer.ExistsAsync(firstBlobName!))).ShouldBeFalse();
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var served = await _businessAppService.GetLogoAsync(result.BusinessProfileId);
+            using var memoryStream = new MemoryStream();
+            await served.GetStream().CopyToAsync(memoryStream);
+            memoryStream.ToArray().ShouldBe(new byte[] { 2, 2 });
+        });
+    }
+
+    [Fact]
+    public async Task Should_Remove_The_Logo()
+    {
+        var result = await WithUnitOfWorkAsync(() => _businessAppService.RegisterAsync(CreateInput("Logo Remove Biz " + Guid.NewGuid().ToString("N"))));
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(result.TenantId))
+            {
+                await _businessAppService.UploadLogoAsync(LogoFile(new byte[] { 1 }));
+                var profile = await _businessAppService.RemoveLogoAsync();
+                profile.LogoBlobName.ShouldBeNull();
+            }
+        });
+
+        await Assert.ThrowsAsync<EntityNotFoundException>(() =>
+            WithUnitOfWorkAsync(() => _businessAppService.GetLogoAsync(result.BusinessProfileId)));
+    }
+
+    [Fact]
+    public async Task Should_Reject_A_Disallowed_Content_Type()
+    {
+        var result = await WithUnitOfWorkAsync(() => _businessAppService.RegisterAsync(CreateInput("Logo Reject Type Biz " + Guid.NewGuid().ToString("N"))));
+
+        using (_currentTenant.Change(result.TenantId))
+        {
+            await Assert.ThrowsAsync<UserFriendlyException>(() =>
+                WithUnitOfWorkAsync(() => _businessAppService.UploadLogoAsync(LogoFile(new byte[] { 1 }, "application/pdf"))));
+        }
+    }
+
+    [Fact]
+    public async Task Should_Reject_A_File_Over_The_Size_Cap()
+    {
+        var result = await WithUnitOfWorkAsync(() => _businessAppService.RegisterAsync(CreateInput("Logo Reject Size Biz " + Guid.NewGuid().ToString("N"))));
+        var tooBig = new byte[BusinessProfileConsts.MaxLogoFileSizeBytes + 1];
+
+        using (_currentTenant.Change(result.TenantId))
+        {
+            await Assert.ThrowsAsync<UserFriendlyException>(() =>
+                WithUnitOfWorkAsync(() => _businessAppService.UploadLogoAsync(LogoFile(tooBig))));
+        }
     }
 }

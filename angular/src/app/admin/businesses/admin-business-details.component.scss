@@ -17,6 +17,14 @@
   background: linear-gradient(135deg, var(--eks-primary-500), var(--eks-primary-700));
 }
 
+.eks-avatar-img {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
 // Matches the prototype's own `p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60` mini stat boxes
 // (Members/Plan) in the profile card.
 .eks-mini-stat {

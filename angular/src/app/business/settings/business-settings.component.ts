@@ -9,6 +9,10 @@ import type { CategoryDto } from '../../proxy/platform/models';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
+import { environment } from '../../../environments/environment';
+
+const ALLOWED_LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
 /** `BusinessProfile.SocialLinksJson` has no fixed schema (freeform blob, confirmed by reading
  *  `BusinessProfile.cs`) — "instagram"/"facebook" are just the two keys `BusinessAppService.RegisterAsync`
@@ -69,9 +73,13 @@ function serializeSocialLinks(instagram: string, facebook: string, rest: Record<
  * - **Instagram/Facebook** map to the real (but schema-free) `SocialLinksJson`, matching the exact two
  *   keys `RegisterAsync` itself populates at signup — see `parseSocialLinks`/`serializeSocialLinks`
  *   above. Any other keys already present are preserved on save, not silently dropped.
- * - **No logo upload** — `LogoBlobName` is real and shown as a placeholder/name only; no blob-upload
- *   widget exists anywhere in this app yet (same established gap as Rewards' `imageBlobName`/
- *   Categories' `iconBlobName`).
+ * - **Logo upload/change/remove** — the first real consumer of this app's (previously dormant)
+ *   Database blob-storing provider: `BusinessAppService.UploadLogoAsync`/`RemoveLogoAsync` (permission-
+ *   gated, same as the rest of this form) and the anonymous `GetLogoAsync` the `<img>` below points at
+ *   directly (no auth header needed for a public logo image). PNG/JPEG/WebP only, capped at 2 MB —
+ *   validated client-side here AND server-side (`BusinessProfileConsts`), since the client check is a
+ *   UX nicety, not the actual enforcement. `logoBlobName` doubles as a cache-busting query param since
+ *   the image URL itself never changes across uploads (it's keyed by business id, not blob name).
  */
 @Component({
   selector: 'app-business-settings',
@@ -97,9 +105,18 @@ export class BusinessSettingsComponent implements OnInit {
   protected readonly isLoading = signal(true);
   protected readonly loadFailed = signal(false);
   protected readonly isSaving = signal(false);
+  protected readonly isUploadingLogo = signal(false);
   protected readonly profile = signal<BusinessProfileDto | null>(null);
   protected readonly categories = signal<CategoryDto[]>([]);
   private socialLinksRest: Record<string, unknown> = {};
+
+  // Query param cache-busts the <img> — the URL itself is keyed by business id, not blob name, so it
+  // never changes across uploads on its own.
+  protected readonly logoUrl = computed(() => {
+    const p = this.profile();
+    if (!p?.logoBlobName) return null;
+    return `${environment.apis.default.url}/api/app/business/${p.id}/logo?v=${encodeURIComponent(p.logoBlobName)}`;
+  });
 
   protected readonly form = new FormGroup({
     categoryId: new FormControl<string | null>(null),
@@ -146,6 +163,51 @@ export class BusinessSettingsComponent implements OnInit {
           this.toaster.error('::BusinessPanel:Settings:SaveErrorMessage');
         },
       });
+  }
+
+  protected onLogoFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    input.value = ''; // reset so re-selecting the same file still fires a change event
+
+    if (!file) return;
+
+    if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
+      this.toaster.error('::BusinessPanel:Settings:InvalidLogoTypeMessage');
+      return;
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      this.toaster.error('::BusinessPanel:Settings:LogoTooLargeMessage');
+      return;
+    }
+
+    this.isUploadingLogo.set(true);
+    this.businessService.uploadLogo(file).subscribe({
+      next: (profile) => {
+        this.isUploadingLogo.set(false);
+        this.profile.set(profile);
+        this.toaster.success('::BusinessPanel:Settings:LogoUploadedMessage');
+      },
+      error: () => {
+        this.isUploadingLogo.set(false);
+        this.toaster.error('::BusinessPanel:Settings:LogoUploadErrorMessage');
+      },
+    });
+  }
+
+  protected removeLogo(): void {
+    this.isUploadingLogo.set(true);
+    this.businessService.removeLogo().subscribe({
+      next: (profile) => {
+        this.isUploadingLogo.set(false);
+        this.profile.set(profile);
+        this.toaster.success('::BusinessPanel:Settings:LogoRemovedMessage');
+      },
+      error: () => {
+        this.isUploadingLogo.set(false);
+        this.toaster.error('::BusinessPanel:Settings:LogoRemoveErrorMessage');
+      },
+    });
   }
 
   private load(): void {

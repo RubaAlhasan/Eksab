@@ -24,12 +24,19 @@ public abstract class OtpLoginService_Tests<TStartupModule> : EksabliApplication
         _customerProfileRepository = GetRequiredService<IRepository<CustomerProfile, Guid>>();
     }
 
+    // Normalized before caching, same as OtpAppService.RequestOtpAsync does in production — the real
+    // cache key OtpLoginService.ValidateAndResolveUserAsync looks up is always the normalized number,
+    // never the raw one.
     private Task SeedCodeAsync(string phoneNumber, string code) => WithUnitOfWorkAsync(() => _otpCache.SetAsync(
-        phoneNumber,
+        PhoneNumberNormalizer.Normalize(phoneNumber),
         new OtpCacheItem { Code = code },
         new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5) }));
 
-    private static string NewPhoneNumber() => "+1555" + Guid.NewGuid().ToString("N").Substring(0, 7);
+    // Digits only, deliberately — a GUID hex substring can contain a-f, which PhoneNumberNormalizer
+    // (correctly) strips as non-digit noise. A phone number containing letters was never realistic test
+    // data to begin with, and it silently desynced this helper's raw key from ValidateAndResolveUserAsync's
+    // normalized lookup whenever the random GUID happened to land on a hex letter.
+    private static string NewPhoneNumber() => "+1555" + Random.Shared.Next(1000000, 10000000);
 
     [Fact]
     public async Task Should_Reject_When_No_Code_Requested()
