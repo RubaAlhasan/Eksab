@@ -7,7 +7,6 @@ import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_tokens.dart';
 import '../../shared/models/models.dart';
 import '../../shared/providers/app_providers.dart';
-import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_states.dart';
 import '../../shared/widgets/business_tiles.dart';
@@ -23,7 +22,6 @@ class SearchScreen extends ConsumerStatefulWidget {
 
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
-  List<String> _recent = ['Cedar & Bean Coffee', 'Fitness', 'Bookshop'];
   String _query = '';
 
   @override
@@ -41,19 +39,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    final businesses = ref.watch(businessesProvider);
-    final categories = ref.watch(categoriesProvider);
+    final query = _query.trim();
 
-    final query = _query.trim().toLowerCase();
-    final results = query.isEmpty
-        ? const <Business>[]
-        : businesses
-              .where(
-                (b) =>
-                    b.name.toLowerCase().contains(query) ||
-                    b.category.toLowerCase().contains(query),
-              )
-              .toList();
+    // The server does the filtering, so an empty query is the full directory —
+    // which is what the "browse by category" view is built from.
+    final results = ref.watch(
+      businessSearchProvider(
+        BusinessQuery(text: query.isEmpty ? null : query),
+      ),
+    );
 
     return Scaffold(
       backgroundColor: palette.scaffold,
@@ -100,31 +94,36 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ),
             ),
             Expanded(
-              child: query.isEmpty
-                  ? _buildBrowse(palette, categories)
-                  : (results.isEmpty
-                        ? const EmptyState(
-                            icon: Icons.search_rounded,
-                            title: 'No results found',
-                            message: 'Try a different name or category.',
-                          )
-                        : ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                            itemCount: results.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 12),
-                            itemBuilder: (context, i) {
-                              final business = results[i];
-                              return BusinessRow(
-                                business: business,
-                                logoSize: 48,
-                                meta:
-                                    '${business.category} · '
-                                    '${business.distanceKm} km',
-                                onTap: () =>
-                                    context.push(Routes.store(business.id)),
-                              );
-                            },
-                          )),
+              child: AsyncSection<List<Business>>(
+                value: results,
+                onRetry: () => ref.invalidate(businessSearchProvider),
+                data: (list) => query.isEmpty
+                    ? _buildBrowse(palette, list)
+                    : (list.isEmpty
+                          ? const EmptyState(
+                              icon: Icons.search_rounded,
+                              title: 'No results found',
+                              message: 'Try a different name or category.',
+                            )
+                          : ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                              itemCount: list.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 12),
+                              itemBuilder: (context, i) {
+                                final business = list[i];
+                                return BusinessRow(
+                                  business: business,
+                                  meta: business.distanceKm == null
+                                      ? business.category
+                                      : '${business.category} · '
+                                            '${business.distanceKm!.toStringAsFixed(1)} km',
+                                  onTap: () =>
+                                      context.push(Routes.store(business.id)),
+                                );
+                              },
+                            )),
+              ),
             ),
           ],
         ),
@@ -132,89 +131,62 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
-  Widget _buildBrowse(AppPalette palette, List<String> categories) {
-    final businesses = ref.watch(businessesProvider);
+  Widget _buildBrowse(AppPalette palette, List<Business> all) {
+    final categories = <String>[];
+    for (final b in all) {
+      if (b.category.isNotEmpty && !categories.contains(b.category)) {
+        categories.add(b.category);
+      }
+    }
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'RECENT SEARCHES',
-              style: AppText.overline.copyWith(color: palette.textMuted),
-            ),
-            if (_recent.isNotEmpty)
-              GestureDetector(
-                onTap: () => setState(() => _recent = []),
-                child: Text(
-                  'Clear',
-                  style: AppText.smallSemi.copyWith(
-                    color: palette.primaryOnDarkAware,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        if (_recent.isEmpty)
-          Text(
-            'No recent searches.',
-            style: AppText.small.copyWith(color: palette.textMuted),
-          )
-        else
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final term in _recent)
-                GestureDetector(
-                  onTap: () => _search(term),
-                  child: AppBadge(term),
-                ),
-            ],
-          ),
-        const SizedBox(height: 24),
-
         Text(
           'BROWSE BY CATEGORY',
           style: AppText.overline.copyWith(color: palette.textMuted),
         ),
         const SizedBox(height: 10),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 2.3,
-          children: [
-            for (final category in categories)
-              AppCard(
-                onTap: () => _search(category),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      category,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.bodyBold.copyWith(
-                        color: palette.textPrimary,
+        if (categories.isEmpty)
+          const EmptyState(
+            icon: Icons.storefront_outlined,
+            title: 'No businesses yet',
+            message: 'Approved businesses will appear here.',
+          )
+        else
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 2.3,
+            children: [
+              for (final category in categories)
+                AppCard(
+                  onTap: () => _search(category),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        category,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.bodyBold.copyWith(
+                          color: palette.textPrimary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${businesses.where((b) => b.category == category).length}'
-                      ' businesses',
-                      style: AppText.small.copyWith(color: palette.textMuted),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        '${all.where((b) => b.category == category).length}'
+                        ' businesses',
+                        style: AppText.small.copyWith(color: palette.textMuted),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-          ],
-        ),
+            ],
+          ),
       ],
     );
   }

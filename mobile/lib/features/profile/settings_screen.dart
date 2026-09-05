@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/router/app_router.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_tokens.dart';
-import '../../core/demo/demo_data.dart';
+import '../../core/static_content.dart';
 import '../../shared/models/models.dart';
 import '../../shared/providers/app_providers.dart';
 import '../../shared/widgets/app_avatar.dart';
@@ -26,7 +26,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  final List<LinkedDevice> _devices = List.of(DemoData.devices);
+  final List<LinkedDevice> _devices = List.of(StaticContent.devices);
 
   @override
   Widget build(BuildContext context) {

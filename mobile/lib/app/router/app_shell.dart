@@ -33,7 +33,7 @@ class AppShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
-    final unread = ref.watch(unreadCountProvider);
+    final unread = ref.watch(unreadCountProvider).valueOrNull ?? 0;
 
     return Scaffold(
       backgroundColor: palette.scaffold,

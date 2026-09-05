@@ -7,6 +7,7 @@ import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_tokens.dart';
 import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_button.dart';
+import '../../shared/models/models.dart';
 import '../../shared/providers/app_providers.dart';
 import '../../shared/widgets/app_scaffold.dart';
 import '../../shared/widgets/app_states.dart';
@@ -19,58 +20,57 @@ class MyMembershipsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
-    final memberships = ref.watch(membershipsProvider);
+    final entries = ref.watch(walletEntriesProvider);
 
     return AppScaffold(
       title: 'My Memberships',
       onBack: () =>
           context.canPop() ? context.pop() : context.go(Routes.profile),
-      body: memberships.isEmpty
-          ? EmptyState(
-              icon: Icons.storefront_outlined,
-              title: 'No memberships yet',
-              message: 'Join a business to start collecting points.',
-              action: AppButton(
-                label: 'Discover businesses',
-                size: AppButtonSize.sm,
-                onPressed: () => context.push(Routes.nearby),
-              ),
-            )
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-              children: [
-                Text(
-                  "Every business you've joined, and its membership status.",
-                  style: AppText.small.copyWith(color: palette.textMuted),
+      body: AsyncSection<List<WalletEntry>>(
+        value: entries,
+        onRetry: () => ref.invalidate(membershipsProvider),
+        data: (list) => list.isEmpty
+            ? EmptyState(
+                icon: Icons.storefront_outlined,
+                title: 'No memberships yet',
+                message: 'Join a business to start collecting points.',
+                action: AppButton(
+                  label: 'Discover businesses',
+                  size: AppButtonSize.sm,
+                  onPressed: () => context.push(Routes.nearby),
                 ),
-                const SizedBox(height: 16),
-                for (final membership in memberships) ...[
-                  Builder(
-                    builder: (context) {
-                      final business = ref.watch(
-                        businessByIdProvider(membership.businessId),
-                      );
-                      if (business == null) return const SizedBox.shrink();
-                      return BusinessRow(
-                        business: business,
-                        logoSize: 44,
-                        meta:
-                            'Joined ${formatDate(membership.joinedAt, withYear: true)}'
-                            ' · ${business.category}',
-                        trailing: AppBadge(
-                          membership.status,
-                          tone: membership.status == 'Active'
-                              ? AppTone.success
-                              : AppTone.neutral,
-                        ),
-                        onTap: () => context.push(Routes.points(business.id)),
-                      );
-                    },
+              )
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                children: [
+                  Text(
+                    "Every business you've joined, and its membership status.",
+                    style: AppText.small.copyWith(color: palette.textMuted),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
+                  for (final entry in list) ...[
+                    BusinessRow(
+                      business: entry.business,
+                      logoSize: 44,
+                      meta: entry.membership.joinedAt == null
+                          ? entry.business.category
+                          : 'Joined '
+                                '${formatDate(entry.membership.joinedAt!, withYear: true)}'
+                                ' · ${entry.business.category}',
+                      trailing: AppBadge(
+                        entry.membership.status.label,
+                        tone: entry.membership.status == MembershipStatus.active
+                            ? AppTone.success
+                            : AppTone.neutral,
+                      ),
+                      onTap: () =>
+                          context.push(Routes.points(entry.business.id)),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                 ],
-              ],
-            ),
+              ),
+      ),
     );
   }
 }

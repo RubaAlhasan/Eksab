@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/router/app_router.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_tokens.dart';
+import '../../core/auth/auth_exception.dart';
+import '../../core/auth/registration.dart';
+import '../../shared/providers/app_providers.dart';
 import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_form.dart';
@@ -11,14 +15,19 @@ import '../../shared/widgets/app_scaffold.dart';
 import '../../shared/widgets/business_tiles.dart';
 
 /// Prototype: `customer/register.html`.
-class RegisterScreen extends StatefulWidget {
+///
+/// Real registration: posts to `POST /api/app/otp/register`, which creates the
+/// IdentityUser + CustomerProfile (unconfirmed) and sends the verification
+/// code in the same call — so this routes straight to the OTP screen with no
+/// separate "send code" step, exactly as the prototype does.
+class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _firstName = TextEditingController();
   final _lastName = TextEditingController();
   final _phone = TextEditingController();
@@ -26,7 +35,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _password = TextEditingController();
 
   DateTime? _dob;
-  String? _gender;
+  CustomerGender? _gender;
   bool _acceptedTerms = false;
   bool _obscure = true;
   bool _submitting = false;
@@ -49,6 +58,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final email = _email.text.trim();
 
     setState(() {
+      _errors['server'] = null;
       _errors
         ..['firstName'] = _firstName.text.trim().isEmpty
             ? 'First name is required.'
@@ -69,14 +79,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ..['terms'] = _acceptedTerms
             ? null
             : 'You must accept the terms to continue.';
-      _showFormAlert = _errors.values.any((e) => e != null);
+      _showFormAlert = _errors.entries.any((e) => e.key != 'server' && e.value != null);
     });
     if (_showFormAlert) return;
 
+    final phone = _phone.text.trim();
     setState(() => _submitting = true);
-    await Future<void>.delayed(const Duration(milliseconds: 1200));
-    if (!mounted) return;
-    context.push(Routes.otpVerify);
+
+    try {
+      await ref
+          .read(sessionProvider.notifier)
+          .register(
+            RegisterRequest(
+              phoneNumber: phone,
+              firstName: _firstName.text.trim(),
+              lastName: _lastName.text.trim(),
+              password: _password.text,
+              email: email.isEmpty ? null : email,
+              dateOfBirth: _dob,
+              gender: _gender,
+            ),
+          );
+
+      if (!mounted) return;
+      // The account exists but is unconfirmed, and the code is already sent —
+      // verifying it is what activates the account.
+      context.push('${Routes.otpVerify}?phone=${Uri.encodeComponent(phone)}');
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _showFormAlert = true;
+        _errors['server'] = error.message;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _showFormAlert = true;
+        _errors['server'] = 'Unexpected error: $error';
+      });
+    }
   }
 
   Future<void> _pickDob() async {
@@ -119,8 +162,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 24),
 
             if (_showFormAlert) ...[
-              const AppAlert(
-                message: 'Please fix the highlighted fields and try again.',
+              AppAlert(
+                message:
+                    _errors['server'] ??
+                    'Please fix the highlighted fields and try again.',
                 tone: AppTone.danger,
               ),
               const SizedBox(height: 16),
@@ -218,20 +263,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      DropdownButtonFormField<String>(
+                      DropdownButtonFormField<CustomerGender>(
                         initialValue: _gender,
                         isDense: true,
                         hint: Text(
                           'Select',
                           style: AppText.body.copyWith(color: AppColors.slate400),
                         ),
-                        items: const [
-                          DropdownMenuItem(value: 'Female', child: Text('Female')),
-                          DropdownMenuItem(value: 'Male', child: Text('Male')),
-                          DropdownMenuItem(
-                            value: 'Prefer not to say',
-                            child: Text('Prefer not to say'),
-                          ),
+                        items: [
+                          for (final g in CustomerGender.values)
+                            DropdownMenuItem(value: g, child: Text(g.label)),
                         ],
                         onChanged: (v) => setState(() => _gender = v),
                       ),

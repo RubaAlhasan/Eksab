@@ -3,12 +3,14 @@ import 'package:eksabli_mobile/app/router/app_router.dart';
 import 'package:eksabli_mobile/app/theme/app_theme.dart';
 import 'package:eksabli_mobile/core/auth/auth_exception.dart';
 import 'package:eksabli_mobile/core/auth/auth_tokens.dart';
-import 'package:eksabli_mobile/core/demo/demo_data.dart';
+import 'package:eksabli_mobile/core/api/eksabli_api.dart';
 import 'package:eksabli_mobile/shared/models/models.dart';
 import 'package:eksabli_mobile/shared/providers/app_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'fakes.dart';
 
 class _SessionStub extends SessionNotifier {
   _SessionStub(this.user);
@@ -124,7 +126,12 @@ void main() {
       Customer? user,
     ) async {
       final container = ProviderContainer(
-        overrides: [sessionProvider.overrideWith(() => _SessionStub(user))],
+        overrides: [
+          sessionProvider.overrideWith(() => _SessionStub(user)),
+          // Landing on Home triggers real API calls; the fake keeps the guard
+          // test about routing rather than networking.
+          apiProvider.overrideWith((ref) => FakeApi() as EksabliApi),
+        ],
       );
       addTearDown(container.dispose);
 
@@ -169,7 +176,7 @@ void main() {
     testWidgets('a signed-in user is sent from splash to home', (tester) async {
       final container = await pumpWithSession(
         tester,
-        DemoData.currentCustomer,
+        testCustomer,
       );
       expect(locationOf(container), Routes.home);
     });
@@ -179,7 +186,7 @@ void main() {
     ) async {
       final container = await pumpWithSession(
         tester,
-        DemoData.currentCustomer,
+        testCustomer,
       );
 
       container.read(routerProvider).go(Routes.login);

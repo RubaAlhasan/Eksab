@@ -7,7 +7,6 @@ import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_tokens.dart';
 import '../../shared/models/models.dart';
 import '../../shared/providers/app_providers.dart';
-import '../../shared/widgets/app_avatar.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_scaffold.dart';
 import '../../shared/widgets/app_states.dart';
@@ -15,17 +14,17 @@ import '../../shared/widgets/business_tiles.dart';
 
 /// Prototype: `customer/birthday-rewards.html` — birthday-type campaigns from
 /// the businesses the customer belongs to.
+/// Prototype: `customer/birthday-rewards.html`.
+///
+/// Both halves are real now: the birthday comes from `CustomerProfileDto`, and
+/// the perks are birthday-type campaigns from the customer campaign feed.
 class BirthdayRewardsScreen extends ConsumerWidget {
   const BirthdayRewardsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final palette = AppPalette.of(context);
     final customer = ref.watch(currentCustomerProvider);
-    final campaigns = ref
-        .watch(activeCampaignsProvider)
-        .where((c) => c.type == CampaignType.birthday)
-        .toList();
+    final campaigns = ref.watch(myCampaignsProvider);
 
     return AppScaffold(
       title: 'Birthday Rewards',
@@ -47,8 +46,6 @@ class BirthdayRewardsScreen extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   customer.dateOfBirth == null
-                      // ABP's profile endpoint carries no date of birth, and
-                      // CustomerProfileAppService is not exposed over HTTP yet.
                       ? 'Add your birthday to unlock birthday perks'
                       : 'Your birthday is '
                             '${formatDate(customer.dateOfBirth!)}',
@@ -57,73 +54,77 @@ class BirthdayRewardsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Businesses below are offering a birthday perk this month.',
+                  customer.dateOfBirth == null
+                      ? 'You can set it in Edit Profile.'
+                      : 'Businesses you have joined may offer a perk that month.',
                   textAlign: TextAlign.center,
                   style: AppText.small.copyWith(
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: Colors.white.withValues(alpha: 0.85),
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
+          AsyncSection<List<Campaign>>(
+            value: campaigns,
+            onRetry: () => ref.invalidate(myCampaignsProvider),
+            data: (all) {
+              final birthday = all
+                  .where((c) => c.type == CampaignType.birthday)
+                  .toList();
 
-          if (campaigns.isEmpty)
-            const EmptyState(
-              icon: Icons.card_giftcard_rounded,
-              title: 'No birthday offers yet',
-              message:
-                  'Join more businesses to unlock birthday perks throughout '
-                  'the year.',
-            )
-          else
-            for (final campaign in campaigns) ...[
-              Builder(
-                builder: (context) {
-                  final business = ref.watch(
-                    businessByIdProvider(campaign.businessId),
-                  );
-                  if (business == null) return const SizedBox.shrink();
-                  return AppCard(
-                    onTap: () => context.push(Routes.store(business.id)),
-                    child: Row(
-                      children: [
-                        BusinessLogo(
-                          initials: business.initials,
-                          gradient: business.gradient,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                business.name,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppText.bodyBold.copyWith(
-                                  color: palette.textPrimary,
+              if (birthday.isEmpty) {
+                return const EmptyState(
+                  icon: Icons.card_giftcard_rounded,
+                  title: 'No birthday offers yet',
+                  message:
+                      'Join more businesses to unlock birthday perks through '
+                      'the year.',
+                );
+              }
+
+              return Column(
+                children: [
+                  for (final campaign in birthday) ...[
+                    AppCard(
+                      onTap: () =>
+                          context.push(Routes.store(campaign.businessId)),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  campaign.businessName,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppText.bodyBold.copyWith(
+                                    color: AppPalette.of(context).textPrimary,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                campaign.description,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppText.small.copyWith(
-                                  color: palette.textSecondary,
+                                Text(
+                                  campaign.name,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppText.small.copyWith(
+                                    color: AppPalette.of(context).textSecondary,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text('🎁', style: TextStyle(fontSize: 22)),
-                      ],
+                          const SizedBox(width: 8),
+                          const Text('🎁', style: TextStyle(fontSize: 22)),
+                        ],
+                      ),
                     ),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-            ],
+                    const SizedBox(height: 12),
+                  ],
+                ],
+              );
+            },
+          ),
         ],
       ),
     );

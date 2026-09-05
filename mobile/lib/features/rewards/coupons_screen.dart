@@ -7,6 +7,7 @@ import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_tokens.dart';
 import '../../shared/models/models.dart';
 import '../../shared/providers/app_providers.dart';
+import '../../shared/widgets/app_avatar.dart';
 import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_scaffold.dart';
@@ -31,22 +32,17 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
     CouponStatus.expired,
   ];
 
-  static ({String label, AppTone tone}) _meta(CouponStatus status) =>
-      switch (status) {
-        CouponStatus.issued => (label: 'Active', tone: AppTone.success),
-        CouponStatus.redeemed => (label: 'Used', tone: AppTone.neutral),
-        CouponStatus.expired => (label: 'Expired', tone: AppTone.danger),
-        CouponStatus.cancelled => (label: 'Cancelled', tone: AppTone.danger),
-      };
+  static AppTone _tone(CouponStatus status) => switch (status) {
+    CouponStatus.issued => AppTone.success,
+    CouponStatus.redeemed => AppTone.neutral,
+    CouponStatus.expired => AppTone.danger,
+    CouponStatus.cancelled => AppTone.danger,
+  };
 
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    final all = ref.watch(couponsProvider);
-    final filter = _filters[_tab];
-    final coupons = filter == null
-        ? all
-        : all.where((c) => c.status == filter).toList();
+    final coupons = ref.watch(couponsProvider);
 
     return AppScaffold(
       title: 'My Coupons',
@@ -63,72 +59,89 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
             ),
           ),
           Expanded(
-            child: coupons.isEmpty
-                ? const EmptyState(
+            child: AsyncSection<List<Coupon>>(
+              value: coupons,
+              onRetry: () => ref.invalidate(couponsProvider),
+              data: (all) {
+                final filter = _filters[_tab];
+                final list = filter == null
+                    ? all
+                    : all.where((c) => c.status == filter).toList();
+
+                if (list.isEmpty) {
+                  return const EmptyState(
                     icon: Icons.confirmation_number_outlined,
                     title: 'Nothing here yet',
-                    message:
-                        'Redeem a reward to see your coupons appear here.',
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                    itemCount: coupons.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, i) {
-                      final coupon = coupons[i];
-                      final reward = ref.watch(
-                        rewardByIdProvider(coupon.rewardId),
-                      );
-                      final business = ref.watch(
-                        businessByIdProvider(coupon.businessId),
-                      );
-                      final meta = _meta(coupon.status);
-                      final spent = coupon.status != CouponStatus.issued;
+                    message: 'Redeem a reward to see your coupons appear here.',
+                  );
+                }
 
-                      return Opacity(
-                        opacity: spent ? 0.55 : 1,
-                        child: AppCard(
-                          child: Row(
-                            children: [
-                              Text(
-                                reward?.emoji ?? '🎟️',
-                                style: const TextStyle(fontSize: 28),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      reward?.name ?? 'Reward',
-                                      overflow: TextOverflow.ellipsis,
-                                      style: AppText.bodyBold.copyWith(
-                                        color: palette.textPrimary,
-                                      ),
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                  itemCount: list.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, i) {
+                    final coupon = list[i];
+                    final business = ref
+                        .watch(businessByIdProvider(coupon.businessId))
+                        .valueOrNull;
+                    final spent = coupon.status != CouponStatus.issued;
+
+                    return Opacity(
+                      opacity: spent ? 0.55 : 1,
+                      child: AppCard(
+                        child: Row(
+                          children: [
+                            // Icon rather than 🎟️ — CanvasKit renders that
+                            // emoji as tofu on web.
+                            IconTile(
+                              icon: Icons.confirmation_number_outlined,
+                              tone: _tone(coupon.status) == AppTone.success
+                                  ? AppColors.success600
+                                  : AppColors.slate500,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    coupon.rewardName ?? 'Reward',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppText.bodyBold.copyWith(
+                                      color: palette.textPrimary,
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${business?.name ?? ''} · ${coupon.code}',
-                                      overflow: TextOverflow.ellipsis,
-                                      style: AppText.small.copyWith(
-                                        color: palette.textMuted,
-                                        fontFeatures: const [
-                                          FontFeature.tabularFigures(),
-                                        ],
-                                      ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    business == null
+                                        ? coupon.code
+                                        : '${business.name} · ${coupon.code}',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppText.small.copyWith(
+                                      color: palette.textMuted,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 8),
-                              AppBadge(meta.label, tone: meta.tone),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(width: 8),
+                            AppBadge(
+                              coupon.status.label,
+                              tone: _tone(coupon.status),
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),

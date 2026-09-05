@@ -8,7 +8,6 @@ import '../../app/theme/app_tokens.dart';
 import '../../shared/models/models.dart';
 import '../../shared/providers/app_providers.dart';
 import '../../shared/widgets/app_avatar.dart';
-import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_states.dart';
@@ -16,55 +15,162 @@ import '../../shared/widgets/business_tiles.dart';
 
 /// Prototype: `customer/home.html`.
 ///
-/// Renders from cache-shaped local state immediately; the skeleton stands in
-/// for the first network fetch. Sections mirror the prototype exactly: my
-/// businesses, active campaigns, quick actions, discover nearby.
-class HomeScreen extends ConsumerStatefulWidget {
+/// The "Active Offers" strip is backed by the customer campaign feed, which is
+/// already filtered server-side to campaigns this customer is targeted by.
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  ConsumerState<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends ConsumerState<HomeScreen> {
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    Future<void>.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) setState(() => _loading = false);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final palette = AppPalette.of(context);
     final customer = ref.watch(currentCustomerProvider);
-    final unread = ref.watch(unreadCountProvider);
+    final unread = ref.watch(unreadCountProvider).valueOrNull ?? 0;
+    final wallet = ref.watch(walletEntriesProvider);
+    final directory = ref.watch(businessSearchProvider(const BusinessQuery()));
+    final campaigns = ref.watch(myCampaignsProvider);
 
     return Scaffold(
       backgroundColor: palette.scaffold,
       body: SafeArea(
         bottom: false,
-        child: Column(
-          children: [
-            _Header(customer: customer, hasUnread: unread > 0),
-            Expanded(
-              child: _loading
-                  ? const _HomeSkeleton()
-                  : RefreshIndicator(
-                      onRefresh: () async {
-                        setState(() => _loading = true);
-                        await Future<void>.delayed(
-                          const Duration(milliseconds: 500),
-                        );
-                        if (mounted) setState(() => _loading = false);
-                      },
-                      child: const _HomeContent(),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref
+              ..invalidate(membershipsProvider)
+              ..invalidate(businessSearchProvider)
+              ..invalidate(unreadCountProvider);
+            await ref.read(walletEntriesProvider.future);
+          },
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            children: [
+              _Header(customer: customer, hasUnread: unread > 0),
+
+              SectionHeader(
+                title: 'My Businesses',
+                actionLabel: 'See all',
+                onAction: () => context.go(Routes.wallet),
+              ),
+              AsyncSection<List<WalletEntry>>(
+                value: wallet,
+                onRetry: () => ref.invalidate(membershipsProvider),
+                loading: const SizedBox(
+                  height: 168,
+                  child: Row(
+                    children: [
+                      Skeleton(height: 168, width: 176, radius: 16),
+                      SizedBox(width: 12),
+                      Skeleton(height: 168, width: 176, radius: 16),
+                    ],
+                  ),
+                ),
+                data: (entries) => entries.isEmpty
+                    ? EmptyState(
+                        icon: Icons.account_balance_wallet_outlined,
+                        title: 'No businesses joined yet',
+                        message:
+                            'Join your first business to start earning points.',
+                        action: AppButton(
+                          label: 'Discover businesses',
+                          size: AppButtonSize.sm,
+                          onPressed: () => context.push(Routes.nearby),
+                        ),
+                      )
+                    : SizedBox(
+                        height: 168,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: entries.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 12),
+                          itemBuilder: (context, i) => _MyBusinessCard(
+                            entry: entries[i],
+                          ),
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 28),
+
+              // Only rendered when there is something live to show — an empty
+              // offers strip is noise, not information.
+              ...switch (campaigns.valueOrNull) {
+                final list? when list.isNotEmpty => [
+                  SectionHeader(
+                    title: 'Active Offers',
+                    actionLabel: 'See all',
+                    onAction: () => context.push(Routes.campaigns),
+                  ),
+                  SizedBox(
+                    height: 108,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: list.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 12),
+                      itemBuilder: (context, i) => _CampaignCard(
+                        campaign: list[i],
+                      ),
                     ),
-            ),
-          ],
+                  ),
+                  const SizedBox(height: 28),
+                ],
+                _ => const <Widget>[],
+              },
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _QuickAction(
+                      icon: Icons.qr_code_scanner_rounded,
+                      tone: AppColors.primary600,
+                      label: 'Scan & Check-in',
+                      onTap: () => context.push(Routes.qrScanner),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _QuickAction(
+                      icon: Icons.qr_code_rounded,
+                      tone: AppColors.success600,
+                      label: 'My Wallet QR',
+                      onTap: () => context.push(Routes.qrCode),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
+
+              SectionHeader(
+                title: 'Discover',
+                actionLabel: 'See all',
+                onAction: () => context.push(Routes.nearby),
+              ),
+              AsyncSection<List<Business>>(
+                value: directory,
+                onRetry: () => ref.invalidate(businessSearchProvider),
+                data: (all) {
+                  final discover = all.where((b) => !b.member).take(4).toList();
+                  if (discover.isEmpty) {
+                    return const EmptyState(
+                      icon: Icons.storefront_outlined,
+                      title: 'Nothing new to discover',
+                      message: "You've joined every business listed so far.",
+                    );
+                  }
+                  return GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.95,
+                    children: [
+                      for (final business in discover)
+                        _DiscoverCard(business: business),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -86,7 +192,7 @@ class _Header extends StatelessWidget {
         : (hour < 18 ? 'Good afternoon' : 'Good evening');
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+      padding: const EdgeInsets.only(top: 8, bottom: 16),
       child: Row(
         children: [
           AppAvatar(
@@ -141,157 +247,10 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _HomeContent extends ConsumerWidget {
-  const _HomeContent();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final palette = AppPalette.of(context);
-    final businesses = ref.watch(businessesProvider);
-    final memberships = ref.watch(membershipsProvider);
-    final campaigns = ref.watch(activeCampaignsProvider);
-    final discover = businesses.where((b) => !b.member).take(4).toList();
-
-    Business? businessById(String id) {
-      for (final b in businesses) {
-        if (b.id == id) return b;
-      }
-      return null;
-    }
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-      children: [
-        // ── My businesses ────────────────────────────────────────────────
-        SectionHeader(
-          title: 'My Businesses',
-          actionLabel: 'See all',
-          onAction: () => context.go(Routes.wallet),
-        ),
-        if (memberships.isEmpty)
-          EmptyState(
-            icon: Icons.account_balance_wallet_outlined,
-            title: 'No businesses joined yet',
-            message: 'Join your first business to start earning points.',
-            action: AppButton(
-              label: 'Discover businesses',
-              size: AppButtonSize.sm,
-              onPressed: () => context.push(Routes.nearby),
-            ),
-          )
-        else
-          SizedBox(
-            // Logo (40) + name + tier + balance, plus the card's 16px padding.
-            height: 168,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: memberships.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, i) {
-                final membership = memberships[i];
-                final business = businessById(membership.businessId);
-                if (business == null) return const SizedBox.shrink();
-                final hasCampaign = campaigns.any(
-                  (c) => c.businessId == business.id,
-                );
-                return _MyBusinessCard(
-                  business: business,
-                  membership: membership,
-                  hasCampaign: hasCampaign,
-                );
-              },
-            ),
-          ),
-        const SizedBox(height: 28),
-
-        // ── Active campaigns ─────────────────────────────────────────────
-        SectionHeader(
-          title: 'Active Campaigns',
-          actionLabel: 'See all',
-          onAction: () => context.push(Routes.campaigns),
-        ),
-        if (campaigns.isEmpty)
-          Text(
-            'No active campaigns right now.',
-            style: AppText.small.copyWith(color: palette.textMuted),
-          )
-        else
-          SizedBox(
-            height: 116,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: campaigns.length > 4 ? 4 : campaigns.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, i) {
-                final campaign = campaigns[i];
-                final business = businessById(campaign.businessId);
-                if (business == null) return const SizedBox.shrink();
-                return _CampaignBanner(
-                  campaign: campaign,
-                  business: business,
-                );
-              },
-            ),
-          ),
-        const SizedBox(height: 28),
-
-        // ── Quick actions ────────────────────────────────────────────────
-        Row(
-          children: [
-            Expanded(
-              child: _QuickAction(
-                icon: Icons.qr_code_scanner_rounded,
-                tone: AppColors.primary600,
-                label: 'Scan & Check-in',
-                onTap: () => context.push(Routes.qrScanner),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _QuickAction(
-                icon: Icons.qr_code_rounded,
-                tone: AppColors.success600,
-                label: 'My Wallet QR',
-                onTap: () => context.push(Routes.qrCode),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 28),
-
-        // ── Discover nearby ──────────────────────────────────────────────
-        SectionHeader(
-          title: 'Discover Nearby',
-          actionLabel: 'See all',
-          onAction: () => context.push(Routes.nearby),
-        ),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.95,
-          children: [
-            for (final business in discover)
-              _DiscoverCard(business: business),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
 class _MyBusinessCard extends StatelessWidget {
-  const _MyBusinessCard({
-    required this.business,
-    required this.membership,
-    required this.hasCampaign,
-  });
+  const _MyBusinessCard({required this.entry});
 
-  final Business business;
-  final Membership membership;
-  final bool hasCampaign;
+  final WalletEntry entry;
 
   @override
   Widget build(BuildContext context) {
@@ -299,103 +258,45 @@ class _MyBusinessCard extends StatelessWidget {
     return SizedBox(
       width: 176,
       child: AppCard(
-        onTap: () => context.push(Routes.points(business.id)),
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                BusinessLogo(
-                  initials: business.initials,
-                  gradient: business.gradient,
-                  size: 40,
-                  radius: 12,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  business.name,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.bodyBold.copyWith(color: palette.textPrimary),
-                ),
-                Text(
-                  '${membership.tier} tier',
-                  style: AppText.small.copyWith(color: palette.textMuted),
-                ),
-                const SizedBox(height: 10),
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text: formatPoints(membership.balance),
-                        style: AppText.h2.copyWith(
-                          color: palette.primaryOnDarkAware,
-                        ),
-                      ),
-                      TextSpan(
-                        text: ' pts',
-                        style: AppText.smallSemi.copyWith(
-                          color: palette.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (hasCampaign)
-              const Positioned(
-                top: 0,
-                right: 0,
-                child: AppBadge('Campaign', tone: AppTone.warning),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CampaignBanner extends StatelessWidget {
-  const _CampaignBanner({required this.campaign, required this.business});
-
-  final Campaign campaign;
-  final Business business;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 256,
-      child: AppCard(
-        gradient: business.gradient.gradient,
-        onTap: () => context.push(Routes.campaigns),
+        onTap: () => context.push(Routes.points(entry.business.id)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              business.name.toUpperCase(),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppText.overline.copyWith(
-                color: Colors.white.withValues(alpha: 0.7),
-                fontSize: 10,
-              ),
+            BusinessLogo(
+              initials: entry.business.initials,
+              gradient: entry.business.gradient,
+              size: 40,
+              radius: 12,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 12),
             Text(
-              campaign.name,
-              maxLines: 1,
+              entry.business.name,
               overflow: TextOverflow.ellipsis,
-              style: AppText.bodyBold.copyWith(color: Colors.white),
+              style: AppText.bodyBold.copyWith(color: palette.textPrimary),
             ),
-            const SizedBox(height: 4),
             Text(
-              campaign.description,
-              maxLines: 2,
+              entry.membership.tier ?? entry.business.category,
               overflow: TextOverflow.ellipsis,
-              style: AppText.small.copyWith(
-                color: Colors.white.withValues(alpha: 0.8),
+              style: AppText.small.copyWith(color: palette.textMuted),
+            ),
+            const SizedBox(height: 10),
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: formatPoints(entry.membership.balance),
+                    style: AppText.h2.copyWith(
+                      color: palette.primaryOnDarkAware,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' pts',
+                    style: AppText.smallSemi.copyWith(
+                      color: palette.textMuted,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -471,18 +372,13 @@ class _DiscoverCard extends StatelessWidget {
             style: AppText.small.copyWith(color: palette.textMuted),
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              const Icon(Icons.star_rounded, size: 14, color: AppColors.warning500),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                  '${business.rating} · ${business.distanceKm} km',
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.small.copyWith(color: palette.textSecondary),
-                ),
-              ),
-            ],
+          Text(
+            business.distanceKm == null
+                ? '${business.branches} '
+                      '${business.branches == 1 ? 'branch' : 'branches'}'
+                : '${business.distanceKm!.toStringAsFixed(1)} km away',
+            overflow: TextOverflow.ellipsis,
+            style: AppText.small.copyWith(color: palette.textSecondary),
           ),
         ],
       ),
@@ -490,32 +386,48 @@ class _DiscoverCard extends StatelessWidget {
   }
 }
 
-class _HomeSkeleton extends StatelessWidget {
-  const _HomeSkeleton();
+class _CampaignCard extends StatelessWidget {
+  const _CampaignCard({required this.campaign});
+
+  final Campaign campaign;
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-      children: const [
-        Row(
+    return SizedBox(
+      width: 256,
+      child: AppCard(
+        gradient: Business.gradientFor(campaign.businessId).gradient,
+        onTap: () => context.push(Routes.store(campaign.businessId)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Skeleton(height: 168, width: 176, radius: 16),
-            SizedBox(width: 12),
-            Skeleton(height: 168, width: 176, radius: 16),
+            Text(
+              campaign.businessName.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.overline.copyWith(
+                color: Colors.white.withValues(alpha: 0.7),
+                fontSize: 10,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              campaign.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.bodyBold.copyWith(color: Colors.white),
+            ),
+            const Spacer(),
+            Text(
+              'Ends ${formatDate(campaign.endDate)}',
+              style: AppText.small.copyWith(
+                color: Colors.white.withValues(alpha: 0.8),
+              ),
+            ),
           ],
         ),
-        SizedBox(height: 28),
-        Skeleton(height: 96, radius: 16),
-        SizedBox(height: 28),
-        Row(
-          children: [
-            Expanded(child: Skeleton(height: 144, radius: 16)),
-            SizedBox(width: 12),
-            Expanded(child: Skeleton(height: 144, radius: 16)),
-          ],
-        ),
-      ],
+      ),
     );
   }
 }

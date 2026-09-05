@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/router/app_router.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_tokens.dart';
-import '../../core/demo/demo_data.dart';
+import '../../core/static_content.dart';
 import '../../shared/widgets/app_avatar.dart';
 import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_button.dart';
@@ -68,9 +68,9 @@ class _HelpScreenState extends State<HelpScreen> {
           const SectionLabel('Frequently Asked Questions'),
           AppCardList(
             children: [
-              for (var i = 0; i < DemoData.faqs.length; i++)
+              for (var i = 0; i < StaticContent.faqs.length; i++)
                 _FaqRow(
-                  faq: DemoData.faqs[i],
+                  faq: StaticContent.faqs[i],
                   expanded: _expanded.contains(i),
                   onToggle: () => setState(() {
                     _expanded.contains(i)

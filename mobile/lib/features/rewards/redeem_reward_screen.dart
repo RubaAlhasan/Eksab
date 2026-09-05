@@ -24,8 +24,13 @@ enum _RedemptionState { active, expired, success }
 /// discount. The 6-second auto-confirm stands in for that staff scan until the
 /// redemption endpoint is wired up.
 class RedeemRewardScreen extends ConsumerStatefulWidget {
-  const RedeemRewardScreen({super.key, required this.rewardId});
+  const RedeemRewardScreen({
+    super.key,
+    required this.businessId,
+    required this.rewardId,
+  });
 
+  final String businessId;
   final String rewardId;
 
   @override
@@ -76,8 +81,18 @@ class _RedeemRewardScreenState extends ConsumerState<RedeemRewardScreen> {
     _staffConfirm = Timer(_staffConfirmDelay, () {
       if (!mounted || _state != _RedemptionState.active) return;
       _countdown?.cancel();
-      final reward = ref.read(rewardByIdProvider(widget.rewardId));
-      if (reward != null) ref.read(couponsProvider.notifier).issue(reward);
+      final reward = ref.read(
+        rewardByIdProvider(
+          RewardKey(businessId: widget.businessId, rewardId: widget.rewardId),
+        ),
+      ).valueOrNull;
+      if (reward != null) {
+        // Server-side redemption: it issues the coupon and debits the
+        // wallet. A client-side token alone is never a valid discount.
+        ref
+            .read(couponsProvider.notifier)
+            .redeem(tenantId: widget.businessId, rewardId: reward.id);
+      }
       setState(() => _state = _RedemptionState.success);
     });
   }
@@ -98,7 +113,11 @@ class _RedeemRewardScreenState extends ConsumerState<RedeemRewardScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    final reward = ref.watch(rewardByIdProvider(widget.rewardId));
+    final reward = ref.watch(
+      rewardByIdProvider(
+        RewardKey(businessId: widget.businessId, rewardId: widget.rewardId),
+      ),
+    ).valueOrNull;
     if (reward == null) return const ErrorScreen(kind: ErrorKind.notFound);
 
     return AppScaffold(
@@ -203,7 +222,7 @@ class _RedeemRewardScreenState extends ConsumerState<RedeemRewardScreen> {
             expand: true,
             onPressed: () => context.canPop()
                 ? context.pop()
-                : context.go(Routes.reward(widget.rewardId)),
+                : context.go(Routes.reward(widget.businessId, widget.rewardId)),
           ),
         ],
       ),

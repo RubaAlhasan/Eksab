@@ -1,24 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/router/app_router.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_tokens.dart';
-import '../../core/demo/demo_data.dart';
 import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_button.dart';
+import '../../shared/models/models.dart';
+import '../../shared/providers/app_providers.dart';
 import '../../shared/widgets/app_avatar.dart';
+import '../../shared/widgets/app_scaffold.dart';
 
 /// Prototype: `customer/qr-scanner.html` — branch check-in scanner.
 ///
 /// The camera preview is stubbed; wiring a scanner package (e.g.
 /// `mobile_scanner`) replaces [_ScannerFrame] and calls [_showResult] with the
 /// decoded branch token. Check-in itself stays a server-side mutation.
-class QrScannerScreen extends StatelessWidget {
+class QrScannerScreen extends ConsumerWidget {
   const QrScannerScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.slate950,
       body: SafeArea(
@@ -76,7 +79,7 @@ class QrScannerScreen extends StatelessWidget {
                 label: 'Simulate Scan',
                 size: AppButtonSize.lg,
                 expand: true,
-                onPressed: () => _showResult(context),
+                onPressed: () => _showResult(context, ref),
               ),
             ),
           ],
@@ -85,8 +88,22 @@ class QrScannerScreen extends StatelessWidget {
     );
   }
 
-  void _showResult(BuildContext context) {
-    final business = DemoData.businesses.first;
+  void _showResult(BuildContext context, WidgetRef ref) {
+    // Until the camera is wired, stand in for "scanned a branch QR" using the
+    // customer's first membership — real data, so the sheet is truthful about
+    // which business it names.
+    final entries = ref.read(walletEntriesProvider).valueOrNull ?? const [];
+    if (entries.isEmpty) {
+      showAppToast(
+        context,
+        title: 'Nothing to check in to',
+        message: 'Join a business first, then scan its branch code.',
+        icon: Icons.info_outline_rounded,
+        accent: AppColors.info600,
+      );
+      return;
+    }
+    final Business business = entries.first.business;
 
     showModalBottomSheet<void>(
       context: context,
@@ -129,7 +146,7 @@ class QrScannerScreen extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Downtown Branch check-in',
+                          'Branch check-in',
                           style: AppText.small.copyWith(
                             color: palette.textMuted,
                           ),

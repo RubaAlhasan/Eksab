@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_tokens.dart';
+import '../../core/auth/auth_exception.dart';
 
 /// `.empty-state` — tinted icon square, headline, hint, optional action.
 class EmptyState extends StatelessWidget {
@@ -221,6 +223,115 @@ class SectionHeader extends StatelessWidget {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+
+/// Renders an [AsyncValue] with consistent loading, error and empty states so
+/// every screen fails the same way instead of each inventing its own.
+class AsyncSection<T> extends StatelessWidget {
+  const AsyncSection({
+    super.key,
+    required this.value,
+    required this.data,
+    this.loading,
+    this.onRetry,
+    this.errorTitle = 'Could not load this',
+  });
+
+  final AsyncValue<T> value;
+  final Widget Function(T value) data;
+
+  /// Defaults to a shimmer block; pass a shaped skeleton where the screen has
+  /// one so the layout does not jump when real data arrives.
+  final Widget? loading;
+  final VoidCallback? onRetry;
+  final String errorTitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return value.when(
+      data: data,
+      loading: () =>
+          loading ??
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Skeleton(height: 88, radius: 16),
+          ),
+      error: (error, _) => ErrorState(
+        title: errorTitle,
+        // AuthException already carries a message written for a person; for
+        // anything else, don't leak a raw stack trace into the UI.
+        message: error is AuthException
+            ? error.message
+            : 'Something went wrong. Please try again.',
+        onRetry: onRetry,
+      ),
+    );
+  }
+}
+
+/// Failure state with an optional retry — the counterpart to [EmptyState].
+class ErrorState extends StatelessWidget {
+  const ErrorState({
+    super.key,
+    required this.title,
+    this.message,
+    this.onRetry,
+  });
+
+  final String title;
+  final String? message;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.danger500.withValues(
+                alpha: palette.isDark ? 0.14 : 0.1,
+              ),
+              borderRadius: AppRadius.rLg,
+            ),
+            child: const Icon(
+              Icons.cloud_off_rounded,
+              size: 26,
+              color: AppColors.danger500,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: AppText.bodyBold.copyWith(color: palette.textPrimary),
+          ),
+          if (message != null) ...[
+            const SizedBox(height: 4),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 280),
+              child: Text(
+                message!,
+                textAlign: TextAlign.center,
+                style: AppText.small.copyWith(color: palette.textMuted),
+              ),
+            ),
+          ],
+          if (onRetry != null) ...[
+            const SizedBox(height: 16),
+            TextButton(onPressed: onRetry, child: const Text('Try again')),
+          ],
         ],
       ),
     );

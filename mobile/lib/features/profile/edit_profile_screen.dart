@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../app/router/app_router.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_tokens.dart';
+import '../../core/auth/auth_exception.dart';
+import '../../core/auth/registration.dart';
 import '../../shared/providers/app_providers.dart';
 import '../../shared/widgets/app_avatar.dart';
 import '../../shared/widgets/app_button.dart';
@@ -27,7 +29,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late final TextEditingController _email;
 
   DateTime? _dob;
-  String? _gender;
+  CustomerGender? _gender;
 
   String? _firstNameError;
   String? _emailError;
@@ -44,7 +46,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _phone = TextEditingController(text: customer.phone);
     _email = TextEditingController(text: customer.email);
     _dob = customer.dateOfBirth;
-    _gender = customer.gender;
+    _gender = CustomerGender.fromLabel(customer.gender);
   }
 
   @override
@@ -66,27 +68,37 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     if (_firstNameError != null || _emailError != null) return;
 
     setState(() => _saving = true);
-    await Future<void>.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
 
-    ref
-        .read(sessionProvider.notifier)
-        .updateProfile(
-          ref
-              .read(currentCustomerProvider)
-              .copyWith(
-                firstName: _firstName.text.trim(),
-                lastName: _lastName.text.trim(),
-                phone: _phone.text.trim(),
-                email: email,
-                dateOfBirth: _dob,
-                gender: _gender,
-              ),
-        );
+    try {
+      // Phone and email live on the ABP identity user, which this endpoint
+      // does not own — only name, date of birth and gender are persisted here.
+      await ref
+          .read(sessionProvider.notifier)
+          .updateProfile(
+            firstName: _firstName.text.trim(),
+            lastName: _lastName.text.trim(),
+            dateOfBirth: _dob,
+            gender: _gender,
+          );
 
-    if (!mounted) return;
-    showAppToast(context, title: 'Profile updated');
-    context.canPop() ? context.pop() : context.go(Routes.profile);
+      if (!mounted) return;
+      showAppToast(context, title: 'Profile updated');
+      context.canPop() ? context.pop() : context.go(Routes.profile);
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _emailError = null;
+        _firstNameError = null;
+      });
+      showAppToast(
+        context,
+        title: 'Could not save',
+        message: error.message,
+        icon: Icons.error_outline_rounded,
+        accent: AppColors.danger600,
+      );
+    }
   }
 
   Future<void> _pickDob() async {
@@ -183,6 +195,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             label: 'Phone number',
             controller: _phone,
             keyboardType: TextInputType.phone,
+            readOnly: true,
           ),
           const SizedBox(height: 16),
           AppField(
@@ -241,20 +254,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    DropdownButtonFormField<String>(
+                    DropdownButtonFormField<CustomerGender>(
                       initialValue: _gender,
                       isDense: true,
                       hint: Text(
                         'Select',
                         style: AppText.body.copyWith(color: AppColors.slate400),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'Female', child: Text('Female')),
-                        DropdownMenuItem(value: 'Male', child: Text('Male')),
-                        DropdownMenuItem(
-                          value: 'Prefer not to say',
-                          child: Text('Prefer not to say'),
-                        ),
+                      items: [
+                        for (final g in CustomerGender.values)
+                          DropdownMenuItem(value: g, child: Text(g.label)),
                       ],
                       onChanged: (v) => setState(() => _gender = v),
                     ),

@@ -2,17 +2,18 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api/eksabli_api.dart';
 import '../../core/auth/auth_exception.dart';
 import '../../core/auth/auth_repository.dart';
+import '../../core/auth/registration.dart';
 import '../../core/auth/token_store.dart';
-import '../../core/demo/demo_data.dart';
 import '../../core/network/api_client.dart';
 import '../models/models.dart';
 
 /// Riverpod doubles as the DI container for this app — see
 /// `docs/eksabli-loyalty-platform/05-flutter-architecture.md#dependency-injection`.
-/// Every screen reads its data through a provider here, so replacing [DemoData]
-/// with real repositories later means changing these providers only.
+/// Every screen reads its data through a provider here, and every provider here
+/// reads from the API — there is no fixture data left in the running app.
 
 // ---------------------------------------------------------------------------
 // Auth infrastructure
@@ -33,10 +34,13 @@ final apiClientProvider = Provider<Dio>((ref) {
   return buildApiClient(
     tokenStore: ref.watch(tokenStoreProvider),
     refreshTokens: () => ref.read(authRepositoryProvider).refresh(),
-    onSessionLost: () =>
-        ref.read(sessionProvider.notifier).handleSessionLost(),
+    onSessionLost: () => ref.read(sessionProvider.notifier).handleSessionLost(),
   );
 });
+
+final apiProvider = Provider<EksabliApi>(
+  (ref) => EksabliApi(ref.watch(apiClientProvider)),
+);
 
 // ---------------------------------------------------------------------------
 // Session
@@ -44,9 +48,9 @@ final apiClientProvider = Provider<Dio>((ref) {
 
 /// The signed-in user, or null when logged out.
 ///
-/// Authenticates against the same OpenIddict server and the same `Eksabli_App`
-/// client the Angular app uses, via the password grant (Angular uses the
-/// authorization-code redirect because it runs in a browser).
+/// Sign-in is the OTP flow: `POST /api/app/otp/request` (or `otp/register` for
+/// a new account) sends a code, then OpenIddict's custom `otp` grant exchanges
+/// it for tokens.
 ///
 /// `build()` is async, so the app starts in [AsyncValue.loading] while a stored
 /// session is restored — the router holds on the splash screen until it
@@ -75,20 +79,30 @@ class SessionNotifier extends AsyncNotifier<Customer?> {
     }
   }
 
-  /// Throws [AuthException] so the login screen can show the server's own
-  /// message. State only becomes authenticated once the profile also loads.
-  Future<void> signIn({
-    required String username,
-    required String password,
+  /// Creates the account. The server also sends the verification code, so the
+  /// caller goes straight to the OTP screen afterwards.
+  Future<void> register(RegisterRequest request) => ref
+      .read(authRepositoryProvider)
+      .register(request, ref.read(apiClientProvider));
+
+  /// Sends a code to an existing account (the login path).
+  Future<void> requestOtp(String phoneNumber) => ref
+      .read(authRepositoryProvider)
+      .requestOtp(phoneNumber, ref.read(apiClientProvider));
+
+  /// Completes sign-in with the `otp` grant. This is what actually confirms a
+  /// freshly registered phone number server-side.
+  Future<void> verifyOtp({
+    required String phoneNumber,
+    required String code,
   }) async {
     final repository = ref.read(authRepositoryProvider);
-    await repository.signIn(username: username, password: password);
+    await repository.signInWithOtp(phoneNumber: phoneNumber, code: code);
 
     try {
-      final customer = await repository.fetchProfile(
-        ref.read(apiClientProvider),
+      state = AsyncData(
+        await repository.fetchProfile(ref.read(apiClientProvider)),
       );
-      state = AsyncData(customer);
     } on AuthException {
       // Tokens are valid but the profile call failed — don't strand the user
       // in a half-signed-in state.
@@ -96,12 +110,6 @@ class SessionNotifier extends AsyncNotifier<Customer?> {
       rethrow;
     }
   }
-
-  /// OTP sign-in is still simulated: it mints no tokens, so API calls made
-  /// afterwards will 401. Everything except the login form currently renders
-  /// from [DemoData], so this is enough to walk the flow — replace it with the
-  /// `otp` grant (already registered on the client) when wiring OtpAppService.
-  void signInSimulated() => state = AsyncData(DemoData.currentCustomer);
 
   Future<void> signOut() async {
     await ref.read(authRepositoryProvider).signOut();
@@ -111,7 +119,24 @@ class SessionNotifier extends AsyncNotifier<Customer?> {
   /// Called by the API client when a refresh fails mid-session.
   void handleSessionLost() => state = const AsyncData(null);
 
-  void updateProfile(Customer customer) => state = AsyncData(customer);
+  /// Persists a profile edit, then adopts the server's version of the record.
+  Future<void> updateProfile({
+    required String firstName,
+    required String lastName,
+    DateTime? dateOfBirth,
+    CustomerGender? gender,
+  }) async {
+    final updated = await ref
+        .read(authRepositoryProvider)
+        .updateProfile(
+          apiClient: ref.read(apiClientProvider),
+          firstName: firstName,
+          lastName: lastName,
+          dateOfBirth: dateOfBirth,
+          gender: gender,
+        );
+    state = AsyncData(updated);
+  }
 }
 
 final sessionProvider = AsyncNotifierProvider<SessionNotifier, Customer?>(
@@ -122,7 +147,7 @@ final sessionProvider = AsyncNotifierProvider<SessionNotifier, Customer?>(
 ///
 /// The router's guard means screens only build once this is a real user; the
 /// blank fallback exists so widgets never null-check, and deliberately shows
-/// nothing rather than fixture data.
+/// nothing rather than a placeholder identity.
 final currentCustomerProvider = Provider<Customer>(
   (ref) => ref.watch(sessionProvider).valueOrNull ?? Customer.empty,
 );
@@ -132,79 +157,101 @@ final isAuthenticatedProvider = Provider<bool>(
 );
 
 // ---------------------------------------------------------------------------
-// Businesses / memberships
+// Businesses
 // ---------------------------------------------------------------------------
 
-class BusinessesNotifier extends Notifier<List<Business>> {
+/// Query key for [businessSearchProvider]. A value type so Riverpod caches per
+/// distinct query instead of refetching on every rebuild.
+@immutable
+class BusinessQuery {
+  const BusinessQuery({this.text, this.categoryId});
+
+  final String? text;
+  final String? categoryId;
+
   @override
-  List<Business> build() => List.of(DemoData.businesses);
+  bool operator ==(Object other) =>
+      other is BusinessQuery &&
+      other.text == text &&
+      other.categoryId == categoryId;
 
-  void toggleFollow(String businessId) {
-    state = [
-      for (final b in state)
-        if (b.id == businessId) b.copyWith(following: !b.following) else b,
-    ];
-  }
-
-  void markJoined(String businessId) {
-    state = [
-      for (final b in state)
-        if (b.id == businessId) b.copyWith(member: true) else b,
-    ];
-  }
+  @override
+  int get hashCode => Object.hash(text, categoryId);
 }
 
-final businessesProvider =
-    NotifierProvider<BusinessesNotifier, List<Business>>(
-      BusinessesNotifier.new,
-    );
+/// Directory search. An empty query returns the whole approved directory, which
+/// is what Home's "Discover" and the Nearby screen use.
+final businessSearchProvider =
+    FutureProvider.family<List<Business>, BusinessQuery>((ref, q) async {
+      final businesses = await ref
+          .watch(apiProvider)
+          .searchBusinesses(query: q.text, categoryId: q.categoryId);
 
-final businessByIdProvider = Provider.family<Business?, String>((ref, id) {
-  final all = ref.watch(businessesProvider);
-  for (final b in all) {
-    if (b.id == id) return b;
-  }
-  return null;
+      // Membership and follow state come from other endpoints; fold them in
+      // here so every screen sees a consistent Business.
+      final memberIds = (await ref.watch(membershipsProvider.future))
+          .map((m) => m.businessId)
+          .toSet();
+      final followedIds = (await ref.watch(followedIdsProvider.future)).toSet();
+
+      return businesses
+          .map(
+            (b) => b.copyWith(
+              member: memberIds.contains(b.id),
+              following: followedIds.contains(b.id),
+            ),
+          )
+          .toList();
+    });
+
+final businessByIdProvider = FutureProvider.family<Business, String>((
+  ref,
+  tenantId,
+) async {
+  final business = await ref.watch(apiProvider).getBusiness(tenantId);
+  final memberIds = (await ref.watch(membershipsProvider.future))
+      .map((m) => m.businessId)
+      .toSet();
+  final followedIds = (await ref.watch(followedIdsProvider.future)).toSet();
+
+  return business.copyWith(
+    member: memberIds.contains(business.id),
+    following: followedIds.contains(business.id),
+  );
 });
 
-/// Categories present in the catalogue, used by Search and Nearby filters.
-final categoriesProvider = Provider<List<String>>((ref) {
+/// Distinct categories present in the directory, for the filter chips.
+final categoriesProvider = FutureProvider<List<String>>((ref) async {
+  final businesses = await ref.watch(
+    businessSearchProvider(const BusinessQuery()).future,
+  );
   final seen = <String>[];
-  for (final b in ref.watch(businessesProvider)) {
-    if (!seen.contains(b.category)) seen.add(b.category);
+  for (final b in businesses) {
+    if (b.category.isNotEmpty && !seen.contains(b.category)) {
+      seen.add(b.category);
+    }
   }
   return seen;
 });
 
-class MembershipsNotifier extends Notifier<List<Membership>> {
-  @override
-  List<Membership> build() => List.of(DemoData.memberships);
+// ---------------------------------------------------------------------------
+// Memberships & wallet
+// ---------------------------------------------------------------------------
 
-  /// Joining is a server-authoritative mutation; this only reflects the
-  /// optimistic local result of a successful join call.
-  void join(Business business) {
-    if (state.any((m) => m.businessId == business.id)) return;
-    state = [
-      ...state,
-      Membership(
-        businessId: business.id,
-        membershipId: 'mem_${state.length + 1}',
-        joinedAt: DateTime.now(),
-        status: 'Active',
-        balance: 0,
-        lifetimeEarned: 0,
-        lifetimeRedeemed: 0,
-        tier: 'Bronze',
-        tierProgressPct: 0,
-        nextTier: 'Silver',
-        pointsToNextTier: 500,
-      ),
-    ];
+class MembershipsNotifier extends AsyncNotifier<List<Membership>> {
+  @override
+  Future<List<Membership>> build() => ref.watch(apiProvider).myMemberships();
+
+  /// Joining is server-authoritative; refetch rather than guessing the result.
+  Future<void> join(String tenantId) async {
+    await ref.read(apiProvider).joinBusiness(tenantId);
+    ref.invalidateSelf();
+    await future;
   }
 }
 
 final membershipsProvider =
-    NotifierProvider<MembershipsNotifier, List<Membership>>(
+    AsyncNotifierProvider<MembershipsNotifier, List<Membership>>(
       MembershipsNotifier.new,
     );
 
@@ -212,146 +259,223 @@ final membershipForBusinessProvider = Provider.family<Membership?, String>((
   ref,
   businessId,
 ) {
-  for (final m in ref.watch(membershipsProvider)) {
+  final memberships = ref.watch(membershipsProvider).valueOrNull ?? const [];
+  for (final m in memberships) {
     if (m.businessId == businessId) return m;
   }
   return null;
 });
 
 final totalPointsProvider = Provider<int>((ref) {
-  var total = 0;
-  for (final m in ref.watch(membershipsProvider)) {
-    total += m.balance;
-  }
-  return total;
+  final memberships = ref.watch(membershipsProvider).valueOrNull ?? const [];
+  return memberships.fold(0, (sum, m) => sum + m.balance);
 });
 
-// ---------------------------------------------------------------------------
-// Points / rewards / coupons / campaigns
-// ---------------------------------------------------------------------------
+/// A membership paired with its resolved business — what the wallet renders.
+class WalletEntry {
+  const WalletEntry({required this.business, required this.membership});
 
-final transactionsProvider = Provider<List<PointTransaction>>(
-  (ref) => DemoData.transactions,
-);
+  final Business business;
+  final Membership membership;
+}
+
+final walletEntriesProvider = FutureProvider<List<WalletEntry>>((ref) async {
+  final memberships = await ref.watch(membershipsProvider.future);
+  if (memberships.isEmpty) return const [];
+
+  final businesses = await ref
+      .watch(apiProvider)
+      .lookupBusinesses(memberships.map((m) => m.businessId).toList());
+
+  return [
+    for (final m in memberships)
+      if (businesses[m.businessId] != null)
+        WalletEntry(business: businesses[m.businessId]!, membership: m),
+  ]..sort((a, b) => b.membership.balance.compareTo(a.membership.balance));
+});
 
 final transactionsForBusinessProvider =
-    Provider.family<List<PointTransaction>, String>((ref, businessId) {
-      final list = ref
-          .watch(transactionsProvider)
-          .where((t) => t.businessId == businessId)
-          .toList();
+    FutureProvider.family<List<PointTransaction>, String>((
+      ref,
+      businessId,
+    ) async {
+      final list = await ref.watch(apiProvider).transactions(businessId);
       list.sort((a, b) => b.date.compareTo(a.date));
       return list;
     });
 
-final rewardsProvider = Provider<List<Reward>>((ref) => DemoData.rewards);
+// ---------------------------------------------------------------------------
+// Rewards & coupons
+// ---------------------------------------------------------------------------
 
-final rewardsForBusinessProvider = Provider.family<List<Reward>, String>(
-  (ref, businessId) => ref
-      .watch(rewardsProvider)
-      .where((r) => r.businessId == businessId)
-      .toList(),
+final rewardsForBusinessProvider = FutureProvider.family<List<Reward>, String>(
+  (ref, businessId) => ref.watch(apiProvider).rewardCatalog(businessId),
 );
 
-final rewardByIdProvider = Provider.family<Reward?, String>((ref, id) {
-  for (final r in ref.watch(rewardsProvider)) {
-    if (r.id == id) return r;
+/// Rewards are only listed per business, so a reward is addressed by both ids.
+@immutable
+class RewardKey {
+  const RewardKey({required this.businessId, required this.rewardId});
+
+  final String businessId;
+  final String rewardId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RewardKey &&
+      other.businessId == businessId &&
+      other.rewardId == rewardId;
+
+  @override
+  int get hashCode => Object.hash(businessId, rewardId);
+}
+
+final rewardByIdProvider = FutureProvider.family<Reward?, RewardKey>((
+  ref,
+  key,
+) async {
+  final rewards = await ref.watch(
+    rewardsForBusinessProvider(key.businessId).future,
+  );
+  for (final r in rewards) {
+    if (r.id == key.rewardId) return r;
   }
   return null;
 });
 
-class CouponsNotifier extends Notifier<List<Coupon>> {
+class CouponsNotifier extends AsyncNotifier<List<Coupon>> {
   @override
-  List<Coupon> build() => List.of(DemoData.coupons);
+  Future<List<Coupon>> build() => ref.watch(apiProvider).myCoupons();
 
-  void issue(Reward reward) {
-    state = [
-      Coupon(
-        id: 'cpn_${state.length + 1}',
-        rewardId: reward.id,
-        businessId: reward.businessId,
-        code: _code(reward),
-        status: CouponStatus.redeemed,
-        issuedAt: DateTime.now(),
-        redeemedAt: DateTime.now(),
-      ),
-      ...state,
-    ];
-  }
-
-  /// Mirrors the prototype's `CB-8F3K2Q` shape: a business prefix and six
-  /// unambiguous characters (no O/0/I/1). The real codes are minted
-  /// server-side when the redemption endpoint issues the coupon.
-  String _code(Reward reward) {
-    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    final prefix = reward.businessId
-        .replaceAll(RegExp('[^0-9a-zA-Z]'), '')
-        .toUpperCase()
-        .padRight(2, 'X')
-        .substring(0, 2);
-
-    final buffer = StringBuffer();
-    var value = DateTime.now().microsecondsSinceEpoch ^ reward.id.hashCode;
-    for (var i = 0; i < 6; i++) {
-      buffer.write(alphabet[value.abs() % alphabet.length]);
-      value = value ~/ alphabet.length + 7;
-    }
-    return '$prefix-$buffer';
+  /// Redemption is server-side — it issues the coupon and debits the wallet, so
+  /// both this list and the balances are refetched.
+  Future<Coupon> redeem({
+    required String tenantId,
+    required String rewardId,
+  }) async {
+    final coupon = await ref
+        .read(apiProvider)
+        .redeemReward(tenantId: tenantId, rewardId: rewardId);
+    ref.invalidateSelf();
+    ref.invalidate(membershipsProvider);
+    return coupon;
   }
 }
 
-final couponsProvider = NotifierProvider<CouponsNotifier, List<Coupon>>(
+final couponsProvider = AsyncNotifierProvider<CouponsNotifier, List<Coupon>>(
   CouponsNotifier.new,
 );
 
-final campaignsProvider = Provider<List<Campaign>>((ref) => DemoData.campaigns);
+// ---------------------------------------------------------------------------
+// Campaigns
+// ---------------------------------------------------------------------------
 
-final activeCampaignsProvider = Provider<List<Campaign>>(
-  (ref) => ref
-      .watch(campaignsProvider)
-      .where((c) => c.status == CampaignStatus.active)
-      .toList(),
+/// Live campaigns for the businesses the customer has joined. Segment targeting
+/// is applied server-side, so this never advertises something unclaimable.
+final myCampaignsProvider = FutureProvider<List<Campaign>>(
+  (ref) => ref.watch(apiProvider).myCampaigns(),
 );
 
-final campaignsForBusinessProvider = Provider.family<List<Campaign>, String>(
-  (ref, businessId) => ref
-      .watch(activeCampaignsProvider)
-      .where((c) => c.businessId == businessId)
-      .toList(),
-);
+final campaignsForBusinessProvider =
+    FutureProvider.family<List<Campaign>, String>(
+      (ref, tenantId) => ref.watch(apiProvider).campaignsForBusiness(tenantId),
+    );
 
 // ---------------------------------------------------------------------------
 // Notifications
 // ---------------------------------------------------------------------------
 
-class NotificationsNotifier extends Notifier<List<AppNotification>> {
+class NotificationsNotifier extends AsyncNotifier<List<AppNotification>> {
   @override
-  List<AppNotification> build() {
-    final list = List.of(DemoData.notifications);
+  Future<List<AppNotification>> build() async {
+    final list = await ref.watch(apiProvider).notifications();
     list.sort((a, b) => b.sentAt.compareTo(a.sentAt));
     return list;
   }
 
-  void markRead(String id) {
-    state = [
-      for (final n in state)
+  /// Optimistic: the row greys out immediately, and the unread badge refetches.
+  Future<void> markRead(String id) async {
+    state = AsyncData([
+      for (final n in state.valueOrNull ?? const <AppNotification>[])
         if (n.id == id) n.copyWith(read: true) else n,
-    ];
+    ]);
+    await ref.read(apiProvider).markNotificationRead(id);
+    ref.invalidate(unreadCountProvider);
   }
 
-  void markAllRead() => state = [for (final n in state) n.copyWith(read: true)];
+  Future<void> markAllRead() async {
+    state = AsyncData([
+      for (final n in state.valueOrNull ?? const <AppNotification>[])
+        n.copyWith(read: true),
+    ]);
+    await ref.read(apiProvider).markAllNotificationsRead();
+    ref.invalidate(unreadCountProvider);
+  }
 }
 
 final notificationsProvider =
-    NotifierProvider<NotificationsNotifier, List<AppNotification>>(
+    AsyncNotifierProvider<NotificationsNotifier, List<AppNotification>>(
       NotificationsNotifier.new,
     );
 
-final unreadCountProvider = Provider<int>(
-  (ref) => ref.watch(notificationsProvider).where((n) => !n.read).length,
+final unreadCountProvider = FutureProvider<int>(
+  (ref) => ref.watch(apiProvider).unreadCount(),
 );
 
-final referralProvider = Provider<ReferralProgram>((ref) => DemoData.referral);
+// ---------------------------------------------------------------------------
+// Referrals & follows
+// ---------------------------------------------------------------------------
+
+final referralProvider = FutureProvider<ReferralProgram>((ref) async {
+  // A code exists per joined business, so the wallet entries drive this.
+  final entries = await ref.watch(walletEntriesProvider.future);
+  return ref
+      .watch(apiProvider)
+      .referral(entries.map((e) => e.business).toList());
+});
+
+final followedIdsProvider = FutureProvider<List<String>>(
+  (ref) => ref.watch(apiProvider).myFollowedTenantIds(),
+);
+
+/// Favourites: followed businesses, resolved to displayable records.
+final favoriteBusinessesProvider = FutureProvider<List<Business>>((ref) async {
+  final ids = await ref.watch(followedIdsProvider.future);
+  if (ids.isEmpty) return const [];
+
+  final businesses = await ref.watch(apiProvider).lookupBusinesses(ids);
+  final memberIds = (await ref.watch(membershipsProvider.future))
+      .map((m) => m.businessId)
+      .toSet();
+
+  return [
+    for (final id in ids)
+      if (businesses[id] != null)
+        businesses[id]!.copyWith(following: true, member: memberIds.contains(id)),
+  ];
+});
+
+/// Follow/unfollow, invalidating everything that renders follow state.
+final followActionsProvider = Provider<FollowActions>(
+  (ref) => FollowActions(ref),
+);
+
+class FollowActions {
+  const FollowActions(this._ref);
+
+  final Ref _ref;
+
+  Future<void> toggle(String tenantId, {required bool follow}) async {
+    final api = _ref.read(apiProvider);
+    if (follow) {
+      await api.follow(tenantId);
+    } else {
+      await api.unfollow(tenantId);
+    }
+    _ref.invalidate(followedIdsProvider);
+    _ref.invalidate(favoriteBusinessesProvider);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Preferences (Settings screen)
@@ -391,8 +515,9 @@ class PreferencesNotifier extends Notifier<AppPreferences> {
   @override
   AppPreferences build() => const AppPreferences();
 
-  void setDarkMode(bool enabled) =>
-      state = state.copyWith(themeMode: enabled ? ThemeMode.dark : ThemeMode.light);
+  void setDarkMode(bool enabled) => state = state.copyWith(
+    themeMode: enabled ? ThemeMode.dark : ThemeMode.light,
+  );
 
   void setLocale(Locale locale) => state = state.copyWith(locale: locale);
 

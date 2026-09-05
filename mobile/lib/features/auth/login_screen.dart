@@ -6,7 +6,6 @@ import '../../app/router/app_router.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_tokens.dart';
 import '../../core/auth/auth_exception.dart';
-import '../../core/config/app_config.dart';
 import '../../shared/providers/app_providers.dart';
 import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_button.dart';
@@ -14,10 +13,14 @@ import '../../shared/widgets/app_form.dart';
 
 /// Prototype: `customer/login.html`.
 ///
-/// This is a real login: it performs an OpenIddict password grant against the
-/// same auth server and the same `Eksabli_App` client the Angular app uses,
-/// then loads the profile. Failures show the server's own message rather than
-/// a generic one.
+/// Real login via the OTP path: `POST /api/app/otp/request` sends a code, then
+/// the OTP screen exchanges it through OpenIddict's custom `otp` grant.
+///
+/// The password grant is deliberately not used here. `Eksabli_App` permits it,
+/// but `RegisterCustomerDto` states the stored password authenticates nothing
+/// today — OTP is the only login path wired server-side. The password field is
+/// kept (collected at registration) so this can switch over without UI churn
+/// once the server supports it.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -27,52 +30,44 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _identifier = TextEditingController();
-  final _password = TextEditingController();
 
   String? _identifierError;
-  String? _passwordError;
 
   /// The server's message for a rejected login, shown verbatim.
   String? _formError;
-  bool _credentialsRejected = false;
-  bool _obscure = true;
-  bool _remember = true;
   bool _submitting = false;
 
   @override
   void dispose() {
     _identifier.dispose();
-    _password.dispose();
     super.dispose();
   }
 
+  static final _phonePattern = RegExp(r'^[+\d][\d\s-]{7,}$');
+
   Future<void> _submit() async {
-    final identifier = _identifier.text.trim();
-    final password = _password.text;
+    final phone = _identifier.text.trim();
 
     setState(() {
       _formError = null;
-      _credentialsRejected = false;
-      _identifierError = identifier.isEmpty ? 'Enter your phone or email.' : null;
-      _passwordError = password.isEmpty ? 'Enter your password.' : null;
+      _identifierError = _phonePattern.hasMatch(phone)
+          ? null
+          : 'Enter the phone number on your account.';
     });
-    if (_identifierError != null || _passwordError != null) return;
+    if (_identifierError != null) return;
 
     setState(() => _submitting = true);
 
     try {
-      await ref
-          .read(sessionProvider.notifier)
-          .signIn(username: identifier, password: password);
-
-      // The router's guard moves us to Home the moment the session resolves,
-      // so there is nothing to navigate to here.
+      await ref.read(sessionProvider.notifier).requestOtp(phone);
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      context.push('${Routes.otpVerify}?phone=${Uri.encodeComponent(phone)}');
     } on AuthException catch (error) {
       if (!mounted) return;
       setState(() {
         _submitting = false;
         _formError = error.message;
-        _credentialsRejected = error.isCredentialError;
       });
     } catch (error) {
       if (!mounted) return;
@@ -134,108 +129,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ],
 
               AppField(
-                label: 'Phone or email',
+                label: 'Phone number',
                 controller: _identifier,
                 hint: '+971 50 123 4567',
-                keyboardType: TextInputType.emailAddress,
+                keyboardType: TextInputType.phone,
                 errorText: _identifierError,
-              ),
-              const SizedBox(height: 16),
-              AppField(
-                label: 'Password',
-                controller: _password,
-                hint: 'Your password',
-                obscure: _obscure,
-                errorText:
-                    _passwordError ?? (_credentialsRejected ? '' : null),
-                suffix: IconButton(
-                  icon: Icon(
-                    _obscure
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    size: 18,
-                    color: palette.textMuted,
-                  ),
-                  onPressed: () => setState(() => _obscure = !_obscure),
-                ),
               ),
               const SizedBox(height: 6),
               Text(
-                'Signing in to ${AppConfig.baseUrl}',
+                "We'll text you a 6-digit code to sign in.",
                 style: AppText.small.copyWith(color: palette.textMuted),
-              ),
-              const SizedBox(height: 12),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: Checkbox(
-                          value: _remember,
-                          onChanged: (v) =>
-                              setState(() => _remember = v ?? false),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Remember me',
-                        style: AppText.body.copyWith(
-                          color: palette.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  GestureDetector(
-                    onTap: () => context.push(Routes.forgotPassword),
-                    child: Text(
-                      'Forgot password?',
-                      style: AppText.bodySemi.copyWith(
-                        color: palette.primaryOnDarkAware,
-                      ),
-                    ),
-                  ),
-                ],
               ),
               const SizedBox(height: 20),
 
               AppButton(
-                label: 'Log in',
-                loadingLabel: 'Logging in…',
+                label: 'Send code',
+                loadingLabel: 'Sending…',
                 loading: _submitting,
                 size: AppButtonSize.lg,
                 expand: true,
                 onPressed: _submit,
               ),
               const SizedBox(height: 20),
-
-              Row(
-                children: [
-                  Expanded(child: Divider(color: palette.borderSubtle)),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      'or',
-                      style: AppText.small.copyWith(color: palette.textMuted),
-                    ),
-                  ),
-                  Expanded(child: Divider(color: palette.borderSubtle)),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              AppButton(
-                label: 'Log in with OTP instead',
-                icon: Icons.smartphone_rounded,
-                variant: AppButtonVariant.secondary,
-                size: AppButtonSize.lg,
-                expand: true,
-                onPressed: () => context.push(Routes.otpVerify),
-              ),
-              const SizedBox(height: 24),
 
               Center(
                 child: Wrap(

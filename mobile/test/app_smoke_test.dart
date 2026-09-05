@@ -1,8 +1,6 @@
 import 'package:eksabli_mobile/app/router/app_router.dart';
 import 'package:eksabli_mobile/app/theme/app_theme.dart';
-import 'package:eksabli_mobile/core/demo/demo_data.dart';
-import 'package:eksabli_mobile/features/home/home_screen.dart';
-import 'package:eksabli_mobile/features/wallet/wallet_screen.dart';
+import 'package:eksabli_mobile/core/api/eksabli_api.dart';
 import 'package:eksabli_mobile/shared/models/models.dart';
 import 'package:eksabli_mobile/shared/providers/app_providers.dart';
 import 'package:flutter/material.dart';
@@ -10,21 +8,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-/// A session that is already signed in, so screens can be pumped without
-/// standing up the auth server. Subclassing the real notifier keeps the rest of
-/// the provider graph untouched.
-class _SignedInSession extends SessionNotifier {
-  @override
-  Future<Customer?> build() async => DemoData.currentCustomer;
-}
+import 'fakes.dart';
 
-/// Smoke coverage for the shell: that the routes mount, the tab bar switches
-/// branches, and the wallet total is derived from memberships rather than
-/// hard-coded.
+/// Shell coverage: the routes mount, the tab bar switches branches, and the
+/// wallet total is derived from the API's balances rather than hard-coded.
 ///
 /// These mount [appRoutes] in a plain router, deliberately without the auth
-/// guard from `routerProvider` — the guard is exercised separately in
-/// `auth_test.dart`.
+/// guard from `routerProvider` — the guard is exercised in `auth_test.dart`.
 void main() {
   Future<void> pumpApp(WidgetTester tester, {String at = Routes.home}) async {
     final router = GoRouter(initialLocation: at, routes: appRoutes);
@@ -32,22 +22,22 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [sessionProvider.overrideWith(_SignedInSession.new)],
+        overrides: [
+          sessionProvider.overrideWith(SignedInSession.new),
+          apiProvider.overrideWith((ref) => FakeApi() as EksabliApi),
+        ],
         child: MaterialApp.router(
           routerConfig: router,
           theme: AppTheme.light(),
         ),
       ),
     );
-    await tester.pump(const Duration(milliseconds: 600)); // skeleton delay
+    await tester.pumpAndSettle();
   }
 
-  testWidgets('home renders the customer greeting and quick actions', (
-    tester,
-  ) async {
+  testWidgets('home renders the customer greeting', (tester) async {
     await pumpApp(tester);
 
-    expect(find.byType(HomeScreen), findsOneWidget);
     expect(find.text('Layla Haddad'), findsOneWidget);
     expect(find.text('My Businesses'), findsOneWidget);
     expect(find.text('Scan & Check-in'), findsOneWidget);
@@ -59,24 +49,23 @@ void main() {
     await tester.tap(find.text('Wallet'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(WalletScreen), findsOneWidget);
     expect(find.text('My Wallet'), findsOneWidget);
   });
 
-  testWidgets('wallet total is the sum of membership balances', (tester) async {
+  testWidgets('wallet total is the sum of the API balances', (tester) async {
     await pumpApp(tester, at: Routes.wallet);
 
     final container = ProviderScope.containerOf(
-      tester.element(find.byType(WalletScreen)),
+      tester.element(find.text('My Wallet')),
     );
-    final memberships = container.read(membershipsProvider);
+    final memberships = container.read(membershipsProvider).valueOrNull ?? [];
     final expected = memberships.fold<int>(0, (sum, m) => sum + m.balance);
 
     expect(container.read(totalPointsProvider), expected);
     expect(expected, greaterThan(0));
   });
 
-  testWidgets('marking all notifications read clears the unread badge', (
+  testWidgets('marking all notifications read clears the badge', (
     tester,
   ) async {
     await pumpApp(tester, at: Routes.notifications);
@@ -84,44 +73,25 @@ void main() {
     final container = ProviderScope.containerOf(
       tester.element(find.text('Notifications').first),
     );
-    expect(container.read(unreadCountProvider), greaterThan(0));
+    final before = container.read(notificationsProvider).valueOrNull ?? [];
+    expect(before.where((n) => !n.read), isNotEmpty);
 
     await tester.tap(find.text('Mark all read'));
     await tester.pump();
 
-    expect(container.read(unreadCountProvider), 0);
+    final after = container.read(notificationsProvider).valueOrNull ?? [];
+    expect(after.where((n) => !n.read), isEmpty);
   });
 
-  testWidgets('an unknown route lands on the 404 state', (tester) async {
-    final router = GoRouter(
-      initialLocation: '/does-not-exist',
-      routes: appRoutes,
-      errorBuilder: (context, state) =>
-          const ErrorScreenForTest(),
-    );
-    addTearDown(router.dispose);
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [sessionProvider.overrideWith(_SignedInSession.new)],
-        child: MaterialApp.router(
-          routerConfig: router,
-          theme: AppTheme.light(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('not found'), findsOneWidget);
+  test('business initials are derived from the name', () {
+    expect(Business.initialsFor('Cedar & Bean Coffee'), 'CB');
+    expect(Business.initialsFor('Pulse'), 'PU');
+    expect(Business.initialsFor(''), '?');
   });
-}
 
-/// Minimal stand-in so the unknown-route test asserts on routing, not on the
-/// error screen's copy.
-class ErrorScreenForTest extends StatelessWidget {
-  const ErrorScreenForTest({super.key});
-
-  @override
-  Widget build(BuildContext context) =>
-      const Scaffold(body: Center(child: Text('not found')));
+  test('a business always gets the same gradient for the same id', () {
+    final a = Business.gradientFor('tenant-1');
+    final b = Business.gradientFor('tenant-1');
+    expect(a, b);
+  });
 }

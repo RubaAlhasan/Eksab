@@ -64,8 +64,12 @@ abstract final class Routes {
   static String points(String businessId) => '/points/$businessId';
   static String history(String businessId) => '/points/$businessId/history';
   static String rewards(String businessId) => '/points/$businessId/rewards';
-  static String reward(String rewardId) => '/reward/$rewardId';
-  static String redeem(String rewardId) => '/reward/$rewardId/redeem';
+  // A reward is addressed by business + reward: the catalogue endpoint is
+  // per-tenant, so the business id is needed to look one up.
+  static String reward(String businessId, String rewardId) =>
+      '/points/$businessId/rewards/$rewardId';
+  static String redeem(String businessId, String rewardId) =>
+      '/points/$businessId/rewards/$rewardId/redeem';
   static const coupons = '/coupons';
 
   // Wallet extras
@@ -118,7 +122,11 @@ final appRoutes = <RouteBase>[
     ),
     GoRoute(
       path: Routes.otpVerify,
-      builder: (context, state) => const OtpVerifyScreen(),
+      // ?phone= is set by both register and login; the `otp` grant needs the
+      // number alongside the code.
+      builder: (context, state) => OtpVerifyScreen(
+        phoneNumber: state.uri.queryParameters['phone'] ?? '',
+      ),
     ),
     GoRoute(
       path: Routes.forgotPassword,
@@ -202,18 +210,24 @@ final appRoutes = <RouteBase>[
           path: 'rewards',
           builder: (context, state) =>
               RewardsScreen(businessId: state.pathParameters['id']!),
-        ),
-      ],
-    ),
-    GoRoute(
-      path: '/reward/:id',
-      builder: (context, state) =>
-          RewardDetailsScreen(rewardId: state.pathParameters['id']!),
-      routes: [
-        GoRoute(
-          path: 'redeem',
-          builder: (context, state) =>
-              RedeemRewardScreen(rewardId: state.pathParameters['id']!),
+          routes: [
+            GoRoute(
+              path: ':rewardId',
+              builder: (context, state) => RewardDetailsScreen(
+                businessId: state.pathParameters['id']!,
+                rewardId: state.pathParameters['rewardId']!,
+              ),
+              routes: [
+                GoRoute(
+                  path: 'redeem',
+                  builder: (context, state) => RedeemRewardScreen(
+                    businessId: state.pathParameters['id']!,
+                    rewardId: state.pathParameters['rewardId']!,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ],
     ),

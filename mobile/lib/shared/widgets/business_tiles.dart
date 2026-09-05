@@ -6,7 +6,6 @@ import '../models/models.dart';
 import 'app_avatar.dart';
 import 'app_badge.dart';
 import 'app_card.dart';
-import 'app_states.dart';
 
 /// Row used by Nearby Stores, Search results, Favorites, and My Memberships:
 /// logo, name (+ optional badge), meta line, optional trailing widget.
@@ -70,30 +69,17 @@ class BusinessRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: AppText.small.copyWith(color: palette.textMuted),
                 ),
+                // No rating exists server-side. Show what does: branch
+                // count, and distance when the directory supplied it.
                 if (showRating) ...[
                   const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.star_rounded,
-                        size: 14,
-                        color: AppColors.warning500,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${business.rating}',
-                        style: AppText.small.copyWith(
-                          color: palette.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        '${business.distanceKm} km away',
-                        style: AppText.small.copyWith(
-                          color: palette.textSecondary,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    business.distanceKm == null
+                        ? '${business.branches} '
+                              '${business.branches == 1 ? 'branch' : 'branches'}'
+                        : '${business.branches} · '
+                              '${business.distanceKm!.toStringAsFixed(1)} km away',
+                    style: AppText.small.copyWith(color: palette.textSecondary),
                   ),
                 ],
               ],
@@ -162,19 +148,18 @@ class WalletRow extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    AppBadge(membership.tier),
-                    Flexible(
-                      child: Text(
-                        '${membership.pointsToNextTier} pts to '
-                        '${membership.nextTier}',
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.small.copyWith(color: palette.textMuted),
-                      ),
+                    // Tier thresholds are not exposed to customers, so there is
+                    // no "x pts to next tier" to show — only the current tier.
+                    if (membership.tier != null)
+                      AppBadge(membership.tier!)
+                    else
+                      const SizedBox.shrink(),
+                    Text(
+                      '${formatPoints(membership.lifetimeEarned)} earned',
+                      style: AppText.small.copyWith(color: palette.textMuted),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                ProgressTrack(percent: membership.tierProgressPct),
               ],
             ),
           ),

@@ -44,9 +44,26 @@ abstract final class AppConfig {
 
   static String get tokenEndpoint => '$baseUrl/connect/token';
 
-  /// ABP Account module (`AbpAccountPublic`). The Eksabli-specific
-  /// `CustomerProfileAppService` is `[RemoteService(IsEnabled = false)]`, so
-  /// it is not reachable over HTTP — this is the profile the server exposes.
+  // ---------------------------------------------------------------------
+  // Endpoints
+  //
+  // App services are `[RemoteService(IsEnabled = false)]` and exposed through
+  // explicit controllers in `src/Eksabli.HttpApi/Controllers/`, so these are
+  // hand-written routes rather than ABP's conventional API paths.
+  // ---------------------------------------------------------------------
+
+  /// `OtpController.RegisterAsync` — creates the IdentityUser + CustomerProfile
+  /// (unconfirmed) **and** sends the verification code in the same call.
+  static const registerPath = '/api/app/otp/register';
+
+  /// `OtpController.RequestOtpAsync` — sends a code to an existing account.
+  static const requestOtpPath = '/api/app/otp/request';
+
+  /// `CustomerProfileController` — first name, last name, date of birth, gender.
+  static const customerProfilePath = '/api/app/customer-profile/my';
+
+  /// ABP Account module — carries the email and phone number that the Eksabli
+  /// profile does not.
   static const myProfilePath = '/api/account/my-profile';
 
   /// True when pointed at a local dev host whose HTTPS certificate is the
