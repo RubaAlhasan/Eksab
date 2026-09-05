@@ -6,32 +6,96 @@ The customer-facing app for the Eksabli loyalty platform — a Flutter port of e
 
 ## Status
 
-All **31 customer prototype screens** are implemented. **Login is real** — it authenticates
-against the same ABP/OpenIddict server the Angular app uses. Everything else still renders from
-in-memory fixture data (`lib/core/demo/demo_data.dart`, a direct port of
-`prototype/assets/js/demo-data.js`) — see [Next steps](#next-steps).
+All **31 customer prototype screens** are implemented and read from the live API — there is no
+fixture data left in the running app. Auth is the real OTP flow against the same ABP/OpenIddict
+server the Angular portal uses.
+
+Verified end to end against a running host: register → OTP sign-in → profile → directory → join →
+wallet → campaigns → rewards → redemption → token refresh.
+
+What is still a placeholder is listed under [Deliberate stubs](#deliberate-stubs).
 
 ## Running
+
+### 1. Start the API
+
+Run it **from its own directory**. `dotnet run --project …` leaves the working directory as the
+content root, so `appsettings.json` is not found and the connection string comes back empty:
+
+```bash
+cd src/Eksabli.HttpApi.Host
+dotnet run
+```
+
+First time only, generate the dev certificate (from the repo root):
+
+```bash
+dotnet dev-certs https -v -ep openiddict.pfx -p a8a5c4df-3387-44f7-b368-e21f3f0b2f4e
+```
+
+### 2. Run the app
 
 ```bash
 cd mobile
 flutter pub get
-flutter run
-flutter analyze
-flutter test
+flutter run -d edge --web-port 4200 --no-web-resources-cdn
 ```
 
-The app talks to `https://localhost:44330` by default, so **the API host must be running**
-(`dotnet run --project src/Eksabli.HttpApi.Host`) before you can log in. On the Android emulator
-the host is reached at `10.0.2.2`, which `AppConfig` selects automatically. Point it elsewhere
-with:
+Both flags matter on web:
+
+| Flag | Why |
+|---|---|
+| `--web-port 4200` | The API's `CorsOrigins` allows exactly `http://localhost:4200`. On any other port every request is blocked by the browser. |
+| `--no-web-resources-cdn` | Otherwise CanvasKit (~7 MB) is fetched from `gstatic.com` at runtime. If that request stalls or is blocked the app shows a **blank page with nothing in the console** — the engine simply never initialises. The flag bundles CanvasKit locally instead. |
+
+`-d chrome` works the same. Neither flag applies to Android or iOS, which compile the renderer
+into the binary.
+
+For a production-shaped bundle:
+
+```bash
+flutter build web --no-web-resources-cdn
+cd build/web && python -m http.server 4200 --bind 127.0.0.1
+```
+
+### 3. Log in
+
+There is no SMS provider yet, so `NullSmsSender` writes the verification code to the `AppSmsLogs`
+table (also browsable in Admin Portal → Verification Codes):
+
+```sql
+SELECT "Message" FROM "AppSmsLogs" ORDER BY "CreationTime" DESC LIMIT 1;
+```
+
+### Pointing at another host
+
+`AppConfig` selects `10.0.2.2` automatically on the Android emulator, since `localhost` there is
+the emulator itself. Override for a device or staging:
 
 ```bash
 flutter run --dart-define=EKSABLI_API_URL=https://your-host
 ```
 
-Requires Flutter **3.47+** (Dart 3.13+), which is what this targets
-(`environment: sdk: ^3.9.0`).
+### Checks
+
+```bash
+flutter analyze
+flutter test
+```
+
+`integration_test/live_api_test.dart` runs the real widget tree against a live host and skips
+itself without a token:
+
+```bash
+flutter test integration_test/live_api_test.dart \
+  --dart-define=ACCESS_TOKEN=<token> --dart-define=TENANT_ID=<guid>
+```
+
+> **Do not run `flutter run` and `flutter test` at the same time.** Both take
+> `bin/cache/lockfile`; the second sits at 0% CPU printing *nothing*, which looks like a hang
+> rather than a wait.
+
+Requires Flutter **3.47+** (Dart 3.13+), which is what this targets (`environment: sdk: ^3.9.0`).
 
 ## Architecture
 
@@ -54,7 +118,8 @@ lib/
 │   ├── config/app_config.dart    # endpoints + OpenIddict client (mirrors Angular env)
 │   ├── auth/                     # token store, password/refresh grants, error mapping
 │   ├── network/api_client.dart   # Dio + bearer/refresh interceptors
-│   └── demo/demo_data.dart       # fixture data — the remaining API boundary
+│   ├── api/eksabli_api.dart      # every endpoint the app calls, one class
+│   └── static_content.dart       # copy with no server source (FAQs, etc.)
 ├── shared/
 │   ├── models/models.dart        # Business, Membership, Reward, Coupon, …
 │   ├── providers/app_providers.dart  # Riverpod providers (state *and* DI)
@@ -65,9 +130,9 @@ lib/
 ### State management & DI
 
 Riverpod, per the architecture doc — its provider graph doubles as the DI container, so no
-second framework (`get_it`/`injectable`) is layered on top. Screens never touch `DemoData`
-directly; they read providers, which is what makes the swap to real repositories a change in
-`app_providers.dart` rather than in 31 screens.
+second framework (`get_it`/`injectable`) is layered on top. Screens never touch `EksabliApi`
+directly; they read providers, so the HTTP surface stays in one file and tests swap it out by
+overriding a single provider (see `test/fakes.dart`).
 
 ### Design system
 
@@ -138,15 +203,19 @@ is `[RemoteService(IsEnabled = false)]`, so **date of birth and gender are not r
 HTTP** — `Customer.dateOfBirth`, `.gender` and `.memberSince` are nullable and the UI hides those
 rows rather than inventing values.
 
-### Still simulated
+### What is real
 
-**OTP** (`auth/otp_verify_screen.dart`) — the code is checked locally against `123456` and mints
-no tokens, so API calls after an OTP sign-in will 401. The client is already registered for an
-`otp` grant and the backend has an `OtpAppService`, so wiring it is a change in
-`SessionNotifier`, not in the screen.
+Registration, OTP delivery, sign-in, token refresh and sign-out all hit the server.
+`POST /api/app/otp/register` (or `otp/request`) sends a code, then OpenIddict's custom `otp`
+grant exchanges it for tokens. Tokens are held in the platform keystore, refreshed proactively
+and once more on a 401.
 
-**Register** (`auth/register_screen.dart`) — validates fully but creates no account; it flows into
-the simulated OTP step.
+The password grant is deliberately unused: `RegisterCustomerDto` stores a password that
+authenticates nothing today, so OTP is the only login path.
+
+**No SMS provider is configured yet.** `NullSmsSender` writes the code to `AppSmsLogs` instead of
+sending it — fine for development, a hard blocker for release. Choosing a provider is the one
+thing standing between this app and a live deployment.
 
 ### Dev certificate
 
@@ -205,17 +274,16 @@ drop-in:
 |---|---|---|
 | QR rendering | `shared/widgets/qr_placeholder.dart` | `qr_flutter` (API is already `seed` + `size`) |
 | Camera scanning | `wallet/qr_scanner_screen.dart` → `_ScannerFrame` | `mobile_scanner` |
-| Map view | `discovery/nearby_stores_screen.dart` → `_MapPlaceholder` | real map + PostGIS nearby-search endpoint |
-| OTP verification | `auth/otp_verify_screen.dart` | the `otp` grant + `OtpAppService` |
-| Registration | `auth/register_screen.dart` | the customer sign-up endpoint |
-| Staff redemption confirm | `rewards/redeem_reward_screen.dart` | server-side redemption endpoint |
+| Device location | `discovery/nearby_stores_screen.dart` | `geolocator`; the server already sorts by distance when given coordinates, so this is a `BusinessQuery` argument, not a new endpoint |
+| Map view | `discovery/nearby_stores_screen.dart` | a real map once a nearby-search endpoint exists |
+
+Referral codes are raw GUIDs. They work, but nobody is going to read one out loud — the server
+should mint a short human-shareable code.
 
 ## Next steps
 
-1. **API layer** — `core/network/api_client.dart` (Dio + auth/refresh interceptors) already
-   exists and is used by auth. Add per-feature `data/` repositories on top of it, then point the
-   remaining providers in `app_providers.dart` at them instead of `DemoData`. Nothing in
-   `features/` should need to change.
+1. **SMS provider** — the only hard blocker for release. Swap `NullSmsSender` for a real
+   sender; nothing in the app changes, since the client never sees the code either way.
 2. **Localization** — `ar` and `en` are already declared on `MaterialApp` and the Settings
    screen switches locale, but strings are still inline. Extract to ARB files
    (`flutter_localizations` + `intl` are already dependencies) and budget explicit RTL QA for
