@@ -6,3 +6,174 @@
     --lpx-logo: url('/images/logo/leptonxlite/logo-dark-thumbnail.png');
     background-position: left;
 }
+
+/* ===========================================================================
+   Eksabli palette for the MVC host (login, register, forgot-password, the
+   tenant-switch and language chrome the layout injects).
+
+   This file loads on every host page, which is why the theming lives here rather
+   than in a single page's `@section styles` — the tenant "switch" button and the
+   language dropdown come from the ABP layout, not from any page we own, so a
+   page-scoped rule can never reach them.
+
+   Values mirror angular/src/styles/_tokens.scss, the design system's source of
+   truth. Keep the two in sync. The Angular SPA does NOT load this file; it has its
+   own token layer.
+
+   Lepton-X Lite's MVC theme hardcodes its blue (#355dff) rather than deriving from
+   `--bs-primary`, and it ships `:hover` rules that set `background-color` directly,
+   so setting the `--bs-btn-*` variables alone leaves hover blue. The explicit
+   hover/focus/active rules below are what actually fix that, and they carry
+   `!important` only because the rules they beat do too.
+   =========================================================================== */
+:root {
+    --eks-primary: #6248e3;
+    --eks-primary-500: #7c6af0;
+    --eks-primary-700: #4f37c4;
+    --eks-primary-800: #422f9e;
+    --eks-primary-fg: #ffffff;
+    --eks-primary-ring: rgba(98, 72, 227, .25);
+
+    --eks-bg: #faf9f8;
+    --eks-surface: #ffffff;
+    --eks-surface-2: #f4f3f1;
+    --eks-border: #e9e7e5;
+    --eks-border-strong: #d5d3d0;
+    --eks-text: #191817;
+    --eks-text-muted: #726f6d;
+    --eks-surface-inverse: #191817;
+
+    --bs-primary: var(--eks-primary);
+    --bs-primary-rgb: 98, 72, 227;
+    --bs-link-color: var(--eks-primary);
+    --bs-link-color-rgb: 98, 72, 227;
+    --bs-link-hover-color: var(--eks-primary-700);
+}
+
+/* --- Filled primary: the commit action ---------------------------------- */
+.btn-primary {
+    --bs-btn-color: var(--eks-primary-fg);
+    --bs-btn-bg: var(--eks-primary);
+    --bs-btn-border-color: var(--eks-primary);
+    --bs-btn-hover-color: var(--eks-primary-fg);
+    --bs-btn-hover-bg: var(--eks-primary-700);
+    --bs-btn-hover-border-color: var(--eks-primary-700);
+    --bs-btn-focus-shadow-rgb: 98, 72, 227;
+    --bs-btn-active-color: var(--eks-primary-fg);
+    --bs-btn-active-bg: var(--eks-primary-800);
+    --bs-btn-active-border-color: var(--eks-primary-800);
+    --bs-btn-disabled-color: var(--eks-primary-fg);
+    --bs-btn-disabled-bg: var(--eks-primary);
+    --bs-btn-disabled-border-color: var(--eks-primary);
+    background-color: var(--eks-primary);
+    border-color: var(--eks-primary);
+    color: var(--eks-primary-fg);
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:focus-visible {
+    background-color: var(--eks-primary-700) !important;
+    border-color: var(--eks-primary-700) !important;
+    color: var(--eks-primary-fg) !important;
+}
+
+.btn-primary:active,
+.btn-primary.active,
+.btn-primary:not(:disabled):not(.disabled):active {
+    background-color: var(--eks-primary-800) !important;
+    border-color: var(--eks-primary-800) !important;
+    color: var(--eks-primary-fg) !important;
+}
+
+.btn-primary:focus-visible {
+    box-shadow: 0 0 0 .25rem var(--eks-primary-ring) !important;
+}
+
+/* --- Outline primary ----------------------------------------------------- */
+.btn-outline-primary {
+    --bs-btn-color: var(--eks-primary);
+    --bs-btn-border-color: var(--eks-primary);
+    --bs-btn-hover-color: var(--eks-primary-fg);
+    --bs-btn-hover-bg: var(--eks-primary);
+    --bs-btn-hover-border-color: var(--eks-primary);
+    --bs-btn-active-color: var(--eks-primary-fg);
+    --bs-btn-active-bg: var(--eks-primary);
+    --bs-btn-active-border-color: var(--eks-primary);
+    color: var(--eks-primary);
+    border-color: var(--eks-primary);
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:active {
+    background-color: var(--eks-primary) !important;
+    border-color: var(--eks-primary) !important;
+    color: var(--eks-primary-fg) !important;
+}
+
+/* --- Secondary is a QUIET action (Cancel, dismiss), never a second brand
+       colour. Lepton paints it #6c5dd3 — a purple only dE 5.6 from our primary,
+       which made Cancel and Submit look like the same button. ---------------- */
+.btn-secondary {
+    --bs-btn-color: var(--eks-text);
+    --bs-btn-bg: var(--eks-surface);
+    --bs-btn-border-color: var(--eks-border-strong);
+    --bs-btn-hover-color: var(--eks-text);
+    --bs-btn-hover-bg: var(--eks-surface-2);
+    --bs-btn-hover-border-color: var(--eks-text-muted);
+    --bs-btn-active-color: var(--eks-text);
+    --bs-btn-active-bg: var(--eks-surface-2);
+    --bs-btn-active-border-color: var(--eks-text-muted);
+    background-color: var(--eks-surface);
+    border-color: var(--eks-border-strong);
+    color: var(--eks-text);
+}
+
+.btn-secondary:hover,
+.btn-secondary:active {
+    background-color: var(--eks-surface-2) !important;
+    border-color: var(--eks-text-muted) !important;
+    color: var(--eks-text) !important;
+}
+
+/* --- Links, form focus, checkables --------------------------------------- */
+a {
+    color: var(--eks-primary);
+}
+
+a:hover {
+    color: var(--eks-primary-700);
+}
+
+.btn-link {
+    --bs-btn-color: var(--eks-primary);
+    --bs-btn-hover-color: var(--eks-primary-700);
+    color: var(--eks-primary);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--eks-primary);
+    box-shadow: 0 0 0 3px var(--eks-primary-ring);
+}
+
+.form-check-input:checked {
+    background-color: var(--eks-primary);
+    border-color: var(--eks-primary);
+}
+
+.form-check-input:focus {
+    border-color: var(--eks-primary);
+    box-shadow: 0 0 0 .25rem var(--eks-primary-ring);
+}
+
+/* --- Utilities Lepton hardcodes with !important -------------------------- */
+.text-primary {
+    color: var(--eks-primary) !important;
+}
+
+.bg-primary,
+.badge.bg-primary {
+    background-color: var(--eks-primary) !important;
+    color: var(--eks-primary-fg) !important;
+}

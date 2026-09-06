@@ -112,13 +112,13 @@ class NotificationsScreen extends ConsumerWidget {
                               color: n.read
                                   ? null
                                   : (palette.isDark
-                                        ? const Color(0x0D6248E3)
-                                        : const Color(0x80F4F3FF)),
+                                        ? AppColors.primary600.withValues(alpha: 0.05)
+                                        : AppColors.primary50.withValues(alpha: 0.50)),
                               border: n.read
                                   ? null
                                   : Border.all(
                                       color: palette.isDark
-                                          ? const Color(0x336248E3)
+                                          ? AppColors.primary600.withValues(alpha: 0.20)
                                           : AppColors.primary100,
                                     ),
                               onTap: n.read

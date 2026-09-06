@@ -72,13 +72,19 @@
 @section styles
     {
     <style>
+        /* Colour tokens (--eks-*) come from wwwroot/global-styles.css, which loads on every
+           host page. They are NOT redeclared here: the tenant-switch and language chrome
+           on this screen are injected by the ABP layout, so anything page-scoped misses
+           them — that's why the palette and the button overrides live globally. Only the
+           layout takeover below is specific to this page. */
+
         /* ---- Layout takeover: turn the real .col-md-8.col-lg-5.mx-auto (logo + tenant/language card
            + this page's own form, in that real DOM order) into the right-hand "form" column, and this
            page's own .eks-login__brand (position: fixed) into the left-hand "brand" column. Scoped to
            this page only via @@section styles' own per-page rendering — never touches Register/
            ForgotPassword/etc. */
         body.abp-account-layout {
-            background: #f7f8fb;
+            background: var(--eks-bg);
         }
 
         body.abp-account-layout .lpx-content-container,
@@ -109,7 +115,7 @@
             flex-direction: column;
             justify-content: center;
             padding: 3rem clamp(1.5rem, 5vw, 5rem);
-            background: #fff;
+            background: var(--eks-surface);
         }
 
         .eks-login__brand {
@@ -122,11 +128,11 @@
             flex-direction: column;
             justify-content: space-between;
             padding: clamp(1.5rem, 4vw, 3.5rem);
-            color: #fff;
-            background: linear-gradient(160deg, #2b4fd6 0%, #22389c 55%, #0f172a 100%);
+            color: var(--eks-primary-fg);
+            background: linear-gradient(160deg, var(--eks-primary-500) 0%, var(--eks-primary-800) 55%, var(--eks-surface-inverse) 100%);
             background-image:
                 radial-gradient(circle, rgba(255,255,255,.08) 1px, transparent 1px),
-                linear-gradient(160deg, #2b4fd6 0%, #22389c 55%, #0f172a 100%);
+                linear-gradient(160deg, var(--eks-primary-500) 0%, var(--eks-primary-800) 55%, var(--eks-surface-inverse) 100%);
             background-size: 24px 24px, auto;
             overflow: hidden;
         }
@@ -231,8 +237,8 @@
             width: 2.25rem;
             height: 2.25rem;
             border-radius: .75rem;
-            background: var(--bs-primary, #355dff);
-            color: #fff;
+            background: var(--eks-primary);
+            color: var(--eks-primary-fg);
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -267,7 +273,7 @@
         /* ---- This page's own content ---- */
         .eks-login__eyebrow {
             font-size: .8125rem;
-            color: #6b7280;
+            color: var(--eks-text-muted);
             margin: 0 0 .25rem;
         }
 
@@ -293,16 +299,17 @@
         }
 
         .eks-login__form .input-group .btn-secondary {
-            background: #fff;
-            border-color: #dee2e6;
+            background: var(--eks-surface);
+            border-color: var(--eks-border-strong);
             border-inline-start: none;
-            color: #6b7280;
+            color: var(--eks-text-muted);
         }
 
         .eks-login__submit {
             border-radius: .5rem;
             font-weight: 700;
         }
+
 
         @@media (max-width: 991.98px) {
             .eks-login__brand {

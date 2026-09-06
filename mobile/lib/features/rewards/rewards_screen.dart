@@ -43,7 +43,7 @@ class RewardsScreen extends ConsumerWidget {
             child: AppCard(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               color: palette.isDark
-                  ? const Color(0x1F6248E3)
+                  ? AppColors.primary600.withValues(alpha: 0.12)
                   : AppColors.primary50,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

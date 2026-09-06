@@ -45,22 +45,62 @@
   --eks-primary-ring: rgba(98, 72, 227, 0.25);
 
   // ---------------------------------------------------------------------------
-  // Neutral ramp — a warm gray, lightness-matched step-for-step to the Tailwind
-  // `slate` it replaces (max drift 1.9% relative luminance), so this is a pure hue
-  // shift: nothing gets visually heavier or lighter, it just stops fighting the
-  // violet accent the way a blue-gray does.
+  // Secondary ramp — magenta. There is room in this system for exactly ONE more
+  // saturated brand hue, and this is it: a full sRGB gamut search for a colour that
+  // is AA on white, >=3:1 on the dark surface, and far from BOTH the four status
+  // colours and the violet primary converges on a narrow band at hue ~333deg. Every
+  // other candidate reads as "warning" (clay/brass, dE 10.8), "error" (coral/rose,
+  // dE 6.3), "success" (teal/forest, dE 6.8) or "just the primary again" (indigo,
+  // dE 7.3). Retiring `info` to free the blue quadrant does not change the answer.
+  //
+  // Verified: 600 is 5.99:1 on white and carries white text at 5.99:1; dark mode
+  // lifts to 400 at 4.64:1 on the dark surface. dE 20.4 from the nearest status
+  // colour, 19.8 from the primary — both clear of the 15 "users will conflate them"
+  // floor.
+  //
+  // ROLE: brand moments that are neither an action nor a status — rewards earned,
+  // tier-up, referral, campaign highlights. It is NOT a second primary: a button
+  // is still `--eks-primary`. Currently exercised by the mobile customer app; the
+  // portals define it for parity but deliberately don't repaint anything with it.
   // ---------------------------------------------------------------------------
-  --eks-neutral-50: #faf9f7;
-  --eks-neutral-100: #f5f3ef;
-  --eks-neutral-200: #ebe7e1;
-  --eks-neutral-300: #d8d3ca;
-  --eks-neutral-400: #a7a196;
-  --eks-neutral-500: #756f66;
-  --eks-neutral-600: #5b564d;
-  --eks-neutral-700: #433e37;
-  --eks-neutral-800: #2c2823;
-  --eks-neutral-900: #1b1815;
-  --eks-neutral-950: #0d0b09;
+  --eks-secondary-50: #fef0fb;
+  --eks-secondary-100: #ffe1f8;
+  --eks-secondary-200: #f9bfee;
+  --eks-secondary-300: #ec94de;
+  --eks-secondary-400: #da64ca;
+  --eks-secondary-500: #c73bb7;
+  --eks-secondary-600: #af1da0;
+  --eks-secondary-700: #8d1281;
+  --eks-secondary-800: #6f0c66;
+  --eks-secondary-900: #560b4e;
+
+  --eks-secondary: var(--eks-secondary-600);
+  --eks-secondary-fg: #ffffff; // 5.99:1 on --eks-secondary
+  --eks-secondary-subtle-bg: var(--eks-secondary-100);
+  --eks-secondary-subtle-fg: var(--eks-secondary-800);
+
+  // ---------------------------------------------------------------------------
+  // Neutral ramp — a warm gray, lightness-matched step-for-step to the Tailwind `slate`
+  // it replaces (max drift 1.9% relative luminance), so this is a pure hue shift:
+  // nothing gets visually heavier or lighter, it just stops fighting the violet accent
+  // the way a blue-gray does.
+  //
+  // Chroma is deliberately held at ~0.005 OKLCH (Tailwind `stone` territory), NOT the
+  // ~0.015 a naive warm ramp lands on. Above roughly 0.010 these stop reading as "gray"
+  // and start reading as BEIGE — which showed up immediately on the one surface where a
+  // neutral has to look neutral: the Cancel button sitting on a white modal.
+  // ---------------------------------------------------------------------------
+  --eks-neutral-50: #faf9f8;
+  --eks-neutral-100: #f4f3f1;
+  --eks-neutral-200: #e9e7e5;
+  --eks-neutral-300: #d5d3d0;
+  --eks-neutral-400: #a4a19e;
+  --eks-neutral-500: #726f6d;
+  --eks-neutral-600: #585654;
+  --eks-neutral-700: #403e3c;
+  --eks-neutral-800: #2a2827;
+  --eks-neutral-900: #191817;
+  --eks-neutral-950: #0c0b0a;
 
   // ---------------------------------------------------------------------------
   // Semantic surfaces & ink (light). Contrast ratios verified against the surface
@@ -78,7 +118,17 @@
   --eks-text-faint: var(--eks-neutral-400);
   --eks-text-on-dark: var(--eks-neutral-100);
 
-  --eks-overlay: rgba(27, 24, 21, 0.5);
+  // Inverse surface — the warm near-black used as a deliberate BRAND surface rather
+  // than only as text: dark hero bands, a stats strip, a card footer, the membership
+  // card's reward shelf. Violet + near-black + cream is what reads premium here; a
+  // third saturated hue is not. Fixed in both themes (it is a surface *choice*, not a
+  // theme-dependent role), so `--eks-text-on-inverse` stays legible either way.
+  --eks-surface-inverse: var(--eks-neutral-900);
+  --eks-surface-inverse-2: var(--eks-neutral-800);
+  --eks-text-on-inverse: var(--eks-neutral-100); // 15.8:1
+  --eks-text-on-inverse-muted: var(--eks-neutral-400); // 6.89:1
+
+  --eks-overlay: rgba(25, 24, 23, 0.5);
 
   // ---------------------------------------------------------------------------
   // Status — reserved. These four mean good / warning / serious / info and are never
@@ -142,9 +192,9 @@
   --eks-radius-lg: 1rem;
   --eks-radius-pill: 999px;
 
-  --eks-shadow-sm: 0 1px 2px 0 rgba(27, 24, 21, 0.05);
-  --eks-shadow-md: 0 1px 2px 0 rgba(27, 24, 21, 0.05), 0 8px 24px -8px rgba(27, 24, 21, 0.12);
-  --eks-shadow-lg: 0 2px 4px 0 rgba(27, 24, 21, 0.05), 0 20px 48px -12px rgba(27, 24, 21, 0.2);
+  --eks-shadow-sm: 0 1px 2px 0 rgba(25, 24, 23, 0.05);
+  --eks-shadow-md: 0 1px 2px 0 rgba(25, 24, 23, 0.05), 0 8px 24px -8px rgba(25, 24, 23, 0.12);
+  --eks-shadow-lg: 0 2px 4px 0 rgba(25, 24, 23, 0.05), 0 20px 48px -12px rgba(25, 24, 23, 0.2);
 }
 
 // =============================================================================
@@ -168,6 +218,17 @@
   --eks-primary-active: var(--eks-primary-300);
   --eks-primary-subtle-bg: rgba(98, 72, 227, 0.18);
   --eks-primary-subtle-fg: var(--eks-primary-300);
+
+  --eks-secondary: var(--eks-secondary-400); // 4.64:1 on the dark surface
+  --eks-secondary-fg: var(--eks-neutral-950);
+  --eks-secondary-subtle-bg: rgba(175, 29, 160, 0.22);
+  --eks-secondary-subtle-fg: var(--eks-secondary-300);
+
+  // The inverse surface has to invert too, or it vanishes into the dark ground.
+  --eks-surface-inverse: var(--eks-neutral-50);
+  --eks-surface-inverse-2: var(--eks-neutral-200);
+  --eks-text-on-inverse: var(--eks-neutral-900);
+  --eks-text-on-inverse-muted: var(--eks-neutral-500);
 
   --eks-overlay: rgba(13, 11, 9, 0.6);
 

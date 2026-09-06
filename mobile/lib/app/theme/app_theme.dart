@@ -51,7 +51,10 @@ abstract final class AppTheme {
         filled: true,
         fillColor: p.isDark ? AppColors.slate800 : Colors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        hintStyle: AppText.body.copyWith(color: AppColors.slate400),
+        // p.textMuted, not slate400: in light mode slate400 is 2.7:1 on the field
+        // fill — below AA — and a placeholder is text. The palette already picks the
+        // AA-passing step per brightness (slate500 light / slate400 dark).
+        hintStyle: AppText.body.copyWith(color: p.textMuted),
         border: _inputBorder(p.border),
         enabledBorder: _inputBorder(p.isDark ? AppColors.slate700 : AppColors.slate200),
         focusedBorder: _inputBorder(AppColors.primary600, width: 1.5),

@@ -34,7 +34,7 @@ class EmptyState extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: palette.isDark
-                  ? const Color(0x1F6248E3)
+                  ? AppColors.primary600.withValues(alpha: 0.12)
                   : AppColors.primary50,
               borderRadius: AppRadius.rLg,
             ),

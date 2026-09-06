@@ -45,7 +45,7 @@ class PillTabs extends StatelessWidget {
             style: AppText.smallSemi.copyWith(
               fontSize: 13,
               color: active
-                  ? (isDark ? const Color(0xFFF1F5F9) : AppColors.primary900)
+                  ? (isDark ? AppColors.slate100 : AppColors.primary900)
                   : palette.textMuted,
             ),
           ),
@@ -180,7 +180,7 @@ class FilterChipsRow extends StatelessWidget {
                 style: AppText.smallSemi.copyWith(
                   fontSize: 13,
                   color: active
-                      ? (isDark ? const Color(0xFFF1F5F9) : AppColors.primary900)
+                      ? (isDark ? AppColors.slate100 : AppColors.primary900)
                       : palette.textMuted,
                 ),
               ),

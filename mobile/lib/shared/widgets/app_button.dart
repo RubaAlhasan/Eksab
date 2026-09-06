@@ -45,7 +45,7 @@ class AppButton extends StatelessWidget {
       AppButtonVariant.primary => (AppColors.primary600, Colors.white, null),
       AppButtonVariant.secondary => (
         isDark ? AppColors.slate800 : Colors.white,
-        isDark ? const Color(0xFFF1F5F9) : AppColors.slate800,
+        isDark ? AppColors.slate100 : AppColors.slate800,
         isDark ? AppColors.slate700 : AppColors.slate200,
       ),
       AppButtonVariant.outline => (
@@ -168,7 +168,7 @@ class AppIconButton extends StatelessWidget {
     final (Color bg, Color fg, Color? borderColor) = switch (variant) {
       AppButtonVariant.secondary => (
         isDark ? AppColors.slate800 : Colors.white,
-        isDark ? const Color(0xFFF1F5F9) : AppColors.slate800,
+        isDark ? AppColors.slate100 : AppColors.slate800,
         isDark ? AppColors.slate700 : AppColors.slate200,
       ),
       _ => (

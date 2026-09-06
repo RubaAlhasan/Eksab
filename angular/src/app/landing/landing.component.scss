@@ -1,18 +1,27 @@
+// The landing page is the signed-out home page — the first thing anyone sees — so it now
+// runs on the product palette rather than the teal/paper/gold look it shipped with. Its own
+// `--paper`/`--ink`/`--brand` names are kept (the ~200 usages below already read them, and
+// they carry page-specific meaning), but every VALUE now comes from the design system in
+// src/styles/_tokens.scss. Contrast re-verified against the new paper: ink 16.9:1,
+// ink-muted 4.7:1, brand 5.6:1, gold/secondary 5.7:1 — all AA.
 :host {
-  --paper: #F7F4EC;
-  --paper-raised: #FFFFFF;
-  --ink: #14231F;
-  --ink-muted: #5C6B64;
-  --ink-faint: #93A099;
-  --brand: #0F5C52;
-  --brand-soft: #E3EFEA;
-  --gold: #B87F1E;
-  --gold-soft: #F6EAD2;
-  --line: #E3E0D2;
-  --shadow: 220 25% 10%;
-  --tenant-t1: #1E7D5A; --tenant-t1-soft: #E1F0E7;
-  --tenant-t2: #C1652E; --tenant-t2-soft: #F7E7DA;
-  --tenant-t3: #B0473F; --tenant-t3-soft: #F5E2DF;
+  --paper: #faf9f8;          // --eks-neutral-50
+  --paper-raised: #ffffff;   // --eks-surface
+  --ink: #191817;            // --eks-text
+  --ink-muted: #726f6d;      // --eks-text-muted
+  --ink-faint: #a4a19e;      // --eks-text-faint — 2.4:1, decorative only, never body copy
+  --brand: #6248e3;          // --eks-primary
+  --brand-soft: #ebe9fe;     // --eks-primary-100
+  // `--gold` keeps its name but is now the system's sanctioned secondary (magenta): a
+  // marketing accent that is neither an action nor a status. Gold read as `warning`.
+  --gold: #af1da0;           // --eks-secondary
+  --gold-soft: #ffe1f8;      // --eks-secondary-100
+  --line: #e9e7e5;           // --eks-border
+  --shadow: 30 8% 10%;
+  // Demo-tenant identity swatches — categorical, so they take the chart slots in order.
+  --tenant-t1: #2a78d6; --tenant-t1-soft: #e3eefb;
+  --tenant-t2: #eb6834; --tenant-t2-soft: #fceae2;
+  --tenant-t3: #1baf7a; --tenant-t3-soft: #e0f4ed;
   --font-sans: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-display: ui-rounded, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", "Roboto Mono", monospace;
@@ -25,20 +34,21 @@
   line-height: 1.5;
 }
 
+// Dark steps are SELECTED for the dark ground, not an automatic flip of the light values.
 :host-context(.lpx-theme-dark) {
-  --paper: #0B120F;
-  --paper-raised: #131F1B;
-  --ink: #EDF3F0;
-  --ink-muted: #92A69E;
-  --ink-faint: #57685F;
-  --brand: #4FD9BF;
-  --brand-soft: #163029;
-  --gold: #E8B84B;
-  --gold-soft: #2B2313;
-  --line: #22322C;
-  --tenant-t1: #49B98C; --tenant-t1-soft: #17302A;
-  --tenant-t2: #E08A54; --tenant-t2-soft: #33241A;
-  --tenant-t3: #E0827A; --tenant-t3-soft: #322220;
+  --paper: #191817;          // --eks-neutral-900
+  --paper-raised: #2a2827;   // --eks-neutral-800
+  --ink: #f4f3f1;            // 15.99:1
+  --ink-muted: #a4a19e;      // 6.90:1 — the 400 step IS AA on a dark ground
+  --ink-faint: #726f6d;
+  --brand: #9d8ff8;          // --eks-primary-400, 6.52:1
+  --brand-soft: #2a2140;
+  --gold: #da64ca;           // --eks-secondary-400, 5.62:1
+  --gold-soft: #3a1636;
+  --line: #403e3c;
+  --tenant-t1: #3987e5; --tenant-t1-soft: #16283c;
+  --tenant-t2: #d95926; --tenant-t2-soft: #3a2118;
+  --tenant-t3: #199e70; --tenant-t3-soft: #122c24;
 }
 
 * { box-sizing: border-box; }

@@ -16,9 +16,21 @@
 // Semantic colors (success / warning / danger / info) are left alone: they carry
 // meaning, not brand.
 // ---------------------------------------------------------------------------
+// `.confirmation` is in this list because ABP's own ConfirmationService appends its dialog
+// to <body>, OUTSIDE either portal shell — so a shell-scoped rule never reaches it, and it
+// kept rendering in Lepton-X's blue while the portal around it was violet. It is triggered
+// from portal pages, so it counts as app chrome rather than stock ABP chrome.
+//
+// Known limitation: dark mode is a component-local `.dark` class on each shell root (see
+// admin-layout.component.ts's `darkMode` signal), never on <html>, so an overlay outside the
+// shell cannot follow it. The confirmation dialog therefore always renders light. Fixing that
+// properly means hoisting the dark toggle to the document root — a separate change.
 .eks-admin-shell,
-.eks-biz-shell {
+.eks-biz-shell,
+.confirmation {
   --bs-primary: var(--eks-primary);
+  --bs-secondary: var(--eks-text-muted);
+  --bs-secondary-rgb: 117, 111, 102;
   --bs-primary-rgb: 98, 72, 227;
   --bs-primary-text-emphasis: var(--eks-primary-subtle-fg);
   --bs-primary-bg-subtle: var(--eks-primary-subtle-bg);
@@ -47,6 +59,61 @@
     --bs-btn-disabled-color: var(--eks-primary-fg);
     --bs-btn-disabled-bg: var(--eks-primary);
     --bs-btn-disabled-border-color: var(--eks-primary);
+  }
+
+  // ---------------------------------------------------------------------------
+  // The FOURTH primary: Lepton-X's `--bs-secondary` is #6c5dd3, a purple only dE 5.6
+  // from our own #6248e3 — far below the 15 at which people stop telling two colours
+  // apart. Because `.btn-secondary` is what every modal here uses for Cancel, that
+  // rendered Cancel as a solid purple button sitting next to a solid purple Submit.
+  //
+  // The fix is hierarchy, not palette: a dismissive action should be QUIET — a
+  // neutral surface with a border — so the single saturated button on screen is the
+  // one that commits. Giving Cancel its own brand hue would keep the "two loud
+  // buttons" problem and just change its colour.
+  // ---------------------------------------------------------------------------
+  .btn-secondary {
+    --bs-btn-color: var(--eks-text);
+    --bs-btn-bg: var(--eks-surface);
+    --bs-btn-border-color: var(--eks-border-strong);
+    --bs-btn-hover-color: var(--eks-text);
+    --bs-btn-hover-bg: var(--eks-surface-2);
+    --bs-btn-hover-border-color: var(--eks-text-faint);
+    --bs-btn-focus-shadow-rgb: 117, 111, 102;
+    --bs-btn-active-color: var(--eks-text);
+    --bs-btn-active-bg: var(--eks-surface-2);
+    --bs-btn-active-border-color: var(--eks-text-faint);
+    --bs-btn-disabled-color: var(--eks-text-muted);
+    --bs-btn-disabled-bg: var(--eks-surface);
+    --bs-btn-disabled-border-color: var(--eks-border);
+  }
+
+  // Tertiary actions (row-level "View"/"Edit", filter toggles) — 23 call sites. Same
+  // reasoning: neutral, so they don't compete with the page's real primary action.
+  .btn-outline-secondary {
+    --bs-btn-color: var(--eks-text-muted);
+    --bs-btn-border-color: var(--eks-border-strong);
+    --bs-btn-hover-color: var(--eks-text);
+    --bs-btn-hover-bg: var(--eks-surface-2);
+    --bs-btn-hover-border-color: var(--eks-text-faint);
+    --bs-btn-focus-shadow-rgb: 117, 111, 102;
+    --bs-btn-active-color: var(--eks-text);
+    --bs-btn-active-bg: var(--eks-surface-2);
+    --bs-btn-active-border-color: var(--eks-text-faint);
+    --bs-btn-disabled-color: var(--eks-text-faint);
+    --bs-btn-disabled-border-color: var(--eks-border);
+  }
+
+  // Same purple leaks through the utility classes; Lepton sets these `!important`
+  // with a hardcoded hex, so there is no variable to override instead.
+  .text-secondary {
+    color: var(--eks-text-muted) !important;
+  }
+
+  .bg-secondary,
+  .badge.bg-secondary {
+    background-color: var(--eks-surface-2) !important;
+    color: var(--eks-text) !important;
   }
 
   .btn-outline-primary {
@@ -98,6 +165,81 @@
   .progress {
     --bs-progress-bar-bg: var(--eks-primary);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Secondary-accent utilities. The magenta `--eks-secondary` exists as a token, but a
+// token nobody can reach gets hardcoded instead — so these are the sanctioned way to
+// use it, mirroring `AppTone.secondary` in the Flutter app (shared/widgets/app_badge.dart).
+//
+// FOR: celebratory / brand moments — points earned, reward unlocked, tier-up, referral
+// paid out, a campaign highlight. Those had no colour of their own, so they were
+// borrowing either a status tone (which means good/bad) or the primary (which means
+// "actionable").
+//
+// NOT FOR: buttons (still `.btn-primary`), and not for anything that means good or bad
+// (still `.badge.bg-success` / `.text-danger` / …). It is an accent, not a third status.
+// ---------------------------------------------------------------------------
+.eks-accent {
+  color: var(--eks-secondary);
+}
+
+.eks-accent-bg {
+  background-color: var(--eks-secondary);
+  color: var(--eks-secondary-fg);
+}
+
+.eks-badge-accent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--eks-radius-pill);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  background-color: var(--eks-secondary-subtle-bg);
+  color: var(--eks-secondary-subtle-fg);
+}
+
+// Pale wash for a celebratory panel (a "you earned it" card), rather than a solid fill.
+.eks-accent-surface {
+  background-color: var(--eks-secondary-subtle-bg);
+  border: 1px solid var(--eks-secondary-200);
+  color: var(--eks-text);
+}
+
+.confirmation {
+  .confirmation-dialog {
+    background: var(--eks-surface);
+    border-radius: var(--eks-radius-lg);
+    box-shadow: var(--eks-shadow-lg);
+    color: var(--eks-text);
+  }
+
+  .confirmation-dialog .message {
+    color: var(--eks-text-muted);
+  }
+
+  // Dismissive action goes quiet, so the one saturated button is the one that commits.
+  #cancel {
+    --bs-btn-color: var(--eks-text);
+    --bs-btn-bg: var(--eks-surface);
+    --bs-btn-border-color: var(--eks-border-strong);
+    --bs-btn-hover-color: var(--eks-text);
+    --bs-btn-hover-bg: var(--eks-surface-2);
+    --bs-btn-hover-border-color: var(--eks-text-faint);
+    --bs-btn-active-color: var(--eks-text);
+    --bs-btn-active-bg: var(--eks-surface-2);
+    --bs-btn-active-border-color: var(--eks-text-faint);
+  }
+
+  // The severity glyph is a status signal — keep it on the status tokens, not the brand.
+  .icon-container.warning .icon { color: var(--eks-warning); }
+  .icon-container.error .icon { color: var(--eks-danger); }
+  .icon-container.success .icon { color: var(--eks-success); }
+  .icon-container.info .icon { color: var(--eks-info); }
 }
 
 // ---------------------------------------------------------------------------

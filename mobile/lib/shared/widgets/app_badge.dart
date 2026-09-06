@@ -3,22 +3,35 @@ import 'package:flutter/material.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_tokens.dart';
 
-/// Tone shared by badges and alerts — matches the prototype's
-/// `badge-primary / -success / -warning / -danger / -info / -neutral`.
-enum AppTone { primary, success, warning, danger, info, neutral }
+/// Tone shared by badges and alerts.
+///
+/// [reward] is the brand SECONDARY (magenta) and exists so that celebratory moments —
+/// points earned, a reward unlocked, a tier-up, a referral paid out — have a sanctioned
+/// colour of their own. Before it existed the only options were a status tone (which
+/// means something else) or [primary] (which means "actionable"), so those moments were
+/// borrowing colours that already had jobs.
+///
+/// It is NOT a second [primary]: a button stays [primary]. And it is not a status —
+/// nothing about it means good/bad, so it never replaces [success] or [danger].
+enum AppTone { primary, secondary, success, warning, danger, info, neutral }
+
+/// Reads better at call sites than `AppTone.secondary` for what this tone is actually for.
+const AppTone reward = AppTone.secondary;
 
 extension AppToneColors on AppTone {
   Color background(bool isDark) => switch (this) {
-    AppTone.primary => isDark ? const Color(0x2E6248E3) : AppColors.primary100,
-    AppTone.success => isDark ? const Color(0x2610B981) : AppColors.success100,
-    AppTone.warning => isDark ? const Color(0x26F59E0B) : AppColors.warning100,
-    AppTone.danger => isDark ? const Color(0x26EF4444) : AppColors.danger100,
-    AppTone.info => isDark ? const Color(0x260EA5E9) : AppColors.info100,
+    AppTone.primary => isDark ? AppColors.primary600.withValues(alpha: 0.18) : AppColors.primary100,
+    AppTone.secondary => isDark ? AppColors.secondary600.withValues(alpha: 0.22) : AppColors.secondary100,
+    AppTone.success => isDark ? AppColors.success500.withValues(alpha: 0.15) : AppColors.success100,
+    AppTone.warning => isDark ? AppColors.warning500.withValues(alpha: 0.15) : AppColors.warning100,
+    AppTone.danger => isDark ? AppColors.danger500.withValues(alpha: 0.15) : AppColors.danger100,
+    AppTone.info => isDark ? AppColors.info500.withValues(alpha: 0.15) : AppColors.info100,
     AppTone.neutral => isDark ? AppColors.slate800 : AppColors.slate100,
   };
 
   Color foreground(bool isDark) => switch (this) {
     AppTone.primary => isDark ? AppColors.primary300 : AppColors.primary700,
+    AppTone.secondary => isDark ? AppColors.secondary300 : AppColors.secondary800,
     AppTone.success => isDark ? AppColors.success300 : AppColors.success700,
     AppTone.warning => isDark ? AppColors.warning300 : AppColors.warning700,
     AppTone.danger => isDark ? AppColors.danger300 : AppColors.danger700,
@@ -28,25 +41,28 @@ extension AppToneColors on AppTone {
 
   /// Softer fill used by the alert component (`alert-*`).
   Color alertBackground(bool isDark) => switch (this) {
-    AppTone.primary => isDark ? const Color(0x146248E3) : AppColors.primary50,
-    AppTone.success => isDark ? const Color(0x1410B981) : AppColors.success50,
-    AppTone.warning => isDark ? const Color(0x14F59E0B) : AppColors.warning50,
-    AppTone.danger => isDark ? const Color(0x14EF4444) : AppColors.danger50,
-    AppTone.info => isDark ? const Color(0x140EA5E9) : AppColors.info50,
+    AppTone.primary => isDark ? AppColors.primary600.withValues(alpha: 0.08) : AppColors.primary50,
+    AppTone.secondary => isDark ? AppColors.secondary600.withValues(alpha: 0.10) : AppColors.secondary50,
+    AppTone.success => isDark ? AppColors.success500.withValues(alpha: 0.08) : AppColors.success50,
+    AppTone.warning => isDark ? AppColors.warning500.withValues(alpha: 0.08) : AppColors.warning50,
+    AppTone.danger => isDark ? AppColors.danger500.withValues(alpha: 0.08) : AppColors.danger50,
+    AppTone.info => isDark ? AppColors.info500.withValues(alpha: 0.08) : AppColors.info50,
     AppTone.neutral => isDark ? AppColors.slate900 : AppColors.slate50,
   };
 
   Color alertBorder(bool isDark) => switch (this) {
-    AppTone.primary => isDark ? const Color(0x4D6248E3) : AppColors.primary200,
-    AppTone.success => isDark ? const Color(0x4D10B981) : AppColors.success200,
-    AppTone.warning => isDark ? const Color(0x4DF59E0B) : AppColors.warning200,
-    AppTone.danger => isDark ? const Color(0x4DEF4444) : AppColors.danger200,
-    AppTone.info => isDark ? const Color(0x4D0EA5E9) : AppColors.info200,
+    AppTone.primary => isDark ? AppColors.primary600.withValues(alpha: 0.30) : AppColors.primary200,
+    AppTone.secondary => isDark ? AppColors.secondary600.withValues(alpha: 0.30) : AppColors.secondary200,
+    AppTone.success => isDark ? AppColors.success500.withValues(alpha: 0.30) : AppColors.success200,
+    AppTone.warning => isDark ? AppColors.warning500.withValues(alpha: 0.30) : AppColors.warning200,
+    AppTone.danger => isDark ? AppColors.danger500.withValues(alpha: 0.30) : AppColors.danger200,
+    AppTone.info => isDark ? AppColors.info500.withValues(alpha: 0.30) : AppColors.info200,
     AppTone.neutral => isDark ? AppColors.slate700 : AppColors.slate200,
   };
 
   IconData get icon => switch (this) {
     AppTone.primary => Icons.info_outline_rounded,
+    AppTone.secondary => Icons.auto_awesome_rounded,
     AppTone.success => Icons.check_circle_outline_rounded,
     AppTone.warning => Icons.warning_amber_rounded,
     AppTone.danger => Icons.error_outline_rounded,

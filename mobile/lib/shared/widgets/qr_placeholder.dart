@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../app/theme/app_colors.dart';
 
 /// A deterministic QR-looking block.
 ///
@@ -14,7 +15,7 @@ class QrPlaceholder extends StatelessWidget {
     this.size = 240,
     this.modules = 8,
     this.padding = 20,
-    this.background = const Color(0xFF0F172A),
+    this.background = AppColors.slate950,
     this.foreground = Colors.white,
     this.borderRadius = 24,
   });

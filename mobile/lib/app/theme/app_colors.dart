@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 
-/// Colour tokens ported 1:1 from the prototype's Tailwind config
-/// (`prototype/assets/js/tailwind-config.js`). Keep the two in sync — the
-/// prototype remains the visual source of truth for the customer app.
+/// Colour tokens. The source of truth is now `angular/src/styles/_tokens.scss`
+/// (the shipping design system) — NOT the prototype, which is frozen on the older
+/// cool-slate palette and is no longer tracked here. Keep this file and that one in
+/// sync; every value below has a named counterpart there.
+///
+/// Not ported: the `--eks-chart-*` categorical ramp and the `--eks-tier-*` ordinal
+/// ramp. Neither has a consumer in this app yet (no charts, no tier colouring), and
+/// unused tokens rot. Port them from _tokens.scss when the first screen needs them.
 abstract final class AppColors {
   // Primary (violet)
   static const primary50 = Color(0xFFF4F3FF);
@@ -50,18 +55,41 @@ abstract final class AppColors {
   static const info600 = Color(0xFF0284C7);
   static const info700 = Color(0xFF0369A1);
 
-  // Slate — the neutral ramp every surface/border/text token is built from.
-  static const slate50 = Color(0xFFF8FAFC);
-  static const slate100 = Color(0xFFF1F5F9);
-  static const slate200 = Color(0xFFE2E8F0);
-  static const slate300 = Color(0xFFCBD5E1);
-  static const slate400 = Color(0xFF94A3B8);
-  static const slate500 = Color(0xFF64748B);
-  static const slate600 = Color(0xFF475569);
-  static const slate700 = Color(0xFF334155);
-  static const slate800 = Color(0xFF1E293B);
-  static const slate900 = Color(0xFF0F172A);
-  static const slate950 = Color(0xFF020617);
+  // Secondary (magenta) — the one brand hue that still fits beside the violet without
+  // colliding with a status colour. Reserved for brand moments that are neither an
+  // action nor a status: rewards earned, tier-up, referral, campaign highlights.
+  // NOT a second primary — a button is still primary600. See the long note in
+  // angular/src/styles/_tokens.scss for the gamut search behind hue 333deg.
+  static const secondary50 = Color(0xFFFEF0FB);
+  static const secondary100 = Color(0xFFFFE1F8);
+  static const secondary200 = Color(0xFFF9BFEE);
+  static const secondary300 = Color(0xFFEC94DE);
+  static const secondary400 = Color(0xFFDA64CA);
+  static const secondary500 = Color(0xFFC73BB7);
+  static const secondary600 = Color(0xFFAF1DA0);
+  static const secondary700 = Color(0xFF8D1281);
+  static const secondary800 = Color(0xFF6F0C66);
+  static const secondary900 = Color(0xFF560B4E);
+
+  // Neutral ramp every surface/border/text token is built from. Still named `slate`
+  // so the ~9 call sites outside this file keep working, but the values are now a
+  // WARM gray, lightness-matched step-for-step to the cool slate they replace (max
+  // drift 1.9% relative luminance) — a pure hue shift, so nothing got heavier or
+  // lighter. A blue-gray fights the violet accent; this one doesn't.
+  //
+  // Chroma held at ~0.005 OKLCH (Tailwind `stone` territory). Above ~0.010 a warm ramp
+  // stops reading as "gray" and starts reading as BEIGE.
+  static const slate50 = Color(0xFFFAF9F8);
+  static const slate100 = Color(0xFFF4F3F1);
+  static const slate200 = Color(0xFFE9E7E5);
+  static const slate300 = Color(0xFFD5D3D0);
+  static const slate400 = Color(0xFFA4A19E);
+  static const slate500 = Color(0xFF726F6D);
+  static const slate600 = Color(0xFF585654);
+  static const slate700 = Color(0xFF403E3C);
+  static const slate800 = Color(0xFF2A2827);
+  static const slate900 = Color(0xFF191817);
+  static const slate950 = Color(0xFF0C0B0A);
 }
 
 /// Semantic surface/text tokens resolved per brightness. Widgets read these via
@@ -81,6 +109,11 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.textMuted,
     required this.primary,
     required this.primaryOnDarkAware,
+    required this.secondary,
+    required this.secondaryOnDarkAware,
+    required this.surfaceInverse,
+    required this.textOnInverse,
+    required this.textOnInverseMuted,
     required this.shadow,
   });
 
@@ -103,6 +136,20 @@ class AppPalette extends ThemeExtension<AppPalette> {
 
   /// Primary tint used for text/icons — lighter in dark mode so it stays legible.
   final Color primaryOnDarkAware;
+
+  /// Brand accent for moments that are neither an action nor a status — reward
+  /// earned, tier-up, referral. Never use it for a button; that's [primary].
+  final Color secondary;
+
+  /// [secondary] as text/icons — lifted a step in dark mode to stay legible.
+  final Color secondaryOnDarkAware;
+
+  /// A deliberately inverted surface: near-black in light mode, near-white in dark.
+  /// For hero bands, a stats strip, the membership card's reward shelf — the thing
+  /// that gives the app depth without spending another hue on it.
+  final Color surfaceInverse;
+  final Color textOnInverse;
+  final Color textOnInverseMuted;
   final Color shadow;
 
   /// Resolves the palette for [context].
@@ -126,10 +173,17 @@ class AppPalette extends ThemeExtension<AppPalette> {
     borderSubtle: AppColors.slate100,
     textPrimary: AppColors.slate900,
     textSecondary: AppColors.slate600,
-    textMuted: AppColors.slate400,
+    // slate500, not slate400: on the light ground slate400 is 2.7:1 — below WCAG AA,
+    // and this is the app's most-used text colour. slate500 is 4.73:1.
+    textMuted: AppColors.slate500,
     primary: AppColors.primary600,
     primaryOnDarkAware: AppColors.primary600,
-    shadow: Color(0x1A0F172A),
+    secondary: AppColors.secondary600,
+    secondaryOnDarkAware: AppColors.secondary600,
+    surfaceInverse: AppColors.slate900,
+    textOnInverse: AppColors.slate100,
+    textOnInverseMuted: AppColors.slate400,
+    shadow: Color(0x1A191817),
   );
 
   static const dark = AppPalette(
@@ -139,11 +193,18 @@ class AppPalette extends ThemeExtension<AppPalette> {
     surfaceMuted: AppColors.slate900,
     border: AppColors.slate800,
     borderSubtle: AppColors.slate800,
-    textPrimary: Color(0xFFF1F5F9),
+    textPrimary: AppColors.slate100,
     textSecondary: AppColors.slate300,
+    // slate400 IS AA here — 6.89:1 on the dark ground — so unlike light mode it stays.
     textMuted: AppColors.slate400,
     primary: AppColors.primary600,
     primaryOnDarkAware: AppColors.primary400,
+    secondary: AppColors.secondary600,
+    secondaryOnDarkAware: AppColors.secondary400,
+    // Inverts, or it disappears into the dark ground.
+    surfaceInverse: AppColors.slate50,
+    textOnInverse: AppColors.slate900,
+    textOnInverseMuted: AppColors.slate500,
     shadow: Color(0x800A0A0A),
   );
 
