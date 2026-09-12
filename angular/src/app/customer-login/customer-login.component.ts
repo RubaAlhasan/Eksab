@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { Router, RouterLink } from '@angular/router';
 import { AuthService, ConfigStateService, LocalizationPipe } from '@abp/ng.core';
 import { ToasterService } from '@abp/ng.theme.shared';
+import { OAuthService } from 'angular-oauth2-oidc';
 import { PhoneInputComponent } from '../shared/components/phone-input/phone-input.component';
 import { OtpService } from '../proxy/controllers/otp.service';
 
@@ -33,6 +34,7 @@ export class CustomerLoginComponent {
   private readonly configState = inject(ConfigStateService);
   private readonly toaster = inject(ToasterService);
   private readonly router = inject(Router);
+  private readonly oAuthService = inject(OAuthService);
 
   protected readonly step = signal<Step>('phone');
   protected readonly phoneNumber = signal('');
@@ -87,6 +89,21 @@ export class CustomerLoginComponent {
   private verifyCode(): void {
     if (!this.code() || this.isSubmitting()) return;
     this.isSubmitting.set(true);
+
+    // A real, confirmed bug: an earlier visit to a protected staff/business route while signed out
+    // (authGuard -> AuthService.navigateToLogin({returnUrl})) runs a real OIDC code-flow redirect and,
+    // on return, angular-oauth2-oidc's OAuthService.tryLogin() sets OAuthService.state to that
+    // returnUrl for the rest of this page's lifetime. @abp/ng.oauth's own
+    // AuthCodeFlowStrategy.navigateToPreviousUrl() then has a standing (one-shot, but not yet fired)
+    // subscription that reacts to ANY 'token_received' event with a non-empty `state` — it does not
+    // check which grant produced it — and OAuthService.fetchTokenUsingGrant (what loginUsingGrant
+    // below calls for this "otp" grant too) emits that exact same event type. Left alone, a customer
+    // who logs in here after any such earlier attempt gets silently redirected to that stale staff/
+    // business URL instead of /home, racing our own navigateByUrl below (confirmed live this session:
+    // landed on /business/support-tickets after a customer OTP login). Clearing `state` here,
+    // synchronously before the async grant request, means that stale listener has nothing to act on
+    // when THIS login's token_received event fires.
+    this.oAuthService.state = '';
 
     // Unlike requestOtp above, loginUsingGrant posts straight through angular-oauth2-oidc's own
     // OAuthService.fetchTokenUsingGrant (plain HttpClient.post to the OpenIddict token endpoint) —
