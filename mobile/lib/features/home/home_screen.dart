@@ -266,6 +266,7 @@ class _MyBusinessCard extends StatelessWidget {
             BusinessLogo(
               initials: entry.business.initials,
               gradient: entry.business.gradient,
+              logoUrl: entry.business.logoUrl,
               size: 40,
               radius: 12,
             ),
@@ -357,6 +358,7 @@ class _DiscoverCard extends StatelessWidget {
           BusinessLogo(
             initials: business.initials,
             gradient: business.gradient,
+            logoUrl: business.logoUrl,
             size: 40,
             radius: 12,
           ),

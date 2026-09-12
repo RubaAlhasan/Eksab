@@ -83,6 +83,7 @@ class _JoinStoreScreenState extends ConsumerState<JoinStoreScreen> {
           BusinessLogo(
             initials: biz.initials,
             gradient: biz.gradient,
+            logoUrl: biz.logoUrl,
             size: 64,
             radius: 24,
             fontSize: 20,

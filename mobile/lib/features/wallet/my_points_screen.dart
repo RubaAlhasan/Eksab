@@ -47,6 +47,7 @@ class MyPointsScreen extends ConsumerWidget {
                   BusinessLogo(
                     initials: biz.initials,
                     gradient: biz.gradient,
+                    logoUrl: biz.logoUrl,
                     size: 48,
                   ),
                   const SizedBox(height: 12),

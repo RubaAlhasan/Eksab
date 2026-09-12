@@ -157,6 +157,7 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
                     Website = p.Website,
                     BusinessProfileId = p.Id,
                     HasLogo = !p.LogoBlobName.IsNullOrWhiteSpace(),
+                    LogoBlobName = p.LogoBlobName,
                     BranchCount = tenantBranches.Count,
                     DistanceKm = NearestBranchDistanceKm(tenantBranches, latitude, longitude),
                 };

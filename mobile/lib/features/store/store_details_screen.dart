@@ -128,6 +128,7 @@ class _StoreDetailsScreenState extends ConsumerState<StoreDetailsScreen> {
                 BusinessLogo(
                   initials: biz.initials,
                   gradient: biz.gradient,
+                  logoUrl: biz.logoUrl,
                   size: 80,
                   radius: 24,
                   fontSize: 24,

@@ -37,6 +37,7 @@ class BusinessRow extends StatelessWidget {
           BusinessLogo(
             initials: business.initials,
             gradient: business.gradient,
+            logoUrl: business.logoUrl,
             size: logoSize,
           ),
           const SizedBox(width: 16),
@@ -116,6 +117,7 @@ class WalletRow extends StatelessWidget {
           BusinessLogo(
             initials: business.initials,
             gradient: business.gradient,
+            logoUrl: business.logoUrl,
             size: 48,
           ),
           const SizedBox(width: 16),

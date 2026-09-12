@@ -131,6 +131,7 @@ class QrScannerScreen extends ConsumerWidget {
                   BusinessLogo(
                     initials: business.initials,
                     gradient: business.gradient,
+                    logoUrl: business.logoUrl,
                     size: 56,
                   ),
                   const SizedBox(width: 16),

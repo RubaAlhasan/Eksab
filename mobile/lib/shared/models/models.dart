@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_tokens.dart';
+import '../../core/config/app_config.dart';
 
 /// Domain models for the customer app, mapped from the API's DTOs in
 /// `src/Eksabli.Application.Contracts/`.
@@ -63,6 +64,7 @@ class Business {
     required this.branches,
     required this.businessProfileId,
     required this.hasLogo,
+    this.logoBlobName,
     this.description,
     this.website,
     this.distanceKm,
@@ -88,6 +90,7 @@ class Business {
       branches: (json['branchCount'] as num?)?.toInt() ?? 0,
       businessProfileId: (json['businessProfileId'] as String?) ?? '',
       hasLogo: json['hasLogo'] as bool? ?? false,
+      logoBlobName: (json['logoBlobName'] as String?)?.trim(),
       description:
           (json['descriptionEn'] as String?)?.trim() ??
           (json['descriptionAr'] as String?)?.trim(),
@@ -104,6 +107,28 @@ class Business {
   final int branches;
   final String businessProfileId;
   final bool hasLogo;
+
+  /// Opaque version token from the server, used only to cache-bust [logoUrl].
+  final String? logoBlobName;
+
+  /// Public URL of this business's logo, or null when none has been uploaded.
+  ///
+  /// `GET /api/app/business/{businessProfileId}/logo` is `[AllowAnonymous]`, so this works as a
+  /// plain image URL with no auth header — which is what lets [BusinessLogo] use `Image.network`
+  /// rather than routing it through the authenticated Dio client.
+  ///
+  /// The URL is keyed by profile id and never changes on its own, so a business that swaps its logo
+  /// would keep serving the old one from cache; `?v=` is what busts that.
+  String? get logoUrl {
+    if (!hasLogo || businessProfileId.isEmpty) return null;
+    final base =
+        '${AppConfig.baseUrl}/api/app/business/$businessProfileId/logo';
+    final version = logoBlobName;
+    return version == null || version.isEmpty
+        ? base
+        : '$base?v=${Uri.encodeComponent(version)}';
+  }
+
   final String? description;
   final String? website;
 
@@ -123,6 +148,7 @@ class Business {
     branches: branches,
     businessProfileId: businessProfileId,
     hasLogo: hasLogo,
+    logoBlobName: logoBlobName,
     description: description,
     website: website,
     distanceKm: distanceKm,

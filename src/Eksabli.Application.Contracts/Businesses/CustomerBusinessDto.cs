@@ -34,6 +34,12 @@ public class CustomerBusinessDto
 
     public bool HasLogo { get; set; }
 
+    // Opaque version token for the logo URL, not a path the client resolves itself — the blob store
+    // is server-side and this only ever appears as `?v=...`. Without it a business that changes its
+    // logo keeps serving the old one out of the HTTP cache, since the URL is keyed by profile id and
+    // never otherwise changes. Already public in the same form the Business Portal uses.
+    public string? LogoBlobName { get; set; }
+
     public int BranchCount { get; set; }
 
     // Straight-line distance to the nearest branch, populated only when the caller
