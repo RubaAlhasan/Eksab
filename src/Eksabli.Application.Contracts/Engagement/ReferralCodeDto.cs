@@ -1,9 +1,10 @@
-using System;
-
 namespace Eksabli.Engagement;
 
 public class ReferralCodeDto
 {
-    // The referrer's Membership.Id in the requested tenant — pass back as JoinBusinessDto.ReferralCode.
-    public Guid Code { get; set; }
+    // A short, human-shareable code (see Membership.ReferralCode's own comment for the shape) —
+    // pass back as JoinBusinessDto.ReferralCode. Previously the referrer's raw Membership.Id (a GUID);
+    // that worked functionally but was never something a person could actually read out, type, or
+    // share in a text message.
+    public string Code { get; set; } = string.Empty;
 }

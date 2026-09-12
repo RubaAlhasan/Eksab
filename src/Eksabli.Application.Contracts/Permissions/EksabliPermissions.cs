@@ -123,6 +123,21 @@ public static class EksabliPermissions
         public const string Export = Default + ".Export";
     }
 
+    // Host-realm marker permission for a real, OTP-verified customer account — distinguishes "this
+    // Host-realm user is an onboarded customer" from an admin, from tenant staff, and from an
+    // abandoned/never-completed registration attempt (see OtpAppService.RegisterAsync's own comment on
+    // why an unconfirmed account gets hard-deleted on retry, not left around). Granted automatically by
+    // OtpLoginService.ValidateAndResolveUserAsync the moment OTP verification actually proves the phone
+    // number — never manually assigned, and it has no children: a customer's real authorization is
+    // always scoped by CustomerId in application code (see Business Strategy's own "Customer role:
+    // deliberately flat" note), not by ABP permission checks. This exists purely as an identity signal
+    // — for the web login flow to know "this account can use the customer web experience", and for any
+    // future customer-only endpoint that wants a real permission gate instead of an implicit one.
+    public static class Customer
+    {
+        public const string Default = GroupName + ".Customer";
+    }
+
     // Host-realm platform-operations permissions (Feature 08 — Admin Panel). Distinct from the
     // tenant-realm groups above: these gate Super Admin/Support Agent/Billing Admin/Content Moderator
     // tooling, not anything a business's own staff can be granted.

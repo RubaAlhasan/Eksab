@@ -9,7 +9,15 @@ import type { AdminInvoiceFilterDto, AdminPaymentFilterDto, AdminSubscriptionFil
 export class AdminSubscriptionsService {
   private restService = inject(RestService);
   apiName = 'Default';
-  
+
+
+  approvePlanChange = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, TenantSubscriptionDto>({
+      method: 'POST',
+      url: `/api/app/admin-subscriptions/${id}/approve-plan-change`,
+    },
+    { apiName: this.apiName,...config });
+
 
   getInvoices = (input: AdminInvoiceFilterDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PagedResultDto<InvoiceDto>>({
@@ -59,6 +67,14 @@ export class AdminSubscriptionsService {
       method: 'GET',
       url: '/api/app/admin-subscriptions/payments',
       params: { invoiceId: input.invoiceId, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+    },
+    { apiName: this.apiName,...config });
+
+
+  rejectPlanChange = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, TenantSubscriptionDto>({
+      method: 'POST',
+      url: `/api/app/admin-subscriptions/${id}/reject-plan-change`,
     },
     { apiName: this.apiName,...config });
 }

@@ -145,6 +145,24 @@ public class PosAppService : ApplicationService, IPosAppService
         return await AwardPointsCoreAsync(customerId, input.PurchaseAmount);
     }
 
+    // Read-only counterpart of AwardPointsCoreAsync's calculation step — same staff-role gate, same
+    // membership/wallet/tier lookups, and the exact same ComputePointsAsync call, just without ever
+    // inserting a PointsTransaction or updating the wallet. Exists so the Award Points screen can show
+    // a live "base x tier x campaign" breakdown as the cashier types a sale amount, without
+    // reimplementing (and risking drifting from) the real pipeline client-side.
+    public async Task<PointsPreviewDto> PreviewPointsAsync(Guid customerId, PreviewPointsDto input)
+    {
+        await CheckStaffRoleAsync(EmployeeRole.Owner, EmployeeRole.BranchManager, EmployeeRole.Cashier);
+
+        var membership = await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == customerId)
+            ?? throw new UserFriendlyException("This customer hasn't joined your business yet.");
+
+        var wallet = await _walletRepository.FirstAsync(w => w.MembershipId == membership.Id);
+        var (tierMultiplier, tierName) = await GetCurrentTierInfoAsync(wallet);
+
+        return await ComputePointsAsync(input.PurchaseAmount, tierMultiplier, tierName);
+    }
+
     public async Task<AwardPointsResultDto> ManualAdjustAsync(ManualAdjustDto input)
     {
         var (employeeId, _) = await CheckStaffRoleAsync(EmployeeRole.Owner, EmployeeRole.BranchManager);
@@ -190,18 +208,10 @@ public class PosAppService : ApplicationService, IPosAppService
             ?? throw new UserFriendlyException("This customer hasn't joined your business yet.");
 
         var wallet = await _walletRepository.FirstAsync(w => w.MembershipId == membership.Id);
+        var (tierMultiplier, tierName) = await GetCurrentTierInfoAsync(wallet);
 
-        decimal tierMultiplier = 1.0m;
-        if (wallet.CurrentTierId.HasValue)
-        {
-            var tier = await _tierRepository.FindAsync(wallet.CurrentTierId.Value);
-            if (tier != null)
-            {
-                tierMultiplier = tier.Multiplier;
-            }
-        }
-
-        var points = await ComputePointsAsync(purchaseAmount, tierMultiplier);
+        var preview = await ComputePointsAsync(purchaseAmount, tierMultiplier, tierName);
+        var points = preview.TotalPoints;
         var isFirstEarn = wallet.LifetimeEarned == 0; // the qualifying action for referral completion
 
         var transaction = PointsTransaction.Create(
@@ -224,6 +234,20 @@ public class PosAppService : ApplicationService, IPosAppService
         return await BuildResultAsync(transaction, wallet);
     }
 
+    // Reads the caller's current tier off their wallet — shared by AwardPointsCoreAsync (the real
+    // award) and PreviewPointsAsync (the read-only breakdown), so both always see the exact same tier
+    // state rather than two independent lookups that could theoretically disagree.
+    private async Task<(decimal Multiplier, string? Name)> GetCurrentTierInfoAsync(PointsWallet wallet)
+    {
+        if (!wallet.CurrentTierId.HasValue)
+        {
+            return (1.0m, null);
+        }
+
+        var tier = await _tierRepository.FindAsync(wallet.CurrentTierId.Value);
+        return tier != null ? (tier.Multiplier, tier.Name) : (1.0m, null);
+    }
+
     // Points pipeline: base rule × tier multiplier × campaign multiplier, plus any flat SpendXGetY
     // bonus — the real-time evaluation mode from
     // docs/eksabli-loyalty-platform/features/05-campaigns-notifications/README.md#business-rules,
@@ -231,9 +255,17 @@ public class PosAppService : ApplicationService, IPosAppService
     // mode — Birthday/WinBack/Vip/NewCustomer — runs as a batch sweep in Campaigns.CampaignSweepWorker).
     // Rounding: floor, applied once to the multiplied portion — see
     // docs/eksabli-loyalty-platform/07-loyalty-engine.md#8.
-    private async Task<int> ComputePointsAsync(decimal? purchaseAmount, decimal tierMultiplier)
+    //
+    // Returns the full breakdown, not just the final total, so both the real award
+    // (AwardPointsCoreAsync) and the read-only preview (PreviewPointsAsync) can share this one
+    // implementation — the Angular Award Points screen renders this breakdown directly rather than
+    // reimplementing the pipeline client-side (see business-points.component.ts's own comment on why
+    // that would be a drift risk).
+    private async Task<PointsPreviewDto> ComputePointsAsync(decimal? purchaseAmount, decimal tierMultiplier, string? tierName)
     {
         decimal basePoints = 0m;
+        PointRuleType? ruleType = null;
+        decimal pointsPerUnit = 0m;
 
         if (purchaseAmount.HasValue)
         {
@@ -241,6 +273,8 @@ public class PosAppService : ApplicationService, IPosAppService
             if (rule != null)
             {
                 basePoints = purchaseAmount.Value * rule.PointsPerUnit;
+                ruleType = rule.RuleType;
+                pointsPerUnit = rule.PointsPerUnit;
             }
         }
 
@@ -250,12 +284,27 @@ public class PosAppService : ApplicationService, IPosAppService
             if (rule != null)
             {
                 basePoints = rule.PointsPerUnit;
+                ruleType = rule.RuleType;
+                pointsPerUnit = rule.PointsPerUnit;
             }
         }
 
         var campaignResult = await _campaignRulesEngine.EvaluateAsync(purchaseAmount);
+        var total = (int)Math.Floor(basePoints * tierMultiplier * campaignResult.Multiplier) + campaignResult.BonusPoints;
 
-        return (int)Math.Floor(basePoints * tierMultiplier * campaignResult.Multiplier) + campaignResult.BonusPoints;
+        return new PointsPreviewDto
+        {
+            BasePoints = (int)Math.Floor(basePoints),
+            RuleType = ruleType,
+            PointsPerUnit = pointsPerUnit,
+            TierMultiplier = tierMultiplier,
+            TierName = tierName,
+            CampaignMultiplier = campaignResult.Multiplier,
+            CampaignName = campaignResult.MultiplierCampaignName,
+            CampaignBonusPoints = campaignResult.BonusPoints,
+            BonusCampaignName = campaignResult.BonusCampaignName,
+            TotalPoints = total
+        };
     }
 
     private async Task<AwardPointsResultDto> BuildResultAsync(PointsTransaction transaction, PointsWallet wallet)

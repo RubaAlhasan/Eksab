@@ -94,13 +94,18 @@ function parseFeatureToggle(json: string | undefined, key: string): boolean {
  *     reused here to avoid implying a fake per-channel credit pool).
  * - **Compare Plans is real** (`SubscriptionPlansService.getList()`, the same public catalog Admin
  *   Plans manages), current plan highlighted.
- * - **"Select" on another plan performs a REAL, immediate `ChangePlanAsync` call** — a deliberate
- *   divergence from the prototype, whose own Upgrade/Downgrade/Select buttons are all stubs
- *   ("this would open the plan checkout flow"). The real backend has no payment/proration step at all
- *   (confirmed by reading `BillingAppService.ChangePlanAsync` — it just reassigns `PlanId` and re-pushes
- *   `FeatureLimitsJson` into Feature Management), so faking a checkout step here would be LESS honest
- *   than just performing the real, complete action. Guarded behind a confirmation dialog since it's a
- *   real mutation with billing-sounding consequences.
+ * - **"Select" on another plan submits a REAL plan-change REQUEST, not an immediate switch** —
+ *   `ChangePlanAsync` (confirmed by re-reading it this session) now only records
+ *   `PendingPlanId`/`PlanChangeRequestedAt`; it no longer reassigns `PlanId` or pushes
+ *   `FeatureLimitsJson` itself. A platform admin has to approve it (Admin Portal > Subscriptions —
+ *   `AdminSubscriptionAppService.ApprovePlanChangeAsync`) before the new plan actually applies and the
+ *   subscription is marked Active. While one request is pending, every other plan's Select button is
+ *   disabled (`hasPendingChange`) — only one request at a time, never a queue — and the pending plan's
+ *   own row shows "Pending approval" instead of a button. Guarded behind a confirmation dialog whose
+ *   copy now says "request", not "change", since that's what actually happens on click.
+ * - **No Cancel-request action** — `[MISSING BACKEND CAPABILITY]`. If the tenant wants to withdraw a
+ *   pending request before an admin decides it, there's no endpoint for that today; they'd need to ask
+ *   the admin to reject it. Not built speculatively.
  * - **No Cancel / Danger Zone** — `[MISSING BACKEND CAPABILITY]`. `TenantSubscription.Cancel()` exists
  *   as a real domain method (confirmed by reading `TenantSubscription.cs`) but is not called from ANY
  *   app service anywhere in this codebase — not `IBillingAppService`, not even the Host-only
@@ -136,6 +141,7 @@ export class BusinessSubscriptionComponent implements OnInit {
   protected readonly activeMemberCount = signal<number | null>(null);
   protected readonly plans = signal<SubscriptionPlanDto[]>([]);
   protected readonly changingPlanId = signal<string | null>(null);
+  protected readonly hasPendingChange = computed(() => !!this.subscription()?.pendingPlanId);
 
   protected readonly maxCampaigns = computed(() => parseFeatureLimit(this.currentPlan()?.featureLimitsJson, FEATURE_KEYS.maxCampaigns));
   protected readonly maxActiveMembers = computed(() =>
@@ -188,7 +194,10 @@ export class BusinessSubscriptionComponent implements OnInit {
   }
 
   protected selectPlan(plan: SubscriptionPlanDto): void {
-    if (!plan.id || plan.id === this.currentPlan()?.id) return;
+    // Also guards the click itself, not just the button's [disabled] — the button is already hidden/
+    // disabled for the current and pending-plan cases in the template, but this stays the single source
+    // of truth in case anything else ever calls into this method.
+    if (!plan.id || plan.id === this.currentPlan()?.id || this.hasPendingChange()) return;
 
     this.confirmation
       .warn('::BusinessPanel:Subscription:ChangePlanConfirmMessage', '::BusinessPanel:Subscription:ChangePlanConfirmTitle', {
@@ -201,7 +210,7 @@ export class BusinessSubscriptionComponent implements OnInit {
         this.billingService.changePlan({ planId: plan.id }).subscribe({
           next: () => {
             this.changingPlanId.set(null);
-            this.toaster.success('::BusinessPanel:Subscription:PlanChangedMessage');
+            this.toaster.success('::BusinessPanel:Subscription:PlanChangeRequestedMessage');
             this.load();
           },
           error: () => {

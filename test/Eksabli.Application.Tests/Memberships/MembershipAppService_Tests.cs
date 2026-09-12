@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Eksabli.Engagement;
 using Eksabli.Wallets;
 using Shouldly;
 using Volo.Abp;
@@ -18,10 +19,12 @@ public abstract class MembershipAppService_Tests<TStartupModule> : EksabliApplic
     where TStartupModule : IAbpModule
 {
     private readonly IMembershipAppService _membershipAppService;
+    private readonly IReferralAppService _referralAppService;
     private readonly TenantManager _tenantManager;
     private readonly ITenantRepository _tenantRepository;
     private readonly IRepository<Membership, Guid> _membershipRepository;
     private readonly IRepository<PointsWallet, Guid> _walletRepository;
+    private readonly IReferralRepository _referralRepository;
     private readonly IRepository<Tier, Guid> _tierRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly ICurrentPrincipalAccessor _currentPrincipalAccessor;
@@ -29,10 +32,12 @@ public abstract class MembershipAppService_Tests<TStartupModule> : EksabliApplic
     protected MembershipAppService_Tests()
     {
         _membershipAppService = GetRequiredService<IMembershipAppService>();
+        _referralAppService = GetRequiredService<IReferralAppService>();
         _tenantManager = GetRequiredService<TenantManager>();
         _tenantRepository = GetRequiredService<ITenantRepository>();
         _membershipRepository = GetRequiredService<IRepository<Membership, Guid>>();
         _walletRepository = GetRequiredService<IRepository<PointsWallet, Guid>>();
+        _referralRepository = GetRequiredService<IReferralRepository>();
         _tierRepository = GetRequiredService<IRepository<Tier, Guid>>();
         _currentTenant = GetRequiredService<ICurrentTenant>();
         _currentPrincipalAccessor = GetRequiredService<ICurrentPrincipalAccessor>();
@@ -119,6 +124,113 @@ public abstract class MembershipAppService_Tests<TStartupModule> : EksabliApplic
         }
     }
 
+    // Covers MembershipAppService.SetBusinessNamesAsync — the one genuinely new piece of server logic
+    // behind the customer web wallet view (home.component.ts): each wallet in this cross-tenant list
+    // must carry the actual business name it belongs to, not just a TenantId the UI would otherwise
+    // have no way to turn into a human-readable label.
+    [Fact]
+    public async Task GetMyWalletsAsync_Should_Resolve_Business_Name_Per_Tenant()
+    {
+        var tenantAId = await CreateTenantAsync();
+        var tenantBId = await CreateTenantAsync();
+        var customerId = Guid.NewGuid();
+
+        var (tenantAName, tenantBName) = await WithUnitOfWorkAsync(async () =>
+            ((await _tenantRepository.GetAsync(tenantAId)).Name, (await _tenantRepository.GetAsync(tenantBId)).Name));
+
+        using (LoginAs(customerId))
+        {
+            await WithUnitOfWorkAsync(() => _membershipAppService.JoinAsync(new JoinBusinessDto { TenantId = tenantAId }));
+            await WithUnitOfWorkAsync(() => _membershipAppService.JoinAsync(new JoinBusinessDto { TenantId = tenantBId }));
+
+            var wallets = await WithUnitOfWorkAsync(() => _membershipAppService.GetMyWalletsAsync());
+
+            wallets.Single(w => w.TenantId == tenantAId).BusinessName.ShouldBe(tenantAName);
+            wallets.Single(w => w.TenantId == tenantBId).BusinessName.ShouldBe(tenantBName);
+        }
+    }
+
+    // Referral join flow, now keyed by Membership.ReferralCode (a short human-typeable code) instead
+    // of the referrer's raw Membership.Id — see that property's own comment.
+    [Fact]
+    public async Task JoinAsync_Should_Create_A_Referral_When_A_Valid_Code_Is_Given()
+    {
+        var tenantId = await CreateTenantAsync();
+        var referrerId = Guid.NewGuid();
+        var refereeId = Guid.NewGuid();
+
+        Guid referrerMembershipId = default;
+        string referralCode;
+        using (LoginAs(referrerId))
+        {
+            var referrerMembership = await WithUnitOfWorkAsync(() => _membershipAppService.JoinAsync(new JoinBusinessDto { TenantId = tenantId }));
+            referrerMembershipId = referrerMembership.Id;
+            referralCode = (await WithUnitOfWorkAsync(() => _referralAppService.GetMyReferralCodeAsync(tenantId))).Code;
+        }
+
+        using (LoginAs(refereeId))
+        {
+            await WithUnitOfWorkAsync(() => _membershipAppService.JoinAsync(new JoinBusinessDto { TenantId = tenantId, ReferralCode = referralCode }));
+        }
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var referrals = await _referralRepository.GetByReferrerMembershipIdsAsync(new[] { referrerMembershipId }.ToList());
+                referrals.ShouldHaveSingleItem();
+                referrals.Single().RefereeCustomerId.ShouldBe(refereeId);
+            }
+        });
+    }
+
+    [Fact]
+    public async Task JoinAsync_Should_Ignore_An_Unknown_Referral_Code_Without_Failing_The_Join()
+    {
+        var tenantId = await CreateTenantAsync();
+        var customerId = Guid.NewGuid();
+
+        using (LoginAs(customerId))
+        {
+            var membership = await WithUnitOfWorkAsync(() =>
+                _membershipAppService.JoinAsync(new JoinBusinessDto { TenantId = tenantId, ReferralCode = "NOTREAL1" }));
+            membership.CustomerId.ShouldBe(customerId);
+        }
+    }
+
+    // Gives a member a real Earn transaction's effect directly on the wallet (LifetimeEarned), rather
+    // than going through PosAppService — that service isn't a dependency of this test class, and
+    // GetMembersAsync's filter only ever reads PointsWallet.LifetimeEarned, not the ledger itself, so
+    // this is a faithful, minimal way to simulate "this member has really transacted".
+    private async Task GiveWalletARealEarnAsync(Guid tenantId, Guid membershipId, int points)
+    {
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var wallet = await _walletRepository.SingleAsync(w => w.MembershipId == membershipId);
+                wallet.ApplyTransaction(PointsTransactionType.Earn, points);
+                await _walletRepository.UpdateAsync(wallet, autoSave: true);
+            }
+        });
+    }
+
+    // Same real-Earn-transaction shape as GiveWalletARealEarnAsync above, keyed by customerId instead
+    // of membershipId — what the tier-progress tests below already look up their wallet by.
+    private async Task SetLifetimeEarnedAsync(Guid tenantId, Guid customerId, int lifetimeEarned)
+    {
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var membership = await _membershipRepository.SingleAsync(m => m.CustomerId == customerId);
+                var wallet = await _walletRepository.SingleAsync(w => w.MembershipId == membership.Id);
+                wallet.ApplyTransaction(PointsTransactionType.Earn, lifetimeEarned);
+                await _walletRepository.UpdateAsync(wallet, autoSave: true);
+            }
+        });
+    }
+
     private async Task SeedTiersAsync(Guid tenantId)
     {
         await WithUnitOfWorkAsync(async () =>
@@ -133,18 +245,55 @@ public abstract class MembershipAppService_Tests<TStartupModule> : EksabliApplic
         });
     }
 
-    private async Task SetLifetimeEarnedAsync(Guid tenantId, Guid customerId, int lifetimeEarned)
+    [Fact]
+    public async Task GetMembersAsync_Should_Include_Everyone_By_Default_Even_With_Zero_Activity()
     {
-        await WithUnitOfWorkAsync(async () =>
+        var tenantId = await CreateTenantAsync();
+        var neverTransactedId = Guid.NewGuid();
+
+        using (LoginAs(neverTransactedId))
         {
-            using (_currentTenant.Change(tenantId))
-            {
-                var membership = await _membershipRepository.SingleAsync(m => m.CustomerId == customerId);
-                var wallet = await _walletRepository.SingleAsync(w => w.MembershipId == membership.Id);
-                wallet.ApplyTransaction(PointsTransactionType.Earn, lifetimeEarned);
-                await _walletRepository.UpdateAsync(wallet, autoSave: true);
-            }
-        });
+            await WithUnitOfWorkAsync(() => _membershipAppService.JoinAsync(new JoinBusinessDto { TenantId = tenantId }));
+        }
+
+        using (_currentTenant.Change(tenantId))
+        {
+            // No HasEarnedPointsAtLeastOnce set — this is the shape Coupons'/Notifications'/the
+            // Subscription page's own calls use, and they need every real member, not just ones who've
+            // transacted (see MemberFilterDto.HasEarnedPointsAtLeastOnce's own comment).
+            var result = await WithUnitOfWorkAsync(() => _membershipAppService.GetMembersAsync(new MemberFilterDto()));
+            result.Items.Select(m => m.CustomerId).ShouldContain(neverTransactedId);
+        }
+    }
+
+    [Fact]
+    public async Task GetMembersAsync_Should_Exclude_Members_With_No_Real_Transaction_When_Filter_Is_On()
+    {
+        var tenantId = await CreateTenantAsync();
+        var neverTransactedId = Guid.NewGuid();
+        var realCustomerId = Guid.NewGuid();
+
+        Guid realMembershipId = default;
+        using (LoginAs(neverTransactedId))
+        {
+            await WithUnitOfWorkAsync(() => _membershipAppService.JoinAsync(new JoinBusinessDto { TenantId = tenantId }));
+        }
+        using (LoginAs(realCustomerId))
+        {
+            var membership = await WithUnitOfWorkAsync(() => _membershipAppService.JoinAsync(new JoinBusinessDto { TenantId = tenantId }));
+            realMembershipId = membership.Id;
+        }
+        await GiveWalletARealEarnAsync(tenantId, realMembershipId, 50);
+
+        using (_currentTenant.Change(tenantId))
+        {
+            var result = await WithUnitOfWorkAsync(() =>
+                _membershipAppService.GetMembersAsync(new MemberFilterDto { HasEarnedPointsAtLeastOnce = true }));
+
+            var customerIds = result.Items.Select(m => m.CustomerId).ToList();
+            customerIds.ShouldContain(realCustomerId);
+            customerIds.ShouldNotContain(neverTransactedId);
+        }
     }
 
     [Fact]

@@ -19,6 +19,12 @@ public class PointsWalletDto : AuditedEntityDto<Guid>
 
     public string? CurrentTierName { get; set; }
 
+    // Resolved only by MembershipAppService.GetMyWalletsAsync (the customer's own cross-business
+    // wallet list — Tenant.Name, cross-tenant, safe here because a customer's own wallet already
+    // proves membership in that business) — null for any other caller of this DTO, same "only set
+    // where it's actually resolved" shape as CurrentTierName above.
+    public string? BusinessName { get; set; }
+
     // ---------------------------------------------------------------------------------------------
     // Tier progress — everything the customer app needs to draw "Gold, 600 points to Platinum"
     // without being handed the tenant's whole tier ladder.

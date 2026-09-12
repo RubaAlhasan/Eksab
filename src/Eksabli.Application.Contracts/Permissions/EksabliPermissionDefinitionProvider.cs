@@ -79,6 +79,10 @@ public class EksabliPermissionDefinitionProvider : PermissionDefinitionProvider
         var reportsPermission = myGroup.AddPermission(EksabliPermissions.Reports.Default, L("Permission:Reports"));
         reportsPermission.AddChild(EksabliPermissions.Reports.Export, L("Permission:Reports.Export"));
 
+        // Host-realm only, granted automatically (never through the Roles/Permissions UI) — see
+        // EksabliPermissions.Customer's own comment.
+        myGroup.AddPermission(EksabliPermissions.Customer.Default, L("Permission:Customer"), MultiTenancySides.Host);
+
         // Everything from here down is Host-realm-only (platform staff, never a tenant business's own
         // role) — explicitly restricted via MultiTenancySides.Host. Found necessary by LIVE testing
         // this session: without this restriction, ABP's own "Grant all permissions" seeding (applied

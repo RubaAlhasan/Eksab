@@ -33,6 +33,8 @@ public class CampaignRulesEngine : ICampaignRulesEngine, ITransientDependency
 
         var multiplier = 1.0m;
         var bonusPoints = 0;
+        string? multiplierCampaignName = null;
+        string? bonusCampaignName = null;
 
         foreach (var campaign in activeCampaigns)
         {
@@ -42,17 +44,33 @@ public class CampaignRulesEngine : ICampaignRulesEngine, ITransientDependency
             {
                 // Multiple simultaneous multiplier campaigns take the best single one, not a stack —
                 // same "pick the winning value" treatment PosAppService.RecomputeTierAsync gives tiers.
-                multiplier = Math.Max(multiplier, rules.Multiplier ?? 2.0m);
+                var candidateMultiplier = rules.Multiplier ?? 2.0m;
+                if (candidateMultiplier > multiplier)
+                {
+                    multiplier = candidateMultiplier;
+                    multiplierCampaignName = campaign.NameEn;
+                }
             }
             else if (campaign.Type == CampaignType.SpendXGetY &&
                      purchaseAmount.HasValue &&
                      rules.SpendThreshold.HasValue &&
                      purchaseAmount.Value >= rules.SpendThreshold.Value)
             {
-                bonusPoints = Math.Max(bonusPoints, rules.BonusPoints ?? 0);
+                var candidateBonus = rules.BonusPoints ?? 0;
+                if (candidateBonus > bonusPoints)
+                {
+                    bonusPoints = candidateBonus;
+                    bonusCampaignName = campaign.NameEn;
+                }
             }
         }
 
-        return new CampaignRulesEvaluationResult { Multiplier = multiplier, BonusPoints = bonusPoints };
+        return new CampaignRulesEvaluationResult
+        {
+            Multiplier = multiplier,
+            BonusPoints = bonusPoints,
+            MultiplierCampaignName = multiplierCampaignName,
+            BonusCampaignName = bonusCampaignName
+        };
     }
 }

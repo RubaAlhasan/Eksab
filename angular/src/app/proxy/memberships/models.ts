@@ -23,6 +23,7 @@ export interface MemberFilterDto extends PagedAndSortedResultRequestDto {
   filterText?: string | null;
   tierId?: string | null;
   status?: MembershipStatus | null;
+  hasEarnedPointsAtLeastOnce?: boolean | null;
 }
 
 export interface MembershipDto extends AuditedEntityDto<string> {

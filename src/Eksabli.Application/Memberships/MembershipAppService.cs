@@ -15,6 +15,7 @@ using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
+using Volo.Abp.TenantManagement;
 using Volo.Abp.Users;
 
 namespace Eksabli.Memberships;
@@ -29,6 +30,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
     private readonly IRepository<BusinessProfile, Guid> _businessProfileRepository;
     private readonly IRepository<CustomerProfile, Guid> _customerProfileRepository;
     private readonly IIdentityUserRepository _identityUserRepository;
+    private readonly IRepository<Tenant, Guid> _tenantRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
     private readonly IDistributedCache _qrCache;
@@ -41,6 +43,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
         IRepository<BusinessProfile, Guid> businessProfileRepository,
         IRepository<CustomerProfile, Guid> customerProfileRepository,
         IIdentityUserRepository identityUserRepository,
+        IRepository<Tenant, Guid> tenantRepository,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
         IDistributedCache qrCache)
@@ -52,6 +55,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
         _businessProfileRepository = businessProfileRepository;
         _customerProfileRepository = customerProfileRepository;
         _identityUserRepository = identityUserRepository;
+        _tenantRepository = tenantRepository;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
         _qrCache = qrCache;
@@ -93,14 +97,18 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
     // Invalid, self-referral, or already-referred codes are ignored rather than rejected — a bad
     // referral code shouldn't block the join itself. Actual bonus payout happens later, on the
     // referee's first purchase (Engagement.ReferralCompletionService via PosAppService).
-    private async Task TryCreateReferralAsync(Guid? referralCode, Membership refereeMembership)
+    //
+    // Looks up by Membership.ReferralCode now, not Membership.Id — see that property's own comment.
+    // Runs inside JoinAsync's ambient _currentTenant.Change(input.TenantId), so this lookup is already
+    // scoped to just this business, matching the code's own per-tenant-unique design.
+    private async Task TryCreateReferralAsync(string? referralCode, Membership refereeMembership)
     {
-        if (!referralCode.HasValue)
+        if (referralCode == null)
         {
             return;
         }
 
-        var referrerMembership = await _membershipRepository.FindAsync(referralCode.Value);
+        var referrerMembership = await _membershipRepository.FirstOrDefaultAsync(m => m.ReferralCode == referralCode);
         if (referrerMembership == null || referrerMembership.CustomerId == refereeMembership.CustomerId)
         {
             return;
@@ -134,6 +142,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
             var wallets = await _walletRepository.GetListAsync(w => membershipIds.Contains(w.MembershipId));
             var dtos = ObjectMapper.Map<List<PointsWallet>, List<PointsWalletDto>>(wallets);
             await SetTierProgressAsync(dtos);
+            await SetBusinessNamesAsync(dtos);
             return dtos;
         }
     }
@@ -162,6 +171,12 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
     // "acceptable at this scale" approach AdminTenantAppService already uses for the (much larger,
     // cross-tenant) Businesses list; a single tenant's own member count is smaller by construction.
     // Revisit if a tenant's member count genuinely grows past what's comfortable in memory.
+    //
+    // Reused by more than just the Customers page (Coupons' name lookup, Notifications' recipient
+    // picker, the Subscription page's Active-Members usage count all call this same method) — the
+    // MemberFilterDto.HasEarnedPointsAtLeastOnce filter below is opt-in for exactly this reason: only
+    // the Customers > Members tab passes it, so this method's default output (every real member,
+    // regardless of activity) stays correct for those other callers.
     public async Task<PagedResultDto<MemberDto>> GetMembersAsync(MemberFilterDto input)
     {
         var memberships = await _membershipRepository.GetListAsync();
@@ -170,6 +185,13 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
 
         var wallets = await _walletRepository.GetListAsync(w => membershipIds.Contains(w.MembershipId));
         var walletByMembershipId = wallets.ToDictionary(w => w.MembershipId);
+
+        if (input.HasEarnedPointsAtLeastOnce == true)
+        {
+            memberships = memberships
+                .Where(m => (walletByMembershipId.GetValueOrDefault(m.Id)?.LifetimeEarned ?? 0) > 0)
+                .ToList();
+        }
 
         var tierIds = wallets.Where(w => w.CurrentTierId.HasValue).Select(w => w.CurrentTierId!.Value).Distinct().ToList();
         var tierNameById = (await _tierRepository.GetListAsync(t => tierIds.Contains(t.Id)))
@@ -319,6 +341,33 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
             dto.CurrentTierMinLifetimePoints = current?.MinLifetimePoints;
             dto.NextTierName = next?.Name;
             dto.NextTierMinLifetimePoints = next?.MinLifetimePoints;
+        }
+    }
+
+    // Same "called only from inside GetMyWalletsAsync's own Disable<IMultiTenant> block" shape as
+    // SetTierProgressAsync above. Cross-tenant Tenant.Name lookup, safe here specifically because every
+    // TenantId being resolved is one this exact customer already has a real wallet in — this is their
+    // own cross-business wallet list, not a general-purpose tenant directory (contrast with
+    // AdminUserAppService/AdminSubscriptionAppService, which need Disable<IMultiTenant>() precisely
+    // because a Host admin is allowed to look at OTHER people's data; here the caller is only ever
+    // resolving names for businesses they're personally a member of).
+    private async Task SetBusinessNamesAsync(List<PointsWalletDto> dtos)
+    {
+        var tenantIds = dtos.Where(d => d.TenantId.HasValue).Select(d => d.TenantId!.Value).Distinct().ToList();
+        if (tenantIds.Count == 0)
+        {
+            return;
+        }
+
+        var nameByTenantId = (await _tenantRepository.GetListAsync(t => tenantIds.Contains(t.Id)))
+            .ToDictionary(t => t.Id, t => t.Name);
+
+        foreach (var dto in dtos)
+        {
+            if (dto.TenantId.HasValue)
+            {
+                dto.BusinessName = nameByTenantId.GetValueOrDefault(dto.TenantId.Value);
+            }
         }
     }
 }

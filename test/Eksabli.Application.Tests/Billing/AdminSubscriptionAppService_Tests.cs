@@ -1,8 +1,14 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Eksabli.Features;
+using Eksabli.Notifications;
+using Microsoft.AspNetCore.Identity;
 using Shouldly;
+using Volo.Abp;
 using Volo.Abp.Application.Dtos;
+using Volo.Abp.Features;
+using Volo.Abp.Identity;
 using Volo.Abp.Modularity;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.TenantManagement;
@@ -19,6 +25,9 @@ public abstract class AdminSubscriptionAppService_Tests<TStartupModule> : Eksabl
     private readonly ISubscriptionPlanRepository _planRepository;
     private readonly ITenantSubscriptionRepository _subscriptionRepository;
     private readonly IInvoiceRepository _invoiceRepository;
+    private readonly IFeatureChecker _featureChecker;
+    private readonly IdentityUserManager _userManager;
+    private readonly IUserNotificationRepository _userNotificationRepository;
     private readonly ICurrentTenant _currentTenant;
 
     protected AdminSubscriptionAppService_Tests()
@@ -29,7 +38,29 @@ public abstract class AdminSubscriptionAppService_Tests<TStartupModule> : Eksabl
         _planRepository = GetRequiredService<ISubscriptionPlanRepository>();
         _subscriptionRepository = GetRequiredService<ITenantSubscriptionRepository>();
         _invoiceRepository = GetRequiredService<IInvoiceRepository>();
+        _featureChecker = GetRequiredService<IFeatureChecker>();
+        _userManager = GetRequiredService<IdentityUserManager>();
+        _userNotificationRepository = GetRequiredService<IUserNotificationRepository>();
         _currentTenant = GetRequiredService<ICurrentTenant>();
+    }
+
+    // A bare tenant-realm IdentityUser (no EmployeeAssignment needed) — enough for
+    // NotificationPublisher.PublishToTenantAsync's own fan-out query, which only cares about "which
+    // users belong to this tenant", the same generic IIdentityUserRepository.GetListAsync() it uses.
+    private async Task<Guid> CreateTenantStaffAsync(Guid tenantId)
+    {
+        Guid userId = default;
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var email = $"{Guid.NewGuid():N}@example.com";
+                var user = new IdentityUser(Guid.NewGuid(), email, email, tenantId);
+                (await _userManager.CreateAsync(user)).CheckErrors();
+                userId = user.Id;
+            }
+        });
+        return userId;
     }
 
     private async Task<(Guid TenantId, Guid SubscriptionId)> CreateTenantWithSubscriptionAsync()
@@ -167,5 +198,164 @@ public abstract class AdminSubscriptionAppService_Tests<TStartupModule> : Eksabl
         var payments = await WithUnitOfWorkAsync(() => _adminSubscriptionAppService.GetPaymentsAsync(new AdminPaymentFilterDto { InvoiceId = invoiceBId }));
 
         payments.Items.ShouldBeEmpty();
+    }
+
+    // Mirrors what Billing.BillingAppService.ChangePlanAsync itself does (RequestPlanChange, not
+    // ChangePlan) — calling the domain method directly here rather than going through
+    // IBillingAppService, since that service isn't otherwise a dependency of this test class.
+    private async Task<Guid> RequestPlanChangeAsync(Guid tenantId, Guid subscriptionId, Guid newPlanId)
+    {
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var subscription = await _subscriptionRepository.GetAsync(subscriptionId);
+                subscription.RequestPlanChange(newPlanId, DateTime.UtcNow);
+                await _subscriptionRepository.UpdateAsync(subscription, autoSave: true);
+            }
+        });
+        return newPlanId;
+    }
+
+    [Fact]
+    public async Task ApprovePlanChangeAsync_Should_Notify_The_Tenant()
+    {
+        var (tenantId, subscriptionId) = await CreateTenantWithSubscriptionAsync();
+        var staffId = await CreateTenantStaffAsync(tenantId);
+
+        Guid newPlanId = default;
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var scalePlan = SubscriptionPlan.Create(Guid.NewGuid(), "Scale", 149m, "{}");
+                await _planRepository.InsertAsync(scalePlan, autoSave: true);
+                newPlanId = scalePlan.Id;
+            }
+        });
+        await RequestPlanChangeAsync(tenantId, subscriptionId, newPlanId);
+
+        await WithUnitOfWorkAsync(() => _adminSubscriptionAppService.ApprovePlanChangeAsync(subscriptionId));
+
+        using (_currentTenant.Change(tenantId))
+        {
+            await WithUnitOfWorkAsync(async () =>
+            {
+                var notified = await _userNotificationRepository.GetListAsync(n => n.UserId == staffId);
+                notified.ShouldNotBeEmpty();
+            });
+        }
+    }
+
+    [Fact]
+    public async Task RejectPlanChangeAsync_Should_Notify_The_Tenant()
+    {
+        var (tenantId, subscriptionId) = await CreateTenantWithSubscriptionAsync();
+        var staffId = await CreateTenantStaffAsync(tenantId);
+
+        Guid newPlanId = default;
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var scalePlan = SubscriptionPlan.Create(Guid.NewGuid(), "Scale", 149m, "{}");
+                await _planRepository.InsertAsync(scalePlan, autoSave: true);
+                newPlanId = scalePlan.Id;
+            }
+        });
+        await RequestPlanChangeAsync(tenantId, subscriptionId, newPlanId);
+
+        await WithUnitOfWorkAsync(() => _adminSubscriptionAppService.RejectPlanChangeAsync(subscriptionId));
+
+        using (_currentTenant.Change(tenantId))
+        {
+            await WithUnitOfWorkAsync(async () =>
+            {
+                var notified = await _userNotificationRepository.GetListAsync(n => n.UserId == staffId);
+                notified.ShouldNotBeEmpty();
+            });
+        }
+    }
+
+    [Fact]
+    public async Task ApprovePlanChangeAsync_Should_Apply_The_Pending_Plan_And_Push_Its_Features_And_Activate()
+    {
+        var (tenantId, subscriptionId) = await CreateTenantWithSubscriptionAsync();
+
+        Guid newPlanId = default;
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var scalePlan = SubscriptionPlan.Create(Guid.NewGuid(), "Scale", 149m, $"{{\"{EksabliFeatures.MaxBranches}\":\"25\"}}");
+                await _planRepository.InsertAsync(scalePlan, autoSave: true);
+                newPlanId = scalePlan.Id;
+            }
+        });
+        await RequestPlanChangeAsync(tenantId, subscriptionId, newPlanId);
+
+        var dto = await WithUnitOfWorkAsync(() => _adminSubscriptionAppService.ApprovePlanChangeAsync(subscriptionId));
+
+        dto.PlanId.ShouldBe(newPlanId);
+        dto.PlanName.ShouldBe("Scale");
+        dto.PendingPlanId.ShouldBeNull();
+        dto.Status.ShouldBe(TenantSubscriptionStatus.Active);
+
+        using (_currentTenant.Change(tenantId))
+        {
+            var maxBranches = await _featureChecker.GetAsync<int>(EksabliFeatures.MaxBranches);
+            maxBranches.ShouldBe(25);
+        }
+    }
+
+    [Fact]
+    public async Task RejectPlanChangeAsync_Should_Clear_The_Request_Without_Changing_The_Plan_Or_Status()
+    {
+        var (tenantId, subscriptionId) = await CreateTenantWithSubscriptionAsync();
+
+        Guid originalPlanId = default;
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                originalPlanId = (await _subscriptionRepository.GetAsync(subscriptionId)).PlanId;
+            }
+        });
+
+        Guid newPlanId = default;
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var scalePlan = SubscriptionPlan.Create(Guid.NewGuid(), "Scale", 149m, "{}");
+                await _planRepository.InsertAsync(scalePlan, autoSave: true);
+                newPlanId = scalePlan.Id;
+            }
+        });
+        await RequestPlanChangeAsync(tenantId, subscriptionId, newPlanId);
+
+        var dto = await WithUnitOfWorkAsync(() => _adminSubscriptionAppService.RejectPlanChangeAsync(subscriptionId));
+
+        dto.PlanId.ShouldBe(originalPlanId);
+        dto.PendingPlanId.ShouldBeNull();
+        dto.Status.ShouldBe(TenantSubscriptionStatus.Trialing); // untouched, not activated by a rejection
+    }
+
+    [Fact]
+    public async Task ApprovePlanChangeAsync_Should_Throw_When_Nothing_Is_Pending()
+    {
+        var (_, subscriptionId) = await CreateTenantWithSubscriptionAsync();
+
+        await Assert.ThrowsAsync<UserFriendlyException>(() =>
+            WithUnitOfWorkAsync(() => _adminSubscriptionAppService.ApprovePlanChangeAsync(subscriptionId)));
+    }
+
+    [Fact]
+    public async Task RejectPlanChangeAsync_Should_Throw_When_Nothing_Is_Pending()
+    {
+        var (_, subscriptionId) = await CreateTenantWithSubscriptionAsync();
+
+        await Assert.ThrowsAsync<UserFriendlyException>(() =>
+            WithUnitOfWorkAsync(() => _adminSubscriptionAppService.RejectPlanChangeAsync(subscriptionId)));
     }
 }

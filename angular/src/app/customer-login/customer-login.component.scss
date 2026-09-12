@@ -1,0 +1,33 @@
+.customer-login-page {
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+
+.customer-login-card {
+  max-width: 420px;
+  width: 100%;
+}
+
+// Same wordmark treatment as landing.component.scss's header — no shared component between the two
+// pages, just the two-element markup, so the dot/color are repeated here rather than extracted.
+.wordmark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+
+  .dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--bs-primary, #6366f1);
+    display: inline-block;
+  }
+}
+
+.otp-code-input {
+  letter-spacing: 0.5em;
+  font-size: 1.5rem;
+}

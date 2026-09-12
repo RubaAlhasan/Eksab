@@ -1,0 +1,46 @@
+// Same profile-card treatment as admin-business-details.component.scss (large gradient avatar, mini
+// stat tile, plain label/value detail rows) — not promoted to a shared style, same reasoning that
+// component's own comment gives: `.eks-avatar-sm` stays the global table-row utility, this larger
+// variant is only for a single profile-card header.
+.eks-avatar {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--eks-primary-fg);
+  background: linear-gradient(135deg, var(--eks-primary-500), var(--eks-primary-700));
+}
+
+.eks-mini-stat {
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background-color: var(--eks-bg);
+
+  &__value {
+    font-size: 1.125rem;
+    font-weight: 800;
+    margin-bottom: 0;
+    color: var(--eks-text);
+  }
+
+  &__label {
+    font-size: 0.75rem;
+    color: var(--eks-text-muted);
+    margin-bottom: 0;
+  }
+}
+
+.eks-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+
+  span:last-child {
+    color: var(--eks-text);
+  }
+}

@@ -1,10 +1,33 @@
 import type { FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
 import type { AdminUserType } from './admin-user-type.enum';
+import type { MembershipStatus } from '../memberships/membership-status.enum';
 import type { SupportTicketPriority } from './support-ticket-priority.enum';
 import type { SupportTicketStatus } from './support-ticket-status.enum';
 
 export interface AddSupportTicketMessageDto {
   body: string;
+}
+
+export interface AdminCustomerDetailDto {
+  id?: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  contact?: string | null;
+  isActive: boolean;
+  creationTime?: string;
+  memberships?: AdminCustomerMembershipDto[];
+}
+
+export interface AdminCustomerMembershipDto {
+  membershipId?: string;
+  tenantId?: string;
+  businessName?: string;
+  status?: MembershipStatus;
+  joinedAt?: string;
+  balance?: number;
+  lifetimeEarned?: number;
+  lifetimeRedeemed?: number;
+  tierName?: string | null;
 }
 
 export interface AdminUserDto {

@@ -75,6 +75,9 @@ export interface TenantSubscriptionDto extends AuditedEntityDto<string> {
   startDate?: string;
   renewalDate?: string;
   status?: TenantSubscriptionStatus;
+  pendingPlanId?: string | null;
+  pendingPlanName?: string | null;
+  planChangeRequestedAt?: string | null;
 }
 
 export interface UsageDto {

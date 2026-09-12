@@ -1,6 +1,6 @@
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { AwardPointsByCustomerIdDto, AwardPointsByQrDto, AwardPointsResultDto, ConfirmRedemptionDto, CustomerLookupResultDto, LookupRedemptionDto, ManualAdjustDto, PhoneLookupDto, RedemptionConfirmationDto, RedemptionLookupDto, RedemptionRejectionDto, RejectRedemptionDto } from '../pos/models';
+import type { AwardPointsByCustomerIdDto, AwardPointsByQrDto, AwardPointsResultDto, ConfirmRedemptionDto, CustomerLookupResultDto, LookupRedemptionDto, ManualAdjustDto, PhoneLookupDto, PointsPreviewDto, PreviewPointsDto, RedemptionConfirmationDto, RedemptionLookupDto, RedemptionRejectionDto, RejectRedemptionDto } from '../pos/models';
 
 @Injectable({
   providedIn: 'root',
@@ -59,6 +59,15 @@ export class PosService {
     this.restService.request<any, AwardPointsResultDto>({
       method: 'POST',
       url: '/api/app/pos/adjust',
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+
+
+  previewPoints = (customerId: string, input: PreviewPointsDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, PointsPreviewDto>({
+      method: 'POST',
+      url: `/api/app/pos/preview-points/${customerId}`,
       body: input,
     },
     { apiName: this.apiName,...config });

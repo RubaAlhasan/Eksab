@@ -99,12 +99,16 @@
               <td class="fw-semibold">
                 <div class="d-flex align-items-center gap-2">
                   <span class="eks-avatar-sm">{{ initials(user) }}</span>
-                  @if (displayName(user); as name) {
+                  @if (user.type === Type.Customer) {
+                    <!-- Customer-only link — a Staff row has no wallet/membership concept for
+                         Customer Details to show (see admin-user-details.component.ts's file comment). -->
+                    <a [routerLink]="['/admin/users', user.id]">
+                      {{ displayName(user) ?? ('::AdminPanel:Users:UnknownCustomer' | abpLocalization) }}
+                    </a>
+                  } @else if (displayName(user); as name) {
                     <span>{{ name }}</span>
-                  } @else if (user.type === Type.Staff) {
-                    <span>{{ user.contact ?? '—' }}</span>
                   } @else {
-                    <span class="text-muted fst-italic">{{ '::AdminPanel:Users:UnknownCustomer' | abpLocalization }}</span>
+                    <span>{{ user.contact ?? '—' }}</span>
                   }
                 </div>
               </td>

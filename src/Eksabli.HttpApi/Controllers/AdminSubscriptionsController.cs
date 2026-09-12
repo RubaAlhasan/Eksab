@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Eksabli.Billing;
@@ -48,6 +49,18 @@ public class AdminSubscriptionsController : EksabliController
     public Task<InvoiceDto> RecordManualPaymentAsync(RecordManualPaymentDto input)
     {
         return _adminSubscriptionAppService.RecordManualPaymentAsync(input);
+    }
+
+    [HttpPost("{id}/approve-plan-change")]
+    public Task<TenantSubscriptionDto> ApprovePlanChangeAsync(Guid id)
+    {
+        return _adminSubscriptionAppService.ApprovePlanChangeAsync(id);
+    }
+
+    [HttpPost("{id}/reject-plan-change")]
+    public Task<TenantSubscriptionDto> RejectPlanChangeAsync(Guid id)
+    {
+        return _adminSubscriptionAppService.RejectPlanChangeAsync(id);
     }
 
     [HttpGet("payments")]

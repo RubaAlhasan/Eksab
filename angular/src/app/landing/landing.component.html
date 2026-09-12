@@ -15,6 +15,7 @@
       </div>
       @if (!hasLoggedIn) {
         <a class="login-link" (click)="login()">{{ '::Landing:Login' | abpLocalization }}</a>
+        <a class="login-link" routerLink="/customer-login">{{ '::Landing:MemberLogin' | abpLocalization }}</a>
       }
       <button class="btn btn-primary" type="button">{{ '::Landing:StartTrial' | abpLocalization }}</button>
     </div>
@@ -43,6 +44,7 @@
         </div>
         @if (!hasLoggedIn) {
           <a class="login-link" (click)="login()">{{ '::Landing:Login' | abpLocalization }}</a>
+          <a class="login-link" routerLink="/customer-login" (click)="closeMobileMenu()">{{ '::Landing:MemberLogin' | abpLocalization }}</a>
         }
       </div>
       <button class="btn btn-primary" type="button" (click)="closeMobileMenu()">{{ '::Landing:StartTrial' | abpLocalization }}</button>

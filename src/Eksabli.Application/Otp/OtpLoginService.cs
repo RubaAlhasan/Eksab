@@ -2,12 +2,14 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Eksabli.CustomerProfiles;
+using Eksabli.Permissions;
 using Volo.Abp.Caching;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Guids;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
+using Volo.Abp.PermissionManagement;
 
 namespace Eksabli.Otp;
 
@@ -17,6 +19,7 @@ public class OtpLoginService : IOtpLoginService, ITransientDependency
     private readonly IdentityUserManager _identityUserManager;
     private readonly IIdentityUserRepository _identityUserRepository;
     private readonly IRepository<CustomerProfile, Guid> _customerProfileRepository;
+    private readonly IPermissionManager _permissionManager;
     private readonly ICurrentTenant _currentTenant;
     private readonly IGuidGenerator _guidGenerator;
 
@@ -25,6 +28,7 @@ public class OtpLoginService : IOtpLoginService, ITransientDependency
         IdentityUserManager identityUserManager,
         IIdentityUserRepository identityUserRepository,
         IRepository<CustomerProfile, Guid> customerProfileRepository,
+        IPermissionManager permissionManager,
         ICurrentTenant currentTenant,
         IGuidGenerator guidGenerator)
     {
@@ -32,6 +36,7 @@ public class OtpLoginService : IOtpLoginService, ITransientDependency
         _identityUserManager = identityUserManager;
         _identityUserRepository = identityUserRepository;
         _customerProfileRepository = customerProfileRepository;
+        _permissionManager = permissionManager;
         _currentTenant = currentTenant;
         _guidGenerator = guidGenerator;
     }
@@ -96,6 +101,13 @@ public class OtpLoginService : IOtpLoginService, ITransientDependency
 
                 isNew = true;
             }
+
+            // Idempotent — SetAsync on an already-granted permission is a no-op, so this runs
+            // unconditionally on every successful validation (not just the two "just proved their
+            // phone" branches above) rather than trying to catch every path that could have granted it
+            // before. Marks this account as a real, verified customer — see EksabliPermissions
+            // .Customer's own comment for what this is actually used for.
+            await _permissionManager.SetForUserAsync(user.Id, EksabliPermissions.Customer.Default, true);
 
             return new OtpValidationResult { IsValid = true, User = user, IsNewUser = isNew };
         }

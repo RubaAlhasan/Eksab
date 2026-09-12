@@ -2,7 +2,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { LocalizationPipe, PermissionService } from '@abp/ng.core';
-import { ToasterService } from '@abp/ng.theme.shared';
+import { Confirmation, ConfirmationService, ToasterService } from '@abp/ng.theme.shared';
 import { AdminSubscriptionsService } from '../../proxy/controllers/admin-subscriptions.service';
 import { AdminTenantsService } from '../../proxy/controllers/admin-tenants.service';
 import type { InvoiceDto, PaymentDto, TenantSubscriptionDto } from '../../proxy/billing/models';
@@ -43,6 +43,14 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
  * server-side call now (DB-level GroupBy over active subscriptions, joined against plan prices — see
  * AdminSubscriptionAppService.GetStatsAsync) — one round trip, and the true total MRR, not a
  * first-500-rows approximation.
+ *
+ * **Plan-change approval, new this session**: `Billing.BillingAppService.ChangePlanAsync` no longer
+ * applies a tenant's plan selection immediately — it only records `PendingPlanId`/
+ * `PlanChangeRequestedAt`. A row with a pending change shows it inline (current plan → requested plan)
+ * with Approve/Reject actions, both real (`AdminSubscriptionAppService.ApprovePlanChangeAsync`/
+ * `RejectPlanChangeAsync`) — approving reassigns the plan, pushes its feature limits, and activates the
+ * subscription in one step; rejecting just clears the request. Same confirm-then-toast shape as
+ * Approve/Suspend on the Businesses list.
  */
 @Component({
   selector: 'app-admin-subscriptions',
@@ -67,6 +75,7 @@ export class AdminSubscriptionsComponent implements OnInit {
   private readonly subscriptionsService = inject(AdminSubscriptionsService);
   private readonly tenantsService = inject(AdminTenantsService);
   private readonly toaster = inject(ToasterService);
+  private readonly confirmation = inject(ConfirmationService);
   private readonly permissionService = inject(PermissionService);
 
   protected readonly SubStatus = TenantSubscriptionStatus;
@@ -118,6 +127,10 @@ export class AdminSubscriptionsComponent implements OnInit {
   protected readonly paymentModalOpen = signal(false);
   protected readonly isSavingPayment = signal(false);
   private payingInvoiceId: string | null = null;
+
+  // Which row's Approve/Reject plan-change action is in flight — disables just that row's buttons,
+  // not the whole table, same granularity as the record-payment action already uses per invoice.
+  protected readonly decidingPlanChangeId = signal<string | null>(null);
 
   protected readonly paymentForm = new FormGroup({
     providerTransactionRef: new FormControl('', { nonNullable: true }),
@@ -278,6 +291,58 @@ export class AdminSubscriptionsComponent implements OnInit {
       default:
         return '::AdminPanel:Subscriptions:PaymentPending';
     }
+  }
+
+  protected approvePlanChange(subscription: TenantSubscriptionDto): void {
+    if (!subscription.id) return;
+    const id = subscription.id;
+
+    this.confirmation
+      .warn('::AdminPanel:Subscriptions:ApprovePlanChangeConfirmMessage', '::AdminPanel:Subscriptions:ApprovePlanChangeConfirmTitle', {
+        yesText: '::AdminPanel:Subscriptions:Approve',
+      })
+      .subscribe((status) => {
+        if (status !== Confirmation.Status.confirm) return;
+
+        this.decidingPlanChangeId.set(id);
+        this.subscriptionsService.approvePlanChange(id).subscribe({
+          next: () => {
+            this.decidingPlanChangeId.set(null);
+            this.toaster.success('::AdminPanel:Subscriptions:PlanChangeApprovedMessage');
+            this.load();
+          },
+          error: () => {
+            this.decidingPlanChangeId.set(null);
+            this.toaster.error('::AdminPanel:Subscriptions:PlanChangeDecisionErrorMessage');
+          },
+        });
+      });
+  }
+
+  protected rejectPlanChange(subscription: TenantSubscriptionDto): void {
+    if (!subscription.id) return;
+    const id = subscription.id;
+
+    this.confirmation
+      .warn('::AdminPanel:Subscriptions:RejectPlanChangeConfirmMessage', '::AdminPanel:Subscriptions:RejectPlanChangeConfirmTitle', {
+        yesText: '::AdminPanel:Subscriptions:Reject',
+      })
+      .subscribe((status) => {
+        if (status !== Confirmation.Status.confirm) return;
+
+        this.decidingPlanChangeId.set(id);
+        this.subscriptionsService.rejectPlanChange(id).subscribe({
+          next: () => {
+            this.decidingPlanChangeId.set(null);
+            this.toaster.success('::AdminPanel:Subscriptions:PlanChangeRejectedMessage');
+            this.load();
+          },
+          error: () => {
+            this.decidingPlanChangeId.set(null);
+            this.toaster.error('::AdminPanel:Subscriptions:PlanChangeDecisionErrorMessage');
+          },
+        });
+      });
   }
 
   protected paymentStatusVariant(status: PaymentStatus | undefined): StatusBadgeVariant {

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
 import { AdminUsersService } from '../../proxy/controllers/admin-users.service';
 import type { AdminUserDto } from '../../proxy/platform/models';
@@ -36,6 +37,10 @@ type TypeFilter = 'all' | 'customer' | 'staff';
  *   name or a generic "Unnamed" label (which would be actively misleading — email IS their real
  *   identifier). Customers fall back to the localized "Unnamed customer" text, same convention as the
  *   Customers page's `customerName()` helper.
+ *
+ * **Customer rows link to Customer Details** (`admin-user-details.component.ts`) — balance, tier, and
+ * full transaction history per business the customer has joined. Staff rows are not clickable: a Staff
+ * `AdminUserDto` row has no wallet/membership to show (that concept is customer-only by construction).
  */
 @Component({
   selector: 'app-admin-users',
@@ -43,6 +48,7 @@ type TypeFilter = 'all' | 'customer' | 'staff';
   styleUrls: ['./admin-users.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    RouterLink,
     LocalizationPipe,
     PageHeaderComponent,
     SearchInputComponent,

@@ -243,6 +243,12 @@ namespace Eksabli.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("LastModifierId");
 
+                    b.Property<Guid?>("PendingPlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("PlanChangeRequestedAt")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<Guid>("PlanId")
                         .HasColumnType("uuid");
 
@@ -951,6 +957,10 @@ namespace Eksabli.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("LastModifierId");
 
+                    b.Property<string>("ReferralCode")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
@@ -961,6 +971,9 @@ namespace Eksabli.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId", "TenantId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "ReferralCode")
                         .IsUnique();
 
                     b.HasIndex("TenantId", "Status");

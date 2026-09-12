@@ -72,9 +72,17 @@ public partial class EksabliMembershipToMembershipDtoMapper : MapperBase<Members
 public partial class EksabliPointsWalletToPointsWalletDtoMapper : MapperBase<PointsWallet, PointsWalletDto>
 {
     [MapperIgnoreTarget(nameof(PointsWalletDto.CurrentTierName))]
+    [MapperIgnoreTarget(nameof(PointsWalletDto.BusinessName))]
+    [MapperIgnoreTarget(nameof(PointsWalletDto.CurrentTierMinLifetimePoints))]
+    [MapperIgnoreTarget(nameof(PointsWalletDto.NextTierName))]
+    [MapperIgnoreTarget(nameof(PointsWalletDto.NextTierMinLifetimePoints))]
     public override partial PointsWalletDto Map(PointsWallet source);
 
     [MapperIgnoreTarget(nameof(PointsWalletDto.CurrentTierName))]
+    [MapperIgnoreTarget(nameof(PointsWalletDto.BusinessName))]
+    [MapperIgnoreTarget(nameof(PointsWalletDto.CurrentTierMinLifetimePoints))]
+    [MapperIgnoreTarget(nameof(PointsWalletDto.NextTierName))]
+    [MapperIgnoreTarget(nameof(PointsWalletDto.NextTierMinLifetimePoints))]
     public override partial void Map(PointsWallet source, PointsWalletDto destination);
 }
 
@@ -134,9 +142,11 @@ public partial class EksabliSubscriptionPlanToSubscriptionPlanDtoMapper : Mapper
 public partial class EksabliTenantSubscriptionToTenantSubscriptionDtoMapper : MapperBase<TenantSubscription, TenantSubscriptionDto>
 {
     [MapperIgnoreTarget(nameof(TenantSubscriptionDto.PlanName))]
+    [MapperIgnoreTarget(nameof(TenantSubscriptionDto.PendingPlanName))]
     public override partial TenantSubscriptionDto Map(TenantSubscription source);
 
     [MapperIgnoreTarget(nameof(TenantSubscriptionDto.PlanName))]
+    [MapperIgnoreTarget(nameof(TenantSubscriptionDto.PendingPlanName))]
     public override partial void Map(TenantSubscription source, TenantSubscriptionDto destination);
 }
 

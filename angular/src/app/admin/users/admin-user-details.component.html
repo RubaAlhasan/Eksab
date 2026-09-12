@@ -1,0 +1,172 @@
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::AdminPanel:Users:Loading' | abpLocalization"></app-loading-spinner>
+} @else if (notFound()) {
+  <app-empty-state icon="fa-user" [title]="'::AdminPanel:Users:NotFoundTitle' | abpLocalization" [description]="'::AdminPanel:Users:NotFoundMessage' | abpLocalization">
+    <a routerLink="/admin/users" class="btn btn-sm btn-outline-secondary">
+      {{ '::AdminPanel:Users:BackToList' | abpLocalization }}
+    </a>
+  </app-empty-state>
+} @else if (loadFailed()) {
+  <app-error-state
+    [message]="'::AdminPanel:Users:LoadErrorMessage' | abpLocalization"
+    [retryLabel]="'::AdminPanel:Users:TryAgain' | abpLocalization"
+    (retry)="retry()"
+  >
+  </app-error-state>
+} @else if (customer(); as customer) {
+  <app-page-header
+    [title]="displayName(customer) ?? ('::AdminPanel:Users:UnknownCustomer' | abpLocalization)"
+    [breadcrumbs]="[
+      { label: 'Admin Portal', link: '/admin/businesses' },
+      { label: ('::AdminPanel:Users:Title' | abpLocalization), link: '/admin/users' },
+      { label: displayName(customer) ?? ('::AdminPanel:Users:UnknownCustomer' | abpLocalization) }
+    ]"
+  >
+  </app-page-header>
+
+  <div class="row g-4">
+    <div class="col-12 col-lg-4">
+      <div class="card">
+        <div class="card-body text-center p-4">
+          <div class="eks-avatar mx-auto mb-3">{{ initials(customer) }}</div>
+          @if (displayName(customer); as name) {
+            <p class="fw-bold mb-1">{{ name }}</p>
+          } @else {
+            <p class="fw-bold mb-1 fst-italic text-muted">{{ '::AdminPanel:Users:UnknownCustomer' | abpLocalization }}</p>
+          }
+          <p class="text-muted small mb-2">{{ customer.contact ?? '—' }}</p>
+          <app-status-badge [label]="statusLabelKey(customer.isActive) | abpLocalization" [variant]="statusVariant(customer.isActive)"></app-status-badge>
+
+          <div class="row g-3 text-center mt-1 mb-1">
+            <div class="col-12">
+              <div class="eks-mini-stat">
+                <p class="eks-mini-stat__value">{{ customer.memberships?.length ?? 0 }}</p>
+                <p class="eks-mini-stat__label">{{ '::AdminPanel:Users:ColumnBusinessesJoined' | abpLocalization }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="text-start mt-4">
+            <div class="eks-detail-row">
+              <span class="text-muted small">{{ '::AdminPanel:Users:CustomerSinceLabel' | abpLocalization }}</span>
+              <span class="fw-semibold small">{{ customer.creationTime | date: 'mediumDate' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-8">
+      <p class="fw-bold small text-uppercase text-muted mb-3">{{ '::AdminPanel:Users:MembershipsHeading' | abpLocalization }}</p>
+
+      @if (!customer.memberships || customer.memberships.length === 0) {
+        <div class="card">
+          <div class="card-body">
+            <app-empty-state icon="fa-store-slash" [title]="'::AdminPanel:Users:NoMembershipsTitle' | abpLocalization"></app-empty-state>
+          </div>
+        </div>
+      } @else {
+        <div class="card">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>{{ '::AdminPanel:Users:ColumnBusiness' | abpLocalization }}</th>
+                  <th>{{ '::AdminPanel:Users:ColumnBalance' | abpLocalization }}</th>
+                  <th>{{ '::AdminPanel:Users:ColumnTier' | abpLocalization }}</th>
+                  <th>{{ '::AdminPanel:Users:ColumnLifetimeEarned' | abpLocalization }}</th>
+                  <th>{{ '::AdminPanel:Users:ColumnLifetimeRedeemed' | abpLocalization }}</th>
+                  <th>{{ '::AdminPanel:Users:ColumnJoined' | abpLocalization }}</th>
+                  <th>{{ '::AdminPanel:Users:ColumnMembershipStatus' | abpLocalization }}</th>
+                  <th class="text-end"><span class="visually-hidden">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (membership of customer.memberships; track membership.membershipId) {
+                  <tr class="eks-clickable-row" (click)="toggleMembership(membership)">
+                    <td class="fw-semibold">{{ membership.businessName || '—' }}</td>
+                    <td>{{ membership.balance ?? 0 }} {{ '::BusinessPanel:Points:PointsWord' | abpLocalization }}</td>
+                    <td class="text-muted">{{ membership.tierName ?? '—' }}</td>
+                    <td class="text-muted">{{ membership.lifetimeEarned ?? 0 }}</td>
+                    <td class="text-muted">{{ membership.lifetimeRedeemed ?? 0 }}</td>
+                    <td class="text-muted">{{ membership.joinedAt | date: 'mediumDate' }}</td>
+                    <td>
+                      <app-status-badge
+                        [label]="membershipStatusLabelKey(membership.status) | abpLocalization"
+                        [variant]="membershipStatusVariant(membership.status)"
+                      >
+                      </app-status-badge>
+                    </td>
+                    <td class="text-end">
+                      <i
+                        class="fas"
+                        [class.fa-chevron-down]="expandedMembershipId() !== membership.membershipId"
+                        [class.fa-chevron-up]="expandedMembershipId() === membership.membershipId"
+                      ></i>
+                    </td>
+                  </tr>
+                  @if (expandedMembershipId() === membership.membershipId) {
+                    <tr>
+                      <td colspan="8" class="bg-body-tertiary">
+                        <p class="fw-semibold small text-uppercase text-muted mb-2 mt-1">
+                          {{ '::AdminPanel:Users:TransactionsHeading' | abpLocalization }}
+                        </p>
+                        @if (transactionsLoading()) {
+                          <app-loading-spinner [label]="'::AdminPanel:Users:Loading' | abpLocalization"></app-loading-spinner>
+                        } @else if (transactionsFailed()) {
+                          <app-error-state
+                            [message]="'::AdminPanel:Users:LoadErrorMessage' | abpLocalization"
+                            [retryLabel]="'::AdminPanel:Users:TryAgain' | abpLocalization"
+                            (retry)="retryTransactions(membership)"
+                          >
+                          </app-error-state>
+                        } @else if (transactions().length === 0) {
+                          <p class="text-muted small mb-2">{{ '::AdminPanel:Users:NoTransactions' | abpLocalization }}</p>
+                        } @else {
+                          <div class="table-responsive">
+                            <table class="table table-sm mb-2">
+                              <thead>
+                                <tr>
+                                  <th>{{ '::BusinessPanel:Transactions:ColumnDate' | abpLocalization }}</th>
+                                  <th>{{ '::BusinessPanel:Transactions:ColumnType' | abpLocalization }}</th>
+                                  <th>{{ '::BusinessPanel:Transactions:ColumnPoints' | abpLocalization }}</th>
+                                  <th>{{ '::BusinessPanel:Transactions:ColumnSource' | abpLocalization }}</th>
+                                  <th>{{ '::AdminPanel:Users:ColumnReason' | abpLocalization }}</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                @for (transaction of transactions(); track transaction.id) {
+                                  <tr>
+                                    <td class="text-muted">{{ transaction.creationTime | date: 'medium' }}</td>
+                                    <td>
+                                      <app-status-badge [label]="typeLabelKey(transaction.type) | abpLocalization" [variant]="typeVariant(transaction.type)"></app-status-badge>
+                                    </td>
+                                    <td class="fw-semibold">{{ transaction.points }}</td>
+                                    <td class="text-muted">{{ sourceLabelKey(transaction.source) | abpLocalization }}</td>
+                                    <td class="text-muted">{{ transaction.reason ?? '—' }}</td>
+                                  </tr>
+                                }
+                              </tbody>
+                            </table>
+                          </div>
+                          @if (transactionsTotalPages() > 1) {
+                            <app-pagination
+                              [pageIndex]="transactionsPageIndex()"
+                              [totalPages]="transactionsTotalPages()"
+                              (pageChange)="goToTransactionsPage($event, membership)"
+                            >
+                            </app-pagination>
+                          }
+                        }
+                      </td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}

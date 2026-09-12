@@ -1,3 +1,4 @@
+import type { PointRuleType } from '../wallets/point-rule-type.enum';
 
 export interface AwardPointsByCustomerIdDto {
   purchaseAmount?: number | null;
@@ -42,6 +43,23 @@ export interface ManualAdjustDto {
 
 export interface PhoneLookupDto {
   phoneNumber: string;
+}
+
+export interface PointsPreviewDto {
+  basePoints?: number;
+  ruleType?: PointRuleType;
+  pointsPerUnit?: number;
+  tierMultiplier?: number;
+  tierName?: string | null;
+  campaignMultiplier?: number;
+  campaignName?: string | null;
+  campaignBonusPoints?: number;
+  bonusCampaignName?: string | null;
+  totalPoints?: number;
+}
+
+export interface PreviewPointsDto {
+  purchaseAmount?: number | null;
 }
 
 export interface RedemptionConfirmationDto {

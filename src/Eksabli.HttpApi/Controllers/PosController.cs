@@ -36,6 +36,12 @@ public class PosController : EksabliController
         return _posAppService.AwardPointsByCustomerIdAsync(customerId, input);
     }
 
+    [HttpPost("preview-points/{customerId}")]
+    public Task<PointsPreviewDto> PreviewPointsAsync(Guid customerId, PreviewPointsDto input)
+    {
+        return _posAppService.PreviewPointsAsync(customerId, input);
+    }
+
     [HttpPost("adjust")]
     public Task<AwardPointsResultDto> ManualAdjustAsync(ManualAdjustDto input)
     {
