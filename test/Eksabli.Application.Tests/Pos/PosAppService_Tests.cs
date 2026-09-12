@@ -178,11 +178,9 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
                     membershipId,
                     code,
                     cost,
-                    // DateTime.Now, not UtcNow: the service compares against ABP's Clock.Now, which
-                    // this solution leaves at DateTimeKind.Unspecified and so returns LOCAL time. A
-                    // UTC window looks already-lapsed to it from any timezone east of Greenwich.
-                    DateTime.Now,
-                    DateTime.Now.AddMinutes(CouponConsts.PendingWindowMinutes));
+                    // Matches IClock.Now, now configured as DateTimeKind.Utc.
+                    DateTime.UtcNow,
+                    DateTime.UtcNow.AddMinutes(CouponConsts.PendingWindowMinutes));
                 await _couponRepository.InsertAsync(coupon, autoSave: true);
 
                 var wallet = await _walletRepository.SingleAsync(w => w.MembershipId == membershipId);

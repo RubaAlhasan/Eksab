@@ -105,17 +105,28 @@ abstract final class AppText {
   );
 }
 
-/// The eight brand gradients the prototype assigns to demo businesses
-/// (`from-amber-500 to-amber-700` and friends), resolved to real colours.
+/// Generated identity colour for a business with no logo of its own.
+///
+/// Previously eight Tailwind defaults carried over from the HTML prototype — amber, rose, emerald,
+/// sky and friends. Three of them sat squarely on top of the reserved status colours
+/// (rose/#F43F5E vs danger, emerald/#10B981 vs success, amber/#F59E0B vs warning), which the design
+/// tokens go out of their way to keep exclusive: "these four mean good / warning / serious / info and
+/// are never reused". A business tile in emerald beside a Cancelled badge in rose is exactly the
+/// ambiguity that rule exists to prevent, and none of the eight came from the token system at all.
+///
+/// Now six steps along the sanctioned brand axis — violet (`--eks-primary`) through magenta
+/// (`--eks-secondary`), the only two saturated brand hues this system has room for, per the token
+/// file's own colour search. Variation comes from DEPTH rather than hue, the same way the tier ramp
+/// works, so a wall of businesses reads as one family instead of a bag of sweets.
+///
+/// Every colour here is an `AppColors` token; a raw hex in this enum would be the bug it replaces.
 enum BrandGradient {
-  amber(Color(0xFFF59E0B), Color(0xFFB45309)),
-  rose(Color(0xFFF43F5E), Color(0xFFBE123C)),
-  pinkFuchsia(Color(0xFFF472B6), Color(0xFFC026D3)),
-  emerald(Color(0xFF10B981), Color(0xFF047857)),
-  sky(Color(0xFF0EA5E9), Color(0xFF0369A1)),
-  limeGreen(Color(0xFF65A30D), Color(0xFF15803D)),
-  violetPurple(Color(0xFF8B5CF6), Color(0xFF7E22CE)),
-  indigoPrimary(Color(0xFF6366F1), AppColors.primary700);
+  violet(AppColors.primary500, AppColors.primary700),
+  indigo(AppColors.primary600, AppColors.primary900),
+  plum(AppColors.primary700, AppColors.secondary700),
+  magenta(AppColors.secondary500, AppColors.secondary700),
+  mulberry(AppColors.secondary600, AppColors.secondary900),
+  midnight(AppColors.primary800, AppColors.primary950);
 
   const BrandGradient(this.from, this.to);
 

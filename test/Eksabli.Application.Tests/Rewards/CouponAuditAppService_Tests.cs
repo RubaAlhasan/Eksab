@@ -59,8 +59,8 @@ public abstract class CouponAuditAppService_Tests<TStartupModule> : EksabliAppli
                     Guid.NewGuid(),
                     code,
                     reward.PointsCost,
-                    DateTime.Now,
-                    DateTime.Now.AddMinutes(CouponConsts.PendingWindowMinutes));
+                    DateTime.UtcNow,
+                    DateTime.UtcNow.AddMinutes(CouponConsts.PendingWindowMinutes));
                 if (status == CouponStatus.Redeemed)
                 {
                     coupon.Approve(DateTime.UtcNow, Guid.NewGuid(), null);

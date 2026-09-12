@@ -270,12 +270,11 @@ export class BusinessRedemptionComponent implements OnDestroy {
       return;
     }
 
-    // The API stores `timestamp without time zone` written from ABP's `IClock.Now`, which this
-    // solution leaves at `DateTimeKind.Unspecified` — so this is the server's LOCAL time with no
-    // offset. ECMAScript reads an offset-less date-time as local, which is the correct reading while
-    // the till and the API share a timezone. Appending a `Z` here would shift the countdown by the
-    // server's own offset.
-    const deadline = Date.parse(expiresAt);
+    // The API stores `timestamp without time zone` written from ABP's `IClock.Now`, configured as
+    // `DateTimeKind.Utc` — so this is UTC carrying no offset marker. ECMAScript reads an offset-less
+    // date-time as LOCAL, which would shift the countdown by the till's own offset, so the marker is
+    // supplied here. An explicit offset is left alone if one ever appears.
+    const deadline = Date.parse(/[Z+]|-\d{2}:?\d{2}$/.test(expiresAt) ? expiresAt : `${expiresAt}Z`);
     if (Number.isNaN(deadline)) {
       this.secondsLeft.set(null);
       return;

@@ -525,23 +525,24 @@ class Coupon {
   }
 }
 
-/// Parses a server timestamp.
+/// Parses a server timestamp into local device time.
 ///
-/// The API stores `timestamp without time zone` and writes it from ABP's `IClock.Now`, which this
-/// solution leaves at the default `DateTimeKind.Unspecified` — so the value is the SERVER'S LOCAL
-/// time, arriving with no offset. `DateTime.tryParse` reads an offset-less string as local, which is
-/// the right reading while server and device share a timezone, and is the convention every other
-/// timestamp in this app already follows.
+/// The API stores `timestamp without time zone` and writes it from ABP's `IClock.Now`, which is
+/// configured as `DateTimeKind.Utc` — so these arrive as UTC with no offset marker on them.
+/// `DateTime.tryParse` would read an offset-less string as LOCAL, putting every countdown and expiry
+/// hours out for anyone not on UTC, so the marker is supplied before parsing and the result handed
+/// back in the device's own zone.
 ///
-/// It is worth being explicit that this is a property of the deployment, not a guarantee: a device in
-/// a different timezone from the API will read these wrong, in this function and in every existing
-/// screen alike. Fixing that means configuring `AbpClockOptions.Kind = DateTimeKind.Utc` server-side
-/// and migrating the stored values — a backend decision, not something to paper over per-field here.
+/// An explicit offset is respected if one ever appears, so this keeps working if the API moves to
+/// `timestamptz` later.
 DateTime? _parseServerTime(Object? raw) {
   if (raw == null) return null;
   final text = '$raw';
   if (text.isEmpty || text == 'null') return null;
-  return DateTime.tryParse(text);
+
+  final hasZone =
+      text.endsWith('Z') || RegExp(r'[+-]\d{2}:?\d{2}$').hasMatch(text);
+  return DateTime.tryParse(hasZone ? text : '${text}Z')?.toLocal();
 }
 
 enum NotificationTone {

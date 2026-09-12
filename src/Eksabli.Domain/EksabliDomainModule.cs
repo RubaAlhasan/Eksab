@@ -12,6 +12,7 @@ using Volo.Abp.BlobStoring;
 using Volo.Abp.Localization;
 using Volo.Abp.Modularity;
 using Volo.Abp.MultiTenancy;
+using Volo.Abp.Timing;
 using Volo.Abp.PermissionManagement.Identity;
 using Volo.Abp.SettingManagement;
 using Volo.Abp.BackgroundWorkers;
@@ -51,6 +52,23 @@ public class EksabliDomainModule : AbpModule
         Configure<AbpMultiTenancyOptions>(options =>
         {
             options.IsEnabled = MultiTenancyConsts.IsEnabled;
+        });
+
+        // Every DateTime this app stores or compares is UTC.
+        //
+        // ABP defaults Kind to Unspecified, which makes IClock.Now return DateTime.Now — the SERVER'S
+        // LOCAL time — written into `timestamp without time zone` columns that carry no offset. That
+        // is only ever correct while the server and every client share one timezone, and it silently
+        // stops being correct the moment either moves: a reservation window, a campaign end date or a
+        // coupon expiry read hours out, with nothing in the data to say so. The customer app's own
+        // users are at +04 against a +03 server today.
+        //
+        // Existing rows were written in local time and are shifted to UTC by the
+        // ConvertStoredTimestampsToUtc migration, which pairs with this setting — neither is correct
+        // without the other.
+        Configure<AbpClockOptions>(options =>
+        {
+            options.Kind = DateTimeKind.Utc;
         });
 
 

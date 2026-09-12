@@ -55,15 +55,12 @@ class HomeScreen extends ConsumerWidget {
               AsyncSection<List<WalletEntry>>(
                 value: wallet,
                 onRetry: () => ref.invalidate(membershipsProvider),
-                loading: const SizedBox(
-                  height: 186,
-                  child: Row(
-                    children: [
-                      Skeleton(height: 186, width: 176, radius: 16),
-                      SizedBox(width: 12),
-                      Skeleton(height: 186, width: 176, radius: 16),
-                    ],
-                  ),
+                loading: const Column(
+                  children: [
+                    Skeleton(height: 92, radius: 16),
+                    SizedBox(height: 12),
+                    Skeleton(height: 92, radius: 16),
+                  ],
                 ),
                 data: (entries) => entries.isEmpty
                     ? EmptyState(
@@ -77,16 +74,17 @@ class HomeScreen extends ConsumerWidget {
                           onPressed: () => context.push(Routes.nearby),
                         ),
                       )
-                    : SizedBox(
-                        height: 186,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: entries.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 12),
-                          itemBuilder: (context, i) => _MyBusinessCard(
-                            entry: entries[i],
-                          ),
-                        ),
+                    // Stacked, not a horizontal strip — same reasoning as the offers below. A row
+                    // of fixed 176pt cards left most of the width empty for a customer with one
+                    // membership, and clipped the last card for one with several.
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (var i = 0; i < entries.length; i++) ...[
+                            if (i > 0) const SizedBox(height: 12),
+                            _MyBusinessCard(entry: entries[i]),
+                          ],
+                        ],
                       ),
               ),
               const SizedBox(height: 28),
@@ -100,17 +98,7 @@ class HomeScreen extends ConsumerWidget {
                     actionLabel: 'See all',
                     onAction: () => context.push(Routes.campaigns),
                   ),
-                  SizedBox(
-                    height: 108,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: list.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 12),
-                      itemBuilder: (context, i) => _CampaignCard(
-                        campaign: list[i],
-                      ),
-                    ),
-                  ),
+                  _OffersStack(campaigns: list),
                   const SizedBox(height: 28),
                 ],
                 _ => const <Widget>[],
@@ -248,6 +236,11 @@ class _Header extends StatelessWidget {
   }
 }
 
+/// One joined business: who, what tier, how many points, and how close to the next tier.
+///
+/// Laid out as a full-width row rather than the tall fixed-width tile it used to be — see the
+/// stacking comment at the call site. Reading left to right also puts the balance where the eye
+/// already is for every other list in the app.
 class _MyBusinessCard extends StatelessWidget {
   const _MyBusinessCard({required this.entry});
 
@@ -256,59 +249,70 @@ class _MyBusinessCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
-    return SizedBox(
-      width: 176,
-      child: AppCard(
-        onTap: () => context.push(Routes.points(entry.business.id)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            BusinessLogo(
-              initials: entry.business.initials,
-              gradient: entry.business.gradient,
-              logoUrl: entry.business.logoUrl,
-              size: 40,
-              radius: 12,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              entry.business.name,
-              overflow: TextOverflow.ellipsis,
-              style: AppText.bodyBold.copyWith(color: palette.textPrimary),
-            ),
-            Text(
-              entry.membership.tier ?? entry.business.category,
-              overflow: TextOverflow.ellipsis,
-              style: AppText.small.copyWith(color: palette.textMuted),
-            ),
-            const SizedBox(height: 10),
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: formatPoints(entry.membership.balance),
-                    style: AppText.h2.copyWith(
-                      color: palette.primaryOnDarkAware,
-                    ),
-                  ),
-                  TextSpan(
-                    text: ' pts',
-                    style: AppText.smallSemi.copyWith(
-                      color: palette.textMuted,
-                    ),
-                  ),
-                ],
+
+    return AppCard(
+      onTap: () => context.push(Routes.points(entry.business.id)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              BusinessLogo(
+                initials: entry.business.initials,
+                gradient: entry.business.gradient,
+                logoUrl: entry.business.logoUrl,
+                size: 44,
+                radius: 14,
               ),
-            ),
-            // The card's whole job is to pull someone back in; the balance alone says where they
-            // are, this says how close they are to the next thing worth having.
-            if (entry.membership.hasTierProgress) ...[
-              const SizedBox(height: 12),
-              TierProgress(membership: entry.membership, compact: true),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      entry.business.name,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.bodyBold.copyWith(
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      entry.membership.tier ?? entry.business.category,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.small.copyWith(color: palette.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: formatPoints(entry.membership.balance),
+                      style: AppText.h2.copyWith(
+                        color: palette.primaryOnDarkAware,
+                      ),
+                    ),
+                    TextSpan(
+                      text: ' pts',
+                      style: AppText.smallSemi.copyWith(
+                        color: palette.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
+          ),
+          // The card's whole job is to pull someone back in; the balance alone says where they are,
+          // this says how close they are to the next thing worth having.
+          if (entry.membership.hasTierProgress) ...[
+            const SizedBox(height: 12),
+            TierProgress(membership: entry.membership, compact: true),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -395,6 +399,42 @@ class _DiscoverCard extends StatelessWidget {
   }
 }
 
+/// Offers, stacked full width.
+///
+/// This was a horizontal carousel of fixed-width cards, then a PageView with a peek. Both cut the
+/// next card at the viewport edge, and at desktop widths the slice was large enough to chop a
+/// headline mid-word — it read as a rendering fault rather than as "scroll for more". A peek only
+/// works when it is a thin, obviously-deliberate sliver, and there is no card width that stays thin
+/// across a 360pt phone and a maximised browser window.
+///
+/// Full-width rows have no edge to cut against, match every other list on this screen, and need no
+/// width arithmetic at all. Offers beyond the first few live behind the section's own "See all",
+/// which is where a long list belongs anyway.
+class _OffersStack extends StatelessWidget {
+  const _OffersStack({required this.campaigns});
+
+  /// Home is a summary, not the offers screen. Past a handful the section would push everything else
+  /// below the fold, and "See all" already exists.
+  static const _maxVisible = 3;
+
+  final List<Campaign> campaigns;
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = campaigns.take(_maxVisible).toList();
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < visible.length; i++) ...[
+          if (i > 0) const SizedBox(height: 12),
+          _CampaignCard(campaign: visible[i]),
+        ],
+      ],
+    );
+  }
+}
+
 class _CampaignCard extends StatelessWidget {
   const _CampaignCard({required this.campaign});
 
@@ -403,9 +443,12 @@ class _CampaignCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 256,
+      width: double.infinity,
       child: AppCard(
-        gradient: Business.gradientFor(campaign.businessId).gradient,
+        // Brand gradient, not the business's generated colour: this card is Eksabli chrome
+        // announcing an offer, and the business is already named inside it. Hashing the whole
+        // surface off the tenant id made the app's accent depend on whose campaign it was.
+        gradient: BrandGradient.violet.gradient,
         onTap: () => context.push(Routes.store(campaign.businessId)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -427,7 +470,7 @@ class _CampaignCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: AppText.bodyBold.copyWith(color: Colors.white),
             ),
-            const Spacer(),
+            const SizedBox(height: 10),
             Text(
               'Ends ${formatDate(campaign.endDate)}',
               style: AppText.small.copyWith(
