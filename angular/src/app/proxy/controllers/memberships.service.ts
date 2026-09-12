@@ -24,7 +24,7 @@ export class MembershipsService {
     this.restService.request<any, PagedResultDto<MemberDto>>({
       method: 'GET',
       url: '/api/app/memberships',
-      params: { filterText: input.filterText, tierId: input.tierId, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filterText: input.filterText, tierId: input.tierId, status: input.status, hasEarnedPointsAtLeastOnce: input.hasEarnedPointsAtLeastOnce, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
 

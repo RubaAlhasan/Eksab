@@ -170,4 +170,71 @@ public abstract class MembershipAppService_Tests<TStartupModule> : EksabliApplic
         }
     }
 
+    // Gives a member a real Earn transaction's effect directly on the wallet (LifetimeEarned), rather
+    // than going through PosAppService — that service isn't a dependency of this test class, and
+    // GetMembersAsync's filter only ever reads PointsWallet.LifetimeEarned, not the ledger itself, so
+    // this is a faithful, minimal way to simulate "this member has really transacted".
+    private async Task GiveWalletARealEarnAsync(Guid tenantId, Guid membershipId, int points)
+    {
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var wallet = await _walletRepository.SingleAsync(w => w.MembershipId == membershipId);
+                wallet.ApplyTransaction(PointsTransactionType.Earn, points);
+                await _walletRepository.UpdateAsync(wallet, autoSave: true);
+            }
+        });
+    }
+
+    [Fact]
+    public async Task GetMembersAsync_Should_Include_Everyone_By_Default_Even_With_Zero_Activity()
+    {
+        var tenantId = await CreateTenantAsync();
+        var neverTransactedId = Guid.NewGuid();
+
+        using (LoginAs(neverTransactedId))
+        {
+            await WithUnitOfWorkAsync(() => _membershipAppService.JoinAsync(new JoinBusinessDto { TenantId = tenantId }));
+        }
+
+        using (_currentTenant.Change(tenantId))
+        {
+            // No HasEarnedPointsAtLeastOnce set — this is the shape Coupons'/Notifications'/the
+            // Subscription page's own calls use, and they need every real member, not just ones who've
+            // transacted (see MemberFilterDto.HasEarnedPointsAtLeastOnce's own comment).
+            var result = await WithUnitOfWorkAsync(() => _membershipAppService.GetMembersAsync(new MemberFilterDto()));
+            result.Items.Select(m => m.CustomerId).ShouldContain(neverTransactedId);
+        }
+    }
+
+    [Fact]
+    public async Task GetMembersAsync_Should_Exclude_Members_With_No_Real_Transaction_When_Filter_Is_On()
+    {
+        var tenantId = await CreateTenantAsync();
+        var neverTransactedId = Guid.NewGuid();
+        var realCustomerId = Guid.NewGuid();
+
+        Guid realMembershipId = default;
+        using (LoginAs(neverTransactedId))
+        {
+            await WithUnitOfWorkAsync(() => _membershipAppService.JoinAsync(new JoinBusinessDto { TenantId = tenantId }));
+        }
+        using (LoginAs(realCustomerId))
+        {
+            var membership = await WithUnitOfWorkAsync(() => _membershipAppService.JoinAsync(new JoinBusinessDto { TenantId = tenantId }));
+            realMembershipId = membership.Id;
+        }
+        await GiveWalletARealEarnAsync(tenantId, realMembershipId, 50);
+
+        using (_currentTenant.Change(tenantId))
+        {
+            var result = await WithUnitOfWorkAsync(() =>
+                _membershipAppService.GetMembersAsync(new MemberFilterDto { HasEarnedPointsAtLeastOnce = true }));
+
+            var customerIds = result.Items.Select(m => m.CustomerId).ToList();
+            customerIds.ShouldContain(realCustomerId);
+            customerIds.ShouldNotContain(neverTransactedId);
+        }
+    }
 }

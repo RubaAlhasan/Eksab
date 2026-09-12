@@ -820,7 +820,7 @@
     "BusinessPanel:Customers:TryAgain": "Try again",
     "BusinessPanel:Customers:LoadErrorMessage": "Couldn't load customers. Please try again.",
     "BusinessPanel:Customers:EmptyTitle": "No customers found",
-    "BusinessPanel:Customers:EmptyDescription": "Try a different search or clear your filters.",
+    "BusinessPanel:Customers:EmptyDescription": "Try a different search or clear your filters. Note: a customer only appears here after their first purchase — joining alone isn't enough.",
     "BusinessPanel:Customers:UnknownCustomer": "Unnamed customer",
     "BusinessPanel:Customers:FollowingHint": "Customers following your business but not yet members.",
     "BusinessPanel:Customers:FollowingEmptyTitle": "No followers yet",

@@ -840,7 +840,7 @@
     "BusinessPanel:Customers:TryAgain": "حاول مرة أخرى",
     "BusinessPanel:Customers:LoadErrorMessage": "تعذّر تحميل العملاء. يرجى المحاولة مرة أخرى.",
     "BusinessPanel:Customers:EmptyTitle": "لا يوجد عملاء",
-    "BusinessPanel:Customers:EmptyDescription": "جرّب بحثًا مختلفًا أو امسح عوامل التصفية.",
+    "BusinessPanel:Customers:EmptyDescription": "جرّب بحثًا مختلفًا أو امسح عوامل التصفية. ملاحظة: لا يظهر العميل هنا إلا بعد أول عملية شراء له — مجرّد الانضمام لا يكفي.",
     "BusinessPanel:Customers:UnknownCustomer": "عميل بلا اسم",
     "BusinessPanel:Customers:FollowingHint": "عملاء يتابعون نشاطك التجاري ولم ينضموا كأعضاء بعد.",
     "BusinessPanel:Customers:FollowingEmptyTitle": "لا يوجد متابعون بعد",

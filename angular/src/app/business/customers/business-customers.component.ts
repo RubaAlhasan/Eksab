@@ -69,6 +69,14 @@ const TIER_VARIANTS: StatusBadgeVariant[] = ['neutral', 'info', 'warning', 'succ
  * `CouponAuditFilterDto.MembershipId`) was closed with small, justified backend additions; see that
  * component's own doc comment for the details. Each member row here is now a real link to it.
  *
+ * **UPDATE, later session**: Members tab now passes `hasEarnedPointsAtLeastOnce: true` — a member who
+ * joined/scanned a QR but never had a real points-earning transaction (never actually came in and
+ * bought anything) no longer clutters this list. Deliberately NOT applied to `getMembers()` itself
+ * server-side by default — Coupons' name lookup, Notifications' recipient picker, and the
+ * Subscription page's Active-Members usage count all reuse that same endpoint and need every real
+ * member, not just this page's "has actually transacted" subset. See
+ * `MemberFilterDto.HasEarnedPointsAtLeastOnce`'s own comment.
+ *
  * This page's own **"Manual Point Adjustment" modal stays as its own per-row action too**, not removed
  * in favor of the details page's copy — same real `PosAppService.ManualAdjustAsync` call, intentionally
  * duplicated (not extracted into a shared component this pass) rather than risking a regression here
@@ -283,6 +291,11 @@ export class BusinessCustomersComponent implements OnInit {
         filterText: this.filterText() || null,
         tierId: this.tierFilterValue() || null,
         status,
+        // Only real members show up here — everyone who's joined/scanned a QR but never actually had a
+        // real points-earning transaction (never came in and bought anything) is excluded. See
+        // MemberFilterDto.HasEarnedPointsAtLeastOnce's own comment for why this is opt-in on the shared
+        // GetMembersAsync endpoint rather than that endpoint's default behavior.
+        hasEarnedPointsAtLeastOnce: true,
         sorting: undefined,
         skipCount: this.pageIndex() * this.pageSize,
         maxResultCount: this.pageSize,

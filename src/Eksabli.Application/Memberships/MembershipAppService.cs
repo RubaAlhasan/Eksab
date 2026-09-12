@@ -166,6 +166,12 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
     // "acceptable at this scale" approach AdminTenantAppService already uses for the (much larger,
     // cross-tenant) Businesses list; a single tenant's own member count is smaller by construction.
     // Revisit if a tenant's member count genuinely grows past what's comfortable in memory.
+    //
+    // Reused by more than just the Customers page (Coupons' name lookup, Notifications' recipient
+    // picker, the Subscription page's Active-Members usage count all call this same method) — the
+    // MemberFilterDto.HasEarnedPointsAtLeastOnce filter below is opt-in for exactly this reason: only
+    // the Customers > Members tab passes it, so this method's default output (every real member,
+    // regardless of activity) stays correct for those other callers.
     public async Task<PagedResultDto<MemberDto>> GetMembersAsync(MemberFilterDto input)
     {
         var memberships = await _membershipRepository.GetListAsync();
@@ -174,6 +180,13 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
 
         var wallets = await _walletRepository.GetListAsync(w => membershipIds.Contains(w.MembershipId));
         var walletByMembershipId = wallets.ToDictionary(w => w.MembershipId);
+
+        if (input.HasEarnedPointsAtLeastOnce == true)
+        {
+            memberships = memberships
+                .Where(m => (walletByMembershipId.GetValueOrDefault(m.Id)?.LifetimeEarned ?? 0) > 0)
+                .ToList();
+        }
 
         var tierIds = wallets.Where(w => w.CurrentTierId.HasValue).Select(w => w.CurrentTierId!.Value).Distinct().ToList();
         var tierNameById = (await _tierRepository.GetListAsync(t => tierIds.Contains(t.Id)))
