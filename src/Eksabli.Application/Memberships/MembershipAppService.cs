@@ -93,14 +93,18 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
     // Invalid, self-referral, or already-referred codes are ignored rather than rejected — a bad
     // referral code shouldn't block the join itself. Actual bonus payout happens later, on the
     // referee's first purchase (Engagement.ReferralCompletionService via PosAppService).
-    private async Task TryCreateReferralAsync(Guid? referralCode, Membership refereeMembership)
+    //
+    // Looks up by Membership.ReferralCode now, not Membership.Id — see that property's own comment.
+    // Runs inside JoinAsync's ambient _currentTenant.Change(input.TenantId), so this lookup is already
+    // scoped to just this business, matching the code's own per-tenant-unique design.
+    private async Task TryCreateReferralAsync(string? referralCode, Membership refereeMembership)
     {
-        if (!referralCode.HasValue)
+        if (referralCode == null)
         {
             return;
         }
 
-        var referrerMembership = await _membershipRepository.FindAsync(referralCode.Value);
+        var referrerMembership = await _membershipRepository.FirstOrDefaultAsync(m => m.ReferralCode == referralCode);
         if (referrerMembership == null || referrerMembership.CustomerId == refereeMembership.CustomerId)
         {
             return;

@@ -15,6 +15,10 @@ namespace Eksabli.Engagement;
 [RemoteService(IsEnabled = false)]
 public class ReferralAppService : ApplicationService, IReferralAppService
 {
+    // Same shape as Rewards.CouponAppService.MaxCodeGenerationAttempts — a retry cap on the
+    // vanishingly unlikely event two fresh GUIDs' first 8 hex chars collide within the same tenant.
+    private const int MaxCodeGenerationAttempts = 5;
+
     private readonly IRepository<Membership, Guid> _membershipRepository;
     private readonly IReferralRepository _referralRepository;
     private readonly ICurrentTenant _currentTenant;
@@ -32,6 +36,10 @@ public class ReferralAppService : ApplicationService, IReferralAppService
         _dataFilter = dataFilter;
     }
 
+    // Generates the code lazily, on this member's first request for it, and persists it — every
+    // subsequent call for the same membership returns that same code rather than minting a new one.
+    // See Membership.ReferralCode's own comment for why this replaced handing out the raw
+    // Membership.Id (functionally fine, but not something a person can actually read out or type).
     public async Task<ReferralCodeDto> GetMyReferralCodeAsync(Guid tenantId)
     {
         var customerId = CurrentUser.GetId();
@@ -41,8 +49,36 @@ public class ReferralAppService : ApplicationService, IReferralAppService
             var membership = await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == customerId)
                 ?? throw new UserFriendlyException("You haven't joined this business yet.");
 
-            return new ReferralCodeDto { Code = membership.Id };
+            if (membership.ReferralCode == null)
+            {
+                membership.SetReferralCode(await GenerateUniqueCodeAsync());
+                await _membershipRepository.UpdateAsync(membership);
+            }
+
+            return new ReferralCodeDto { Code = membership.ReferralCode! };
         }
+    }
+
+    // Must be called with the target tenant already the ambient CurrentTenant — the uniqueness check
+    // relies on Membership's own IMultiTenant filter to scope it to just this business, matching
+    // Membership.ReferralCode's own comment on why per-tenant uniqueness (not global, unlike
+    // Rewards.Coupon.Code) is enough here.
+    private async Task<string> GenerateUniqueCodeAsync()
+    {
+        for (var attempt = 0; attempt < MaxCodeGenerationAttempts; attempt++)
+        {
+            // Guid.NewGuid() (not GuidGenerator.Create()) — same reasoning as
+            // CouponAppService.GenerateUniqueCodeAsync: uniform randomness across the whole code,
+            // not ABP's time-prefixed sequential id.
+            var code = Guid.NewGuid().ToString("N")[..ReferralConsts.CodeLength].ToUpperInvariant();
+
+            if (!await _membershipRepository.AnyAsync(m => m.ReferralCode == code))
+            {
+                return code;
+            }
+        }
+
+        throw new UserFriendlyException("Couldn't generate a referral code. Please try again.");
     }
 
     public async Task<List<ReferralDto>> GetMyReferralsAsync()

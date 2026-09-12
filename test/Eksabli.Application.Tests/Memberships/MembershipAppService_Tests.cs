@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Eksabli.Engagement;
 using Eksabli.Wallets;
 using Shouldly;
 using Volo.Abp;
@@ -18,20 +19,24 @@ public abstract class MembershipAppService_Tests<TStartupModule> : EksabliApplic
     where TStartupModule : IAbpModule
 {
     private readonly IMembershipAppService _membershipAppService;
+    private readonly IReferralAppService _referralAppService;
     private readonly TenantManager _tenantManager;
     private readonly ITenantRepository _tenantRepository;
     private readonly IRepository<Membership, Guid> _membershipRepository;
     private readonly IRepository<PointsWallet, Guid> _walletRepository;
+    private readonly IReferralRepository _referralRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly ICurrentPrincipalAccessor _currentPrincipalAccessor;
 
     protected MembershipAppService_Tests()
     {
         _membershipAppService = GetRequiredService<IMembershipAppService>();
+        _referralAppService = GetRequiredService<IReferralAppService>();
         _tenantManager = GetRequiredService<TenantManager>();
         _tenantRepository = GetRequiredService<ITenantRepository>();
         _membershipRepository = GetRequiredService<IRepository<Membership, Guid>>();
         _walletRepository = GetRequiredService<IRepository<PointsWallet, Guid>>();
+        _referralRepository = GetRequiredService<IReferralRepository>();
         _currentTenant = GetRequiredService<ICurrentTenant>();
         _currentPrincipalAccessor = GetRequiredService<ICurrentPrincipalAccessor>();
     }
@@ -116,4 +121,53 @@ public abstract class MembershipAppService_Tests<TStartupModule> : EksabliApplic
             wallets.Count.ShouldBe(2);
         }
     }
+
+    // Referral join flow, now keyed by Membership.ReferralCode (a short human-typeable code) instead
+    // of the referrer's raw Membership.Id — see that property's own comment.
+    [Fact]
+    public async Task JoinAsync_Should_Create_A_Referral_When_A_Valid_Code_Is_Given()
+    {
+        var tenantId = await CreateTenantAsync();
+        var referrerId = Guid.NewGuid();
+        var refereeId = Guid.NewGuid();
+
+        Guid referrerMembershipId = default;
+        string referralCode;
+        using (LoginAs(referrerId))
+        {
+            var referrerMembership = await WithUnitOfWorkAsync(() => _membershipAppService.JoinAsync(new JoinBusinessDto { TenantId = tenantId }));
+            referrerMembershipId = referrerMembership.Id;
+            referralCode = (await WithUnitOfWorkAsync(() => _referralAppService.GetMyReferralCodeAsync(tenantId))).Code;
+        }
+
+        using (LoginAs(refereeId))
+        {
+            await WithUnitOfWorkAsync(() => _membershipAppService.JoinAsync(new JoinBusinessDto { TenantId = tenantId, ReferralCode = referralCode }));
+        }
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var referrals = await _referralRepository.GetByReferrerMembershipIdsAsync(new[] { referrerMembershipId }.ToList());
+                referrals.ShouldHaveSingleItem();
+                referrals.Single().RefereeCustomerId.ShouldBe(refereeId);
+            }
+        });
+    }
+
+    [Fact]
+    public async Task JoinAsync_Should_Ignore_An_Unknown_Referral_Code_Without_Failing_The_Join()
+    {
+        var tenantId = await CreateTenantAsync();
+        var customerId = Guid.NewGuid();
+
+        using (LoginAs(customerId))
+        {
+            var membership = await WithUnitOfWorkAsync(() =>
+                _membershipAppService.JoinAsync(new JoinBusinessDto { TenantId = tenantId, ReferralCode = "NOTREAL1" }));
+            membership.CustomerId.ShouldBe(customerId);
+        }
+    }
+
 }

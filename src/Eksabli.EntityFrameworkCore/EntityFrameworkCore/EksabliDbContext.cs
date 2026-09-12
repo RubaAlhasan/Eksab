@@ -168,8 +168,13 @@ public class EksabliDbContext :
             b.ToTable(EksabliConsts.DbTablePrefix + "Memberships", EksabliConsts.DbSchema);
             b.ConfigureByConvention(); //auto configure for the base class props
             b.Property(x => x.CustomerId).IsRequired();
+            b.Property(x => x.ReferralCode).HasMaxLength(ReferralConsts.CodeLength);
             b.HasIndex(x => new { x.CustomerId, x.TenantId }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.Status });
+            // Nullable + unique together is fine here (standard SQL: multiple NULLs never conflict on a
+            // unique index) — every Membership starts with ReferralCode == null and only ever gets one
+            // lazily, see Membership.ReferralCode's own comment.
+            b.HasIndex(x => new { x.TenantId, x.ReferralCode }).IsUnique();
         });
 
         builder.Entity<BusinessProfile>(b =>
