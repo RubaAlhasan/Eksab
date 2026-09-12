@@ -136,6 +136,13 @@ class EksabliApi {
     return _items(response.data).map(Reward.fromJson).toList();
   });
 
+  /// OPENS a redemption — it does not complete one.
+  ///
+  /// The returned coupon comes back [CouponStatus.pending]: the points are held,
+  /// not spent, and the reward is not the customer's until staff approve the
+  /// code at the counter. Poll [coupon] for the outcome, or [cancelCoupon] to
+  /// withdraw it.
+  ///
   /// `RedeemRewardDto` requires **both** ids — the service switches tenant
   /// context by `tenantId` before looking up the membership, so omitting it
   /// fails with "You haven't joined this business yet" rather than a
@@ -147,6 +154,32 @@ class EksabliApi {
     final response = await _client.post<Map<String, dynamic>>(
       '/api/app/coupon/redeem',
       data: {'tenantId': tenantId, 'rewardId': rewardId},
+    );
+    return Coupon.fromJson(response.data ?? const {});
+  });
+
+  /// Polls one redemption's status while it is [CouponStatus.pending].
+  ///
+  /// There is no push channel for approvals, so the pending screen asks. Cheap
+  /// by design — a single row, and only while the customer is looking at it.
+  Future<Coupon> coupon({
+    required String tenantId,
+    required String couponId,
+  }) => _guard(() async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/api/app/coupon/$tenantId/$couponId',
+    );
+    return Coupon.fromJson(response.data ?? const {});
+  });
+
+  /// Withdraws the customer's own pending redemption and releases the hold, so
+  /// they get their points back immediately instead of waiting out the window.
+  Future<Coupon> cancelCoupon({
+    required String tenantId,
+    required String couponId,
+  }) => _guard(() async {
+    final response = await _client.post<Map<String, dynamic>>(
+      '/api/app/coupon/$tenantId/$couponId/cancel',
     );
     return Coupon.fromJson(response.data ?? const {});
   });

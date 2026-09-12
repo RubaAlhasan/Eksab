@@ -19,11 +19,20 @@ public class CouponDto : AuditedEntityDto<Guid>
 
     public CouponStatus Status { get; set; }
 
+    public int PointsCost { get; set; }
+
     public DateTime IssuedAt { get; set; }
+
+    // Drives the customer app's countdown while a redemption is Pending. Null on legacy `Issued` rows.
+    public DateTime? ReservationExpiresAt { get; set; }
 
     public DateTime? RedeemedAt { get; set; }
 
     public Guid? RedeemedByEmployeeId { get; set; }
 
     public Guid? RedeemedBranchId { get; set; }
+
+    // Shown to the customer verbatim when staff decline — "why did this fail?" is the first thing they
+    // will ask, and an unexplained Cancelled is worse than no status at all.
+    public string? RejectionReason { get; set; }
 }

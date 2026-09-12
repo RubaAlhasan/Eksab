@@ -1,4 +1,5 @@
 import 'package:eksabli_mobile/core/api/eksabli_api.dart';
+import 'package:eksabli_mobile/core/auth/auth_exception.dart';
 import 'package:eksabli_mobile/shared/models/models.dart';
 import 'package:eksabli_mobile/shared/providers/app_providers.dart';
 
@@ -48,6 +49,34 @@ final _fitness = Business.fromJson(const {
 /// Not a subclass: [EksabliApi] holds a Dio instance, and the point of the fake
 /// is that no client exists. Tests cast it in via the provider override.
 class FakeApi implements EksabliApi {
+  /// Pending redemptions by coupon id. Exposed so a test can flip one to approved/declined the way
+  /// staff would, then let the screen's poll pick it up.
+  final pendingCoupons = <String, Coupon>{};
+  Map<String, Coupon> get _pending => pendingCoupons;
+
+  /// Set to make the next [redeemReward] fail the way the server does — "out of stock", "not enough
+  /// points", and so on all arrive as an [AuthException] carrying the server's own message.
+  String? failRedeemWith;
+
+  /// Stands in for a staff member acting in the Business Portal: moves the open coupon to its
+  /// settled status so a polling screen picks the outcome up.
+  void settlePending(CouponStatus status, {String? reason}) {
+    for (final entry in pendingCoupons.entries.toList()) {
+      final c = entry.value;
+      pendingCoupons[entry.key] = Coupon(
+        id: c.id,
+        rewardId: c.rewardId,
+        businessId: c.businessId,
+        code: c.code,
+        status: status,
+        issuedAt: c.issuedAt,
+        pointsCost: c.pointsCost,
+        rewardName: c.rewardName,
+        rejectionReason: reason,
+      );
+    }
+  }
+
   final _notifications = <AppNotification>[
     AppNotification.fromJson(const {
       'id': 'n1',
@@ -154,18 +183,62 @@ class FakeApi implements EksabliApi {
     }),
   ];
 
+  /// Mirrors the real service: redemption OPENS a pending coupon (status 4), it does not complete
+  /// one. A fake that returned `redeemed` would let a screen pass tests it would fail in production.
   @override
   Future<Coupon> redeemReward({
     required String tenantId,
     required String rewardId,
-  }) async => Coupon.fromJson({
-    'id': 'cpn-new',
-    'rewardId': rewardId,
-    'tenantId': 'tenant-1',
-    'code': 'CB-TEST01',
-    'status': 1,
-    'issuedAt': DateTime.now().toIso8601String(),
-  });
+  }) async {
+    final failure = failRedeemWith;
+    if (failure != null) {
+      failRedeemWith = null;
+      throw AuthException(failure);
+    }
+
+    final coupon = Coupon.fromJson({
+      'id': 'cpn-new',
+      'rewardId': rewardId,
+      'tenantId': tenantId,
+      'code': '3B02543F',
+      'status': 4,
+      'pointsCost': 500,
+      'issuedAt': DateTime.now().toIso8601String(),
+      'reservationExpiresAt': DateTime.now()
+          .toUtc()
+          .add(const Duration(minutes: 15))
+          .toIso8601String(),
+    });
+    _pending[coupon.id] = coupon;
+    return coupon;
+  }
+
+  /// Whatever the test last put in [_pending] — tests drive an approval or decline by writing here,
+  /// standing in for a staff member acting in the Business Portal.
+  @override
+  Future<Coupon> coupon({
+    required String tenantId,
+    required String couponId,
+  }) async => _pending[couponId] ?? (throw StateError('no coupon $couponId'));
+
+  @override
+  Future<Coupon> cancelCoupon({
+    required String tenantId,
+    required String couponId,
+  }) async {
+    final existing = _pending[couponId]!;
+    final cancelled = Coupon.fromJson({
+      'id': existing.id,
+      'rewardId': existing.rewardId,
+      'tenantId': existing.businessId,
+      'code': existing.code,
+      'status': 3,
+      'pointsCost': existing.pointsCost,
+      'issuedAt': existing.issuedAt.toIso8601String(),
+    });
+    _pending[couponId] = cancelled;
+    return cancelled;
+  }
 
   @override
   Future<List<Coupon>> myCoupons() async => [

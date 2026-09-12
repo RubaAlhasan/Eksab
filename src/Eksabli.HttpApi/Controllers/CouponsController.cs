@@ -32,6 +32,19 @@ public class CouponsController : EksabliController
         return _couponAppService.RedeemAsync(input);
     }
 
+    // Polled by the customer app while a redemption is Pending, to see whether staff approved it.
+    [HttpGet("{tenantId}/{couponId}")]
+    public Task<CouponDto> GetMyCouponAsync(Guid tenantId, Guid couponId)
+    {
+        return _couponAppService.GetMyCouponAsync(tenantId, couponId);
+    }
+
+    [HttpPost("{tenantId}/{couponId}/cancel")]
+    public Task<CouponDto> CancelMyCouponAsync(Guid tenantId, Guid couponId)
+    {
+        return _couponAppService.CancelMyCouponAsync(tenantId, couponId);
+    }
+
     [HttpGet("my")]
     public Task<List<CouponDto>> GetMyCouponsAsync([FromQuery] Guid? tenantId = null)
     {

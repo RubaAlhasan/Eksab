@@ -27,6 +27,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
 
   static const _filters = <CouponStatus?>[
     null,
+    CouponStatus.pending,
     CouponStatus.issued,
     CouponStatus.redeemed,
     CouponStatus.expired,
@@ -34,6 +35,8 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
 
   static AppTone _tone(CouponStatus status) => switch (status) {
     CouponStatus.issued => AppTone.success,
+    // Awaiting a staff decision — neither good news nor bad yet.
+    CouponStatus.pending => AppTone.warning,
     CouponStatus.redeemed => AppTone.neutral,
     CouponStatus.expired => AppTone.danger,
     CouponStatus.cancelled => AppTone.danger,
@@ -85,7 +88,9 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                     final business = ref
                         .watch(businessByIdProvider(coupon.businessId))
                         .valueOrNull;
-                    final spent = coupon.status != CouponStatus.issued;
+                    final spent =
+                        coupon.status != CouponStatus.issued &&
+                        coupon.status != CouponStatus.pending;
 
                     return Opacity(
                       opacity: spent ? 0.55 : 1,

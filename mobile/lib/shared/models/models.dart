@@ -363,17 +363,29 @@ class Reward {
   Color get tone => type.tone;
 }
 
+/// Mirrors the server's `CouponStatus`, INCLUDING its numbering — `_enumFromJson` maps by ordinal,
+/// so the order here is the wire format and must not be rearranged.
+///
+/// `pending` is last because it was added last (see the server enum's own comment): a redemption is
+/// born pending with its points merely reserved, and only becomes [redeemed] when staff approve it at
+/// the counter. `issued` is the legacy state from before reservations existed.
 enum CouponStatus {
   issued,
   redeemed,
   expired,
-  cancelled;
+  cancelled,
+  pending;
 
   static CouponStatus fromJson(Object? raw) =>
       _enumFromJson(raw, CouponStatus.values, CouponStatus.issued);
 
+  /// True while staff have neither approved nor declined — the only state where the customer's
+  /// points are held rather than spent, and the only one worth polling.
+  bool get isAwaitingApproval => this == CouponStatus.pending;
+
   String get label => switch (this) {
     CouponStatus.issued => 'Active',
+    CouponStatus.pending => 'Awaiting staff',
     CouponStatus.redeemed => 'Used',
     CouponStatus.expired => 'Expired',
     CouponStatus.cancelled => 'Cancelled',
@@ -389,8 +401,11 @@ class Coupon {
     required this.code,
     required this.status,
     required this.issuedAt,
+    this.pointsCost = 0,
     this.rewardName,
     this.redeemedAt,
+    this.reservationExpiresAt,
+    this.rejectionReason,
   });
 
   factory Coupon.fromJson(Map<String, dynamic> json) => Coupon(
@@ -399,11 +414,14 @@ class Coupon {
     businessId: (json['tenantId'] as String?) ?? '',
     code: (json['code'] as String?) ?? '',
     status: CouponStatus.fromJson(json['status']),
-    issuedAt: DateTime.tryParse('${json['issuedAt']}') ?? DateTime.now(),
+    issuedAt: _parseServerTime(json['issuedAt']) ?? DateTime.now(),
+    pointsCost: (json['pointsCost'] as num?)?.toInt() ?? 0,
     rewardName:
         (json['rewardNameEn'] as String?)?.trim() ??
         (json['rewardNameAr'] as String?)?.trim(),
-    redeemedAt: DateTime.tryParse('${json['redeemedAt']}'),
+    redeemedAt: _parseServerTime(json['redeemedAt']),
+    reservationExpiresAt: _parseServerTime(json['reservationExpiresAt']),
+    rejectionReason: (json['rejectionReason'] as String?)?.trim(),
   );
 
   final String id;
@@ -412,8 +430,49 @@ class Coupon {
   final String code;
   final CouponStatus status;
   final DateTime issuedAt;
+
+  /// Points held (while [CouponStatus.pending]) or spent (once redeemed). Zero on legacy rows.
+  final int pointsCost;
   final String? rewardName;
   final DateTime? redeemedAt;
+
+  /// When the hold lapses and the points return on their own. Null unless pending.
+  final DateTime? reservationExpiresAt;
+
+  /// Why staff declined, in their own words. Only set on a declined redemption.
+  final String? rejectionReason;
+
+  bool get isAwaitingApproval => status.isAwaitingApproval;
+
+  /// Code grouped for reading aloud across a counter: `3B02543F` -> `3B02 543F`.
+  String get formattedCode =>
+      code.length == 8 ? '${code.substring(0, 4)} ${code.substring(4)}' : code;
+
+  Duration? remaining(DateTime now) {
+    final expiry = reservationExpiresAt;
+    if (expiry == null) return null;
+    final left = expiry.difference(now);
+    return left.isNegative ? Duration.zero : left;
+  }
+}
+
+/// Parses a server timestamp.
+///
+/// The API stores `timestamp without time zone` and writes it from ABP's `IClock.Now`, which this
+/// solution leaves at the default `DateTimeKind.Unspecified` — so the value is the SERVER'S LOCAL
+/// time, arriving with no offset. `DateTime.tryParse` reads an offset-less string as local, which is
+/// the right reading while server and device share a timezone, and is the convention every other
+/// timestamp in this app already follows.
+///
+/// It is worth being explicit that this is a property of the deployment, not a guarantee: a device in
+/// a different timezone from the API will read these wrong, in this function and in every existing
+/// screen alike. Fixing that means configuring `AbpClockOptions.Kind = DateTimeKind.Utc` server-side
+/// and migrating the stored values — a backend decision, not something to paper over per-field here.
+DateTime? _parseServerTime(Object? raw) {
+  if (raw == null) return null;
+  final text = '$raw';
+  if (text.isEmpty || text == 'null') return null;
+  return DateTime.tryParse(text);
 }
 
 enum NotificationTone {

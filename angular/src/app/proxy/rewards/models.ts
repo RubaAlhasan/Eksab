@@ -16,10 +16,13 @@ export interface CouponDto extends AuditedEntityDto<string> {
   tenantId?: string | null;
   code?: string;
   status?: CouponStatus;
+  pointsCost?: number;
   issuedAt?: string;
+  reservationExpiresAt?: string | null;
   redeemedAt?: string | null;
   redeemedByEmployeeId?: string | null;
   redeemedBranchId?: string | null;
+  rejectionReason?: string | null;
 }
 
 export interface CouponExcelDownloadDto {

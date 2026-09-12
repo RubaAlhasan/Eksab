@@ -70,6 +70,21 @@ public class Reward : FullAuditedAggregateRoot<Guid>, IMultiTenant
         }
     }
 
+    // Puts a unit back when a redemption that already took one never completes — staff rejected it, or
+    // the reservation window closed (see RedemptionReservationWorker). Not a general "restock" setter:
+    // a merchant adding inventory uses SetStock.
+    //
+    // Asymmetry with DecrementStock is deliberate. That one clamps at 0 because overselling is the
+    // failure it guards; this one has no ceiling to clamp against, since StockRemaining is whatever
+    // the merchant last set and a release can only ever return a unit this reward already gave out.
+    public void IncrementStock()
+    {
+        if (StockRemaining.HasValue)
+        {
+            StockRemaining = StockRemaining.Value + 1;
+        }
+    }
+
     public void SetValidity(DateTime? validFrom, DateTime? validTo)
     {
         ValidFrom = validFrom;

@@ -1,0 +1,273 @@
+<app-page-header
+  [title]="'::BusinessPanel:Redemption:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:Redemption:Subtitle' | abpLocalization"
+/>
+
+<div class="eks-redeem">
+  <!-- ────────────────────────────────────────────────────────────── capture -->
+  @if (phase() === 'idle') {
+    <div class="card eks-redeem__card">
+      <div class="card-body">
+        <div class="eks-redeem__modes" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            class="eks-redeem__mode"
+            [class.eks-redeem__mode--active]="identifyMode() === 'qr'"
+            [attr.aria-selected]="identifyMode() === 'qr'"
+            (click)="selectMode('qr')"
+          >
+            <i class="fas fa-qrcode" aria-hidden="true"></i>
+            {{ '::BusinessPanel:Redemption:ModeScan' | abpLocalization }}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="eks-redeem__mode"
+            [class.eks-redeem__mode--active]="identifyMode() === 'code'"
+            [attr.aria-selected]="identifyMode() === 'code'"
+            (click)="selectMode('code')"
+          >
+            <i class="fas fa-keyboard" aria-hidden="true"></i>
+            {{ '::BusinessPanel:Redemption:ModeType' | abpLocalization }}
+          </button>
+        </div>
+
+        @if (identifyMode() === 'qr') {
+          <app-qr-scanner
+            [idleLabel]="'::BusinessPanel:Redemption:ScannerIdle' | abpLocalization"
+            [startLabel]="'::BusinessPanel:Redemption:ScannerStart' | abpLocalization"
+            [capturedLabel]="'::BusinessPanel:Redemption:ScannerCaptured' | abpLocalization"
+            [scanAgainLabel]="'::BusinessPanel:Redemption:ScannerAgain' | abpLocalization"
+            [busy]="isLookingUp()"
+            (scanned)="onScanned($event)"
+            (scanError)="onScanError($event)"
+          />
+
+          @if (cameraErrorKey(); as errorKey) {
+            <div class="alert alert-warning d-flex align-items-start gap-2 mt-3 mb-0" role="alert">
+              <i class="fas fa-triangle-exclamation mt-1" aria-hidden="true"></i>
+              <div>
+                {{ errorKey | abpLocalization }}
+                <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline" (click)="selectMode('code')">
+                  {{ '::BusinessPanel:Redemption:UseManualInstead' | abpLocalization }}
+                </button>
+              </div>
+            </div>
+          }
+        } @else {
+          <form [formGroup]="codeForm" (ngSubmit)="submitCode()">
+            <label class="form-label" for="redemption-code">
+              {{ '::BusinessPanel:Redemption:CodeLabel' | abpLocalization }}
+            </label>
+            <input
+              id="redemption-code"
+              type="text"
+              class="form-control eks-redeem__code-input"
+              formControlName="code"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              maxlength="9"
+              placeholder="3B02 543F"
+              [attr.aria-invalid]="codeInput.invalid && codeInput.touched"
+            />
+            <p class="form-text">{{ '::BusinessPanel:Redemption:CodeHint' | abpLocalization }}</p>
+
+            @if (codeInput.invalid && codeInput.touched) {
+              <p class="text-danger small mb-3">{{ '::BusinessPanel:Redemption:CodeInvalid' | abpLocalization }}</p>
+            }
+
+            <button type="submit" class="btn btn-primary w-100" [disabled]="isLookingUp()">
+              @if (isLookingUp()) {
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              }
+              {{ '::BusinessPanel:Redemption:LookUp' | abpLocalization }}
+            </button>
+          </form>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ────────────────────────────────────────────────────────────── review -->
+  @if (phase() === 'review' && lookup(); as pending) {
+    <div class="card eks-redeem__card eks-redeem__card--review">
+      <div class="eks-redeem__banner">
+        <span class="eks-redeem__banner-label">{{ '::BusinessPanel:Redemption:Reward' | abpLocalization }}</span>
+        <h4 class="eks-redeem__reward">{{ pending.rewardNameEn || pending.rewardNameAr }}</h4>
+        <div class="eks-redeem__cost">
+          <span class="eks-redeem__cost-value">{{ pending.pointsCost | number }}</span>
+          <span class="eks-redeem__cost-unit">{{ '::BusinessPanel:Redemption:Points' | abpLocalization }}</span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="eks-redeem__customer">
+          <span class="eks-redeem__avatar" aria-hidden="true">{{ initialsFor(pending.customerName) }}</span>
+          <div class="eks-redeem__customer-text">
+            <span class="eks-redeem__customer-name">
+              {{ pending.customerName || ('::BusinessPanel:Redemption:UnnamedCustomer' | abpLocalization) }}
+            </span>
+            @if (pending.customerPhone) {
+              <span class="eks-redeem__customer-phone" dir="ltr">{{ pending.customerPhone }}</span>
+            }
+          </div>
+        </div>
+
+        <dl class="eks-redeem__facts">
+          <div class="eks-redeem__fact">
+            <dt>{{ '::BusinessPanel:Redemption:Code' | abpLocalization }}</dt>
+            <dd class="eks-redeem__fact-code" dir="ltr">{{ formatCode(pending.code) }}</dd>
+          </div>
+          <div class="eks-redeem__fact">
+            <dt>{{ '::BusinessPanel:Redemption:BalanceAfter' | abpLocalization }}</dt>
+            <dd>{{ pending.balanceAfterRedemption | number }}</dd>
+          </div>
+          @if (countdownLabel(); as remaining) {
+            <div class="eks-redeem__fact">
+              <dt>{{ '::BusinessPanel:Redemption:ExpiresIn' | abpLocalization }}</dt>
+              <dd [class.eks-redeem__fact--urgent]="hasLapsed()" dir="ltr">{{ remaining }}</dd>
+            </div>
+          }
+        </dl>
+
+        @if (hasLapsed()) {
+          <div class="alert alert-danger d-flex align-items-start gap-2" role="alert">
+            <i class="fas fa-clock mt-1" aria-hidden="true"></i>
+            <span>{{ '::BusinessPanel:Redemption:LapsedWarning' | abpLocalization }}</span>
+          </div>
+        }
+
+        @if (pending.requiresManagerApproval && !pending.canCurrentEmployeeApprove) {
+          <div class="alert alert-warning d-flex align-items-start gap-2" role="alert">
+            <i class="fas fa-user-shield mt-1" aria-hidden="true"></i>
+            <span>{{ '::BusinessPanel:Redemption:ManagerRequired' | abpLocalization }}</span>
+          </div>
+        } @else if (pending.requiresManagerApproval) {
+          <div class="alert alert-info d-flex align-items-start gap-2" role="alert">
+            <i class="fas fa-user-shield mt-1" aria-hidden="true"></i>
+            <span>{{ '::BusinessPanel:Redemption:HighValue' | abpLocalization }}</span>
+          </div>
+        }
+
+        @if (showDeclineReason()) {
+          <div class="eks-redeem__decline">
+            <label class="form-label" for="decline-reason">
+              {{ '::BusinessPanel:Redemption:DeclineReasonLabel' | abpLocalization }}
+            </label>
+            <input
+              id="decline-reason"
+              type="text"
+              class="form-control"
+              [formControl]="declineReason"
+              maxlength="256"
+              [placeholder]="'::BusinessPanel:Redemption:DeclineReasonPlaceholder' | abpLocalization"
+            />
+            <p class="form-text mb-3">{{ '::BusinessPanel:Redemption:DeclineReasonHint' | abpLocalization }}</p>
+
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-danger flex-fill" [disabled]="busy()" (click)="confirmDecline()">
+                @if (isDeclining()) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                }
+                {{ '::BusinessPanel:Redemption:ConfirmDecline' | abpLocalization }}
+              </button>
+              <button type="button" class="btn btn-outline-secondary" [disabled]="busy()" (click)="cancelDecline()">
+                {{ '::BusinessPanel:Redemption:Back' | abpLocalization }}
+              </button>
+            </div>
+          </div>
+        } @else {
+          <div class="eks-redeem__actions">
+            <button
+              type="button"
+              class="btn btn-primary btn-lg flex-fill"
+              [disabled]="busy() || !pending.canCurrentEmployeeApprove"
+              (click)="approve()"
+            >
+              @if (isApproving()) {
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              } @else {
+                <i class="fas fa-check me-2" aria-hidden="true"></i>
+              }
+              {{ '::BusinessPanel:Redemption:Approve' | abpLocalization }}
+            </button>
+            <button type="button" class="btn btn-outline-danger btn-lg" [disabled]="busy()" (click)="beginDecline()">
+              {{ '::BusinessPanel:Redemption:Decline' | abpLocalization }}
+            </button>
+          </div>
+
+          <button type="button" class="btn btn-link w-100 mt-2" [disabled]="busy()" (click)="reset()">
+            {{ '::BusinessPanel:Redemption:Cancel' | abpLocalization }}
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ────────────────────────────────────────────────────────────── outcome -->
+  @if (phase() === 'approved' && approved(); as result) {
+    <div class="card eks-redeem__card eks-redeem__outcome eks-redeem__outcome--success">
+      <div class="card-body text-center">
+        <span class="eks-redeem__outcome-icon" aria-hidden="true"><i class="fas fa-circle-check"></i></span>
+        <h4 class="eks-redeem__outcome-title">{{ '::BusinessPanel:Redemption:ApprovedTitle' | abpLocalization }}</h4>
+        <p class="eks-redeem__outcome-reward">{{ result.rewardNameEn || result.rewardNameAr }}</p>
+
+        <p class="eks-redeem__outcome-hint">
+          {{ '::BusinessPanel:Redemption:HandOver' | abpLocalization }}
+        </p>
+
+        <dl class="eks-redeem__facts eks-redeem__facts--centered">
+          @if (result.customerName) {
+            <div class="eks-redeem__fact">
+              <dt>{{ '::BusinessPanel:Redemption:Customer' | abpLocalization }}</dt>
+              <dd>{{ result.customerName }}</dd>
+            </div>
+          }
+          <div class="eks-redeem__fact">
+            <dt>{{ '::BusinessPanel:Redemption:PointsCharged' | abpLocalization }}</dt>
+            <dd>{{ result.pointsDebited | number }}</dd>
+          </div>
+          <div class="eks-redeem__fact">
+            <dt>{{ '::BusinessPanel:Redemption:NewBalance' | abpLocalization }}</dt>
+            <dd>{{ result.newBalance | number }}</dd>
+          </div>
+        </dl>
+
+        <button type="button" class="btn btn-primary btn-lg w-100" (click)="reset()">
+          {{ '::BusinessPanel:Redemption:NextCustomer' | abpLocalization }}
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (phase() === 'declined' && declined(); as result) {
+    <div class="card eks-redeem__card eks-redeem__outcome eks-redeem__outcome--declined">
+      <div class="card-body text-center">
+        <span class="eks-redeem__outcome-icon" aria-hidden="true"><i class="fas fa-rotate-left"></i></span>
+        <h4 class="eks-redeem__outcome-title">{{ '::BusinessPanel:Redemption:DeclinedTitle' | abpLocalization }}</h4>
+        <p class="eks-redeem__outcome-reward">{{ result.rewardNameEn || result.rewardNameAr }}</p>
+
+        <p class="eks-redeem__outcome-hint">
+          {{ '::BusinessPanel:Redemption:PointsReturned' | abpLocalization }}
+        </p>
+
+        <dl class="eks-redeem__facts eks-redeem__facts--centered">
+          <div class="eks-redeem__fact">
+            <dt>{{ '::BusinessPanel:Redemption:PointsReleased' | abpLocalization }}</dt>
+            <dd>{{ result.pointsReleased | number }}</dd>
+          </div>
+          <div class="eks-redeem__fact">
+            <dt>{{ '::BusinessPanel:Redemption:AvailableBalance' | abpLocalization }}</dt>
+            <dd>{{ result.newAvailableBalance | number }}</dd>
+          </div>
+        </dl>
+
+        <button type="button" class="btn btn-primary btn-lg w-100" (click)="reset()">
+          {{ '::BusinessPanel:Redemption:NextCustomer' | abpLocalization }}
+        </button>
+      </div>
+    </div>
+  }
+</div>

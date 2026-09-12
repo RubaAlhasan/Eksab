@@ -281,3 +281,5 @@ src/Eksabli.Blazor.Server.Tiered/Logs/*
 # IdentityServer temp files
 tempkey.rsa
 tempkey.jwk
+# Verification screenshots from prototype/tools/shoot-*.js — regenerate by running the scripts.
+prototype/tools/shots/

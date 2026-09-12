@@ -8,6 +8,7 @@ using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Data;
+using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Users;
@@ -23,7 +24,6 @@ public class CouponAppService : ApplicationService, ICouponAppService
     private readonly ICouponRepository _couponRepository;
     private readonly IRepository<Membership, Guid> _membershipRepository;
     private readonly IRepository<PointsWallet, Guid> _walletRepository;
-    private readonly IRepository<PointsTransaction, Guid> _transactionRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
 
@@ -32,7 +32,6 @@ public class CouponAppService : ApplicationService, ICouponAppService
         ICouponRepository couponRepository,
         IRepository<Membership, Guid> membershipRepository,
         IRepository<PointsWallet, Guid> walletRepository,
-        IRepository<PointsTransaction, Guid> transactionRepository,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter)
     {
@@ -40,7 +39,6 @@ public class CouponAppService : ApplicationService, ICouponAppService
         _couponRepository = couponRepository;
         _membershipRepository = membershipRepository;
         _walletRepository = walletRepository;
-        _transactionRepository = transactionRepository;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
     }
@@ -59,6 +57,16 @@ public class CouponAppService : ApplicationService, ICouponAppService
         }
     }
 
+    // Opens a redemption; it does NOT complete one.
+    //
+    // The points are RESERVED, not debited, and the coupon is born Pending. Nothing here is worth
+    // anything to the customer until a staff member approves the returned code at the counter
+    // (PosAppService.ConfirmRedemptionAsync), and if nobody does, the hold is released — by staff
+    // declining, by the customer cancelling, or by RedemptionReservationWorker sweeping the window.
+    //
+    // This is the whole reason the flow is two-phase: the customer decides *at home*, hours before
+    // they reach the till, and debiting there would spend their points on a reward the branch might be
+    // out of, closed for, or unable to authorise.
     public async Task<CouponDto> RedeemAsync(RedeemRewardDto input)
     {
         var customerId = CurrentUser.GetId();
@@ -83,36 +91,118 @@ public class CouponAppService : ApplicationService, ICouponAppService
                 throw new UserFriendlyException("This reward is out of stock.");
             }
 
-            var wallet = await _walletRepository.FirstAsync(w => w.MembershipId == membership.Id);
-            if (wallet.Balance < reward.PointsCost)
+            // One open redemption per customer per reward. Without this, tapping Redeem twice (a
+            // double-tap, or a return to the screen) silently stacks a second hold on the same wallet
+            // and hands staff two codes for one drink.
+            var alreadyPending = await _couponRepository.FirstOrDefaultAsync(c =>
+                c.MembershipId == membership.Id &&
+                c.RewardId == reward.Id &&
+                c.Status == CouponStatus.Pending);
+
+            if (alreadyPending != null)
             {
-                throw new UserFriendlyException("You don't have enough points to redeem this reward.");
+                // Idempotent rather than an error: the customer's intent hasn't changed, so hand back
+                // the code they already have instead of making them cancel one to get another.
+                return await ToDtoAsync(alreadyPending, reward);
             }
 
-            var code = await GenerateUniqueCodeAsync();
-            var coupon = Coupon.Create(GuidGenerator.Create(), reward.Id, membership.Id, code, now);
-            await _couponRepository.InsertAsync(coupon);
+            var wallet = await _walletRepository.FirstAsync(w => w.MembershipId == membership.Id);
 
-            var transaction = PointsTransaction.Create(
-                GuidGenerator.Create(),
-                wallet.Id,
-                PointsTransactionType.Redeem,
-                -reward.PointsCost,
-                PointsTransactionSource.Reward,
-                referenceId: coupon.Id);
-            await _transactionRepository.InsertAsync(transaction);
-
-            wallet.ApplyTransaction(PointsTransactionType.Redeem, -reward.PointsCost);
+            // Reserve() checks AvailableBalance and throws the same UserFriendlyException the old
+            // inline balance check did, so the customer-facing message is unchanged.
+            wallet.Reserve(reward.PointsCost);
             await _walletRepository.UpdateAsync(wallet);
 
+            var code = await GenerateUniqueCodeAsync();
+            var coupon = Coupon.CreatePending(
+                GuidGenerator.Create(),
+                reward.Id,
+                membership.Id,
+                code,
+                reward.PointsCost,
+                now,
+                now.AddMinutes(CouponConsts.PendingWindowMinutes));
+
+            await _couponRepository.InsertAsync(coupon);
+
+            // Stock is held alongside the points, for the same reason: two customers must not both be
+            // promised the last unit. IncrementStock puts it back on every release path.
             reward.DecrementStock();
             await _rewardRepository.UpdateAsync(reward);
 
-            var dto = ObjectMapper.Map<Coupon, CouponDto>(coupon);
+            // No PointsTransaction row here — deliberately. The ledger records movements, and nothing
+            // has moved yet; the Redeem row is written on approval. See PointsWallet.Reserved.
+            return await ToDtoAsync(coupon, reward);
+        }
+    }
+
+    public async Task<CouponDto> GetMyCouponAsync(Guid tenantId, Guid couponId)
+    {
+        using (_currentTenant.Change(tenantId))
+        {
+            var (coupon, _) = await GetOwnCouponAsync(couponId);
+            return await ToDtoAsync(coupon, reward: null);
+        }
+    }
+
+    public async Task<CouponDto> CancelMyCouponAsync(Guid tenantId, Guid couponId)
+    {
+        using (_currentTenant.Change(tenantId))
+        {
+            var (coupon, membership) = await GetOwnCouponAsync(couponId);
+
+            if (!coupon.IsAwaitingApproval)
+            {
+                throw new UserFriendlyException("This redemption is no longer awaiting approval.");
+            }
+
+            coupon.Cancel();
+            await _couponRepository.UpdateAsync(coupon);
+
+            var wallet = await _walletRepository.FirstAsync(w => w.MembershipId == membership.Id);
+            wallet.ReleaseReservation(coupon.PointsCost);
+            await _walletRepository.UpdateAsync(wallet);
+
+            var reward = await _rewardRepository.FirstOrDefaultAsync(r => r.Id == coupon.RewardId);
+            if (reward != null)
+            {
+                reward.IncrementStock();
+                await _rewardRepository.UpdateAsync(reward);
+            }
+
+            return await ToDtoAsync(coupon, reward);
+        }
+    }
+
+    // Loads a coupon and proves it belongs to the caller. Ownership is checked through Membership
+    // rather than trusting the id — the ambient tenant filter scopes the row to one business, but not
+    // to one customer within it.
+    private async Task<(Coupon Coupon, Membership Membership)> GetOwnCouponAsync(Guid couponId)
+    {
+        var customerId = CurrentUser.GetId();
+
+        var membership = await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == customerId)
+            ?? throw new UserFriendlyException("You haven't joined this business yet.");
+
+        var coupon = await _couponRepository.FirstOrDefaultAsync(c =>
+            c.Id == couponId && c.MembershipId == membership.Id)
+            ?? throw new EntityNotFoundException(typeof(Coupon), couponId);
+
+        return (coupon, membership);
+    }
+
+    private async Task<CouponDto> ToDtoAsync(Coupon coupon, Reward? reward)
+    {
+        var dto = ObjectMapper.Map<Coupon, CouponDto>(coupon);
+
+        reward ??= await _rewardRepository.FirstOrDefaultAsync(r => r.Id == coupon.RewardId);
+        if (reward != null)
+        {
             dto.RewardNameAr = reward.NameAr;
             dto.RewardNameEn = reward.NameEn;
-            return dto;
         }
+
+        return dto;
     }
 
     public async Task<List<CouponDto>> GetMyCouponsAsync(Guid? tenantId = null)

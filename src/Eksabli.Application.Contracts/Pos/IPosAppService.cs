@@ -17,5 +17,11 @@ public interface IPosAppService : IApplicationService
 
     Task<AwardPointsResultDto> ManualAdjustAsync(ManualAdjustDto input);
 
+    // Read-only preview of a scanned/typed code. Deliberately separate from ConfirmRedemptionAsync:
+    // staff review who and what before committing, and a lookup must never move points.
+    Task<RedemptionLookupDto> LookupRedemptionAsync(LookupRedemptionDto input);
+
     Task<RedemptionConfirmationDto> ConfirmRedemptionAsync(ConfirmRedemptionDto input);
+
+    Task<RedemptionRejectionDto> RejectRedemptionAsync(RejectRedemptionDto input);
 }
