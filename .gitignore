@@ -283,3 +283,4 @@ tempkey.rsa
 tempkey.jwk
 # Verification screenshots from prototype/tools/shoot-*.js — regenerate by running the scripts.
 prototype/tools/shots/
+prototype/tools/tour/
