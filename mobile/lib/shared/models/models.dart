@@ -201,6 +201,9 @@ class Membership {
     required this.status,
     this.joinedAt,
     this.tier,
+    this.tierFloor,
+    this.nextTier,
+    this.nextTierAt,
   });
 
   factory Membership.fromWalletJson(Map<String, dynamic> json) => Membership(
@@ -211,6 +214,9 @@ class Membership {
     lifetimeRedeemed: (json['lifetimeRedeemed'] as num?)?.toInt() ?? 0,
     status: MembershipStatus.active,
     tier: (json['currentTierName'] as String?)?.trim(),
+    tierFloor: (json['currentTierMinLifetimePoints'] as num?)?.toInt(),
+    nextTier: (json['nextTierName'] as String?)?.trim(),
+    nextTierAt: (json['nextTierMinLifetimePoints'] as num?)?.toInt(),
   );
 
   final String businessId;
@@ -226,6 +232,40 @@ class Membership {
   /// `PointsWalletDto.currentTierName`. Null when the business defines no tiers.
   final String? tier;
 
+  /// Lifetime points at which the current tier starts — the left end of the progress bar.
+  final int? tierFloor;
+
+  /// The rung above. Null when already on the highest tier this business defines.
+  final String? nextTier;
+
+  /// Lifetime points needed to reach [nextTier].
+  final int? nextTierAt;
+
+  bool get hasTierProgress => tier != null && nextTier != null && nextTierAt != null;
+
+  /// Points still to earn before the next tier. Zero once there is nothing left to climb.
+  int get pointsToNextTier {
+    final target = nextTierAt;
+    if (target == null) return 0;
+    final remaining = target - lifetimeEarned;
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  /// How far through the CURRENT tier the customer is, 0..1.
+  ///
+  /// Measured from the current tier's floor, not from zero: someone who has just reached Gold at
+  /// 2,000 with Platinum at 5,000 is at the start of that stretch, and a bar filled to 40% would
+  /// tell them otherwise.
+  double get tierProgress {
+    final floor = tierFloor ?? 0;
+    final target = nextTierAt;
+    if (target == null || target <= floor) return 1;
+    final span = target - floor;
+    final done = lifetimeEarned - floor;
+    if (done <= 0) return 0;
+    return done >= span ? 1 : done / span;
+  }
+
   Membership withJoinedAt(DateTime? value) => Membership(
     businessId: businessId,
     membershipId: membershipId,
@@ -235,6 +275,9 @@ class Membership {
     status: status,
     joinedAt: value,
     tier: tier,
+    tierFloor: tierFloor,
+    nextTier: nextTier,
+    nextTierAt: nextTierAt,
   );
 }
 

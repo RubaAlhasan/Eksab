@@ -12,6 +12,7 @@ import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_states.dart';
 import '../../shared/widgets/business_tiles.dart';
+import '../../shared/widgets/tier_progress.dart';
 
 /// Prototype: `customer/home.html`.
 ///
@@ -55,12 +56,12 @@ class HomeScreen extends ConsumerWidget {
                 value: wallet,
                 onRetry: () => ref.invalidate(membershipsProvider),
                 loading: const SizedBox(
-                  height: 168,
+                  height: 186,
                   child: Row(
                     children: [
-                      Skeleton(height: 168, width: 176, radius: 16),
+                      Skeleton(height: 186, width: 176, radius: 16),
                       SizedBox(width: 12),
-                      Skeleton(height: 168, width: 176, radius: 16),
+                      Skeleton(height: 186, width: 176, radius: 16),
                     ],
                   ),
                 ),
@@ -77,7 +78,7 @@ class HomeScreen extends ConsumerWidget {
                         ),
                       )
                     : SizedBox(
-                        height: 168,
+                        height: 186,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: entries.length,
@@ -300,6 +301,12 @@ class _MyBusinessCard extends StatelessWidget {
                 ],
               ),
             ),
+            // The card's whole job is to pull someone back in; the balance alone says where they
+            // are, this says how close they are to the next thing worth having.
+            if (entry.membership.hasTierProgress) ...[
+              const SizedBox(height: 12),
+              TierProgress(membership: entry.membership, compact: true),
+            ],
           ],
         ),
       ),
