@@ -80,7 +80,14 @@
           @for (subscription of subscriptions(); track subscription.id) {
             <tr class="eks-clickable-row" (click)="toggleExpand(subscription)">
               <td class="fw-semibold">{{ tenantName(subscription.tenantId) }}</td>
-              <td class="text-muted">{{ subscription.planName ?? '—' }}</td>
+              <td class="text-muted">
+                {{ subscription.planName ?? '—' }}
+                @if (subscription.pendingPlanId) {
+                  <div class="small text-warning">
+                    <i class="fas fa-arrow-right me-1"></i>{{ '::AdminPanel:Subscriptions:PendingChangeTo' | abpLocalization }} {{ subscription.pendingPlanName }}
+                  </div>
+                }
+              </td>
               <td>
                 <app-status-badge
                   [label]="subStatusLabelKey(subscription.status) | abpLocalization"
@@ -90,6 +97,24 @@
               </td>
               <td class="text-muted">{{ subscription.renewalDate | date: 'mediumDate' }}</td>
               <td class="text-end">
+                @if (canManage() && subscription.pendingPlanId) {
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-success me-1"
+                    [disabled]="decidingPlanChangeId() === subscription.id"
+                    (click)="$event.stopPropagation(); approvePlanChange(subscription)"
+                  >
+                    {{ '::AdminPanel:Subscriptions:Approve' | abpLocalization }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger me-2"
+                    [disabled]="decidingPlanChangeId() === subscription.id"
+                    (click)="$event.stopPropagation(); rejectPlanChange(subscription)"
+                  >
+                    {{ '::AdminPanel:Subscriptions:Reject' | abpLocalization }}
+                  </button>
+                }
                 <i class="fas" [class.fa-chevron-down]="expandedId() !== subscription.id" [class.fa-chevron-up]="expandedId() === subscription.id"></i>
               </td>
             </tr>

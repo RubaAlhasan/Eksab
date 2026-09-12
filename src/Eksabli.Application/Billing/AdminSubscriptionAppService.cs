@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Eksabli.Notifications;
 using Eksabli.Reporting;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.FeatureManagement;
 using Volo.Abp.MultiTenancy;
 
 namespace Eksabli.Billing;
@@ -19,6 +21,8 @@ public class AdminSubscriptionAppService : ApplicationService, IAdminSubscriptio
     private readonly ISubscriptionPlanRepository _planRepository;
     private readonly IInvoiceRepository _invoiceRepository;
     private readonly IRepository<Payment, Guid> _paymentRepository;
+    private readonly IFeatureManager _featureManager;
+    private readonly INotificationPublisher _notificationPublisher;
     private readonly IDataFilter _dataFilter;
 
     public AdminSubscriptionAppService(
@@ -26,12 +30,16 @@ public class AdminSubscriptionAppService : ApplicationService, IAdminSubscriptio
         ISubscriptionPlanRepository planRepository,
         IInvoiceRepository invoiceRepository,
         IRepository<Payment, Guid> paymentRepository,
+        IFeatureManager featureManager,
+        INotificationPublisher notificationPublisher,
         IDataFilter dataFilter)
     {
         _subscriptionRepository = subscriptionRepository;
         _planRepository = planRepository;
         _invoiceRepository = invoiceRepository;
         _paymentRepository = paymentRepository;
+        _featureManager = featureManager;
+        _notificationPublisher = notificationPublisher;
         _dataFilter = dataFilter;
     }
 
@@ -144,6 +152,102 @@ public class AdminSubscriptionAppService : ApplicationService, IAdminSubscriptio
             await _invoiceRepository.UpdateAsync(invoice);
 
             return ObjectMapper.Map<Invoice, InvoiceDto>(invoice);
+        }
+    }
+
+    // The other half of Billing.BillingAppService.ChangePlanAsync — that call only ever records a
+    // request now (see its own comment); this is what actually applies it. Real hard-delete-style
+    // "no going back" mutation: reassigns PlanId, clears the pending fields, pushes the new plan's
+    // feature limits, and marks the subscription Active — see TenantSubscription
+    // .ApprovePendingPlanChange's own comment for why activation is bundled in here rather than a
+    // separate step.
+    public async Task<TenantSubscriptionDto> ApprovePlanChangeAsync(Guid id)
+    {
+        TenantSubscriptionDto dto;
+        Guid tenantId;
+        string newPlanName;
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var subscription = await _subscriptionRepository.GetAsync(id);
+            if (!subscription.PendingPlanId.HasValue)
+            {
+                throw new UserFriendlyException("This subscription has no pending plan change to approve.");
+            }
+
+            var newPlan = await _planRepository.GetAsync(subscription.PendingPlanId.Value);
+            subscription.ApprovePendingPlanChange();
+            await _subscriptionRepository.UpdateAsync(subscription);
+
+            await PushPlanFeaturesAsync(subscription.TenantId!.Value, newPlan);
+
+            dto = ObjectMapper.Map<TenantSubscription, TenantSubscriptionDto>(subscription);
+            dto.PlanName = newPlan.Name;
+            tenantId = subscription.TenantId!.Value;
+            newPlanName = newPlan.Name;
+        }
+
+        // Fired AFTER the Disable<IMultiTenant>() scope above closes — PublishToTenantAsync switches
+        // ambient tenant to `tenantId` itself and needs the ordinary (enabled) filter in effect to scope
+        // its own user lookup to just this tenant; calling it from inside the disabled scope would fan
+        // this notification out to every user platform-wide instead.
+        await _notificationPublisher.PublishToTenantAsync(
+            tenantId, UserNotificationType.Success,
+            title: "Plan change approved",
+            message: $"Your request to switch to {newPlanName} was approved — your subscription is now active.",
+            category: "billing.plan_change_approved",
+            data: new { subscriptionId = id, planName = newPlanName });
+
+        return dto;
+    }
+
+    public async Task<TenantSubscriptionDto> RejectPlanChangeAsync(Guid id)
+    {
+        TenantSubscriptionDto dto;
+        Guid tenantId;
+        string rejectedPlanName;
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var subscription = await _subscriptionRepository.GetAsync(id);
+            if (!subscription.PendingPlanId.HasValue)
+            {
+                throw new UserFriendlyException("This subscription has no pending plan change to reject.");
+            }
+
+            var rejectedPlan = await _planRepository.FindAsync(subscription.PendingPlanId.Value);
+            rejectedPlanName = rejectedPlan?.Name ?? "the requested plan";
+
+            subscription.RejectPendingPlanChange();
+            await _subscriptionRepository.UpdateAsync(subscription);
+
+            dto = ObjectMapper.Map<TenantSubscription, TenantSubscriptionDto>(subscription);
+            var currentPlan = await _planRepository.FindAsync(subscription.PlanId);
+            dto.PlanName = currentPlan?.Name;
+            tenantId = subscription.TenantId!.Value;
+        }
+
+        // Same "notify after the disabled-filter scope closes" reasoning as ApprovePlanChangeAsync above.
+        await _notificationPublisher.PublishToTenantAsync(
+            tenantId, UserNotificationType.Warning,
+            title: "Plan change rejected",
+            message: $"Your request to switch to {rejectedPlanName} was not approved. You're still on your current plan.",
+            category: "billing.plan_change_rejected",
+            data: new { subscriptionId = id, rejectedPlanName });
+
+        return dto;
+    }
+
+    // Pushes SubscriptionPlan.FeatureLimitsJson into ABP Feature Management for an explicit tenant —
+    // this Host-side call knows which tenant from the subscription itself, unlike the old tenant-side
+    // BillingAppService version this replaces, which read CurrentTenant.Id (this runs with no ambient
+    // tenant, Disable<IMultiTenant>() above).
+    private async Task PushPlanFeaturesAsync(Guid tenantId, SubscriptionPlan plan)
+    {
+        var limits = SubscriptionPlanFeatureLimits.Parse(plan.FeatureLimitsJson);
+        foreach (var (key, value) in limits)
+        {
+            await _featureManager.SetForTenantAsync(tenantId, key, value);
         }
     }
 

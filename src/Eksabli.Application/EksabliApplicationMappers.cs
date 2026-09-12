@@ -134,9 +134,11 @@ public partial class EksabliSubscriptionPlanToSubscriptionPlanDtoMapper : Mapper
 public partial class EksabliTenantSubscriptionToTenantSubscriptionDtoMapper : MapperBase<TenantSubscription, TenantSubscriptionDto>
 {
     [MapperIgnoreTarget(nameof(TenantSubscriptionDto.PlanName))]
+    [MapperIgnoreTarget(nameof(TenantSubscriptionDto.PendingPlanName))]
     public override partial TenantSubscriptionDto Map(TenantSubscription source);
 
     [MapperIgnoreTarget(nameof(TenantSubscriptionDto.PlanName))]
+    [MapperIgnoreTarget(nameof(TenantSubscriptionDto.PendingPlanName))]
     public override partial void Map(TenantSubscription source, TenantSubscriptionDto destination);
 }
 
