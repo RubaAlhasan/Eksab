@@ -5,6 +5,7 @@ export enum CouponStatus {
   Redeemed = 1,
   Expired = 2,
   Cancelled = 3,
+  Pending = 4,
 }
 
 export const couponStatusOptions = mapEnumToOptions(CouponStatus);

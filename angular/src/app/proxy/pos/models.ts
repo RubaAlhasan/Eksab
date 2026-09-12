@@ -31,6 +31,10 @@ export interface CustomerLookupResultDto {
   lastName?: string | null;
 }
 
+export interface LookupRedemptionDto {
+  code: string;
+}
+
 export interface ManualAdjustDto {
   customerId: string;
   points: number;
@@ -63,4 +67,35 @@ export interface RedemptionConfirmationDto {
   rewardNameAr?: string | null;
   rewardNameEn?: string | null;
   redeemedAt?: string;
+  pointsDebited?: number;
+  newBalance?: number;
+  customerName?: string | null;
+}
+
+export interface RedemptionLookupDto {
+  couponId?: string;
+  code?: string;
+  rewardNameAr?: string | null;
+  rewardNameEn?: string | null;
+  pointsCost?: number;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  balanceAfterRedemption?: number;
+  issuedAt?: string;
+  reservationExpiresAt?: string | null;
+  requiresManagerApproval?: boolean;
+  canCurrentEmployeeApprove?: boolean;
+}
+
+export interface RedemptionRejectionDto {
+  couponId?: string;
+  rewardNameAr?: string | null;
+  rewardNameEn?: string | null;
+  pointsReleased?: number;
+  newAvailableBalance?: number;
+}
+
+export interface RejectRedemptionDto {
+  code: string;
+  reason?: string | null;
 }

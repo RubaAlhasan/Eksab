@@ -73,6 +73,7 @@ class BusinessLogo extends StatelessWidget {
     super.key,
     required this.initials,
     required this.gradient,
+    this.logoUrl,
     this.size = 48,
     this.radius = 16,
     this.fontSize,
@@ -81,6 +82,11 @@ class BusinessLogo extends StatelessWidget {
 
   final String initials;
   final BrandGradient gradient;
+
+  /// The business's real logo. Null for a business that has not uploaded one, which is when the
+  /// generated initials-on-gradient below is the intended presentation rather than a placeholder.
+  final String? logoUrl;
+
   final double size;
   final double radius;
   final double? fontSize;
@@ -88,15 +94,46 @@ class BusinessLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final url = logoUrl;
+
     return Container(
       width: size,
       height: size,
-      alignment: Alignment.center,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        gradient: gradient.gradient,
+        // A real logo sits on a neutral card, not on the generated brand gradient. Logos are rarely
+        // square (the seeded one is 108x115), so `contain` leaves bars either side — filling those
+        // with an unrelated colour picked by hashing the tenant id reads as an accident, and fights
+        // whatever palette the business actually uses. White is what wallet apps use for the same
+        // reason, and it is what a transparent PNG needs behind it.
+        color: url == null ? null : Colors.white,
+        gradient: url == null ? gradient.gradient : null,
         borderRadius: BorderRadius.circular(radius),
         border: border,
       ),
+      child: url == null
+          ? _initials()
+          : Padding(
+              // Breathing room so a logo with no built-in margin does not run into the corners.
+              padding: EdgeInsets.all(size * 0.12),
+              child: Image.network(
+                url,
+                fit: BoxFit.contain,
+                // A broken or unreachable image degrades to exactly what this widget drew before
+                // logos existed, rather than to a broken-image glyph.
+                errorBuilder: (_, _, _) => _initials(),
+                loadingBuilder: (context, child, progress) =>
+                    progress == null ? child : _initials(),
+              ),
+            ),
+    );
+  }
+
+  /// Generated fallback. Paints its own gradient so it still looks right inside the neutral
+  /// container used when a logo was expected but failed to load.
+  Widget _initials() => DecoratedBox(
+    decoration: BoxDecoration(gradient: gradient.gradient),
+    child: Center(
       child: Text(
         initials,
         style: TextStyle(
@@ -105,8 +142,8 @@ class BusinessLogo extends StatelessWidget {
           fontWeight: FontWeight.w700,
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 /// Soft tinted square behind a small icon — the `w-9 h-9 rounded-xl bg-*-50`

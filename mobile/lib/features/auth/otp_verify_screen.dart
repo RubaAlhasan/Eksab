@@ -61,6 +61,10 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
   }
 
   Future<void> _verify() async {
+    // Auto-submit and the Verify button can both fire for one entry — the tap lands while the
+    // request from the sixth digit is still open.
+    if (_submitting) return;
+
     if (_code.length < 6) {
       setState(() {
         _showError = true;
@@ -158,7 +162,13 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
               length: 6,
               hasError: _showError,
               onChanged: (v) => _code = v,
-              onCompleted: (v) => _code = v,
+              // Submit on the sixth digit rather than waiting for a tap. There is nothing left to
+              // decide at that point, and every OTP screen people already use behaves this way —
+              // Verify stays for anyone who pastes, edits, or retries after an error.
+              onCompleted: (v) {
+                _code = v;
+                _verify();
+              },
             ),
             const SizedBox(height: 24),
 

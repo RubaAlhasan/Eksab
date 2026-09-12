@@ -12,6 +12,7 @@ import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/app_scaffold.dart';
 import '../../shared/widgets/app_states.dart';
+import '../../shared/widgets/tier_progress.dart';
 import '../../shared/widgets/business_tiles.dart';
 
 /// Prototype: `customer/my-points.html` — per-business balance, quick links to
@@ -47,6 +48,7 @@ class MyPointsScreen extends ConsumerWidget {
                   BusinessLogo(
                     initials: biz.initials,
                     gradient: biz.gradient,
+                    logoUrl: biz.logoUrl,
                     size: 48,
                   ),
                   const SizedBox(height: 12),
@@ -73,6 +75,10 @@ class MyPointsScreen extends ConsumerWidget {
                       '${formatPoints(membership.lifetimeRedeemed)} redeemed',
                       style: AppText.small.copyWith(color: palette.textMuted),
                     ),
+                  ],
+                  if (membership != null && membership.hasTierProgress) ...[
+                    const SizedBox(height: 20),
+                    TierProgress(membership: membership),
                   ],
                 ],
               ),

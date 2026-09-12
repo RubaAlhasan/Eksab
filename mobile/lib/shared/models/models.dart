@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_tokens.dart';
+import '../../core/config/app_config.dart';
 
 /// Domain models for the customer app, mapped from the API's DTOs in
 /// `src/Eksabli.Application.Contracts/`.
@@ -63,6 +64,7 @@ class Business {
     required this.branches,
     required this.businessProfileId,
     required this.hasLogo,
+    this.logoBlobName,
     this.description,
     this.website,
     this.distanceKm,
@@ -88,6 +90,7 @@ class Business {
       branches: (json['branchCount'] as num?)?.toInt() ?? 0,
       businessProfileId: (json['businessProfileId'] as String?) ?? '',
       hasLogo: json['hasLogo'] as bool? ?? false,
+      logoBlobName: (json['logoBlobName'] as String?)?.trim(),
       description:
           (json['descriptionEn'] as String?)?.trim() ??
           (json['descriptionAr'] as String?)?.trim(),
@@ -104,6 +107,28 @@ class Business {
   final int branches;
   final String businessProfileId;
   final bool hasLogo;
+
+  /// Opaque version token from the server, used only to cache-bust [logoUrl].
+  final String? logoBlobName;
+
+  /// Public URL of this business's logo, or null when none has been uploaded.
+  ///
+  /// `GET /api/app/business/{businessProfileId}/logo` is `[AllowAnonymous]`, so this works as a
+  /// plain image URL with no auth header — which is what lets [BusinessLogo] use `Image.network`
+  /// rather than routing it through the authenticated Dio client.
+  ///
+  /// The URL is keyed by profile id and never changes on its own, so a business that swaps its logo
+  /// would keep serving the old one from cache; `?v=` is what busts that.
+  String? get logoUrl {
+    if (!hasLogo || businessProfileId.isEmpty) return null;
+    final base =
+        '${AppConfig.baseUrl}/api/app/business/$businessProfileId/logo';
+    final version = logoBlobName;
+    return version == null || version.isEmpty
+        ? base
+        : '$base?v=${Uri.encodeComponent(version)}';
+  }
+
   final String? description;
   final String? website;
 
@@ -123,6 +148,7 @@ class Business {
     branches: branches,
     businessProfileId: businessProfileId,
     hasLogo: hasLogo,
+    logoBlobName: logoBlobName,
     description: description,
     website: website,
     distanceKm: distanceKm,
@@ -175,6 +201,9 @@ class Membership {
     required this.status,
     this.joinedAt,
     this.tier,
+    this.tierFloor,
+    this.nextTier,
+    this.nextTierAt,
   });
 
   factory Membership.fromWalletJson(Map<String, dynamic> json) => Membership(
@@ -185,6 +214,9 @@ class Membership {
     lifetimeRedeemed: (json['lifetimeRedeemed'] as num?)?.toInt() ?? 0,
     status: MembershipStatus.active,
     tier: (json['currentTierName'] as String?)?.trim(),
+    tierFloor: (json['currentTierMinLifetimePoints'] as num?)?.toInt(),
+    nextTier: (json['nextTierName'] as String?)?.trim(),
+    nextTierAt: (json['nextTierMinLifetimePoints'] as num?)?.toInt(),
   );
 
   final String businessId;
@@ -200,6 +232,40 @@ class Membership {
   /// `PointsWalletDto.currentTierName`. Null when the business defines no tiers.
   final String? tier;
 
+  /// Lifetime points at which the current tier starts — the left end of the progress bar.
+  final int? tierFloor;
+
+  /// The rung above. Null when already on the highest tier this business defines.
+  final String? nextTier;
+
+  /// Lifetime points needed to reach [nextTier].
+  final int? nextTierAt;
+
+  bool get hasTierProgress => tier != null && nextTier != null && nextTierAt != null;
+
+  /// Points still to earn before the next tier. Zero once there is nothing left to climb.
+  int get pointsToNextTier {
+    final target = nextTierAt;
+    if (target == null) return 0;
+    final remaining = target - lifetimeEarned;
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  /// How far through the CURRENT tier the customer is, 0..1.
+  ///
+  /// Measured from the current tier's floor, not from zero: someone who has just reached Gold at
+  /// 2,000 with Platinum at 5,000 is at the start of that stretch, and a bar filled to 40% would
+  /// tell them otherwise.
+  double get tierProgress {
+    final floor = tierFloor ?? 0;
+    final target = nextTierAt;
+    if (target == null || target <= floor) return 1;
+    final span = target - floor;
+    final done = lifetimeEarned - floor;
+    if (done <= 0) return 0;
+    return done >= span ? 1 : done / span;
+  }
+
   Membership withJoinedAt(DateTime? value) => Membership(
     businessId: businessId,
     membershipId: membershipId,
@@ -209,6 +275,9 @@ class Membership {
     status: status,
     joinedAt: value,
     tier: tier,
+    tierFloor: tierFloor,
+    nextTier: nextTier,
+    nextTierAt: nextTierAt,
   );
 }
 
@@ -363,17 +432,29 @@ class Reward {
   Color get tone => type.tone;
 }
 
+/// Mirrors the server's `CouponStatus`, INCLUDING its numbering — `_enumFromJson` maps by ordinal,
+/// so the order here is the wire format and must not be rearranged.
+///
+/// `pending` is last because it was added last (see the server enum's own comment): a redemption is
+/// born pending with its points merely reserved, and only becomes [redeemed] when staff approve it at
+/// the counter. `issued` is the legacy state from before reservations existed.
 enum CouponStatus {
   issued,
   redeemed,
   expired,
-  cancelled;
+  cancelled,
+  pending;
 
   static CouponStatus fromJson(Object? raw) =>
       _enumFromJson(raw, CouponStatus.values, CouponStatus.issued);
 
+  /// True while staff have neither approved nor declined — the only state where the customer's
+  /// points are held rather than spent, and the only one worth polling.
+  bool get isAwaitingApproval => this == CouponStatus.pending;
+
   String get label => switch (this) {
     CouponStatus.issued => 'Active',
+    CouponStatus.pending => 'Awaiting staff',
     CouponStatus.redeemed => 'Used',
     CouponStatus.expired => 'Expired',
     CouponStatus.cancelled => 'Cancelled',
@@ -389,8 +470,11 @@ class Coupon {
     required this.code,
     required this.status,
     required this.issuedAt,
+    this.pointsCost = 0,
     this.rewardName,
     this.redeemedAt,
+    this.reservationExpiresAt,
+    this.rejectionReason,
   });
 
   factory Coupon.fromJson(Map<String, dynamic> json) => Coupon(
@@ -399,11 +483,14 @@ class Coupon {
     businessId: (json['tenantId'] as String?) ?? '',
     code: (json['code'] as String?) ?? '',
     status: CouponStatus.fromJson(json['status']),
-    issuedAt: DateTime.tryParse('${json['issuedAt']}') ?? DateTime.now(),
+    issuedAt: _parseServerTime(json['issuedAt']) ?? DateTime.now(),
+    pointsCost: (json['pointsCost'] as num?)?.toInt() ?? 0,
     rewardName:
         (json['rewardNameEn'] as String?)?.trim() ??
         (json['rewardNameAr'] as String?)?.trim(),
-    redeemedAt: DateTime.tryParse('${json['redeemedAt']}'),
+    redeemedAt: _parseServerTime(json['redeemedAt']),
+    reservationExpiresAt: _parseServerTime(json['reservationExpiresAt']),
+    rejectionReason: (json['rejectionReason'] as String?)?.trim(),
   );
 
   final String id;
@@ -412,8 +499,50 @@ class Coupon {
   final String code;
   final CouponStatus status;
   final DateTime issuedAt;
+
+  /// Points held (while [CouponStatus.pending]) or spent (once redeemed). Zero on legacy rows.
+  final int pointsCost;
   final String? rewardName;
   final DateTime? redeemedAt;
+
+  /// When the hold lapses and the points return on their own. Null unless pending.
+  final DateTime? reservationExpiresAt;
+
+  /// Why staff declined, in their own words. Only set on a declined redemption.
+  final String? rejectionReason;
+
+  bool get isAwaitingApproval => status.isAwaitingApproval;
+
+  /// Code grouped for reading aloud across a counter: `3B02543F` -> `3B02 543F`.
+  String get formattedCode =>
+      code.length == 8 ? '${code.substring(0, 4)} ${code.substring(4)}' : code;
+
+  Duration? remaining(DateTime now) {
+    final expiry = reservationExpiresAt;
+    if (expiry == null) return null;
+    final left = expiry.difference(now);
+    return left.isNegative ? Duration.zero : left;
+  }
+}
+
+/// Parses a server timestamp into local device time.
+///
+/// The API stores `timestamp without time zone` and writes it from ABP's `IClock.Now`, which is
+/// configured as `DateTimeKind.Utc` — so these arrive as UTC with no offset marker on them.
+/// `DateTime.tryParse` would read an offset-less string as LOCAL, putting every countdown and expiry
+/// hours out for anyone not on UTC, so the marker is supplied before parsing and the result handed
+/// back in the device's own zone.
+///
+/// An explicit offset is respected if one ever appears, so this keeps working if the API moves to
+/// `timestamptz` later.
+DateTime? _parseServerTime(Object? raw) {
+  if (raw == null) return null;
+  final text = '$raw';
+  if (text.isEmpty || text == 'null') return null;
+
+  final hasZone =
+      text.endsWith('Z') || RegExp(r'[+-]\d{2}:?\d{2}$').hasMatch(text);
+  return DateTime.tryParse(hasZone ? text : '${text}Z')?.toLocal();
 }
 
 enum NotificationTone {

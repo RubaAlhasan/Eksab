@@ -327,6 +327,15 @@ export const APP_ROUTES: Routes = [
           import('./business/points/business-points.component').then(c => c.BusinessPointsComponent),
       },
       {
+        // Same "no requiredPolicy" shape as 'points' above, and for the same reason: PosController
+        // carries no ABP permission, only PosAppService's own EmployeeAssignment.Role check. Gating
+        // this route on a permission would hide it from every invited Cashier — i.e. from exactly the
+        // staff who stand at the counter and use it.
+        path: 'redemption',
+        loadComponent: () =>
+          import('./business/redemption/business-redemption.component').then(c => c.BusinessRedemptionComponent),
+      },
+      {
         path: 'rewards',
         loadComponent: () =>
           import('./business/rewards/business-rewards.component').then(c => c.BusinessRewardsComponent),

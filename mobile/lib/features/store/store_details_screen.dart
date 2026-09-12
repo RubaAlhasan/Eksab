@@ -61,29 +61,34 @@ class _StoreDetailsScreenState extends ConsumerState<StoreDetailsScreen> {
     return ListView(
       padding: EdgeInsets.zero,
       children: [
-        SizedBox(
-          height: 200,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              DecoratedBox(
-                decoration: BoxDecoration(gradient: biz.gradient.gradient),
-              ),
-              SafeArea(
-                child: Padding(
+        // Was a 200pt band of the business's generated gradient with nothing inside it — a saturated
+        // colour field carrying no information, sized for a cover photo that does not exist anywhere
+        // in the data model, so the space was never going to fill. It also forced the back and
+        // favourite buttons into translucent-white-on-unknown-colour, which is only ever a guess.
+        //
+        // The business's own colour now survives where it means something — the logo tile, which is
+        // its identity — and the surface behind it stays neutral and out of the way.
+        Container(
+          decoration: BoxDecoration(
+            color: palette.surface,
+            border: Border(bottom: BorderSide(color: palette.borderSubtle)),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 4,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       AppIconButton(
                         icon: Icons.arrow_back_rounded,
                         tooltip: 'Back',
-                        foreground: Colors.white,
-                        background: Colors.white.withValues(alpha: 0.2),
+                        foreground: palette.textSecondary,
                         onPressed: () => context.canPop()
                             ? context.pop()
                             : context.go(Routes.home),
@@ -94,9 +99,8 @@ class _StoreDetailsScreenState extends ConsumerState<StoreDetailsScreen> {
                             : Icons.favorite_border_rounded,
                         tooltip: biz.following ? 'Unfollow' : 'Follow',
                         foreground: biz.following
-                            ? AppColors.danger300
-                            : Colors.white,
-                        background: Colors.white.withValues(alpha: 0.2),
+                            ? AppColors.danger500
+                            : palette.textSecondary,
                         onPressed: () async {
                           await ref
                               .read(followActionsProvider)
@@ -114,44 +118,66 @@ class _StoreDetailsScreenState extends ConsumerState<StoreDetailsScreen> {
                     ],
                   ),
                 ),
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      BusinessLogo(
+                        initials: biz.initials,
+                        gradient: biz.gradient,
+                        logoUrl: biz.logoUrl,
+                        size: 64,
+                        radius: 20,
+                        fontSize: 22,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    biz.name,
+                                    style: AppText.h2.copyWith(
+                                      color: palette.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                                if (biz.member)
+                                  const AppBadge(
+                                    'Member',
+                                    tone: AppTone.primary,
+                                  ),
+                              ],
+                            ),
+                            if (biz.category.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                biz.category,
+                                style: AppText.small.copyWith(
+                                  color: palette.textMuted,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        Transform.translate(
-          offset: const Offset(0, -32),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                BusinessLogo(
-                  initials: biz.initials,
-                  gradient: biz.gradient,
-                  size: 80,
-                  radius: 24,
-                  fontSize: 24,
-                  border: Border.all(color: palette.surface, width: 4),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        biz.name,
-                        style: AppText.h1.copyWith(color: palette.textPrimary),
-                      ),
-                    ),
-                    if (biz.member)
-                      const AppBadge('Member', tone: AppTone.primary),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  biz.category,
-                  style: AppText.body.copyWith(color: palette.textMuted),
-                ),
-                const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
                 Row(
                   children: [
                     Text(
@@ -412,7 +438,6 @@ class _StoreDetailsScreenState extends ConsumerState<StoreDetailsScreen> {
               ],
             ),
           ),
-        ),
       ],
     );
   }

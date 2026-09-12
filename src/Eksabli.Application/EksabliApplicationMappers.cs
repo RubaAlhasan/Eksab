@@ -73,10 +73,16 @@ public partial class EksabliPointsWalletToPointsWalletDtoMapper : MapperBase<Poi
 {
     [MapperIgnoreTarget(nameof(PointsWalletDto.CurrentTierName))]
     [MapperIgnoreTarget(nameof(PointsWalletDto.BusinessName))]
+    [MapperIgnoreTarget(nameof(PointsWalletDto.CurrentTierMinLifetimePoints))]
+    [MapperIgnoreTarget(nameof(PointsWalletDto.NextTierName))]
+    [MapperIgnoreTarget(nameof(PointsWalletDto.NextTierMinLifetimePoints))]
     public override partial PointsWalletDto Map(PointsWallet source);
 
     [MapperIgnoreTarget(nameof(PointsWalletDto.CurrentTierName))]
     [MapperIgnoreTarget(nameof(PointsWalletDto.BusinessName))]
+    [MapperIgnoreTarget(nameof(PointsWalletDto.CurrentTierMinLifetimePoints))]
+    [MapperIgnoreTarget(nameof(PointsWalletDto.NextTierName))]
+    [MapperIgnoreTarget(nameof(PointsWalletDto.NextTierMinLifetimePoints))]
     public override partial void Map(PointsWallet source, PointsWalletDto destination);
 }
 

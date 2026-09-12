@@ -24,6 +24,7 @@ public abstract class CouponAppService_Tests<TStartupModule> : EksabliApplicatio
     private readonly IRewardRepository _rewardRepository;
     private readonly IRepository<Membership, Guid> _membershipRepository;
     private readonly IRepository<PointsWallet, Guid> _walletRepository;
+    private readonly IRepository<PointsTransaction, Guid> _transactionRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly ICurrentPrincipalAccessor _currentPrincipalAccessor;
 
@@ -35,6 +36,7 @@ public abstract class CouponAppService_Tests<TStartupModule> : EksabliApplicatio
         _rewardRepository = GetRequiredService<IRewardRepository>();
         _membershipRepository = GetRequiredService<IRepository<Membership, Guid>>();
         _walletRepository = GetRequiredService<IRepository<PointsWallet, Guid>>();
+        _transactionRepository = GetRequiredService<IRepository<PointsTransaction, Guid>>();
         _currentTenant = GetRequiredService<ICurrentTenant>();
         _currentPrincipalAccessor = GetRequiredService<ICurrentPrincipalAccessor>();
     }
@@ -95,7 +97,7 @@ public abstract class CouponAppService_Tests<TStartupModule> : EksabliApplicatio
     }
 
     [Fact]
-    public async Task Should_Redeem_A_Reward_And_Deduct_Points_And_Decrement_Stock()
+    public async Task Should_Reserve_Points_Rather_Than_Deduct_Them_On_Redeem()
     {
         var tenantId = await CreateTenantAsync();
         var customerId = Guid.NewGuid();
@@ -108,8 +110,10 @@ public abstract class CouponAppService_Tests<TStartupModule> : EksabliApplicatio
             coupon = await WithUnitOfWorkAsync(() => _couponAppService.RedeemAsync(new RedeemRewardDto { TenantId = tenantId, RewardId = rewardId }));
         }
 
-        coupon.Status.ShouldBe(CouponStatus.Issued);
+        coupon.Status.ShouldBe(CouponStatus.Pending);
         coupon.Code.Length.ShouldBe(CouponConsts.CodeLength);
+        coupon.PointsCost.ShouldBe(100);
+        coupon.ReservationExpiresAt.ShouldNotBeNull();
 
         await WithUnitOfWorkAsync(async () =>
         {
@@ -117,12 +121,141 @@ public abstract class CouponAppService_Tests<TStartupModule> : EksabliApplicatio
             {
                 var membership = await _membershipRepository.SingleAsync(m => m.CustomerId == customerId);
                 var wallet = await _walletRepository.SingleAsync(w => w.MembershipId == membership.Id);
-                wallet.Balance.ShouldBe(100);
+
+                // The points are HELD, not spent — the customer still owns them until staff approve.
+                wallet.Balance.ShouldBe(200);
+                wallet.Reserved.ShouldBe(100);
+                wallet.AvailableBalance.ShouldBe(100);
+
+                // No ledger row yet: the ledger records movements, and nothing has moved.
+                var transactions = await _transactionRepository.GetListAsync(t => t.WalletId == wallet.Id);
+                transactions.ShouldNotContain(t => t.Type == PointsTransactionType.Redeem);
+
+                // Stock IS held, so two customers can't both be promised the last unit.
+                var reward = await _rewardRepository.GetAsync(rewardId);
+                reward.StockRemaining.ShouldBe(4);
+            }
+        });
+    }
+
+    [Fact]
+    public async Task Should_Count_Reserved_Points_As_Unavailable_For_A_Second_Redemption()
+    {
+        var tenantId = await CreateTenantAsync();
+        var customerId = Guid.NewGuid();
+        await JoinBusinessWithBalanceAsync(tenantId, customerId, 150);
+        var first = await CreateRewardAsync(tenantId, pointsCost: 100);
+        var second = await CreateRewardAsync(tenantId, pointsCost: 100);
+
+        using (LoginAs(customerId))
+        {
+            await WithUnitOfWorkAsync(() => _couponAppService.RedeemAsync(new RedeemRewardDto { TenantId = tenantId, RewardId = first }));
+
+            // Balance is still 150, but only 50 is spendable — without this the customer could open
+            // two redemptions worth 200 points against a 150-point wallet and staff would honour both.
+            await Assert.ThrowsAsync<UserFriendlyException>(async () =>
+            {
+                await WithUnitOfWorkAsync(() => _couponAppService.RedeemAsync(new RedeemRewardDto { TenantId = tenantId, RewardId = second }));
+            });
+        }
+    }
+
+    [Fact]
+    public async Task Should_Return_The_Existing_Code_When_Redeeming_The_Same_Reward_Twice()
+    {
+        var tenantId = await CreateTenantAsync();
+        var customerId = Guid.NewGuid();
+        await JoinBusinessWithBalanceAsync(tenantId, customerId, 500);
+        var rewardId = await CreateRewardAsync(tenantId, pointsCost: 100, stockRemaining: 5);
+
+        using (LoginAs(customerId))
+        {
+            var first = await WithUnitOfWorkAsync(() => _couponAppService.RedeemAsync(new RedeemRewardDto { TenantId = tenantId, RewardId = rewardId }));
+            var second = await WithUnitOfWorkAsync(() => _couponAppService.RedeemAsync(new RedeemRewardDto { TenantId = tenantId, RewardId = rewardId }));
+
+            // A double-tap is the same intent, not a second redemption: same coupon back, and the
+            // wallet and stock are touched exactly once.
+            second.Id.ShouldBe(first.Id);
+            second.Code.ShouldBe(first.Code);
+        }
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var membership = await _membershipRepository.SingleAsync(m => m.CustomerId == customerId);
+                var wallet = await _walletRepository.SingleAsync(w => w.MembershipId == membership.Id);
+                wallet.Reserved.ShouldBe(100);
 
                 var reward = await _rewardRepository.GetAsync(rewardId);
                 reward.StockRemaining.ShouldBe(4);
             }
         });
+    }
+
+    [Fact]
+    public async Task Should_Release_The_Hold_And_Restock_When_The_Customer_Cancels()
+    {
+        var tenantId = await CreateTenantAsync();
+        var customerId = Guid.NewGuid();
+        await JoinBusinessWithBalanceAsync(tenantId, customerId, 200);
+        var rewardId = await CreateRewardAsync(tenantId, pointsCost: 100, stockRemaining: 5);
+
+        using (LoginAs(customerId))
+        {
+            var coupon = await WithUnitOfWorkAsync(() => _couponAppService.RedeemAsync(new RedeemRewardDto { TenantId = tenantId, RewardId = rewardId }));
+            var cancelled = await WithUnitOfWorkAsync(() => _couponAppService.CancelMyCouponAsync(tenantId, coupon.Id));
+
+            cancelled.Status.ShouldBe(CouponStatus.Cancelled);
+        }
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var membership = await _membershipRepository.SingleAsync(m => m.CustomerId == customerId);
+                var wallet = await _walletRepository.SingleAsync(w => w.MembershipId == membership.Id);
+
+                // Everything back where it started, and still no ledger row — a redemption that never
+                // happened must not appear in the customer's own history.
+                wallet.Balance.ShouldBe(200);
+                wallet.Reserved.ShouldBe(0);
+                wallet.AvailableBalance.ShouldBe(200);
+
+                var transactions = await _transactionRepository.GetListAsync(t => t.WalletId == wallet.Id);
+                transactions.ShouldNotContain(t => t.Type == PointsTransactionType.Redeem);
+
+                var reward = await _rewardRepository.GetAsync(rewardId);
+                reward.StockRemaining.ShouldBe(5);
+            }
+        });
+    }
+
+    [Fact]
+    public async Task Should_Reject_Cancelling_Someone_Elses_Coupon()
+    {
+        var tenantId = await CreateTenantAsync();
+        var owner = Guid.NewGuid();
+        var stranger = Guid.NewGuid();
+        await JoinBusinessWithBalanceAsync(tenantId, owner, 200);
+        await JoinBusinessWithBalanceAsync(tenantId, stranger, 200);
+        var rewardId = await CreateRewardAsync(tenantId, pointsCost: 100);
+
+        CouponDto coupon = null!;
+        using (LoginAs(owner))
+        {
+            coupon = await WithUnitOfWorkAsync(() => _couponAppService.RedeemAsync(new RedeemRewardDto { TenantId = tenantId, RewardId = rewardId }));
+        }
+
+        // The tenant filter scopes rows to one business, not to one customer within it — ownership is
+        // proved through Membership, so a stranger holding the id still cannot touch it.
+        using (LoginAs(stranger))
+        {
+            await Assert.ThrowsAnyAsync<Exception>(async () =>
+            {
+                await WithUnitOfWorkAsync(() => _couponAppService.CancelMyCouponAsync(tenantId, coupon.Id));
+            });
+        }
     }
 
     [Fact]

@@ -67,6 +67,9 @@ export class BusinessLayoutComponent {
     // same convention as AdminLayoutComponent's `AbpAccount::MyAccount` entry) — PosController has no
     // ABP permission at all; see business-points.component.ts's file comment for why.
     { labelKey: '::BusinessPanel:Layout:NavPoints', icon: 'fa-qrcode', link: '/business/points', permission: '' },
+    // Empty permission for the same reason as NavPoints directly above — PosController has no ABP
+    // permission, so a Cashier would never see this entry if it required one.
+    { labelKey: '::BusinessPanel:Layout:NavRedemption', icon: 'fa-circle-check', link: '/business/redemption', permission: '' },
     { labelKey: '::BusinessPanel:Layout:NavRewards', icon: 'fa-gift', link: '/business/rewards', permission: 'Eksabli.Rewards' },
     { labelKey: '::BusinessPanel:Layout:NavCoupons', icon: 'fa-ticket', link: '/business/coupons', permission: 'Eksabli.Rewards' },
     { labelKey: '::BusinessPanel:Layout:NavCampaigns', icon: 'fa-bullhorn', link: '/business/campaigns', permission: 'Eksabli.Campaigns' },

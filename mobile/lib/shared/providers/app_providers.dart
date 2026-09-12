@@ -266,11 +266,6 @@ final membershipForBusinessProvider = Provider.family<Membership?, String>((
   return null;
 });
 
-final totalPointsProvider = Provider<int>((ref) {
-  final memberships = ref.watch(membershipsProvider).valueOrNull ?? const [];
-  return memberships.fold(0, (sum, m) => sum + m.balance);
-});
-
 /// A membership paired with its resolved business — what the wallet renders.
 class WalletEntry {
   const WalletEntry({required this.business, required this.membership});
@@ -347,8 +342,12 @@ class CouponsNotifier extends AsyncNotifier<List<Coupon>> {
   @override
   Future<List<Coupon>> build() => ref.watch(apiProvider).myCoupons();
 
-  /// Redemption is server-side — it issues the coupon and debits the wallet, so
-  /// both this list and the balances are refetched.
+  /// Opens a redemption. The server RESERVES the points and returns a pending
+  /// coupon — nothing is spent until staff approve the code, and nothing here
+  /// should tell the customer otherwise.
+  ///
+  /// Balances are refetched because a hold changes what is spendable even
+  /// though `balance` itself is untouched.
   Future<Coupon> redeem({
     required String tenantId,
     required String rewardId,
@@ -356,6 +355,28 @@ class CouponsNotifier extends AsyncNotifier<List<Coupon>> {
     final coupon = await ref
         .read(apiProvider)
         .redeemReward(tenantId: tenantId, rewardId: rewardId);
+    ref.invalidateSelf();
+    ref.invalidate(membershipsProvider);
+    return coupon;
+  }
+
+  /// Re-reads one coupon. Used by the pending screen to learn the outcome; it
+  /// deliberately does NOT invalidate anything, since it runs on a timer and
+  /// rebuilding the whole list every few seconds would be wasteful.
+  Future<Coupon> refreshOne({
+    required String tenantId,
+    required String couponId,
+  }) => ref.read(apiProvider).coupon(tenantId: tenantId, couponId: couponId);
+
+  /// Customer withdrew their own pending redemption — the hold is released, so
+  /// balances and the coupon list both change.
+  Future<Coupon> cancel({
+    required String tenantId,
+    required String couponId,
+  }) async {
+    final coupon = await ref
+        .read(apiProvider)
+        .cancelCoupon(tenantId: tenantId, couponId: couponId);
     ref.invalidateSelf();
     ref.invalidate(membershipsProvider);
     return coupon;

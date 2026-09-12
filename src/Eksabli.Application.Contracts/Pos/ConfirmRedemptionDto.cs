@@ -7,7 +7,7 @@ namespace Eksabli.Pos;
 public class ConfirmRedemptionDto
 {
     [Required]
-    [StringLength(CouponConsts.CodeLength)]
+    [StringLength(CouponConsts.MaxSubmittedCodeLength)]
     public string Code { get; set; } = string.Empty;
 
     // Defaults to the confirming employee's own EmployeeAssignment.BranchId when omitted.

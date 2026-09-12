@@ -1480,6 +1480,9 @@ namespace Eksabli.Migrations
                     b.Property<Guid>("MembershipId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("PointsCost")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("RedeemedAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -1488,6 +1491,13 @@ namespace Eksabli.Migrations
 
                     b.Property<Guid?>("RedeemedByEmployeeId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime?>("ReservationExpiresAt")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("RewardId")
                         .HasColumnType("uuid");
@@ -1505,6 +1515,8 @@ namespace Eksabli.Migrations
                         .IsUnique();
 
                     b.HasIndex("MembershipId", "Status");
+
+                    b.HasIndex("Status", "ReservationExpiresAt");
 
                     b.HasIndex("TenantId", "Status");
 
@@ -1827,6 +1839,9 @@ namespace Eksabli.Migrations
 
                     b.Property<Guid>("MembershipId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Reserved")
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("TenantId")
                         .HasColumnType("uuid")

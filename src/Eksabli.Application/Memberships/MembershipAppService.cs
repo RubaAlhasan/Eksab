@@ -141,7 +141,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
 
             var wallets = await _walletRepository.GetListAsync(w => membershipIds.Contains(w.MembershipId));
             var dtos = ObjectMapper.Map<List<PointsWallet>, List<PointsWalletDto>>(wallets);
-            await SetTierNamesAsync(dtos);
+            await SetTierProgressAsync(dtos);
             await SetBusinessNamesAsync(dtos);
             return dtos;
         }
@@ -302,20 +302,50 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
 
     // Called only from within GetMyWalletsAsync's own Disable<IMultiTenant> block — no need to
     // re-disable the filter here.
-    private async Task SetTierNamesAsync(List<PointsWalletDto> dtos)
+    //
+    // Resolves the tier a wallet's LifetimeEarned qualifies for, rather than reading back
+    // PointsWallet.CurrentTierId. That column is a CACHE of this same calculation — TierRecomputeService
+    // applies exactly this rule, and only runs when points are awarded. A wallet whose balance arrived
+    // any other way (a seed, a migration, a manual correction) carries a stale or null tier, and
+    // showing a customer no tier at all when their lifetime points plainly qualify them is worse than
+    // showing the one the rule gives. Same relationship Balance has to the transaction ledger.
+    //
+    // CurrentTierId is still reported as stored, so a caller can tell the two apart.
+    private async Task SetTierProgressAsync(List<PointsWalletDto> dtos)
     {
+        if (dtos.Count == 0)
+        {
+            return;
+        }
+
+        // One query for every tenant in the result, not one per wallet: a customer with memberships at
+        // a dozen businesses was previously a dozen round trips.
+        var tenantIds = dtos.Select(d => d.TenantId).Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
+        var tiers = await _tierRepository.GetListAsync(t => t.TenantId != null && tenantIds.Contains(t.TenantId!.Value));
+
+        var byTenant = tiers
+            .GroupBy(t => t.TenantId!.Value)
+            .ToDictionary(g => g.Key, g => g.OrderBy(t => t.MinLifetimePoints).ToList());
+
         foreach (var dto in dtos)
         {
-            if (dto.CurrentTierId.HasValue)
+            if (!dto.TenantId.HasValue || !byTenant.TryGetValue(dto.TenantId.Value, out var ladder))
             {
-                var tier = await _tierRepository.FindAsync(dto.CurrentTierId.Value);
-                dto.CurrentTierName = tier?.Name;
+                continue; // business defines no tiers — the UI hides the whole section
             }
+
+            var current = ladder.LastOrDefault(t => t.MinLifetimePoints <= dto.LifetimeEarned);
+            var next = ladder.FirstOrDefault(t => t.MinLifetimePoints > dto.LifetimeEarned);
+
+            dto.CurrentTierName = current?.Name;
+            dto.CurrentTierMinLifetimePoints = current?.MinLifetimePoints;
+            dto.NextTierName = next?.Name;
+            dto.NextTierMinLifetimePoints = next?.MinLifetimePoints;
         }
     }
 
     // Same "called only from inside GetMyWalletsAsync's own Disable<IMultiTenant> block" shape as
-    // SetTierNamesAsync above. Cross-tenant Tenant.Name lookup, safe here specifically because every
+    // SetTierProgressAsync above. Cross-tenant Tenant.Name lookup, safe here specifically because every
     // TenantId being resolved is one this exact customer already has a real wallet in — this is their
     // own cross-business wallet list, not a general-purpose tenant directory (contrast with
     // AdminUserAppService/AdminSubscriptionAppService, which need Disable<IMultiTenant>() precisely

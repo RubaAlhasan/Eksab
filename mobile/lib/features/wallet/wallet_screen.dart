@@ -25,7 +25,6 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
   @override
   Widget build(BuildContext context) {
     final entries = ref.watch(walletEntriesProvider);
-    final total = ref.watch(totalPointsProvider);
 
     return AppScaffold(
       appBar: AppTopBar(
@@ -43,39 +42,62 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           children: [
+            // Was "Total points across all businesses", summed across memberships.
+            //
+            // Points are not fungible: 2,250 at one business buys nothing at another, so the sum was
+            // a number the customer could never spend — and the larger it grew, the more it implied
+            // otherwise. The per-business list below already carries the balances that are real.
+            //
+            // The slot now holds what is actually reached for at a counter. Showing the wallet QR is
+            // how points get earned in the first place, and it was buried behind an unlabelled icon
+            // in the top-right corner.
             AppCard(
               padding: const EdgeInsets.all(20),
+              onTap: () => context.push(Routes.qrCode),
               gradient: const LinearGradient(
                 colors: [AppColors.primary600, AppColors.primary800],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+              child: Row(
                 children: [
-                  Text(
-                    'Total points across all businesses',
-                    style: AppText.small.copyWith(
-                      color: Colors.white.withValues(alpha: 0.7),
+                  Container(
+                    width: 48,
+                    height: 48,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      borderRadius: AppRadius.rMd,
+                    ),
+                    child: const Icon(
+                      Icons.qr_code_rounded,
+                      color: Colors.white,
+                      size: 26,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${formatPoints(total)} pts',
-                    style: AppText.displayLg.copyWith(color: Colors.white),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Your wallet QR',
+                          style: AppText.bodyBold.copyWith(color: Colors.white),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Show this at checkout to earn points',
+                          style: AppText.small.copyWith(
+                            color: Colors.white.withValues(alpha: 0.75),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    entries.maybeWhen(
-                      data: (list) =>
-                          'Across ${list.length} '
-                          '${list.length == 1 ? 'business' : 'businesses'}',
-                      orElse: () => ' ',
-                    ),
-                    style: AppText.small.copyWith(
-                      color: Colors.white.withValues(alpha: 0.6),
-                    ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ],
               ),

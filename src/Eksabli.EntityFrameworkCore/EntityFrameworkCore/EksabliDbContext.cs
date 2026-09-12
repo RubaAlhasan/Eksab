@@ -284,9 +284,13 @@ public class EksabliDbContext :
             b.ToTable(EksabliConsts.DbTablePrefix + "Coupons", EksabliConsts.DbSchema);
             b.ConfigureByConvention(); //auto configure for the base class props
             b.Property(x => x.Code).IsRequired().HasMaxLength(CouponConsts.CodeLength);
+            b.Property(x => x.RejectionReason).HasMaxLength(CouponConsts.MaxRejectionReasonLength);
             b.HasIndex(x => x.Code).IsUnique();
             b.HasIndex(x => new { x.MembershipId, x.Status });
             b.HasIndex(x => new { x.TenantId, x.Status });
+            // RedemptionReservationWorker's sweep predicate — it runs every 5 minutes across every
+            // tenant, and without this it is a full table scan of the coupon history each time.
+            b.HasIndex(x => new { x.Status, x.ReservationExpiresAt });
         });
 
         builder.Entity<SubscriptionPlan>(b =>

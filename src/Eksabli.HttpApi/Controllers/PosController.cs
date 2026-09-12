@@ -48,9 +48,24 @@ public class PosController : EksabliController
         return _posAppService.ManualAdjustAsync(input);
     }
 
+    // Read-only: staff scan or type a code and see who/what before deciding. POST rather than GET
+    // because the code is a bearer-ish secret off a customer's screen — it does not belong in a URL,
+    // a browser history or an access log.
+    [HttpPost("lookup-redemption")]
+    public Task<RedemptionLookupDto> LookupRedemptionAsync(LookupRedemptionDto input)
+    {
+        return _posAppService.LookupRedemptionAsync(input);
+    }
+
     [HttpPost("confirm-redemption")]
     public Task<RedemptionConfirmationDto> ConfirmRedemptionAsync(ConfirmRedemptionDto input)
     {
         return _posAppService.ConfirmRedemptionAsync(input);
+    }
+
+    [HttpPost("reject-redemption")]
+    public Task<RedemptionRejectionDto> RejectRedemptionAsync(RejectRedemptionDto input)
+    {
+        return _posAppService.RejectRedemptionAsync(input);
     }
 }

@@ -53,10 +53,17 @@ public abstract class CouponAuditAppService_Tests<TStartupModule> : EksabliAppli
                 await _rewardRepository.InsertAsync(reward, autoSave: true);
 
                 var code = Guid.NewGuid().ToString("N")[..CouponConsts.CodeLength].ToUpperInvariant();
-                var coupon = Coupon.Create(Guid.NewGuid(), reward.Id, Guid.NewGuid(), code, DateTime.UtcNow);
+                var coupon = Coupon.CreatePending(
+                    Guid.NewGuid(),
+                    reward.Id,
+                    Guid.NewGuid(),
+                    code,
+                    reward.PointsCost,
+                    DateTime.UtcNow,
+                    DateTime.UtcNow.AddMinutes(CouponConsts.PendingWindowMinutes));
                 if (status == CouponStatus.Redeemed)
                 {
-                    coupon.MarkRedeemed(DateTime.UtcNow, Guid.NewGuid(), null);
+                    coupon.Approve(DateTime.UtcNow, Guid.NewGuid(), null);
                 }
                 await _couponRepository.InsertAsync(coupon, autoSave: true);
                 couponId = coupon.Id;

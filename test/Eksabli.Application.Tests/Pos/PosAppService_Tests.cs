@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Eksabli.CustomerProfiles;
@@ -158,15 +159,34 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         return rewardId;
     }
 
-    private async Task<string> IssueCouponAsync(Guid tenantId, Guid membershipId, Guid rewardId)
+    // Mirrors CouponAppService.RedeemAsync: a pending coupon and a matching hold on the wallet. The
+    // reservation is not optional scaffolding — ConfirmRedemptionAsync commits it, and a coupon whose
+    // points were never reserved would fail PointsWallet's own double-release guard.
+    // `pointsCost` defaults to the reward's own cost rather than a literal: the fixture and the reward
+    // must agree, or assertions about the debit are testing the fixture's number instead of the code's.
+    private async Task<string> IssueCouponAsync(Guid tenantId, Guid membershipId, Guid rewardId, int? pointsCost = null)
     {
         var code = Guid.NewGuid().ToString("N")[..CouponConsts.CodeLength].ToUpperInvariant();
         await WithUnitOfWorkAsync(async () =>
         {
             using (_currentTenant.Change(tenantId))
             {
-                var coupon = Coupon.Create(Guid.NewGuid(), rewardId, membershipId, code, DateTime.UtcNow);
+                var cost = pointsCost ?? (await _rewardRepository.GetAsync(rewardId)).PointsCost;
+                var coupon = Coupon.CreatePending(
+                    Guid.NewGuid(),
+                    rewardId,
+                    membershipId,
+                    code,
+                    cost,
+                    // Matches IClock.Now, now configured as DateTimeKind.Utc.
+                    DateTime.UtcNow,
+                    DateTime.UtcNow.AddMinutes(CouponConsts.PendingWindowMinutes));
                 await _couponRepository.InsertAsync(coupon, autoSave: true);
+
+                var wallet = await _walletRepository.SingleAsync(w => w.MembershipId == membershipId);
+                wallet.ApplyTransaction(PointsTransactionType.Earn, cost);
+                wallet.Reserve(cost);
+                await _walletRepository.UpdateAsync(wallet, autoSave: true);
             }
         });
         return code;
@@ -543,8 +563,175 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
                 var coupon = await _couponRepository.SingleAsync(c => c.Code == code);
                 coupon.Status.ShouldBe(CouponStatus.Redeemed);
                 coupon.RedeemedByEmployeeId.ShouldBe(cashierId);
+
+                // Approval is where the points actually move: the hold is gone and the balance has
+                // dropped by the coupon's cost. Before this change the debit happened at redeem time,
+                // which is the bug the whole reservation flow exists to fix.
+                var wallet = await _walletRepository.GetAsync(walletId);
+                wallet.Reserved.ShouldBe(0);
+                wallet.Balance.ShouldBe(0);
+                wallet.LifetimeRedeemed.ShouldBe(50);
+
+                // ...and it is recorded in the ledger, by the employee who approved it.
+                var ledger = await _transactionRepository.GetListAsync(x => x.WalletId == walletId);
+                var redeem = ledger.Single(x => x.Type == PointsTransactionType.Redeem);
+                redeem.Points.ShouldBe(-50);
+                redeem.ReferenceId.ShouldBe(coupon.Id);
+                redeem.CreatedByEmployeeId.ShouldBe(cashierId);
             }
         });
+    }
+
+    [Fact]
+    public async Task Should_Return_The_Hold_When_Staff_Decline_A_Redemption()
+    {
+        var tenantId = await CreateTenantAsync();
+        var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var (customerId, _) = await CreateCustomerAsync();
+        var walletId = await JoinBusinessAsync(tenantId, customerId);
+        var membershipId = await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var wallet = await _walletRepository.GetAsync(walletId);
+                return wallet.MembershipId;
+            }
+        });
+        var rewardId = await CreateRewardAsync(tenantId, pointsCost: 50);
+        var code = await IssueCouponAsync(tenantId, membershipId, rewardId, pointsCost: 50);
+
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashierId))
+        {
+            var result = await WithUnitOfWorkAsync(() => _posAppService.RejectRedemptionAsync(
+                new RejectRedemptionDto { Code = code, Reason = "Out of stock at this branch" }));
+
+            result.PointsReleased.ShouldBe(50);
+            result.NewAvailableBalance.ShouldBe(50);
+        }
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var coupon = await _couponRepository.SingleAsync(c => c.Code == code);
+                coupon.Status.ShouldBe(CouponStatus.Cancelled);
+                coupon.RejectionReason.ShouldBe("Out of stock at this branch");
+
+                var wallet = await _walletRepository.GetAsync(walletId);
+                wallet.Reserved.ShouldBe(0);
+                wallet.Balance.ShouldBe(50);
+
+                // A declined redemption never moved points, so it must leave no trace in the ledger —
+                // the customer's history is not a log of things that did not happen.
+                var ledger = await _transactionRepository.GetListAsync(x => x.WalletId == walletId);
+                ledger.ShouldNotContain(x => x.Type == PointsTransactionType.Redeem);
+            }
+        });
+    }
+
+    [Fact]
+    public async Task Should_Let_A_Cashier_Decline_A_Reward_They_Could_Not_Approve()
+    {
+        var tenantId = await CreateTenantAsync();
+        var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var (customerId, _) = await CreateCustomerAsync();
+        var walletId = await JoinBusinessAsync(tenantId, customerId);
+        var membershipId = await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var wallet = await _walletRepository.GetAsync(walletId);
+                return wallet.MembershipId;
+            }
+        });
+        var rewardId = await CreateRewardAsync(tenantId, pointsCost: 500, approvalThresholdPoints: 300);
+        var code = await IssueCouponAsync(tenantId, membershipId, rewardId, pointsCost: 500);
+
+        // Refusing to hand something over is never the privileged direction: a cashier who cannot
+        // approve a manager-only reward must still be able to give the customer their points back,
+        // rather than leaving them held while someone hunts for a manager.
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashierId))
+        {
+            var result = await WithUnitOfWorkAsync(() => _posAppService.RejectRedemptionAsync(new RejectRedemptionDto { Code = code }));
+            result.PointsReleased.ShouldBe(500);
+        }
+    }
+
+    [Fact]
+    public async Task Should_Not_Move_Points_When_Staff_Only_Look_A_Code_Up()
+    {
+        var tenantId = await CreateTenantAsync();
+        var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var (customerId, _) = await CreateCustomerAsync();
+        var walletId = await JoinBusinessAsync(tenantId, customerId);
+        var membershipId = await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var wallet = await _walletRepository.GetAsync(walletId);
+                return wallet.MembershipId;
+            }
+        });
+        var rewardId = await CreateRewardAsync(tenantId, pointsCost: 50);
+        var code = await IssueCouponAsync(tenantId, membershipId, rewardId, pointsCost: 50);
+
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashierId))
+        {
+            // Spaced and lower-cased, the way a cashier reading it off a phone would type it.
+            var lookup = await WithUnitOfWorkAsync(() => _posAppService.LookupRedemptionAsync(
+                new LookupRedemptionDto { Code = $"{code[..4].ToLowerInvariant()} {code[4..].ToLowerInvariant()}" }));
+
+            lookup.Code.ShouldBe(code);
+            lookup.PointsCost.ShouldBe(50);
+            lookup.CanCurrentEmployeeApprove.ShouldBeTrue();
+            lookup.RequiresManagerApproval.ShouldBeFalse();
+        }
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                // A mis-scan has to be free: looking at a code decides nothing.
+                var coupon = await _couponRepository.SingleAsync(c => c.Code == code);
+                coupon.Status.ShouldBe(CouponStatus.Pending);
+
+                var wallet = await _walletRepository.GetAsync(walletId);
+                wallet.Reserved.ShouldBe(50);
+                wallet.Balance.ShouldBe(50);
+            }
+        });
+    }
+
+    [Fact]
+    public async Task Should_Tell_A_Cashier_They_Cannot_Approve_A_HighValue_Reward()
+    {
+        var tenantId = await CreateTenantAsync();
+        var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var (customerId, _) = await CreateCustomerAsync();
+        var walletId = await JoinBusinessAsync(tenantId, customerId);
+        var membershipId = await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var wallet = await _walletRepository.GetAsync(walletId);
+                return wallet.MembershipId;
+            }
+        });
+        var rewardId = await CreateRewardAsync(tenantId, pointsCost: 500, approvalThresholdPoints: 300);
+        var code = await IssueCouponAsync(tenantId, membershipId, rewardId, pointsCost: 500);
+
+        // Advisory on lookup, enforced on confirm — so the UI can say "fetch a manager" up front
+        // instead of letting them press Approve and eat an opaque 403.
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashierId))
+        {
+            var lookup = await WithUnitOfWorkAsync(() => _posAppService.LookupRedemptionAsync(new LookupRedemptionDto { Code = code }));
+            lookup.RequiresManagerApproval.ShouldBeTrue();
+            lookup.CanCurrentEmployeeApprove.ShouldBeFalse();
+        }
     }
 
     [Fact]
