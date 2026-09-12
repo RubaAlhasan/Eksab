@@ -98,6 +98,15 @@ export const APP_ROUTES: Routes = [
         data: { requiredPolicy: 'Eksabli.Users.View' },
       },
       {
+        // Customer Details — same findRoute()-inherits-'/admin/users' layout shape as
+        // 'businesses/:tenantId' above, no separate route.provider.ts entry needed. Customer-only (see
+        // admin-user-details.component.ts's own file comment); Staff rows have no link into this route.
+        path: 'users/:id',
+        loadComponent: () => import('./admin/users/admin-user-details.component').then(c => c.AdminUserDetailsComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Users.View' },
+      },
+      {
         path: 'categories',
         loadComponent: () =>
           import('./admin/categories/admin-categories.component').then(c => c.AdminCategoriesComponent),
