@@ -10,6 +10,7 @@ import '../../shared/providers/app_providers.dart';
 import '../../shared/widgets/app_avatar.dart';
 import '../../shared/widgets/app_badge.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/business_tiles.dart';
 import '../../shared/widgets/app_scaffold.dart';
 import '../../shared/widgets/app_states.dart';
 import '../../shared/widgets/app_tabs.dart';
@@ -25,12 +26,27 @@ class CouponsScreen extends ConsumerStatefulWidget {
 class _CouponsScreenState extends ConsumerState<CouponsScreen> {
   int _tab = 0;
 
-  static const _filters = <CouponStatus?>[
-    null,
-    CouponStatus.pending,
-    CouponStatus.issued,
-    CouponStatus.redeemed,
-    CouponStatus.expired,
+  /// Label and predicate together, because they were previously two parallel lists — a hardcoded
+  /// `['All', 'Active', 'Used', 'Expired']` beside a list of statuses — and adding a status to one
+  /// without the other silently shifted every tab's meaning by a position.
+  ///
+  /// The tabs are not one-per-status: `pending` and `issued` are both "still yours to use" from the
+  /// customer's side, and `cancelled` and `expired` both mean "this one is over". The row stays four
+  /// wide, and the per-row badge says which of the two a coupon actually is.
+  static final _filters = <({String label, bool Function(Coupon) matches})>[
+    (label: 'All', matches: (_) => true),
+    (
+      label: 'Active',
+      matches: (c) =>
+          c.status == CouponStatus.pending || c.status == CouponStatus.issued,
+    ),
+    (label: 'Used', matches: (c) => c.status == CouponStatus.redeemed),
+    (
+      label: 'Expired',
+      matches: (c) =>
+          c.status == CouponStatus.expired ||
+          c.status == CouponStatus.cancelled,
+    ),
   ];
 
   static AppTone _tone(CouponStatus status) => switch (status) {
@@ -56,7 +72,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: UnderlineTabs(
-              labels: const ['All', 'Active', 'Used', 'Expired'],
+              labels: [for (final f in _filters) f.label],
               selectedIndex: _tab,
               onChanged: (i) => setState(() => _tab = i),
             ),
@@ -66,10 +82,7 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
               value: coupons,
               onRetry: () => ref.invalidate(couponsProvider),
               data: (all) {
-                final filter = _filters[_tab];
-                final list = filter == null
-                    ? all
-                    : all.where((c) => c.status == filter).toList();
+                final list = all.where(_filters[_tab].matches).toList();
 
                 if (list.isEmpty) {
                   return const EmptyState(
@@ -131,6 +144,31 @@ class _CouponsScreenState extends ConsumerState<CouponsScreen> {
                                       ],
                                     ),
                                   ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    // A used coupon is dated by when it was used; anything else by
+                                    // when it was issued. Without either, a wallet of six identical
+                                    // "Free Large Latte" rows is unorderable to the person holding it.
+                                    coupon.redeemedAt != null
+                                        ? 'Used ${formatDate(coupon.redeemedAt!, withYear: true)}'
+                                        : 'Issued ${formatDate(coupon.issuedAt, withYear: true)}',
+                                    style: AppText.small.copyWith(
+                                      color: palette.textMuted,
+                                    ),
+                                  ),
+                                  // Staff type this when they decline at the counter. The customer's
+                                  // first question is "why did that fail?", and an unexplained
+                                  // Cancelled is worse than no status at all.
+                                  if (coupon.rejectionReason case final reason?
+                                      when reason.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      reason,
+                                      style: AppText.small.copyWith(
+                                        color: AppColors.danger500,
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),

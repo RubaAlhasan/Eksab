@@ -3,6 +3,7 @@ import 'package:eksabli_mobile/app/theme/app_theme.dart';
 import 'package:eksabli_mobile/core/api/eksabli_api.dart';
 import 'package:eksabli_mobile/shared/models/models.dart';
 import 'package:eksabli_mobile/shared/providers/app_providers.dart';
+import 'package:eksabli_mobile/shared/widgets/business_tiles.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -52,17 +53,24 @@ void main() {
     expect(find.text('My Wallet'), findsOneWidget);
   });
 
-  testWidgets('wallet total is the sum of the API balances', (tester) async {
+  testWidgets('wallet lists each business with its own balance', (tester) async {
+    // Deliberately not a total. Points are not fungible between businesses, so a sum is a number
+    // the customer can never spend — the wallet shows the balances that are individually real.
     await pumpApp(tester, at: Routes.wallet);
 
     final container = ProviderScope.containerOf(
       tester.element(find.text('My Wallet')),
     );
     final memberships = container.read(membershipsProvider).valueOrNull ?? [];
-    final expected = memberships.fold<int>(0, (sum, m) => sum + m.balance);
+    expect(memberships, isNotEmpty);
 
-    expect(container.read(totalPointsProvider), expected);
-    expect(expected, greaterThan(0));
+    for (final membership in memberships) {
+      expect(
+        find.text(formatPoints(membership.balance)),
+        findsWidgets,
+        reason: 'each membership balance should appear on its own row',
+      );
+    }
   });
 
   testWidgets('marking all notifications read clears the badge', (

@@ -266,11 +266,6 @@ final membershipForBusinessProvider = Provider.family<Membership?, String>((
   return null;
 });
 
-final totalPointsProvider = Provider<int>((ref) {
-  final memberships = ref.watch(membershipsProvider).valueOrNull ?? const [];
-  return memberships.fold(0, (sum, m) => sum + m.balance);
-});
-
 /// A membership paired with its resolved business — what the wallet renders.
 class WalletEntry {
   const WalletEntry({required this.business, required this.membership});

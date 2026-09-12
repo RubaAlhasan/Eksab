@@ -49,6 +49,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _next() {
     if (_isLast) {
+      // Someone who read all three slides and pressed Get Started is new here.
       context.go(Routes.register);
     } else {
       _controller.nextPage(
@@ -78,7 +79,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 child: GestureDetector(
-                  onTap: () => context.go(Routes.register),
+                  // Skip means "I know what this is" — that is a returning user, so it goes to
+                  // Login rather than dropping them on a registration form to hunt for the Log in
+                  // link underneath it.
+                  onTap: () => context.go(Routes.login),
                   child: Text(
                     'Skip',
                     style: AppText.bodySemi.copyWith(color: palette.textMuted),
