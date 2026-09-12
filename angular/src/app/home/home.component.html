@@ -1,8 +1,40 @@
-<div class="home-placeholder">
-  <div class="card">
+<div class="wallet-home">
+  <div class="card wallet-header mb-4">
     <div class="card-body">
-      <h3>{{ '::Dashboard:WelcomeHeading' | abpLocalization }}</h3>
-      <p class="text-muted mb-4">{{ '::Dashboard:Placeholder' | abpLocalization }}</p>
+      <h3 class="mb-1">{{ '::Wallet:Greeting' | abpLocalization: greetingName() }}</h3>
+      <p class="text-muted mb-0">{{ '::Wallet:Subtitle' | abpLocalization }}</p>
     </div>
   </div>
+
+  @if (isLoading()) {
+    <div class="text-center text-muted py-5">
+      <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+      {{ '::Wallet:Loading' | abpLocalization }}
+    </div>
+  } @else if (wallets().length === 0) {
+    <div class="card">
+      <div class="card-body text-center text-muted py-5">
+        {{ '::Wallet:NoBusinesses' | abpLocalization }}
+      </div>
+    </div>
+  } @else {
+    <div class="wallet-grid">
+      @for (wallet of wallets(); track wallet.id) {
+        <div class="card wallet-card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <h5 class="mb-0">{{ wallet.businessName ?? ('::Wallet:UnknownBusiness' | abpLocalization) }}</h5>
+              @if (wallet.currentTierName) {
+                <span class="badge text-bg-secondary">{{ wallet.currentTierName }}</span>
+              }
+            </div>
+            <div class="wallet-balance">
+              <span class="wallet-balance-value">{{ wallet.balance }}</span>
+              <span class="wallet-balance-label">{{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
 </div>

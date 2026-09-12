@@ -1,0 +1,59 @@
+<div class="customer-login-page d-flex align-items-center justify-content-center">
+  <div class="card customer-login-card">
+    <div class="card-body p-4 p-md-5">
+      <div class="text-center mb-4">
+        <div class="wordmark mb-2"><span class="dot" aria-hidden="true"></span>Eksabli</div>
+        <h3 class="mb-1">{{ '::CustomerLogin:Title' | abpLocalization }}</h3>
+        <p class="text-muted mb-0">{{ '::CustomerLogin:Subtitle' | abpLocalization }}</p>
+      </div>
+
+      @if (step() === 'phone') {
+        <form (submit)="onPhoneSubmit($event)">
+          <label class="form-label">{{ '::CustomerLogin:PhoneLabel' | abpLocalization }}</label>
+          <app-phone-input (valueChange)="onPhoneChange($event)"></app-phone-input>
+          <button type="submit" class="btn btn-primary w-100 mt-4" [disabled]="!phoneNumber() || isSubmitting()">
+            @if (isSubmitting()) {
+              <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            }
+            {{ '::CustomerLogin:SendCode' | abpLocalization }}
+          </button>
+        </form>
+      } @else {
+        <form (submit)="onCodeSubmit($event)">
+          <label class="form-label">{{ '::CustomerLogin:CodeLabel' | abpLocalization }}</label>
+          <p class="text-muted small mb-2">
+            {{ '::CustomerLogin:CodeHint' | abpLocalization }} <strong dir="ltr">{{ phoneNumber() }}</strong>
+          </p>
+          <input
+            type="text"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            class="form-control text-center otp-code-input"
+            dir="ltr"
+            maxlength="6"
+            [value]="code()"
+            (input)="onCodeInput($event)"
+          />
+          <button type="submit" class="btn btn-primary w-100 mt-4" [disabled]="!code() || isSubmitting()">
+            @if (isSubmitting()) {
+              <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            }
+            {{ '::CustomerLogin:Verify' | abpLocalization }}
+          </button>
+          <div class="d-flex justify-content-between mt-3">
+            <button type="button" class="btn btn-link btn-sm p-0" [disabled]="isSubmitting()" (click)="changeNumber()">
+              {{ '::CustomerLogin:ChangeNumber' | abpLocalization }}
+            </button>
+            <button type="button" class="btn btn-link btn-sm p-0" [disabled]="isSubmitting()" (click)="resendCode()">
+              {{ '::CustomerLogin:ResendCode' | abpLocalization }}
+            </button>
+          </div>
+        </form>
+      }
+
+      <div class="text-center mt-4">
+        <a routerLink="/">{{ '::CustomerLogin:BackToSite' | abpLocalization }}</a>
+      </div>
+    </div>
+  </div>
+</div>

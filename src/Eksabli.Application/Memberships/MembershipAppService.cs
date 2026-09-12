@@ -15,6 +15,7 @@ using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
+using Volo.Abp.TenantManagement;
 using Volo.Abp.Users;
 
 namespace Eksabli.Memberships;
@@ -29,6 +30,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
     private readonly IRepository<BusinessProfile, Guid> _businessProfileRepository;
     private readonly IRepository<CustomerProfile, Guid> _customerProfileRepository;
     private readonly IIdentityUserRepository _identityUserRepository;
+    private readonly IRepository<Tenant, Guid> _tenantRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
     private readonly IDistributedCache _qrCache;
@@ -41,6 +43,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
         IRepository<BusinessProfile, Guid> businessProfileRepository,
         IRepository<CustomerProfile, Guid> customerProfileRepository,
         IIdentityUserRepository identityUserRepository,
+        IRepository<Tenant, Guid> tenantRepository,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
         IDistributedCache qrCache)
@@ -52,6 +55,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
         _businessProfileRepository = businessProfileRepository;
         _customerProfileRepository = customerProfileRepository;
         _identityUserRepository = identityUserRepository;
+        _tenantRepository = tenantRepository;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
         _qrCache = qrCache;
@@ -138,6 +142,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
             var wallets = await _walletRepository.GetListAsync(w => membershipIds.Contains(w.MembershipId));
             var dtos = ObjectMapper.Map<List<PointsWallet>, List<PointsWalletDto>>(wallets);
             await SetTierNamesAsync(dtos);
+            await SetBusinessNamesAsync(dtos);
             return dtos;
         }
     }
@@ -305,6 +310,33 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
             {
                 var tier = await _tierRepository.FindAsync(dto.CurrentTierId.Value);
                 dto.CurrentTierName = tier?.Name;
+            }
+        }
+    }
+
+    // Same "called only from inside GetMyWalletsAsync's own Disable<IMultiTenant> block" shape as
+    // SetTierNamesAsync above. Cross-tenant Tenant.Name lookup, safe here specifically because every
+    // TenantId being resolved is one this exact customer already has a real wallet in — this is their
+    // own cross-business wallet list, not a general-purpose tenant directory (contrast with
+    // AdminUserAppService/AdminSubscriptionAppService, which need Disable<IMultiTenant>() precisely
+    // because a Host admin is allowed to look at OTHER people's data; here the caller is only ever
+    // resolving names for businesses they're personally a member of).
+    private async Task SetBusinessNamesAsync(List<PointsWalletDto> dtos)
+    {
+        var tenantIds = dtos.Where(d => d.TenantId.HasValue).Select(d => d.TenantId!.Value).Distinct().ToList();
+        if (tenantIds.Count == 0)
+        {
+            return;
+        }
+
+        var nameByTenantId = (await _tenantRepository.GetListAsync(t => tenantIds.Contains(t.Id)))
+            .ToDictionary(t => t.Id, t => t.Name);
+
+        foreach (var dto in dtos)
+        {
+            if (dto.TenantId.HasValue)
+            {
+                dto.BusinessName = nameByTenantId.GetValueOrDefault(dto.TenantId.Value);
             }
         }
     }

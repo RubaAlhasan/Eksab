@@ -1,11 +1,13 @@
 using System;
 using System.Threading.Tasks;
 using Eksabli.CustomerProfiles;
+using Eksabli.Permissions;
 using Microsoft.Extensions.Caching.Distributed;
 using Shouldly;
 using Volo.Abp.Caching;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Modularity;
+using Volo.Abp.PermissionManagement;
 using Xunit;
 
 namespace Eksabli.Otp;
@@ -16,12 +18,14 @@ public abstract class OtpLoginService_Tests<TStartupModule> : EksabliApplication
     private readonly IOtpLoginService _otpLoginService;
     private readonly IDistributedCache<OtpCacheItem, string> _otpCache;
     private readonly IRepository<CustomerProfile, Guid> _customerProfileRepository;
+    private readonly IPermissionManager _permissionManager;
 
     protected OtpLoginService_Tests()
     {
         _otpLoginService = GetRequiredService<IOtpLoginService>();
         _otpCache = GetRequiredService<IDistributedCache<OtpCacheItem, string>>();
         _customerProfileRepository = GetRequiredService<IRepository<CustomerProfile, Guid>>();
+        _permissionManager = GetRequiredService<IPermissionManager>();
     }
 
     // Normalized before caching, same as OtpAppService.RequestOtpAsync does in production — the real
@@ -112,5 +116,50 @@ public abstract class OtpLoginService_Tests<TStartupModule> : EksabliApplication
         var secondAttempt = await WithUnitOfWorkAsync(() => _otpLoginService.ValidateAndResolveUserAsync(phoneNumber, "555555"));
         secondAttempt.IsValid.ShouldBeFalse();
         secondAttempt.ErrorCode.ShouldBe("expired_code");
+    }
+
+    // Covers the "member web login" permission signal ValidateAndResolveUserAsync grants right before
+    // returning (see that method's own comment) — the thing customer-login.component.ts's whole flow
+    // exists to obtain for a real, non-mobile-app customer. "U" is ABP's own well-known
+    // UserPermissionValueProvider.ProviderName, same literal-string convention
+    // EksabliPermissionDefinition_Tests already uses for "R" (role) grants.
+    [Fact]
+    public async Task Should_Grant_Customer_Permission_On_Successful_Login()
+    {
+        var phoneNumber = NewPhoneNumber();
+        await SeedCodeAsync(phoneNumber, "666666");
+
+        var result = await WithUnitOfWorkAsync(() => _otpLoginService.ValidateAndResolveUserAsync(phoneNumber, "666666"));
+        result.IsValid.ShouldBeTrue();
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var grant = await _permissionManager.GetAsync(EksabliPermissions.Customer.Default, "U", result.User!.Id.ToString());
+            grant.IsGranted.ShouldBeTrue();
+        });
+    }
+
+    // The permission grant is unconditional on every successful validation (see
+    // ValidateAndResolveUserAsync's own comment on why), not just the two "just proved their phone"
+    // branches — so a RETURNING user's second, ordinary login must show it granted too, not only a
+    // brand-new user's first one.
+    [Fact]
+    public async Task Should_Grant_Customer_Permission_On_Returning_Users_Login_Too()
+    {
+        var phoneNumber = NewPhoneNumber();
+
+        await SeedCodeAsync(phoneNumber, "777777");
+        var firstLogin = await WithUnitOfWorkAsync(() => _otpLoginService.ValidateAndResolveUserAsync(phoneNumber, "777777"));
+        firstLogin.IsValid.ShouldBeTrue();
+
+        await SeedCodeAsync(phoneNumber, "888888");
+        var secondLogin = await WithUnitOfWorkAsync(() => _otpLoginService.ValidateAndResolveUserAsync(phoneNumber, "888888"));
+        secondLogin.IsValid.ShouldBeTrue();
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var grant = await _permissionManager.GetAsync(EksabliPermissions.Customer.Default, "U", secondLogin.User!.Id.ToString());
+            grant.IsGranted.ShouldBeTrue();
+        });
     }
 }

@@ -44,6 +44,19 @@ export const APP_ROUTES: Routes = [
     canActivate: [authGuard],
   },
   {
+    // Phone + OTP web login for a Host-realm customer (member) — see customer-login.component.ts's
+    // own file comment for why this is a separate page/grant type from the password-based
+    // `AuthService.navigateToLogin()` flow platform admins/business staff use. Empty layout (no
+    // Lepton-X chrome, same as `''`/landing below) — this is a pre-auth page. Reuses
+    // `redirectAuthenticatedToHomeGuard` so an already-authenticated visitor who lands here (e.g. a
+    // stale bookmark) is routed to wherever they actually belong instead of re-prompting for a phone
+    // number.
+    path: 'customer-login',
+    loadComponent: () => import('./customer-login/customer-login.component').then(c => c.CustomerLoginComponent),
+    data: { layout: eLayoutType.empty },
+    canActivate: [redirectAuthenticatedToHomeGuard],
+  },
+  {
     // Parent shell for the whole Admin Portal — AdminLayoutComponent renders its own sidebar/topbar
     // (registered as `eLayoutType.empty` in route.provider.ts so ABP's own Lepton-X SideMenu layout
     // doesn't *also* wrap these routes — see that file's comment for why this matters). Host-realm

@@ -19,6 +19,7 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Meta, Title } from '@angular/platform-browser';
+import { RouterLink } from '@angular/router';
 
 interface WalletCard {
   tenant: 't1' | 't2' | 't3';
@@ -52,7 +53,7 @@ interface PricingTier {
   templateUrl: './landing.component.html',
   styleUrls: ['./landing.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LocalizationPipe],
+  imports: [LocalizationPipe, RouterLink],
   host: {
     '[attr.dir]': 'dir()',
   },

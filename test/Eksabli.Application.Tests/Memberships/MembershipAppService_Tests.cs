@@ -122,6 +122,32 @@ public abstract class MembershipAppService_Tests<TStartupModule> : EksabliApplic
         }
     }
 
+    // Covers MembershipAppService.SetBusinessNamesAsync — the one genuinely new piece of server logic
+    // behind the customer web wallet view (home.component.ts): each wallet in this cross-tenant list
+    // must carry the actual business name it belongs to, not just a TenantId the UI would otherwise
+    // have no way to turn into a human-readable label.
+    [Fact]
+    public async Task GetMyWalletsAsync_Should_Resolve_Business_Name_Per_Tenant()
+    {
+        var tenantAId = await CreateTenantAsync();
+        var tenantBId = await CreateTenantAsync();
+        var customerId = Guid.NewGuid();
+
+        var (tenantAName, tenantBName) = await WithUnitOfWorkAsync(async () =>
+            ((await _tenantRepository.GetAsync(tenantAId)).Name, (await _tenantRepository.GetAsync(tenantBId)).Name));
+
+        using (LoginAs(customerId))
+        {
+            await WithUnitOfWorkAsync(() => _membershipAppService.JoinAsync(new JoinBusinessDto { TenantId = tenantAId }));
+            await WithUnitOfWorkAsync(() => _membershipAppService.JoinAsync(new JoinBusinessDto { TenantId = tenantBId }));
+
+            var wallets = await WithUnitOfWorkAsync(() => _membershipAppService.GetMyWalletsAsync());
+
+            wallets.Single(w => w.TenantId == tenantAId).BusinessName.ShouldBe(tenantAName);
+            wallets.Single(w => w.TenantId == tenantBId).BusinessName.ShouldBe(tenantBName);
+        }
+    }
+
     // Referral join flow, now keyed by Membership.ReferralCode (a short human-typeable code) instead
     // of the referrer's raw Membership.Id — see that property's own comment.
     [Fact]

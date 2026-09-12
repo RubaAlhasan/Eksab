@@ -1,3 +1,24 @@
-.home-placeholder {
-  max-width: 640px;
+.wallet-home {
+  max-width: 960px;
+}
+
+.wallet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.wallet-balance {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.wallet-balance-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.wallet-balance-label {
+  color: var(--bs-secondary-color, #6c757d);
 }

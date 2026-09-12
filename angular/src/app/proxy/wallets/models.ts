@@ -41,6 +41,7 @@ export interface PointsWalletDto extends AuditedEntityDto<string> {
   lifetimeRedeemed?: number;
   currentTierId?: string | null;
   currentTierName?: string | null;
+  businessName?: string | null;
 }
 
 export interface TierDto extends AuditedEntityDto<string> {

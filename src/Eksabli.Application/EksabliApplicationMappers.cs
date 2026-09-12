@@ -72,9 +72,11 @@ public partial class EksabliMembershipToMembershipDtoMapper : MapperBase<Members
 public partial class EksabliPointsWalletToPointsWalletDtoMapper : MapperBase<PointsWallet, PointsWalletDto>
 {
     [MapperIgnoreTarget(nameof(PointsWalletDto.CurrentTierName))]
+    [MapperIgnoreTarget(nameof(PointsWalletDto.BusinessName))]
     public override partial PointsWalletDto Map(PointsWallet source);
 
     [MapperIgnoreTarget(nameof(PointsWalletDto.CurrentTierName))]
+    [MapperIgnoreTarget(nameof(PointsWalletDto.BusinessName))]
     public override partial void Map(PointsWallet source, PointsWalletDto destination);
 }
 
