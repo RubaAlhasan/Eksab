@@ -3,11 +3,26 @@
   [subtitle]="'::BusinessPanel:Campaigns:Subtitle' | abpLocalization"
   [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::BusinessPanel:Campaigns:Title' | abpLocalization) }]"
 >
-  @if (canCreate()) {
-    <button type="button" class="btn btn-primary btn-sm" (click)="openWizard()">
-      <i class="fas fa-plus me-1"></i>{{ '::BusinessPanel:Campaigns:NewCampaign' | abpLocalization }}
+  <div class="d-flex gap-2">
+    <!-- Per-campaign stats (Rewarded Members / Bonus Points Awarded) are only fetched once, on page
+         load — a member benefiting from a campaign at the POS after that doesn't push anything back
+         to an already-open tab. Same "explicit action, no background polling" shape as this app's
+         other list pages (e.g. the error-state's own retry button below) rather than introducing the
+         first auto-refresh/poll anywhere in the app for what's a low-frequency stat. -->
+    <button
+      type="button"
+      class="btn btn-outline-secondary btn-sm"
+      [disabled]="isLoading()"
+      (click)="refresh()"
+    >
+      <i class="fas fa-rotate me-1"></i>{{ '::BusinessPanel:Campaigns:Refresh' | abpLocalization }}
     </button>
-  }
+    @if (canCreate()) {
+      <button type="button" class="btn btn-primary btn-sm" (click)="openWizard()">
+        <i class="fas fa-plus me-1"></i>{{ '::BusinessPanel:Campaigns:NewCampaign' | abpLocalization }}
+      </button>
+    }
+  </div>
 </app-page-header>
 
 @if (isLoading()) {

@@ -130,14 +130,19 @@
               </div>
             }
             @if (preview.campaignMultiplier !== 1 && preview.campaignName) {
+              <!-- Distinct label from the bonus line below (not both "Campaign:") — a business can have
+                   two separate active campaigns (one multiplier-type, one flat-bonus-type) that happen
+                   to share the same display name, which otherwise renders as what looks like the same
+                   line twice. Naming the mechanism, not just the campaign, disambiguates that even when
+                   the names collide. -->
               <div class="d-flex justify-content-between">
-                <span class="text-muted">{{ '::BusinessPanel:Points:PreviewCampaignPrefix' | abpLocalization }} {{ preview.campaignName }}</span>
+                <span class="text-muted">{{ '::BusinessPanel:Points:PreviewCampaignMultiplierPrefix' | abpLocalization }} {{ preview.campaignName }}</span>
                 <span>×{{ preview.campaignMultiplier }}</span>
               </div>
             }
             @if (preview.campaignBonusPoints && preview.bonusCampaignName) {
               <div class="d-flex justify-content-between">
-                <span class="text-muted">{{ '::BusinessPanel:Points:PreviewCampaignPrefix' | abpLocalization }} {{ preview.bonusCampaignName }}</span>
+                <span class="text-muted">{{ '::BusinessPanel:Points:PreviewCampaignBonusPrefix' | abpLocalization }} {{ preview.bonusCampaignName }}</span>
                 <span>+{{ preview.campaignBonusPoints }}</span>
               </div>
             }

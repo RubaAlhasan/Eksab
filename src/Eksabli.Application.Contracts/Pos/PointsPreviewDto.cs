@@ -1,3 +1,4 @@
+using System;
 using Eksabli.Wallets;
 
 namespace Eksabli.Pos;
@@ -26,6 +27,14 @@ public class PointsPreviewDto
     public int CampaignBonusPoints { get; set; }
 
     public string? BonusCampaignName { get; set; }
+
+    // Carried alongside the two *CampaignName fields above, not just for display — AwardPointsCoreAsync
+    // uses BonusCampaignId to attribute the real award's flat-bonus portion to the right campaign
+    // (Source=Campaign, ReferenceId=<id>), the one thing ReportsAppService.GetCampaignPerformanceAsync
+    // actually queries by. See CampaignRulesEvaluationResult's own comment for the full reasoning.
+    public Guid? CampaignId { get; set; }
+
+    public Guid? BonusCampaignId { get; set; }
 
     public int TotalPoints { get; set; }
 }
