@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LocalizationPipe, PermissionService } from '@abp/ng.core';
 import { Confirmation, ConfirmationService, ToasterService } from '@abp/ng.theme.shared';
 import { PosService } from '../../proxy/controllers/pos.service';
 import { PointRulesService } from '../../proxy/controllers/point-rules.service';
 import { TiersService } from '../../proxy/controllers/tiers.service';
-import type { AwardPointsResultDto, CustomerLookupResultDto } from '../../proxy/pos/models';
+import type { AwardPointsResultDto, CustomerLookupResultDto, PointsPreviewDto } from '../../proxy/pos/models';
 import type { PointRuleDto, TierDto } from '../../proxy/wallets/models';
 import { PointRuleType } from '../../proxy/wallets/point-rule-type.enum';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -50,13 +51,16 @@ type IdentifyMode = 'qr' | 'phone';
  * - **Phone Lookup**: real, `PosService.lookupCustomerByPhone` → `PosService.awardPointsByCustomerId`.
  *   Kept as the fallback for low-connectivity/camera-less setups — same QR-preferred/phone-fallback
  *   shape documented for reward redemption in `docs/eksabli-loyalty-platform/07-loyalty-engine.md#9`.
- * - **No live points-calculation preview** — the prototype shows a running "base × tier × campaign"
- *   breakdown as the sale amount is typed. The real calculation (`PosAppService.ComputePointsAsync`)
- *   only runs *inside* the actual award call — there's no separate preview/simulate endpoint, and
- *   reimplementing that pipeline (base rule × tier multiplier × `ICampaignRulesEngine` campaign
- *   multiplier, floor-rounded) client-side would risk silently drifting from the real logic. Instead:
- *   click Award, then show the REAL `AwardPointsResultDto` the backend actually computed (points
- *   awarded, new balance, new tier) — after the fact, not a speculative preview.
+ * - **Live points-calculation preview, matching the prototype's "base × tier × campaign" breakdown**
+ *   — backed by a real, read-only `PosService.previewPoints` call (`PosAppService.PreviewPointsAsync`),
+ *   debounced 300ms off `saleAmount.valueChanges`. This is **not** a client-side reimplementation of
+ *   the pipeline (base rule × tier multiplier × `ICampaignRulesEngine` campaign multiplier,
+ *   floor-rounded) — that would risk silently drifting from the real logic. Instead the backend's own
+ *   private `ComputePointsAsync` now returns the full breakdown, and both the preview endpoint and the
+ *   real award call (`AwardPointsCoreAsync`) go through that exact same method, so the number shown
+ *   here while typing is guaranteed to match what Award actually produces. Only meaningful for Phone
+ *   Lookup (a customer is identified before the amount is entered) — QR mode has no separate identify
+ *   step to preview against, so it keeps showing the REAL `AwardPointsResultDto` after the fact instead.
  *
  * **Point Rules tab** — real via `PointRuleService.getList()`, but `PointRuleDto` itself is much
  * thinner than the prototype's table implies: only `RuleType` (`PerCurrencyUnit`/`PerVisit`) and
@@ -133,6 +137,10 @@ export class BusinessPointsComponent implements OnInit {
   protected readonly isAwarding = signal(false);
   protected readonly lastAward = signal<AwardPointsResultDto | null>(null);
   protected readonly cameraErrorKey = signal<string | null>(null);
+  // Phone Lookup mode only — see this class's own top comment. null while no customer is identified,
+  // or while a debounced re-preview request is in flight/failed (the calculation box just hides).
+  protected readonly pointsPreview = signal<PointsPreviewDto | null>(null);
+  private previewDebounceTimer?: ReturnType<typeof setTimeout>;
 
   // --- Rules tab ---
   protected readonly rules = signal<PointRuleDto[]>([]);
@@ -174,6 +182,16 @@ export class BusinessPointsComponent implements OnInit {
     multiplier: new FormControl<number | null>(null, { validators: [Validators.required, Validators.min(0)] }),
   });
 
+  constructor() {
+    // Debounced the same way app-search-input debounces free-text filtering elsewhere in this app
+    // (a plain setTimeout, not an rxjs debounceTime operator) — re-preview 300ms after the cashier
+    // stops typing a sale amount, but only once a customer is actually identified (see updatePreview).
+    this.saleAmount.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      clearTimeout(this.previewDebounceTimer);
+      this.previewDebounceTimer = setTimeout(() => this.updatePreview(), 300);
+    });
+  }
+
   ngOnInit(): void {
     if (this.activeTab() === 'rules') this.loadRules();
     if (this.activeTab() === 'tiers') this.loadTiers();
@@ -209,11 +227,35 @@ export class BusinessPointsComponent implements OnInit {
   protected setIdentifyMode(mode: IdentifyMode): void {
     if (this.identifyMode() === mode) return;
     this.identifyMode.set(mode);
-    // Switching modes mid-transaction would otherwise leave a stale identified-customer card or
-    // camera error showing next to the *other* mode's controls.
+    // Switching modes mid-transaction would otherwise leave a stale identified-customer card,
+    // calculation breakdown, or camera error showing next to the *other* mode's controls.
     this.customer.set(null);
     this.lookupFailed.set(false);
     this.cameraErrorKey.set(null);
+    this.pointsPreview.set(null);
+  }
+
+  /**
+   * Re-fetches the points-calculation breakdown from `PosService.previewPoints` for whichever
+   * customer is currently identified. No-ops (and clears any stale breakdown) outside Phone Lookup
+   * mode or before a customer is identified — see this class's own top comment for why QR mode has no
+   * equivalent preview step. Debounced by the `saleAmount.valueChanges` subscription in the
+   * constructor; also called directly right after a successful lookup so the breakdown appears
+   * immediately rather than waiting for the cashier to touch the amount field first.
+   */
+  private updatePreview(): void {
+    const customer = this.customer();
+    if (this.identifyMode() !== 'phone' || !customer?.customerId) {
+      this.pointsPreview.set(null);
+      return;
+    }
+
+    this.posService.previewPoints(customer.customerId, { purchaseAmount: this.saleAmount.value }).subscribe({
+      next: (result) => this.pointsPreview.set(result),
+      // A transient failure here just hides the breakdown — Award itself still works and surfaces its
+      // own error if the same problem affects it.
+      error: () => this.pointsPreview.set(null),
+    });
   }
 
   /**
@@ -274,11 +316,13 @@ export class BusinessPointsComponent implements OnInit {
     this.lookupFailed.set(false);
     this.customer.set(null);
     this.lastAward.set(null);
+    this.pointsPreview.set(null);
 
     this.posService.lookupCustomerByPhone({ phoneNumber: this.phoneNumberValue() }).subscribe({
       next: (result) => {
         this.customer.set(result);
         this.isLookingUp.set(false);
+        this.updatePreview();
       },
       error: () => {
         this.isLookingUp.set(false);

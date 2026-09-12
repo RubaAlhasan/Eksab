@@ -110,6 +110,44 @@
         <label class="form-label" for="saleAmount">{{ '::BusinessPanel:Points:SaleAmount' | abpLocalization }}</label>
         <input id="saleAmount" type="number" step="0.01" min="0" class="form-control mb-3" [formControl]="saleAmount" placeholder="e.g. 24.50" />
 
+        @if (identifyMode() === 'phone' && pointsPreview(); as preview) {
+          <div class="bg-body-tertiary rounded p-3 mb-3 small d-flex flex-column gap-2">
+            <div class="d-flex justify-content-between">
+              <span class="text-muted">
+                {{
+                  (preview.ruleType === RuleType.PerVisit ? '::BusinessPanel:Points:PreviewBasePerVisit' : '::BusinessPanel:Points:PreviewBasePerCurrencyUnit')
+                    | abpLocalization: ('' + preview.pointsPerUnit)
+                }}
+              </span>
+              <span>{{ preview.basePoints }}</span>
+            </div>
+            @if (preview.tierMultiplier !== 1 && preview.tierName) {
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">
+                  {{ '::BusinessPanel:Points:PreviewTierMultiplier' | abpLocalization: ('' + preview.tierMultiplier) : preview.tierName }}
+                </span>
+                <span>×{{ preview.tierMultiplier }}</span>
+              </div>
+            }
+            @if (preview.campaignMultiplier !== 1 && preview.campaignName) {
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">{{ '::BusinessPanel:Points:PreviewCampaignPrefix' | abpLocalization }} {{ preview.campaignName }}</span>
+                <span>×{{ preview.campaignMultiplier }}</span>
+              </div>
+            }
+            @if (preview.campaignBonusPoints && preview.bonusCampaignName) {
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">{{ '::BusinessPanel:Points:PreviewCampaignPrefix' | abpLocalization }} {{ preview.bonusCampaignName }}</span>
+                <span>+{{ preview.campaignBonusPoints }}</span>
+              </div>
+            }
+            <div class="d-flex justify-content-between fw-bold border-top pt-2">
+              <span>{{ '::BusinessPanel:Points:PreviewTotal' | abpLocalization }}</span>
+              <span class="text-primary">{{ preview.totalPoints }} {{ '::BusinessPanel:Points:PointsWord' | abpLocalization }}</span>
+            </div>
+          </div>
+        }
+
         @if (lastAward(); as award) {
           <div class="alert alert-success small mb-3">
             {{ '::BusinessPanel:Points:LastAwardPrefix' | abpLocalization }}

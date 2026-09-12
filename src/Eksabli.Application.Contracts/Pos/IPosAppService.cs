@@ -15,6 +15,12 @@ public interface IPosAppService : IApplicationService
 
     Task<AwardPointsResultDto> AwardPointsByCustomerIdAsync(Guid customerId, AwardPointsByCustomerIdDto input);
 
+    // Read-only — computes the exact same breakdown AwardPointsByCustomerIdAsync would use if called
+    // right now, without writing a PointsTransaction or touching the wallet. Only meaningful for the
+    // Phone Lookup identify mode, where a customer is known before the sale amount is entered; there's
+    // no equivalent for QR (the token is burned, and the award made, on the very first read).
+    Task<PointsPreviewDto> PreviewPointsAsync(Guid customerId, PreviewPointsDto input);
+
     Task<AwardPointsResultDto> ManualAdjustAsync(ManualAdjustDto input);
 
     Task<RedemptionConfirmationDto> ConfirmRedemptionAsync(ConfirmRedemptionDto input);
