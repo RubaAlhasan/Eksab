@@ -195,14 +195,24 @@ function configureRoutes() {
         layout: eLayoutType.empty,
         requiredPolicy: 'Eksabli.Branches',
       },
-      // No requiredPolicy — same shape as '/home' above; PosController has no ABP permission at all,
-      // see app.routes.ts's own comment on this route for the full reasoning.
+      // No requiredPolicy — PosController has no ABP permission at all, see app.routes.ts's own
+      // comment on this route for the full reasoning. `invisible: true` for a DIFFERENT reason than
+      // the layout-resolution anchors further down: this route needs a real, visible menu entry, but
+      // only inside BusinessLayoutComponent's own hand-built sidebar (business-layout.component.ts's
+      // NAV array), which never reads RoutesService at all. Without `invisible`, a route with no
+      // requiredPolicy is exactly the kind Lepton-X's OWN stock menu (used at eLayoutType.application
+      // pages like '/home') renders for literally any authenticated user regardless of realm — which
+      // is how a Host-realm customer ended up seeing "Points Management"/"Support Tickets" links in
+      // their own wallet-view sidebar (confirmed live this session, home.component.ts). '/home' itself
+      // has no requiredPolicy either, but that one's correct as-is: it's meant to show for every
+      // authenticated user, business routes are not.
       {
         path: '/business/points',
         name: '::BusinessPanel:Layout:NavPoints',
         iconClass: 'fas fa-qrcode',
         order: 24,
         layout: eLayoutType.empty,
+        invisible: true,
       },
       {
         path: '/business/rewards',
@@ -277,13 +287,16 @@ function configureRoutes() {
         requiredPolicy: 'Eksabli.Reports',
       },
       {
-        // No requiredPolicy — same shape as '/business/points' above; no ABP permission gates this
-        // page, see app.routes.ts's own comment on this route for why.
+        // No requiredPolicy, `invisible: true` — same shape and same reason as '/business/points'
+        // above (see its own comment): no ABP permission gates this page server-side, and without
+        // `invisible` this leaks into Lepton-X's stock menu for every authenticated user, business
+        // staff or not.
         path: '/business/support-tickets',
         name: '::BusinessPanel:Layout:NavSupportTickets',
         iconClass: 'fas fa-life-ring',
         order: 33,
         layout: eLayoutType.empty,
+        invisible: true,
       },
   ]);
 }
