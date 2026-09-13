@@ -209,34 +209,62 @@ public class PosAppService : ApplicationService, IPosAppService
 
         var wallet = await _walletRepository.FirstAsync(w => w.MembershipId == membership.Id);
         var (tierMultiplier, tierName) = await GetCurrentTierInfoAsync(wallet);
+        var tierId = wallet.CurrentTierId; // captured before ApplyTransaction/RecomputeAsync touch it below
 
         var preview = await ComputePointsAsync(purchaseAmount, tierMultiplier, tierName);
         var isFirstEarn = wallet.LifetimeEarned == 0; // the qualifying action for referral completion
 
-        // Split into two ledger rows when a real-time campaign (CampaignRulesEngine — DoublePoints/
-        // SpendXGetY, evaluated inline above via ComputePointsAsync) contributed a flat bonus: one row
-        // for the purchase itself (base x tier x campaign multiplier, still Source=Purchase, same as
-        // before), and a SECOND row attributed to the bonus campaign specifically (Source=Campaign,
-        // ReferenceId=that campaign's id) — the exact convention CampaignSweepWorker already uses for
-        // its own batch-evaluated campaigns (Birthday/WinBack/Vip/NewCustomer). Without this second row,
-        // a POS-evaluated campaign's bonus had nowhere to attribute to (the one row stayed Source=
-        // Purchase with no ReferenceId at all), so ReportsAppService.GetCampaignPerformanceAsync's
-        // "Rewarded Members"/"Bonus Points Awarded" stats for these campaign types never moved no matter
-        // how many real sales applied them — confirmed live this session against a real "Double Points
-        // Weekend" SpendXGetY campaign. The multiplier portion still has nowhere to attribute to
-        // (CampaignPerformanceDto has no "extra points from a multiplier" concept) — same limitation the
-        // sweep-evaluated types never had to solve, since none of them are multiplier-based.
-        var purchasePoints = preview.TotalPoints - preview.CampaignBonusPoints;
+        // Split into up to four ledger rows when the tier and/or a real-time campaign
+        // (CampaignRulesEngine — DoublePoints/SpendXGetY, evaluated inline above via ComputePointsAsync)
+        // contributed anything: one row for the raw base rule alone (Source=Purchase, no tier and no
+        // campaign folded in anymore), one row for the tier's own extra (Source=Tier, ReferenceId=the
+        // tier that earned it), and one row per campaign that actually contributed (Source=Campaign,
+        // ReferenceId=that campaign's id) — the exact attribution convention CampaignSweepWorker already
+        // uses for its own batch-evaluated campaigns (Birthday/WinBack/Vip/NewCustomer). A tier, a
+        // DoublePoints campaign, and a SpendXGetY campaign can never collide with each other (each is a
+        // different Source or a different Campaign row), so these attributions are always distinct.
+        // Before this, a tier's or a POS-evaluated campaign's whole contribution had nowhere to
+        // attribute to (it stayed folded into one Source=Purchase row with no ReferenceId at all), so
+        // there was no way to see how much of an award came from being a Gold member vs. from a running
+        // campaign — confirmed live this session against a real Gold tier and "Double Points Weekend"/
+        // "Spend X Get Y" campaigns.
+        var purchasePoints = preview.BasePoints;
 
         var transaction = PointsTransaction.Create(
             GuidGenerator.Create(),
             wallet.Id,
             PointsTransactionType.Earn,
             purchasePoints,
-            PointsTransactionSource.Purchase,
-            tierMultiplierSnapshot: tierMultiplier);
+            PointsTransactionSource.Purchase);
         await _transactionRepository.InsertAsync(transaction);
         wallet.ApplyTransaction(PointsTransactionType.Earn, purchasePoints);
+
+        if (preview.TierExtraPoints > 0 && tierId.HasValue)
+        {
+            var tierTransaction = PointsTransaction.Create(
+                GuidGenerator.Create(),
+                wallet.Id,
+                PointsTransactionType.Earn,
+                preview.TierExtraPoints,
+                PointsTransactionSource.Tier,
+                referenceId: tierId.Value,
+                tierMultiplierSnapshot: tierMultiplier);
+            await _transactionRepository.InsertAsync(tierTransaction);
+            wallet.ApplyTransaction(PointsTransactionType.Earn, preview.TierExtraPoints);
+        }
+
+        if (preview.CampaignMultiplierExtraPoints > 0 && preview.CampaignId.HasValue)
+        {
+            var multiplierTransaction = PointsTransaction.Create(
+                GuidGenerator.Create(),
+                wallet.Id,
+                PointsTransactionType.Earn,
+                preview.CampaignMultiplierExtraPoints,
+                PointsTransactionSource.Campaign,
+                referenceId: preview.CampaignId.Value);
+            await _transactionRepository.InsertAsync(multiplierTransaction);
+            wallet.ApplyTransaction(PointsTransactionType.Earn, preview.CampaignMultiplierExtraPoints);
+        }
 
         if (preview.CampaignBonusPoints > 0 && preview.BonusCampaignId.HasValue)
         {
@@ -317,18 +345,34 @@ public class PosAppService : ApplicationService, IPosAppService
         }
 
         var campaignResult = await _campaignRulesEngine.EvaluateAsync(purchaseAmount);
-        var total = (int)Math.Floor(basePoints * tierMultiplier * campaignResult.Multiplier) + campaignResult.BonusPoints;
+
+        // Three floors, each one "turning on" one more factor — base alone, base+tier, base+tier+
+        // campaign — so the DIFFERENCE between consecutive floors isolates exactly what each factor is
+        // worth on its own. Zero for a factor that isn't actually in play (no tier / tierMultiplier=1,
+        // no active multiplier campaign), since the two floors either side of it are then identical.
+        // See PointsPreviewDto.TierExtraPoints/CampaignMultiplierExtraPoints's own comments for why
+        // these need to exist at all (AwardPointsCoreAsync attributes each to its own ledger row).
+        var rawBasePoints = (int)Math.Floor(basePoints);
+        var tierOnlyPoints = (int)Math.Floor(basePoints * tierMultiplier);
+        var multipliedPoints = (int)Math.Floor(basePoints * tierMultiplier * campaignResult.Multiplier);
+
+        var tierExtraPoints = tierOnlyPoints - rawBasePoints;
+        var campaignMultiplierExtraPoints = multipliedPoints - tierOnlyPoints;
+
+        var total = multipliedPoints + campaignResult.BonusPoints;
 
         return new PointsPreviewDto
         {
-            BasePoints = (int)Math.Floor(basePoints),
+            BasePoints = rawBasePoints,
             RuleType = ruleType,
             PointsPerUnit = pointsPerUnit,
             TierMultiplier = tierMultiplier,
             TierName = tierName,
+            TierExtraPoints = tierExtraPoints,
             CampaignMultiplier = campaignResult.Multiplier,
             CampaignName = campaignResult.MultiplierCampaignName,
             CampaignId = campaignResult.MultiplierCampaignId,
+            CampaignMultiplierExtraPoints = campaignMultiplierExtraPoints,
             CampaignBonusPoints = campaignResult.BonusPoints,
             BonusCampaignName = campaignResult.BonusCampaignName,
             BonusCampaignId = campaignResult.BonusCampaignId,

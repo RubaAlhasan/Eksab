@@ -175,6 +175,8 @@ export class AdminUserDetailsComponent implements OnInit {
         return '::BusinessPanel:Transactions:SourceManual';
       case PointsTransactionSource.Reward:
         return '::BusinessPanel:Transactions:SourceReward';
+      case PointsTransactionSource.Tier:
+        return '::BusinessPanel:Transactions:SourceTier';
       default:
         return '::BusinessPanel:Transactions:SourcePurchase';
     }

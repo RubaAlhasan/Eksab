@@ -1419,6 +1419,7 @@
     "BusinessPanel:Transactions:SourceBirthday": "عيد ميلاد",
     "BusinessPanel:Transactions:SourceManual": "يدوي",
     "BusinessPanel:Transactions:SourceReward": "مكافأة",
+    "BusinessPanel:Transactions:SourceTier": "الفئة",
     "BusinessPanel:Transactions:ColumnCustomer": "العميل",
     "BusinessPanel:Transactions:ColumnType": "النوع",
     "BusinessPanel:Transactions:ColumnPoints": "النقاط",

@@ -1399,6 +1399,7 @@
     "BusinessPanel:Transactions:SourceBirthday": "Birthday",
     "BusinessPanel:Transactions:SourceManual": "Manual",
     "BusinessPanel:Transactions:SourceReward": "Reward",
+    "BusinessPanel:Transactions:SourceTier": "Tier",
     "BusinessPanel:Transactions:ColumnCustomer": "Customer",
     "BusinessPanel:Transactions:ColumnType": "Type",
     "BusinessPanel:Transactions:ColumnPoints": "Points",

@@ -7,6 +7,7 @@ export enum PointsTransactionSource {
   Birthday = 3,
   Manual = 4,
   Reward = 5,
+  Tier = 6,
 }
 
 export const pointsTransactionSourceOptions = mapEnumToOptions(PointsTransactionSource);
