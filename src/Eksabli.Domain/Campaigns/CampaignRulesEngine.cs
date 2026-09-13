@@ -35,6 +35,8 @@ public class CampaignRulesEngine : ICampaignRulesEngine, ITransientDependency
         var bonusPoints = 0;
         string? multiplierCampaignName = null;
         string? bonusCampaignName = null;
+        Guid? multiplierCampaignId = null;
+        Guid? bonusCampaignId = null;
 
         foreach (var campaign in activeCampaigns)
         {
@@ -49,6 +51,7 @@ public class CampaignRulesEngine : ICampaignRulesEngine, ITransientDependency
                 {
                     multiplier = candidateMultiplier;
                     multiplierCampaignName = campaign.NameEn;
+                    multiplierCampaignId = campaign.Id;
                 }
             }
             else if (campaign.Type == CampaignType.SpendXGetY &&
@@ -61,6 +64,7 @@ public class CampaignRulesEngine : ICampaignRulesEngine, ITransientDependency
                 {
                     bonusPoints = candidateBonus;
                     bonusCampaignName = campaign.NameEn;
+                    bonusCampaignId = campaign.Id;
                 }
             }
         }
@@ -70,7 +74,9 @@ public class CampaignRulesEngine : ICampaignRulesEngine, ITransientDependency
             Multiplier = multiplier,
             BonusPoints = bonusPoints,
             MultiplierCampaignName = multiplierCampaignName,
-            BonusCampaignName = bonusCampaignName
+            BonusCampaignName = bonusCampaignName,
+            MultiplierCampaignId = multiplierCampaignId,
+            BonusCampaignId = bonusCampaignId
         };
     }
 }

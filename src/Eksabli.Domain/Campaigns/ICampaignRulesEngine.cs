@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 
 namespace Eksabli.Campaigns;
@@ -20,4 +21,15 @@ public class CampaignRulesEvaluationResult
     public string? MultiplierCampaignName { get; set; }
 
     public string? BonusCampaignName { get; set; }
+
+    // Ids of the same two campaigns, alongside their names above — needed so a caller that commits a
+    // REAL award (PosAppService.AwardPointsCoreAsync) can attribute a PointsTransaction to the actual
+    // campaign (Source=Campaign, ReferenceId=<id>), the same way CampaignSweepWorker already tags its
+    // own batch-evaluated campaigns (Birthday/WinBack/Vip/NewCustomer). Without this, a real-time
+    // campaign's contribution to a POS award had nowhere to attribute to, and
+    // ReportsAppService.GetCampaignPerformanceAsync's "Rewarded Members"/"Bonus Points Awarded" stats
+    // for DoublePoints/SpendXGetY campaigns never moved no matter how many real sales applied them.
+    public Guid? MultiplierCampaignId { get; set; }
+
+    public Guid? BonusCampaignId { get; set; }
 }

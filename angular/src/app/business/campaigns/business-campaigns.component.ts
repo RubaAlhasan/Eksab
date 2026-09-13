@@ -177,6 +177,12 @@ export class BusinessCampaignsComponent implements OnInit {
     this.load();
   }
 
+  // Manual "Refresh" button — see its own template comment for why this is a click, not a poll.
+  // Re-fetches both the campaign list and its per-campaign performance stats, same as first load.
+  protected refresh(): void {
+    this.load();
+  }
+
   protected performance(campaign: CampaignDto): CampaignPerformanceDto | null {
     return campaign.id ? (this.performanceByCampaignId().get(campaign.id) ?? null) : null;
   }

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Eksabli.Campaigns;
 using Eksabli.CustomerProfiles;
 using Eksabli.EmployeeAssignments;
 using Eksabli.Memberships;
@@ -42,6 +43,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
     private readonly IDistributedCache _qrCache;
     private readonly ICurrentTenant _currentTenant;
     private readonly ICurrentPrincipalAccessor _currentPrincipalAccessor;
+    private readonly IRepository<Campaign, Guid> _campaignRepository;
 
     protected PosAppService_Tests()
     {
@@ -61,6 +63,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         _qrCache = GetRequiredService<IDistributedCache>();
         _currentTenant = GetRequiredService<ICurrentTenant>();
         _currentPrincipalAccessor = GetRequiredService<ICurrentPrincipalAccessor>();
+        _campaignRepository = GetRequiredService<IRepository<Campaign, Guid>>();
     }
 
     private IDisposable LoginAs(Guid userId)
@@ -142,6 +145,28 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         return walletId;
     }
 
+    // Active as of "now" — CampaignRulesEngine.EvaluateAsync only ever considers Status=Active
+    // campaigns whose StartDate/EndDate straddle the current moment (real-time evaluation mode, see
+    // that class's own comment). StartDate is today (Campaign's own constructor rejects a start date
+    // before today), which is already <= _clock.Now.
+    private async Task<Guid> CreateActiveCampaignAsync(Guid tenantId, CampaignType type, string rulesJson)
+    {
+        Guid campaignId = default;
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var campaign = Campaign.Create(
+                    Guid.NewGuid(), "حملة اختبار", "Test Campaign", type, DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(30));
+                campaign.SetRules(rulesJson);
+                campaign.Activate();
+                await _campaignRepository.InsertAsync(campaign, autoSave: true);
+                campaignId = campaign.Id;
+            }
+        });
+        return campaignId;
+    }
+
     private async Task<Guid> CreateRewardAsync(Guid tenantId, int pointsCost, int? approvalThresholdPoints = null, DateTime? validTo = null)
     {
         Guid rewardId = default;
@@ -199,6 +224,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
         var (customerId, _) = await CreateCustomerAsync();
         var walletId = await JoinBusinessAsync(tenantId, customerId);
+        Guid goldTierId = default;
 
         await WithUnitOfWorkAsync(async () =>
         {
@@ -208,6 +234,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
 
                 var gold = Wallets.Tier.Create(Guid.NewGuid(), "Gold", 0, 1.5m);
                 await _tierRepository.InsertAsync(gold, autoSave: true);
+                goldTierId = gold.Id;
 
                 var wallet = await _walletRepository.GetAsync(walletId);
                 wallet.ChangeTier(gold.Id);
@@ -222,7 +249,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
             result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 2.5m }));
         }
 
-        // 2.5 base * 1.5 multiplier = 3.75 -> floor -> 3
+        // 2.5 base * 1.5 multiplier = 3.75 -> floor -> 3, split as 2 (raw base) + 1 (tier's own extra).
         result.PointsAwarded.ShouldBe(3);
         result.NewBalance.ShouldBe(3);
 
@@ -230,8 +257,262 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         {
             using (_currentTenant.Change(tenantId))
             {
-                var tx = await _transactionRepository.GetAsync(result.TransactionId);
-                tx.TierMultiplierSnapshot.ShouldBe(1.5m);
+                var purchaseTx = await _transactionRepository.SingleAsync(t => t.WalletId == walletId && t.Source == PointsTransactionSource.Purchase);
+                purchaseTx.Points.ShouldBe(2);
+
+                var tierTx = await _transactionRepository.SingleAsync(t => t.WalletId == walletId && t.Source == PointsTransactionSource.Tier);
+                tierTx.Points.ShouldBe(1);
+                tierTx.ReferenceId.ShouldBe(goldTierId);
+                tierTx.TierMultiplierSnapshot.ShouldBe(1.5m);
+            }
+        });
+    }
+
+    // Regression coverage for a real bug found live this session: AwardPointsCoreAsync used to write
+    // ONE PointsTransaction (Source=Purchase, no ReferenceId) for the entire total, including a
+    // real-time SpendXGetY campaign's flat bonus — leaving ReportsAppService.GetCampaignPerformanceAsync's
+    // Source=Campaign/ReferenceId=<campaignId> query with nothing to find, so a campaign's "Rewarded
+    // Members"/"Bonus Points Awarded" stats never moved no matter how many real sales applied it (unlike
+    // CampaignSweepWorker's own batch-evaluated campaigns, which were always tagged correctly).
+    [Fact]
+    public async Task AwardPointsByCustomerIdAsync_Should_Attribute_The_SpendXGetY_Bonus_To_Its_Campaign()
+    {
+        var tenantId = await CreateTenantAsync();
+        var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var (customerId, _) = await CreateCustomerAsync();
+        var walletId = await JoinBusinessAsync(tenantId, customerId);
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m), autoSave: true);
+            }
+        });
+        var campaignId = await CreateActiveCampaignAsync(tenantId, CampaignType.SpendXGetY, """{"spendThreshold":100,"bonusPoints":10}""");
+
+        AwardPointsResultDto result = null!;
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashierId))
+        {
+            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 200m }));
+        }
+
+        // 200 base (1 pt/$1, no tier) + 10 flat bonus = 210, split across two ledger rows.
+        result.PointsAwarded.ShouldBe(210);
+        result.NewBalance.ShouldBe(210);
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var purchaseTx = await _transactionRepository.SingleAsync(t => t.WalletId == walletId && t.Source == PointsTransactionSource.Purchase);
+                purchaseTx.Points.ShouldBe(200);
+
+                var campaignTx = await _transactionRepository.SingleAsync(t => t.WalletId == walletId && t.Source == PointsTransactionSource.Campaign);
+                campaignTx.Points.ShouldBe(10);
+                campaignTx.ReferenceId.ShouldBe(campaignId);
+            }
+        });
+    }
+
+    // A pure DoublePoints multiplier campaign (no flat bonus at all) also gets its own attributed
+    // ledger row now — the extra points the multiplier is worth over the tier-only baseline, split out
+    // from the plain Purchase row the same way a flat SpendXGetY bonus already is. Without this, a
+    // multiplier-only campaign's contribution had nowhere to attribute to at all, and its Campaigns-page
+    // stats could never reflect real POS activity (confirmed live this session, same live "Double
+    // Points Weekend" campaign the SpendXGetY test above uses).
+    [Fact]
+    public async Task AwardPointsByCustomerIdAsync_Should_Attribute_The_Multiplier_Extra_To_Its_Campaign()
+    {
+        var tenantId = await CreateTenantAsync();
+        var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var (customerId, _) = await CreateCustomerAsync();
+        var walletId = await JoinBusinessAsync(tenantId, customerId);
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m), autoSave: true);
+            }
+        });
+        var campaignId = await CreateActiveCampaignAsync(tenantId, CampaignType.DoublePoints, """{"multiplier":2}""");
+
+        AwardPointsResultDto result = null!;
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashierId))
+        {
+            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 50m }));
+        }
+
+        // 50 base * 2 multiplier = 100, split into a 50-point Purchase row (the tier-only baseline,
+        // no tier here so it's just base) and a 50-point Campaign row (the multiplier's own extra).
+        result.PointsAwarded.ShouldBe(100);
+        result.NewBalance.ShouldBe(100);
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var purchaseTx = await _transactionRepository.SingleAsync(t => t.WalletId == walletId && t.Source == PointsTransactionSource.Purchase);
+                purchaseTx.Points.ShouldBe(50);
+
+                var campaignTx = await _transactionRepository.SingleAsync(t => t.WalletId == walletId && t.Source == PointsTransactionSource.Campaign);
+                campaignTx.Points.ShouldBe(50);
+                campaignTx.ReferenceId.ShouldBe(campaignId);
+            }
+        });
+    }
+
+    // Two DIFFERENT active campaigns (one DoublePoints, one SpendXGetY — Campaign.Type means they can
+    // never be the same row) both apply to one sale. Each must land in its own ledger row, attributed
+    // to its own campaign, alongside the plain (no tier here) Purchase row — three rows total, none of
+    // them double-counted or dropped.
+    [Fact]
+    public async Task AwardPointsByCustomerIdAsync_Should_Attribute_Both_A_Multiplier_And_A_Bonus_Campaign_At_Once()
+    {
+        var tenantId = await CreateTenantAsync();
+        var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var (customerId, _) = await CreateCustomerAsync();
+        var walletId = await JoinBusinessAsync(tenantId, customerId);
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m), autoSave: true);
+            }
+        });
+        var multiplierCampaignId = await CreateActiveCampaignAsync(tenantId, CampaignType.DoublePoints, """{"multiplier":2}""");
+        var bonusCampaignId = await CreateActiveCampaignAsync(tenantId, CampaignType.SpendXGetY, """{"spendThreshold":100,"bonusPoints":10}""");
+
+        AwardPointsResultDto result = null!;
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashierId))
+        {
+            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 200m }));
+        }
+
+        // 200 base * 2 multiplier = 400, + 10 flat bonus = 410 total: 200 Purchase + 200 multiplier
+        // extra + 10 bonus, three rows.
+        result.PointsAwarded.ShouldBe(410);
+        result.NewBalance.ShouldBe(410);
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var purchaseTx = await _transactionRepository.SingleAsync(t => t.WalletId == walletId && t.Source == PointsTransactionSource.Purchase);
+                purchaseTx.Points.ShouldBe(200);
+
+                var campaignTxs = await _transactionRepository.GetListAsync(t => t.WalletId == walletId && t.Source == PointsTransactionSource.Campaign);
+                campaignTxs.Count.ShouldBe(2);
+                campaignTxs.Single(t => t.ReferenceId == multiplierCampaignId).Points.ShouldBe(200);
+                campaignTxs.Single(t => t.ReferenceId == bonusCampaignId).Points.ShouldBe(10);
+            }
+        });
+    }
+
+    // The exact live scenario reported this session: a Gold-tier customer's $200 sale, with BOTH a
+    // multiplier and a bonus campaign active at once. Four ledger rows, each attributing exactly one
+    // factor's own contribution: raw base (Purchase), the tier's extra (Tier), the multiplier
+    // campaign's extra (Campaign), and the bonus campaign's flat amount (Campaign) — none double-
+    // counted, and the same 510-point total the cashier's own preview showed before this test existed.
+    [Fact]
+    public async Task AwardPointsByCustomerIdAsync_Should_Attribute_Tier_And_Both_Campaigns_On_The_Same_Sale()
+    {
+        var tenantId = await CreateTenantAsync();
+        var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var (customerId, _) = await CreateCustomerAsync();
+        var walletId = await JoinBusinessAsync(tenantId, customerId);
+        Guid goldTierId = default;
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m), autoSave: true);
+
+                var gold = Wallets.Tier.Create(Guid.NewGuid(), "Gold", 0, 1.25m);
+                await _tierRepository.InsertAsync(gold, autoSave: true);
+                goldTierId = gold.Id;
+
+                var wallet = await _walletRepository.GetAsync(walletId);
+                wallet.ChangeTier(gold.Id);
+                await _walletRepository.UpdateAsync(wallet);
+            }
+        });
+        var multiplierCampaignId = await CreateActiveCampaignAsync(tenantId, CampaignType.DoublePoints, """{"multiplier":2}""");
+        var bonusCampaignId = await CreateActiveCampaignAsync(tenantId, CampaignType.SpendXGetY, """{"spendThreshold":100,"bonusPoints":10}""");
+
+        AwardPointsResultDto result = null!;
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashierId))
+        {
+            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 200m }));
+        }
+
+        // 200 base * 1.25 tier = 250, * 2 campaign multiplier = 500, + 10 flat bonus = 510 total:
+        // 200 Purchase + 50 Tier extra + 250 Campaign (multiplier) extra + 10 Campaign (bonus).
+        result.PointsAwarded.ShouldBe(510);
+        result.NewBalance.ShouldBe(510);
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var purchaseTx = await _transactionRepository.SingleAsync(t => t.WalletId == walletId && t.Source == PointsTransactionSource.Purchase);
+                purchaseTx.Points.ShouldBe(200);
+
+                var tierTx = await _transactionRepository.SingleAsync(t => t.WalletId == walletId && t.Source == PointsTransactionSource.Tier);
+                tierTx.Points.ShouldBe(50);
+                tierTx.ReferenceId.ShouldBe(goldTierId);
+
+                var campaignTxs = await _transactionRepository.GetListAsync(t => t.WalletId == walletId && t.Source == PointsTransactionSource.Campaign);
+                campaignTxs.Count.ShouldBe(2);
+                campaignTxs.Single(t => t.ReferenceId == multiplierCampaignId).Points.ShouldBe(250);
+                campaignTxs.Single(t => t.ReferenceId == bonusCampaignId).Points.ShouldBe(10);
+            }
+        });
+    }
+
+    // Sanity guard the other direction: with NO active campaign at all, the split logic must not
+    // fire spuriously — a plain sale still produces exactly one Source=Purchase row for the whole
+    // total, same as before any of this campaign-attribution logic existed.
+    [Fact]
+    public async Task AwardPointsByCustomerIdAsync_Should_Not_Split_The_Ledger_When_No_Campaign_Is_Active()
+    {
+        var tenantId = await CreateTenantAsync();
+        var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var (customerId, _) = await CreateCustomerAsync();
+        var walletId = await JoinBusinessAsync(tenantId, customerId);
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m), autoSave: true);
+            }
+        });
+
+        AwardPointsResultDto result = null!;
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashierId))
+        {
+            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 50m }));
+        }
+
+        result.PointsAwarded.ShouldBe(50);
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var transactions = await _transactionRepository.GetListAsync(t => t.WalletId == walletId);
+                transactions.ShouldHaveSingleItem();
+                transactions.Single().Source.ShouldBe(PointsTransactionSource.Purchase);
+                transactions.Single().Points.ShouldBe(50);
             }
         });
     }
@@ -269,6 +550,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
         var (customerId, _) = await CreateCustomerAsync();
         var walletId = await JoinBusinessAsync(tenantId, customerId);
+        Guid silverTierId = default;
 
         await WithUnitOfWorkAsync(async () =>
         {
@@ -276,10 +558,13 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
             {
                 await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 10m), autoSave: true);
 
-                var silver = Wallets.Tier.Create(Guid.NewGuid(), "Silver", 0, 1.0m);
+                // Silver's own multiplier is 1.2, not 1.0 — a real (non-1.0) pre-upgrade multiplier, so
+                // this award actually produces a Tier-sourced row to assert the snapshot on below.
+                var silver = Wallets.Tier.Create(Guid.NewGuid(), "Silver", 0, 1.2m);
                 var gold = Wallets.Tier.Create(Guid.NewGuid(), "Gold", 50, 2.0m);
                 await _tierRepository.InsertAsync(silver, autoSave: true);
                 await _tierRepository.InsertAsync(gold, autoSave: true);
+                silverTierId = silver.Id;
 
                 var wallet = await _walletRepository.GetAsync(walletId);
                 wallet.ChangeTier(silver.Id);
@@ -294,15 +579,20 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
             result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 6m }));
         }
 
-        result.PointsAwarded.ShouldBe(60); // 6 * 10 * 1.0 (Silver, pre-upgrade)
-        result.NewTierName.ShouldBe("Gold"); // LifetimeEarned=60 >= Gold's 50 threshold, upgraded after award
+        result.PointsAwarded.ShouldBe(72); // 6 * 10 = 60 base, * 1.2 (Silver, pre-upgrade) = 72
+        result.NewTierName.ShouldBe("Gold"); // LifetimeEarned=72 >= Gold's 50 threshold, upgraded after award
 
         await WithUnitOfWorkAsync(async () =>
         {
             using (_currentTenant.Change(tenantId))
             {
-                var tx = await _transactionRepository.GetAsync(result.TransactionId);
-                tx.TierMultiplierSnapshot.ShouldBe(1.0m); // snapshot uses the PRE-upgrade (Silver) multiplier
+                var purchaseTx = await _transactionRepository.SingleAsync(t => t.WalletId == walletId && t.Source == PointsTransactionSource.Purchase);
+                purchaseTx.Points.ShouldBe(60);
+
+                var tierTx = await _transactionRepository.SingleAsync(t => t.WalletId == walletId && t.Source == PointsTransactionSource.Tier);
+                tierTx.Points.ShouldBe(12);
+                tierTx.ReferenceId.ShouldBe(silverTierId);
+                tierTx.TierMultiplierSnapshot.ShouldBe(1.2m); // snapshot uses the PRE-upgrade (Silver) multiplier
             }
         });
     }

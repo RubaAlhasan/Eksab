@@ -195,7 +195,7 @@ public class PosAppService : ApplicationService, IPosAppService
         wallet.ApplyTransaction(PointsTransactionType.Adjust, input.Points);
         await _walletRepository.UpdateAsync(wallet);
 
-        return await BuildResultAsync(transaction, wallet);
+        return await BuildResultAsync(transaction.Id, transaction.Points, wallet);
     }
 
     // Private helper, not a manager service — pipeline/ledger/tier-recompute logic shared by both
@@ -209,21 +209,76 @@ public class PosAppService : ApplicationService, IPosAppService
 
         var wallet = await _walletRepository.FirstAsync(w => w.MembershipId == membership.Id);
         var (tierMultiplier, tierName) = await GetCurrentTierInfoAsync(wallet);
+        var tierId = wallet.CurrentTierId; // captured before ApplyTransaction/RecomputeAsync touch it below
 
         var preview = await ComputePointsAsync(purchaseAmount, tierMultiplier, tierName);
-        var points = preview.TotalPoints;
         var isFirstEarn = wallet.LifetimeEarned == 0; // the qualifying action for referral completion
+
+        // Split into up to four ledger rows when the tier and/or a real-time campaign
+        // (CampaignRulesEngine — DoublePoints/SpendXGetY, evaluated inline above via ComputePointsAsync)
+        // contributed anything: one row for the raw base rule alone (Source=Purchase, no tier and no
+        // campaign folded in anymore), one row for the tier's own extra (Source=Tier, ReferenceId=the
+        // tier that earned it), and one row per campaign that actually contributed (Source=Campaign,
+        // ReferenceId=that campaign's id) — the exact attribution convention CampaignSweepWorker already
+        // uses for its own batch-evaluated campaigns (Birthday/WinBack/Vip/NewCustomer). A tier, a
+        // DoublePoints campaign, and a SpendXGetY campaign can never collide with each other (each is a
+        // different Source or a different Campaign row), so these attributions are always distinct.
+        // Before this, a tier's or a POS-evaluated campaign's whole contribution had nowhere to
+        // attribute to (it stayed folded into one Source=Purchase row with no ReferenceId at all), so
+        // there was no way to see how much of an award came from being a Gold member vs. from a running
+        // campaign — confirmed live this session against a real Gold tier and "Double Points Weekend"/
+        // "Spend X Get Y" campaigns.
+        var purchasePoints = preview.BasePoints;
 
         var transaction = PointsTransaction.Create(
             GuidGenerator.Create(),
             wallet.Id,
             PointsTransactionType.Earn,
-            points,
-            PointsTransactionSource.Purchase,
-            tierMultiplierSnapshot: tierMultiplier);
+            purchasePoints,
+            PointsTransactionSource.Purchase);
         await _transactionRepository.InsertAsync(transaction);
+        wallet.ApplyTransaction(PointsTransactionType.Earn, purchasePoints);
 
-        wallet.ApplyTransaction(PointsTransactionType.Earn, points);
+        if (preview.TierExtraPoints > 0 && tierId.HasValue)
+        {
+            var tierTransaction = PointsTransaction.Create(
+                GuidGenerator.Create(),
+                wallet.Id,
+                PointsTransactionType.Earn,
+                preview.TierExtraPoints,
+                PointsTransactionSource.Tier,
+                referenceId: tierId.Value,
+                tierMultiplierSnapshot: tierMultiplier);
+            await _transactionRepository.InsertAsync(tierTransaction);
+            wallet.ApplyTransaction(PointsTransactionType.Earn, preview.TierExtraPoints);
+        }
+
+        if (preview.CampaignMultiplierExtraPoints > 0 && preview.CampaignId.HasValue)
+        {
+            var multiplierTransaction = PointsTransaction.Create(
+                GuidGenerator.Create(),
+                wallet.Id,
+                PointsTransactionType.Earn,
+                preview.CampaignMultiplierExtraPoints,
+                PointsTransactionSource.Campaign,
+                referenceId: preview.CampaignId.Value);
+            await _transactionRepository.InsertAsync(multiplierTransaction);
+            wallet.ApplyTransaction(PointsTransactionType.Earn, preview.CampaignMultiplierExtraPoints);
+        }
+
+        if (preview.CampaignBonusPoints > 0 && preview.BonusCampaignId.HasValue)
+        {
+            var bonusTransaction = PointsTransaction.Create(
+                GuidGenerator.Create(),
+                wallet.Id,
+                PointsTransactionType.Earn,
+                preview.CampaignBonusPoints,
+                PointsTransactionSource.Campaign,
+                referenceId: preview.BonusCampaignId.Value);
+            await _transactionRepository.InsertAsync(bonusTransaction);
+            wallet.ApplyTransaction(PointsTransactionType.Earn, preview.CampaignBonusPoints);
+        }
+
         await _tierRecomputeService.RecomputeAsync(wallet);
         await _walletRepository.UpdateAsync(wallet);
 
@@ -231,7 +286,7 @@ public class PosAppService : ApplicationService, IPosAppService
         // signup. See docs/eksabli-loyalty-platform/features/06-engagement-gamification/README.md.
         await _referralCompletionService.TryCompleteAsync(membership, wallet, isFirstEarn);
 
-        return await BuildResultAsync(transaction, wallet);
+        return await BuildResultAsync(transaction.Id, preview.TotalPoints, wallet);
     }
 
     // Reads the caller's current tier off their wallet — shared by AwardPointsCoreAsync (the real
@@ -290,24 +345,47 @@ public class PosAppService : ApplicationService, IPosAppService
         }
 
         var campaignResult = await _campaignRulesEngine.EvaluateAsync(purchaseAmount);
-        var total = (int)Math.Floor(basePoints * tierMultiplier * campaignResult.Multiplier) + campaignResult.BonusPoints;
+
+        // Three floors, each one "turning on" one more factor — base alone, base+tier, base+tier+
+        // campaign — so the DIFFERENCE between consecutive floors isolates exactly what each factor is
+        // worth on its own. Zero for a factor that isn't actually in play (no tier / tierMultiplier=1,
+        // no active multiplier campaign), since the two floors either side of it are then identical.
+        // See PointsPreviewDto.TierExtraPoints/CampaignMultiplierExtraPoints's own comments for why
+        // these need to exist at all (AwardPointsCoreAsync attributes each to its own ledger row).
+        var rawBasePoints = (int)Math.Floor(basePoints);
+        var tierOnlyPoints = (int)Math.Floor(basePoints * tierMultiplier);
+        var multipliedPoints = (int)Math.Floor(basePoints * tierMultiplier * campaignResult.Multiplier);
+
+        var tierExtraPoints = tierOnlyPoints - rawBasePoints;
+        var campaignMultiplierExtraPoints = multipliedPoints - tierOnlyPoints;
+
+        var total = multipliedPoints + campaignResult.BonusPoints;
 
         return new PointsPreviewDto
         {
-            BasePoints = (int)Math.Floor(basePoints),
+            BasePoints = rawBasePoints,
             RuleType = ruleType,
             PointsPerUnit = pointsPerUnit,
             TierMultiplier = tierMultiplier,
             TierName = tierName,
+            TierExtraPoints = tierExtraPoints,
             CampaignMultiplier = campaignResult.Multiplier,
             CampaignName = campaignResult.MultiplierCampaignName,
+            CampaignId = campaignResult.MultiplierCampaignId,
+            CampaignMultiplierExtraPoints = campaignMultiplierExtraPoints,
             CampaignBonusPoints = campaignResult.BonusPoints,
             BonusCampaignName = campaignResult.BonusCampaignName,
+            BonusCampaignId = campaignResult.BonusCampaignId,
             TotalPoints = total
         };
     }
 
-    private async Task<AwardPointsResultDto> BuildResultAsync(PointsTransaction transaction, PointsWallet wallet)
+    // Takes the awarded total explicitly rather than reading it off a single PointsTransaction —
+    // AwardPointsCoreAsync can split one award into two ledger rows (see its own comment), so there's
+    // no longer always exactly one row whose .Points equals the whole thing. transactionId still
+    // identifies the primary (Purchase) row; a caller wanting the bonus row's own id has no use for it
+    // today (AwardPointsResultDto.TransactionId isn't read by any Angular/mobile caller, confirmed).
+    private async Task<AwardPointsResultDto> BuildResultAsync(Guid transactionId, int pointsAwarded, PointsWallet wallet)
     {
         string? tierName = null;
         if (wallet.CurrentTierId.HasValue)
@@ -318,8 +396,8 @@ public class PosAppService : ApplicationService, IPosAppService
 
         return new AwardPointsResultDto
         {
-            TransactionId = transaction.Id,
-            PointsAwarded = transaction.Points,
+            TransactionId = transactionId,
+            PointsAwarded = pointsAwarded,
             NewBalance = wallet.Balance,
             NewTierId = wallet.CurrentTierId,
             NewTierName = tierName
