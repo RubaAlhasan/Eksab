@@ -85,7 +85,28 @@ cp .env.example .env      # production URLs, but leave NGINX_CONF on api.local.c
 Regenerate `secrets/openiddict.pfx` on the VPS with the commands from step 1 — a fresh
 keypair, not the one from your laptop.
 
-### Issuing the certificate
+### If the host already runs a reverse proxy (Hostinger Docker template)
+
+Hostinger's Docker template runs **Traefik** on the host network, holding :80 and :443. It
+discovers containers through the Docker provider (`exposedbydefault=false`, so only labelled
+ones are routed), issues and renews Let's Encrypt certificates itself, and redirects HTTP to
+HTTPS. Starting this stack's own nginx there fails with `address already in use`.
+
+On such a host, nothing extra is needed: the `api` service carries `traefik.*` labels and is
+routed automatically. Set `.env` to the real hostname with `AUTH_REQUIRE_HTTPS=true` and run:
+
+```bash
+docker compose up -d --build
+```
+
+Traefik requests the certificate on first request to that hostname. It also sets
+`X-Forwarded-Proto=https` and proxies WebSockets (the SignalR hub) natively, so the nginx
+config's manual `Upgrade`/`Connection` handling is not needed.
+
+The nginx + certbot path below is for hosts with **no** existing reverse proxy, and must be
+started explicitly with `docker compose --profile nginx up -d`.
+
+### Issuing the certificate (nginx profile only)
 
 Order matters. `api.prod.conf` references certificate files that do not exist yet, so nginx
 will refuse to start if you enable it too early.

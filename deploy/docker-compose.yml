@@ -72,6 +72,20 @@ services:
       OpenIddict__Applications__Eksabli_App__RootUrl: ${APP_URL}
       OpenIddict__Applications__Eksabli_Swagger__ClientId: Eksabli_Swagger
       OpenIddict__Applications__Eksabli_Swagger__RootUrl: ${API_URL}
+    labels:
+      # Routed by Traefik, which Hostinger's Docker template already runs on the host network.
+      # It owns :80/:443, issues and renews Let's Encrypt certificates itself, redirects HTTP to
+      # HTTPS, and proxies WebSockets natively -- so on that host this stack runs no nginx and no
+      # certbot (they stay available behind the `nginx` profile for other hosts).
+      #
+      # Traefik sets X-Forwarded-Proto=https, which is what the unconditional ForwardedHeaders
+      # configuration in EksabliHttpApiHostModule consumes; that is why AUTH_REQUIRE_HTTPS can
+      # stay true here.
+      - "traefik.enable=true"
+      - "traefik.http.routers.eksabli-api.rule=Host(`${API_DOMAIN}`)"
+      - "traefik.http.routers.eksabli-api.entrypoints=websecure"
+      - "traefik.http.routers.eksabli-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.eksabli-api.loadbalancer.server.port=8080"
     volumes:
       - ./secrets/openiddict.pfx:/app/openiddict.pfx:ro
       # Without this, the data-protection keyring is regenerated inside a fresh container on
@@ -81,7 +95,12 @@ services:
     expose:
       - "8080"   # reachable only on the compose network, never published to the host
 
+  # NOT started by default. Only for hosts with no reverse proxy of their own:
+  #   docker compose --profile nginx up -d
+  # On the Hostinger Docker template, Traefik already owns :80/:443 and binding here fails with
+  # "address already in use".
   nginx:
+    profiles: ["nginx"]
     image: nginx:alpine
     restart: unless-stopped
     depends_on:
