@@ -86,6 +86,11 @@ services:
       - "traefik.http.routers.eksabli-api.entrypoints=websecure"
       - "traefik.http.routers.eksabli-api.tls.certresolver=letsencrypt"
       - "traefik.http.services.eksabli-api.loadbalancer.server.port=8080"
+      # Neither Traefik nor the app compresses by default, and the MVC login page alone pulls
+      # ~1.5MB of LeptonXLite CSS/JS bundles. Uncompressed that is painful on a slow link;
+      # gzip/brotli takes those bundles to a fraction of the size.
+      - "traefik.http.middlewares.eksabli-compress.compress=true"
+      - "traefik.http.routers.eksabli-api.middlewares=eksabli-compress"
     volumes:
       - ./secrets/openiddict.pfx:/app/openiddict.pfx:ro
       # Without this, the data-protection keyring is regenerated inside a fresh container on
@@ -107,6 +112,8 @@ services:
       - "traefik.http.routers.eksabli-app.entrypoints=websecure"
       - "traefik.http.routers.eksabli-app.tls.certresolver=letsencrypt"
       - "traefik.http.services.eksabli-app.loadbalancer.server.port=80"
+      # Same reason as the api service: compress the SPA bundles in transit.
+      - "traefik.http.routers.eksabli-app.middlewares=eksabli-compress"
     volumes:
       # Carries the API URL and OAuth settings, so the image stays environment-agnostic.
       # Served at /getEnvConfig and deep-merged over environment.prod.ts at app startup.
