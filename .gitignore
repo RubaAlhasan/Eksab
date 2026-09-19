@@ -275,8 +275,17 @@ src/Eksabli.DbMigrator/Logs/*
 src/Eksabli.Blazor.Server/Logs/*
 src/Eksabli.Blazor.Server.Tiered/Logs/*
 
-# Use abp install-libs to restore.
-**/wwwroot/libs/*
+# wwwroot/libs is deliberately COMMITTED rather than restored with `abp install-libs`.
+#
+# These assets are needed at runtime: the OpenIddict authorization-code flow redirects to the
+# MVC login page served by HttpApi.Host, which renders unstyled and non-functional without
+# them. Restoring them during a container build meant installing Node, yarn and the ABP CLI
+# into the build image and reaching out to the npm registry on every build -- slow, and one
+# more thing that can fail on a bad connection. Committing them (~11MB) makes the Docker build
+# offline-capable and guarantees the assets that were tested are the assets that deploy.
+#
+# When ABP or LeptonXLite versions change: run `abp install-libs` in src/Eksabli.HttpApi.Host
+# and commit the result.
 
 # IdentityServer temp files
 tempkey.rsa

@@ -1,0 +1,114 @@
+# Production / rehearsal stack for the Eksabli backend.
+#
+# The SAME file runs on your machine and on the VPS -- only .env differs.
+#   Local rehearsal : NGINX_CONF=./nginx/api.local.conf, http:// URLs
+#   Hostinger VPS   : NGINX_CONF=./nginx/api.prod.conf,  https:// URLs
+#
+# Run from this directory:  docker compose up -d --build
+
+name: eksabli
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      # Loopback ONLY. A plain "5432:5432" publishes on every interface, and Docker writes
+      # its own iptables rules that BYPASS UFW -- that is an open Postgres on the public
+      # internet even with the firewall enabled. Reach it over an SSH tunnel instead
+      # (see README, "Opening the database").
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    image: eksabli-api:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=${POSTGRES_DB};User Id=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+
+      # Every one of these defaults to a localhost URL in appsettings.json.
+      App__SelfUrl: ${API_URL}
+      App__AngularUrl: ${APP_URL}
+      App__CorsOrigins: ${APP_URL}
+      App__RedirectAllowedUrls: ${APP_URL}
+      AuthServer__Authority: ${API_URL}
+
+      # true in production, false only for a plain-HTTP rehearsal. Forwarded-proto handling is
+      # now configured unconditionally in EksabliHttpApiHostModule, so a TLS-terminated
+      # deployment satisfies OpenIddict's transport-security check on its own and does NOT need
+      # this turned off. Setting false in production would silently accept plain-HTTP token
+      # requests.
+      AuthServer__RequireHttpsMetadata: "${AUTH_REQUIRE_HTTPS}"
+
+      # appsettings.json ships DisablePII=false, which sets IdentityModelEventSource.ShowPII and
+      # LogCompleteSecurityArtifact - i.e. tokens and user identifiers written to the log file in
+      # clear. Fine while debugging locally, not something to run in production.
+      App__DisablePII: "${APP_DISABLE_PII}"
+
+      AuthServer__CertificatePassPhrase: ${OPENIDDICT_PFX_PASSWORD}
+      StringEncryption__DefaultPassPhrase: ${STRING_ENCRYPTION_PASSPHRASE}
+
+      # Written into the OpenIddictApplications table by SeedService on startup. Get these
+      # right BEFORE first boot, or you will be editing redirect URIs in the database.
+      OpenIddict__Applications__Eksabli_App__ClientId: Eksabli_App
+      OpenIddict__Applications__Eksabli_App__RootUrl: ${APP_URL}
+      OpenIddict__Applications__Eksabli_Swagger__ClientId: Eksabli_Swagger
+      OpenIddict__Applications__Eksabli_Swagger__RootUrl: ${API_URL}
+    volumes:
+      - ./secrets/openiddict.pfx:/app/openiddict.pfx:ro
+      # Without this, the data-protection keyring is regenerated inside a fresh container on
+      # every deploy, silently invalidating antiforgery tokens and login cookies.
+      - dataprotection:/root/.aspnet/DataProtection-Keys
+      - apilogs:/app/Logs
+    expose:
+      - "8080"   # reachable only on the compose network, never published to the host
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      API_DOMAIN: ${API_DOMAIN}
+      # Restrict envsubst to API_DOMAIN so it cannot eat nginx's own $host / $scheme vars.
+      NGINX_ENVSUBST_FILTER: "^API_DOMAIN$$"
+    volumes:
+      - ${NGINX_CONF}:/etc/nginx/templates/default.conf.template:ro
+      - certbot-www:/var/www/certbot:ro
+      - certbot-conf:/etc/letsencrypt:ro
+
+  # One-shot, not started by `up`. See README, "Issuing the certificate".
+  certbot:
+    image: certbot/certbot:latest
+    profiles: ["tools"]
+    volumes:
+      - certbot-www:/var/www/certbot
+      - certbot-conf:/etc/letsencrypt
+
+volumes:
+  pgdata:
+  dataprotection:
+  apilogs:
+  certbot-www:
+  certbot-conf:

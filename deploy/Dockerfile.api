@@ -1,0 +1,45 @@
+# Multi-stage build for Eksabli.HttpApi.Host.
+#
+# The build context is the REPOSITORY ROOT, not this folder:
+#   docker build -f deploy/Dockerfile.api -t eksabli-api .
+# deploy/docker-compose.yml already sets `context: ..` for this reason.
+#
+# This replaces src/Eksabli.HttpApi.Host/Dockerfile, which only copies a pre-built
+# bin/Release/net10.0/publish/ produced on a developer machine and uses the ~1GB SDK
+# image as its runtime base. That file is left alone for ABP Studio's own tooling.
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+
+# NOTE: src/Eksabli.HttpApi.Host/wwwroot/libs is committed to the repository, so this stage
+# needs no Node, no yarn, no ABP CLI and no npm registry access -- the assets are simply
+# copied in with the rest of the project.
+#
+# They are required at runtime: the OpenIddict authorization-code flow redirects to the MVC
+# login page served by this host, and that page renders unstyled and non-functional without
+# them. Restoring them here with `abp install-libs` meant installing a Node toolchain into
+# the build image and hitting the npm registry on every build -- slower, and one more thing
+# to fail on a poor connection. See the comment in .gitignore for how to refresh them after
+# an ABP or LeptonXLite upgrade.
+
+WORKDIR /src
+
+# common.props is imported by every csproj as ..\..\common.props, so it has to sit one
+# level above src/ exactly as it does in the repo.
+COPY NuGet.Config common.props ./
+COPY src/ src/
+
+RUN dotnet publish src/Eksabli.HttpApi.Host/Eksabli.HttpApi.Host.csproj \
+    -c Release -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+WORKDIR /app
+COPY --from=build /app/publish .
+
+# openiddict.pfx is deliberately NOT copied in. Outside Development, ABP requires a real
+# signing/encryption certificate (EksabliHttpApiHostModule.PreConfigureServices), but baking
+# one into an image hands the private key to anyone who can pull that image. It is bind-mounted
+# read-only at runtime instead -- see the `api` service in docker-compose.yml.
+
+ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "Eksabli.HttpApi.Host.dll"]

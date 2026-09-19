@@ -123,18 +123,36 @@ public class EksabliHttpApiHostModule : AbpModule
             Microsoft.IdentityModel.Logging.IdentityModelEventSource.LogCompleteSecurityArtifact = true;
         }
 
+        // Configured unconditionally, on purpose. Behind any TLS-terminating reverse proxy
+        // (nginx in deploy/, a cloud load balancer, ...) TLS ends at the proxy and the app only
+        // ever sees plain http on the internal hop. Unless X-Forwarded-Proto is honoured,
+        // Request.Scheme stays "http", so OpenIddict builds http:// issuer and redirect URLs and
+        // rejects every token request as insecure.
+        //
+        // This block used to live inside the `if (!RequireHttpsMetadata)` below, which meant the
+        // only way to get proxy headers read was to also disable OpenIddict's transport-security
+        // check -- coupling two unrelated decisions and forcing production to run with the weaker
+        // setting. Splitting them lets a proxied deployment keep RequireHttpsMetadata=true.
+        //
+        // X-Forwarded-For is included so ABP's audit logs record the real client IP rather than
+        // the proxy's. Clearing the known-proxy lists is safe here because Kestrel is never
+        // published to the host (see deploy/docker-compose.yml: the api service uses `expose`,
+        // not `ports`), so the proxy is the only possible source of these headers.
+        Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor;
+            options.KnownIPNetworks.Clear();
+            options.KnownProxies.Clear();
+        });
+
+        // Only for deployments genuinely served over plain HTTP -- local rehearsal of the Docker
+        // stack, say. Never set this in production: with the forwarded-headers fix above, a
+        // TLS-terminated deployment satisfies the transport-security check on its own.
         if (!configuration.GetValue<bool>("AuthServer:RequireHttpsMetadata"))
         {
             Configure<OpenIddictServerAspNetCoreOptions>(options =>
             {
                 options.DisableTransportSecurityRequirement = true;
-            });
-            
-            Configure<ForwardedHeadersOptions>(options =>
-            {
-                options.ForwardedHeaders = ForwardedHeaders.XForwardedProto;
-                options.KnownIPNetworks.Clear();
-                options.KnownProxies.Clear();
             });
         }
 

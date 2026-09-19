@@ -1,0 +1,19 @@
+# Keeps Windows build output, the Angular workspace and the git history out of the
+# build context. Without this the context is several GB and the COPY of src/ drags in
+# bin/obj folders that confuse the in-container restore.
+.git/
+.vs/
+.github/
+**/bin/
+**/obj/
+**/node_modules/
+**/Logs/
+angular/
+mobile/
+prototype/
+postman/
+docs/
+test/
+etc/
+# Never let a certificate into the build context.
+*.pfx
