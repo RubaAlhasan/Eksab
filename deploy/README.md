@@ -155,7 +155,10 @@ Quick look:
 
 ```bash
 docker compose exec postgres psql -U eksabli -d Eksabli
-# \dt "App"*    -- your entities share this DbContext with Identity and Tenant Management
+# \dt           -- ~71 tables, three naming groups sharing one DbContext:
+#                  App*  your entities (AppCampaigns, AppMemberships, ...)
+#                  Abp*  framework modules, Identity included (AbpUsers, AbpRoles, ...)
+#                  OpenIddict*  auth server (no prefix)
 ```
 
 From DBeaver/pgAdmin on Windows: use the client's own **SSH tunnel** tab (host `<vps-ip>`,
@@ -213,5 +216,5 @@ Migrations and seeding run automatically on startup. If you change `API_URL` or 
 `SeedService` rewrites the OpenIddict client's redirect URIs on the next boot — confirm with:
 
 ```sql
-SELECT "ClientId", "RedirectUris" FROM "AppOpenIddictApplications";
+SELECT "ClientId", "RedirectUris" FROM "OpenIddictApplications";
 ```
