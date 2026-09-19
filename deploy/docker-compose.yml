@@ -95,6 +95,26 @@ services:
     expose:
       - "8080"   # reachable only on the compose network, never published to the host
 
+  angular:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.angular
+    image: eksabli-angular:latest
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.eksabli-app.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.routers.eksabli-app.entrypoints=websecure"
+      - "traefik.http.routers.eksabli-app.tls.certresolver=letsencrypt"
+      - "traefik.http.services.eksabli-app.loadbalancer.server.port=80"
+    volumes:
+      # Carries the API URL and OAuth settings, so the image stays environment-agnostic.
+      # Served at /getEnvConfig and deep-merged over environment.prod.ts at app startup.
+      # Generated per environment and gitignored -- see README "Deploying the Angular app".
+      - ./dynamic-env.json:/usr/share/nginx/html/dynamic-env.json:ro
+    expose:
+      - "80"
+
   # NOT started by default. Only for hosts with no reverse proxy of their own:
   #   docker compose --profile nginx up -d
   # On the Hostinger Docker template, Traefik already owns :80/:443 and binding here fails with

@@ -1,0 +1,19 @@
+# Context is the repo root; keep everything the SPA build does not need out of it.
+# NOTE: bare `src/` matches only the .NET source at the root, not angular/src.
+.git/
+.vs/
+.github/
+**/node_modules/
+**/bin/
+**/obj/
+angular/dist/
+angular/.angular/
+src/
+test/
+mobile/
+prototype/
+postman/
+docs/
+etc/
+Logs/
+*.pfx

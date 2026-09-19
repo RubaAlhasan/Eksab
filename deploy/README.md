@@ -147,6 +147,47 @@ just to be told it was behind TLS. They are now independent.
 If you ever see `"this server only accepts HTTPS requests"` from the token endpoint, the cause
 is the proxy not sending `X-Forwarded-Proto`, not this flag. Check the nginx `location /` block.
 
+## 2b. Deploying the Angular app
+
+The SPA is a separate service on its own hostname, so the browser sees two distinct origins
+and CORS is meaningful. Set `APP_DOMAIN` in `.env`, then create `deploy/dynamic-env.json`
+(gitignored -- it holds per-environment URLs):
+
+```bash
+cat > dynamic-env.json <<JSON
+{
+  "application": { "baseUrl": "https://APP_HOST" },
+  "oAuthConfig": {
+    "issuer": "https://API_HOST/",
+    "redirectUri": "https://APP_HOST",
+    "clientId": "Eksabli_App",
+    "responseType": "code",
+    "scope": "offline_access Eksabli",
+    "requireHttps": true
+  },
+  "apis": {
+    "default": { "url": "https://API_HOST", "rootNamespace": "Eksabli" },
+    "AbpAccountPublic": { "url": "https://API_HOST/", "rootNamespace": "AbpAccountPublic" }
+  }
+}
+JSON
+docker compose up -d --build angular
+```
+
+`environment.prod.ts` is compiled with `localhost` URLs but declares
+`remoteEnv: { url: '/getEnvConfig', mergeStrategy: 'deepmerge' }`. nginx serves
+`dynamic-env.json` at that path, and it is deep-merged over the compiled values at startup --
+so one image works in every environment and no rebuild is needed to repoint it.
+
+After changing `APP_URL`, restart the api too: `SeedService` rewrites the OpenIddict client's
+redirect URIs and the CORS origins come from the same variable.
+
+### No domain yet?
+
+`sslip.io` resolves any embedded IP, so `app.<dashed-ip>.sslip.io` points at the VPS with no
+DNS setup and Let's Encrypt will issue for it. Fine for getting running; move to a real domain
+by editing `.env` and `dynamic-env.json`, then restarting.
+
 ## 3. Opening the database
 
 Postgres is bound to `127.0.0.1` only, so reach it through SSH.
