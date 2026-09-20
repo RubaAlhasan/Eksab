@@ -2,7 +2,7 @@ import { provideAbpCore, withOptions } from '@abp/ng.core';
 import { provideAbpOAuth } from '@abp/ng.oauth';
 import { provideSettingManagementConfig } from '@abp/ng.setting-management/config';
 import { provideFeatureManagementConfig } from '@abp/ng.feature-management';
-import { provideAbpThemeShared, withHttpErrorConfig } from '@abp/ng.theme.shared';
+import { CUSTOM_ERROR_HANDLERS, provideAbpThemeShared, withHttpErrorConfig } from '@abp/ng.theme.shared';
 import { provideIdentityConfig } from '@abp/ng.identity/config';
 import { provideAccountConfig } from '@abp/ng.account/config';
 import { provideTenantManagementConfig } from '@abp/ng.tenant-management/config';
@@ -18,6 +18,7 @@ import { APP_ROUTES } from './app.routes';
 import { APP_ROUTE_PROVIDER } from './route.provider';
 import { FOOTER_PROVIDER } from './footer/footer.config';
 import { ApiUnavailableComponent } from './shared/components/api-unavailable/api-unavailable.component';
+import { ApiUnavailableErrorHandler } from './shared/services/api-unavailable-error.handler';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -54,5 +55,8 @@ export const appConfig: ApplicationConfig = {
         },
       }),
     ),
+    // Required for the [0] entry above to ever match -- see ApiUnavailableErrorHandler for why
+    // ABP's own status-0 handler never forwards the status.
+    { provide: CUSTOM_ERROR_HANDLERS, multi: true, useExisting: ApiUnavailableErrorHandler },
   ]
 };
