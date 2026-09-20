@@ -6,7 +6,9 @@
 #
 # Run from this directory:  docker compose up -d --build
 
-name: eksabli
+# Overridden per environment so production and staging can run side by side on one host
+# with separate containers, networks and volumes. See .env.example.
+name: ${STACK_NAME:-eksabli}
 
 services:
   postgres:
@@ -23,7 +25,7 @@ services:
       # its own iptables rules that BYPASS UFW -- that is an open Postgres on the public
       # internet even with the firewall enabled. Reach it over an SSH tunnel instead
       # (see README, "Opening the database").
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${PG_HOST_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -82,15 +84,15 @@ services:
       # configuration in EksabliHttpApiHostModule consumes; that is why AUTH_REQUIRE_HTTPS can
       # stay true here.
       - "traefik.enable=true"
-      - "traefik.http.routers.eksabli-api.rule=Host(`${API_DOMAIN}`)"
-      - "traefik.http.routers.eksabli-api.entrypoints=websecure"
-      - "traefik.http.routers.eksabli-api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.eksabli-api.loadbalancer.server.port=8080"
+      - "traefik.http.routers.${STACK_NAME:-eksabli}-api.rule=Host(`${API_DOMAIN}`)"
+      - "traefik.http.routers.${STACK_NAME:-eksabli}-api.entrypoints=websecure"
+      - "traefik.http.routers.${STACK_NAME:-eksabli}-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.${STACK_NAME:-eksabli}-api.loadbalancer.server.port=8080"
       # Neither Traefik nor the app compresses by default, and the MVC login page alone pulls
       # ~1.5MB of LeptonXLite CSS/JS bundles. Uncompressed that is painful on a slow link;
       # gzip/brotli takes those bundles to a fraction of the size.
-      - "traefik.http.middlewares.eksabli-compress.compress=true"
-      - "traefik.http.routers.eksabli-api.middlewares=eksabli-compress"
+      - "traefik.http.middlewares.${STACK_NAME:-eksabli}-compress.compress=true"
+      - "traefik.http.routers.${STACK_NAME:-eksabli}-api.middlewares=${STACK_NAME:-eksabli}-compress"
     volumes:
       - ./secrets/openiddict.pfx:/app/openiddict.pfx:ro
       # Without this, the data-protection keyring is regenerated inside a fresh container on
@@ -108,12 +110,17 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.eksabli-app.rule=Host(`${APP_DOMAIN}`)"
-      - "traefik.http.routers.eksabli-app.entrypoints=websecure"
-      - "traefik.http.routers.eksabli-app.tls.certresolver=letsencrypt"
-      - "traefik.http.services.eksabli-app.loadbalancer.server.port=80"
+      - "traefik.http.routers.${STACK_NAME:-eksabli}-app.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.routers.${STACK_NAME:-eksabli}-app.entrypoints=websecure"
+      - "traefik.http.routers.${STACK_NAME:-eksabli}-app.tls.certresolver=letsencrypt"
+      - "traefik.http.services.${STACK_NAME:-eksabli}-app.loadbalancer.server.port=80"
       # Same reason as the api service: compress the SPA bundles in transit.
-      - "traefik.http.routers.eksabli-app.middlewares=eksabli-compress"
+      - "traefik.http.routers.${STACK_NAME:-eksabli}-app.middlewares=${STACK_NAME:-eksabli}-compress"
+    environment:
+      # Feeds the preconnect hint in spa.conf.template. Restricted filter so envsubst cannot
+      # eat nginx's own $$uri / $$host variables.
+      API_ORIGIN: ${API_URL}
+      NGINX_ENVSUBST_FILTER: "^API_ORIGIN$$"
     volumes:
       # Carries the API URL and OAuth settings, so the image stays environment-agnostic.
       # Served at /getEnvConfig and deep-merged over environment.prod.ts at app startup.

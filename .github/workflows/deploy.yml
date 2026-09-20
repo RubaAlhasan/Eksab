@@ -1,0 +1,83 @@
+# Auto-deploy to the VPS.
+#
+#   push to `production`  ->  production stack  (/opt/eksabli)
+#   push to `main`        ->  staging stack     (/opt/eksabli-staging)
+#
+# Both stacks share one host. They are kept apart by STACK_NAME in each stack's own .env,
+# which scopes the compose project (containers, network, volumes), the Traefik router names
+# and the Postgres host port -- see deploy/.env.example.
+#
+# Required repository secrets:
+#   VPS_HOST     the server's IP or hostname
+#   VPS_SSH_KEY  private half of a deploy key whose public half is in the VPS's
+#                ~/.ssh/authorized_keys (see deploy/README.md, "Continuous deployment")
+#
+# The VPS pulls from GitHub itself, so a private repo needs a deploy key or token configured
+# in the clone's remote on the server -- the runner never uploads any source.
+
+name: Deploy
+
+on:
+  push:
+    branches: [production, main]
+  workflow_dispatch:
+
+# Serialise deploys per branch. Never cancel in progress: interrupting `docker compose up`
+# can leave a half-built stack.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Resolve target
+        id: target
+        run: |
+          if [ "${{ github.ref_name }}" = "production" ]; then
+            echo "dir=/opt/eksabli"          >> "$GITHUB_OUTPUT"
+            echo "name=production"           >> "$GITHUB_OUTPUT"
+            echo "health=https://srv1993275.hstgr.cloud/health-status" >> "$GITHUB_OUTPUT"
+          else
+            echo "dir=/opt/eksabli-staging"  >> "$GITHUB_OUTPUT"
+            echo "name=staging"              >> "$GITHUB_OUTPUT"
+            echo "health=https://api-staging.152-239-116-40.sslip.io/health-status" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy ${{ steps.target.outputs.name }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -o BatchMode=yes \
+            root@"${{ secrets.VPS_HOST }}" \
+            "DIR='${{ steps.target.outputs.dir }}' BRANCH='${{ github.ref_name }}' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$DIR"
+          git fetch --prune origin
+          # Hard reset, not merge: the server is a deployment target, never an editing copy.
+          git checkout -B "$BRANCH" "origin/$BRANCH"
+          git reset --hard "origin/$BRANCH"
+          cd deploy
+          docker compose up -d --build
+          # Reclaim the layers the rebuild orphaned; without this a 96GB disk fills up.
+          docker image prune -f
+          docker compose ps
+          REMOTE
+
+      - name: Verify health
+        run: |
+          for i in $(seq 1 20); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "${{ steps.target.outputs.health }}" || true)
+            echo "attempt $i: http=$code"
+            [ "$code" = "200" ] && exit 0
+            sleep 10
+          done
+          echo "::error::${{ steps.target.outputs.name }} did not report healthy after deploy"
+          exit 1
