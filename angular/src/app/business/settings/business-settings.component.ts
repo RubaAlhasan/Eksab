@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ConfigStateService, LocalizationPipe, PermissionService } from '@abp/ng.core';
+import { ConfigStateService, EnvironmentService, LocalizationPipe, PermissionService } from '@abp/ng.core';
 import { ToasterService } from '@abp/ng.theme.shared';
 import { BusinessService } from '../../proxy/controllers/business.service';
 import { CategoriesService } from '../../proxy/controllers/categories.service';
@@ -9,7 +9,6 @@ import type { CategoryDto } from '../../proxy/platform/models';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
-import { environment } from '../../../environments/environment';
 
 const ALLOWED_LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
@@ -92,6 +91,8 @@ export class BusinessSettingsComponent implements OnInit {
   private readonly businessService = inject(BusinessService);
   private readonly categoriesService = inject(CategoriesService);
   private readonly configState = inject(ConfigStateService);
+  // See notification-hub.service.ts: the compile-time `environment` import keeps localhost URLs.
+  private readonly environmentService = inject(EnvironmentService);
   private readonly toaster = inject(ToasterService);
   private readonly permissionService = inject(PermissionService);
 
@@ -115,7 +116,7 @@ export class BusinessSettingsComponent implements OnInit {
   protected readonly logoUrl = computed(() => {
     const p = this.profile();
     if (!p?.logoBlobName) return null;
-    return `${environment.apis.default.url}/api/app/business/${p.id}/logo?v=${encodeURIComponent(p.logoBlobName)}`;
+    return `${this.environmentService.getApiUrl('default')}/api/app/business/${p.id}/logo?v=${encodeURIComponent(p.logoBlobName)}`;
   });
 
   protected readonly form = new FormGroup({

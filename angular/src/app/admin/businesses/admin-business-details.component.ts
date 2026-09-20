@@ -2,7 +2,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
-import { LocalizationPipe, PermissionService } from '@abp/ng.core';
+import { EnvironmentService, LocalizationPipe, PermissionService } from '@abp/ng.core';
 import { Confirmation, ConfirmationService, ToasterService } from '@abp/ng.theme.shared';
 import { AdminTenantsService } from '../../proxy/controllers/admin-tenants.service';
 import { CategoriesService } from '../../proxy/controllers/categories.service';
@@ -22,7 +22,6 @@ import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
-import { environment } from '../../../environments/environment';
 
 type DetailTab = 'overview' | 'billing' | 'tickets';
 
@@ -102,6 +101,8 @@ export class AdminBusinessDetailsComponent implements OnInit {
   private readonly confirmation = inject(ConfirmationService);
   private readonly toaster = inject(ToasterService);
   private readonly permissionService = inject(PermissionService);
+  // See notification-hub.service.ts: the compile-time `environment` import keeps localhost URLs.
+  private readonly environmentService = inject(EnvironmentService);
 
   protected readonly ApprovalStatus = TenantApprovalStatus;
   protected readonly TicketStatus = SupportTicketStatus;
@@ -130,7 +131,7 @@ export class AdminBusinessDetailsComponent implements OnInit {
   protected readonly logoFailed = signal(false);
   protected readonly logoUrl = computed(() => {
     const businessProfileId = this.tenant()?.businessProfileId;
-    return businessProfileId ? `${environment.apis.default.url}/api/app/business/${businessProfileId}/logo` : null;
+    return businessProfileId ? `${this.environmentService.getApiUrl('default')}/api/app/business/${businessProfileId}/logo` : null;
   });
 
   protected readonly canApprove = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Tenants.Approve'));
