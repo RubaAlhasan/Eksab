@@ -25,7 +25,9 @@ RUN yarn build:prod
 
 FROM nginx:alpine
 # Serves the SPA with try_files -> /index.html, and /getEnvConfig -> dynamic-env.json.
-COPY angular/nginx.conf /etc/nginx/conf.d/default.conf
+# Template, not a plain conf: the nginx image runs envsubst over /etc/nginx/templates at
+# start-up, which is how the per-environment API origin reaches the preconnect hint.
+COPY deploy/nginx/spa.conf.template /etc/nginx/templates/default.conf.template
 # Angular 17+ emits under dist/<name>/browser/.
 COPY --from=build /app/dist/Eksabli/browser /usr/share/nginx/html
 
