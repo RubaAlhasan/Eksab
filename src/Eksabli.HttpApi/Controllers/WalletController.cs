@@ -20,7 +20,7 @@ public class WalletController : EksabliController
     }
 
     [HttpGet("{tenantId}/transactions")]
-    public Task<PagedResultDto<PointsTransactionDto>> GetMyTransactionHistoryAsync(Guid tenantId, [FromQuery] PagedAndSortedResultRequestDto input)
+    public Task<PagedResultDto<PointsTransactionDto>> GetMyTransactionHistoryAsync(Guid tenantId, [FromQuery] GetMyTransactionHistoryInput input)
     {
         return _walletAppService.GetMyTransactionHistoryAsync(tenantId, input);
     }

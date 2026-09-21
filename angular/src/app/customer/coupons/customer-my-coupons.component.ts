@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
@@ -16,7 +16,14 @@ import { StatusBadgeComponent, StatusBadgeVariant } from '../../shared/component
  * "Awaiting approval" badge here — it matters to the customer whether staff have actually confirmed the
  * redemption yet. Tapping a Pending row re-enters the redeem screen (resumes polling), which also
  * doubles as the recovery path after navigating away or refreshing the tab mid-redemption.
+ *
+ * Filter tabs match the prototype's coupons.html (All/Active/Used/Expired) — adapted for this app's
+ * richer, real status model (prototype only ever modelled Issued/Redeemed/Expired/Cancelled, no Pending
+ * concept at all): Active folds in Pending alongside Issued (both are "not yet used, not expired" from
+ * the customer's point of view), and Expired folds in Cancelled — the prototype's own `statusMeta`
+ * already groups Cancelled under the same danger-styled badge as Expired, so this mirrors that.
  */
+type CouponFilter = 'all' | 'active' | 'used' | 'expired';
 @Component({
   selector: 'app-customer-my-coupons',
   templateUrl: './customer-my-coupons.component.html',
@@ -33,12 +40,32 @@ export class CustomerMyCouponsComponent implements OnInit {
   protected readonly isLoading = signal(true);
   protected readonly loadFailed = signal(false);
 
+  protected readonly filter = signal<CouponFilter>('all');
+
+  protected readonly filteredCoupons = computed(() => {
+    const list = this.coupons();
+    switch (this.filter()) {
+      case 'active':
+        return list.filter(c => c.status === CouponStatus.Issued || c.status === CouponStatus.Pending);
+      case 'used':
+        return list.filter(c => c.status === CouponStatus.Redeemed);
+      case 'expired':
+        return list.filter(c => c.status === CouponStatus.Expired || c.status === CouponStatus.Cancelled);
+      default:
+        return list;
+    }
+  });
+
   ngOnInit(): void {
     this.load();
   }
 
   protected retry(): void {
     this.load();
+  }
+
+  protected selectFilter(filter: CouponFilter): void {
+    this.filter.set(filter);
   }
 
   protected onCouponClick(coupon: CouponDto): void {

@@ -4,11 +4,24 @@ import { ActivatedRoute } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
 import { WalletService } from '../../proxy/controllers/wallet.service';
 import type { PointsTransactionDto } from '../../proxy/wallets/models';
+import { PointsTransactionType } from '../../proxy/wallets/points-transaction-type.enum';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { isCredit, transactionSourceLabelKey, transactionTypeLabelKey } from '../../shared/utils/transaction-display.util';
+
+// Prototype's transaction-history.html shows a type-filter chip row (All + every type actually present
+// in the data) above the list — matched here with the full, fixed type set rather than a data-derived
+// one, since this page is server-paginated (the prototype's demo data is loaded whole, so it can inspect
+// "every type actually present" client-side; this page can't without fetching everything first).
+const FILTER_TYPES: PointsTransactionType[] = [
+  PointsTransactionType.Earn,
+  PointsTransactionType.Redeem,
+  PointsTransactionType.Adjust,
+  PointsTransactionType.Expire,
+  PointsTransactionType.Refund,
+];
 
 @Component({
   selector: 'app-customer-transaction-history',
@@ -36,6 +49,9 @@ export class CustomerTransactionHistoryComponent implements OnInit {
   protected readonly sourceLabelKey = transactionSourceLabelKey;
   protected readonly isCredit = isCredit;
 
+  protected readonly filterTypes = FILTER_TYPES;
+  protected readonly selectedType = signal<PointsTransactionType | null>(null);
+
   ngOnInit(): void {
     this.route.paramMap.subscribe(params => {
       const tenantId = params.get('tenantId');
@@ -50,6 +66,13 @@ export class CustomerTransactionHistoryComponent implements OnInit {
     if (this.tenantId) this.load(this.tenantId);
   }
 
+  protected selectType(type: PointsTransactionType | null): void {
+    if (this.selectedType() === type || !this.tenantId) return;
+    this.selectedType.set(type);
+    this.pageIndex.set(0);
+    this.load(this.tenantId);
+  }
+
   protected goToPage(index: number): void {
     if (index < 0 || index >= this.totalPages() || !this.tenantId) return;
     this.pageIndex.set(index);
@@ -62,6 +85,7 @@ export class CustomerTransactionHistoryComponent implements OnInit {
 
     this.walletService
       .getMyTransactionHistory(tenantId, {
+        type: this.selectedType(),
         sorting: 'creationTime desc',
         skipCount: this.pageIndex() * this.pageSize,
         maxResultCount: this.pageSize,

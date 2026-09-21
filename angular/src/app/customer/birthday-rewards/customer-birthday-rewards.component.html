@@ -1,0 +1,39 @@
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::Wallet:BirthdayRewards:Loading' | abpLocalization" />
+} @else if (loadFailed()) {
+  <app-error-state [message]="'::Wallet:BirthdayRewards:LoadError' | abpLocalization" (retry)="retry()" />
+} @else {
+  @if (dateOfBirth(); as dob) {
+    <div class="card eks-birthday-banner mb-4">
+      <div class="card-body text-center">
+        <div class="eks-birthday-banner__emoji">🎂</div>
+        <p class="fw-bold mb-1">
+          {{ '::Wallet:BirthdayRewards:YourBirthdayIs' | abpLocalization }} {{ dob | date: 'MMMM d' }}
+        </p>
+        <p class="small mb-0">{{ '::Wallet:BirthdayRewards:BannerHint' | abpLocalization }}</p>
+      </div>
+    </div>
+  }
+
+  @if (birthdayCampaigns().length === 0) {
+    <app-empty-state icon="fa-gift" [title]="'::Wallet:BirthdayRewards:Empty' | abpLocalization" [description]="'::Wallet:BirthdayRewards:EmptyHint' | abpLocalization" />
+  } @else {
+    <div class="eks-campaign-list">
+      @for (campaign of birthdayCampaigns(); track campaign.id) {
+        <a [routerLink]="['/customer/store', campaign.tenantId]" class="card eks-campaign-card">
+          <div class="card-body d-flex align-items-center gap-3">
+            <div class="eks-campaign-emoji">🎂</div>
+            <div class="flex-grow-1">
+              <div class="text-muted small">{{ campaign.businessName }}</div>
+              <div class="fw-semibold">{{ campaign.nameEn }}</div>
+              <div class="text-muted small">
+                {{ '::Wallet:Campaigns:Until' | abpLocalization }} {{ campaign.endDate | date: 'mediumDate' }}
+              </div>
+            </div>
+            <span class="eks-campaign-gift">🎁</span>
+          </div>
+        </a>
+      }
+    </div>
+  }
+}

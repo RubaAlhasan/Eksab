@@ -76,7 +76,7 @@ export class CustomerLayoutComponent {
   // rewards catalog/details, the wallet QR, active campaigns — all reached from Home); Search covers
   // discovery (search/nearby + store details — a store can also be reached from Favorites under Profile,
   // but Search is its primary path so it's grouped there); Alerts is the notifications inbox; Profile
-  // covers the account hub, My Coupons, Favorites, Refer a Friend, and Settings. Redeem hangs off none of
+  // covers the account hub, My Coupons, Favorites, Refer a Friend, Birthday Rewards, and Settings. Redeem hangs off none of
   // them: the nav is hidden there entirely (see showBottomNav below), matching the one prototype screen
   // (redeem-reward.html) that ships genuinely nav-less rather than just JS-hidden.
   private static readonly HOME_PREFIXES = ['/customer/home', '/customer/wallet', '/customer/qr', '/customer/campaigns'];
@@ -87,6 +87,7 @@ export class CustomerLayoutComponent {
     '/customer/coupons',
     '/customer/favorites',
     '/customer/referral',
+    '/customer/birthday-rewards',
     '/customer/settings',
   ];
 

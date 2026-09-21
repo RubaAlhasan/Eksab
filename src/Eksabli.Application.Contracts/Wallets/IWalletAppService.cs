@@ -10,5 +10,5 @@ namespace Eksabli.Wallets;
 [RemoteService(IsEnabled = false)]
 public interface IWalletAppService : IApplicationService
 {
-    Task<PagedResultDto<PointsTransactionDto>> GetMyTransactionHistoryAsync(Guid tenantId, PagedAndSortedResultRequestDto input);
+    Task<PagedResultDto<PointsTransactionDto>> GetMyTransactionHistoryAsync(Guid tenantId, GetMyTransactionHistoryInput input);
 }

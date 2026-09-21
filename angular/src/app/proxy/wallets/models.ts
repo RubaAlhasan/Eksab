@@ -1,7 +1,14 @@
 import type { PointRuleType } from './point-rule-type.enum';
-import type { AuditedEntityDto, EntityDto } from '@abp/ng.core';
+import type { AuditedEntityDto, EntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
 import type { PointsTransactionType } from './points-transaction-type.enum';
 import type { PointsTransactionSource } from './points-transaction-source.enum';
+
+// Hand-added field — see the file comment on WalletService.getMyTransactionHistory in
+// ../controllers/wallet.service.ts for why (GetMyTransactionHistoryAsync grew an optional `type`
+// filter, never regenerated into this proxy).
+export interface GetMyTransactionHistoryInput extends PagedAndSortedResultRequestDto {
+  type?: PointsTransactionType | null;
+}
 
 export interface CreateUpdatePointRuleDto {
   ruleType: PointRuleType;

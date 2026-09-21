@@ -122,6 +122,14 @@ export const APP_ROUTES: Routes = [
         data: { titleKey: '::Wallet:Referral:Title' },
       },
       {
+        path: 'birthday-rewards',
+        loadComponent: () =>
+          import('./customer/birthday-rewards/customer-birthday-rewards.component').then(
+            c => c.CustomerBirthdayRewardsComponent,
+          ),
+        data: { titleKey: '::Wallet:BirthdayRewards:Title' },
+      },
+      {
         path: 'alerts',
         loadComponent: () =>
           import('./customer/notifications/customer-notifications.component').then(c => c.CustomerNotificationsComponent),

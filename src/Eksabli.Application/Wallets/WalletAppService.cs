@@ -34,7 +34,7 @@ public class WalletAppService : ApplicationService, IWalletAppService
         _currentTenant = currentTenant;
     }
 
-    public async Task<PagedResultDto<PointsTransactionDto>> GetMyTransactionHistoryAsync(Guid tenantId, PagedAndSortedResultRequestDto input)
+    public async Task<PagedResultDto<PointsTransactionDto>> GetMyTransactionHistoryAsync(Guid tenantId, GetMyTransactionHistoryInput input)
     {
         var customerId = CurrentUser.GetId();
 
@@ -46,14 +46,19 @@ public class WalletAppService : ApplicationService, IWalletAppService
             var wallet = await _walletRepository.FirstAsync(w => w.MembershipId == membership.Id);
 
             var queryable = await _transactionRepository.GetQueryableAsync();
-            var query = queryable
-                .Where(t => t.WalletId == wallet.Id)
+            var filtered = queryable.Where(t => t.WalletId == wallet.Id);
+            if (input.Type.HasValue)
+            {
+                filtered = filtered.Where(t => t.Type == input.Type.Value);
+            }
+
+            var query = filtered
                 .OrderBy(input.Sorting.IsNullOrWhiteSpace() ? "CreationTime desc" : input.Sorting)
                 .Skip(input.SkipCount)
                 .Take(input.MaxResultCount);
 
             var transactions = await AsyncExecuter.ToListAsync(query);
-            var totalCount = await AsyncExecuter.CountAsync(queryable.Where(t => t.WalletId == wallet.Id));
+            var totalCount = await AsyncExecuter.CountAsync(filtered);
 
             var dtos = ObjectMapper.Map<List<PointsTransaction>, List<PointsTransactionDto>>(transactions);
             return new PagedResultDto<PointsTransactionDto>(totalCount, dtos);
