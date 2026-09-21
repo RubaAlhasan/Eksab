@@ -3,7 +3,7 @@ import { Location } from '@angular/common';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
-import { LocalizationPipe } from '@abp/ng.core';
+import { LocalizationPipe, SessionStateService, getLocaleDirection } from '@abp/ng.core';
 import { NotificationHubService } from '../../shared/services/notification-hub.service';
 
 type CustomerTab = 'home' | 'search' | 'alerts' | 'profile' | null;
@@ -36,11 +36,25 @@ type CustomerTab = 'home' | 'search' | 'alerts' | 'profile' | null;
 export class CustomerLayoutComponent {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
+  private readonly sessionState = inject(SessionStateService);
   protected readonly hub = inject(NotificationHubService);
 
   constructor() {
     this.hub.connect();
   }
+
+  // Same `getLocaleDirection()` + `SessionStateService.getLanguage$()` pattern
+  // business-layout.component.ts already uses — this shell was simply missed when it was first built,
+  // so switching to Arabic (Settings' own language list, which already works) left the customer app's
+  // text right-to-left inside a layout that stayed visually left-to-right. Bound as `[attr.dir]` on the
+  // shell root in the template; the two directional icon glyphs the shell can't reach through view
+  // encapsulation (a routed child page's own `fa-arrow-left`/`fa-chevron-right`) are mirrored globally
+  // in styles.scss instead — see that file's own comment for why.
+  protected readonly currentLanguage = toSignal(this.sessionState.getLanguage$(), {
+    initialValue: this.sessionState.getLanguage(),
+  });
+
+  protected readonly direction = computed(() => getLocaleDirection(this.currentLanguage() ?? 'en'));
 
   private readonly navigationEnd = toSignal(
     this.router.events.pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd)),

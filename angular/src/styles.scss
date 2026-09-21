@@ -27,6 +27,7 @@
 // properly means hoisting the dark toggle to the document root — a separate change.
 .eks-admin-shell,
 .eks-biz-shell,
+.eks-customer-shell,
 .confirmation {
   --bs-primary: var(--eks-primary);
   --bs-secondary: var(--eks-text-muted);
@@ -571,5 +572,32 @@ body {
       border-bottom-color: var(--eks-primary) !important;
       background: transparent;
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// RTL icon mirroring for the customer shell. CustomerLayoutComponent
+// (customer/layout/) sets `dir` on `.eks-customer-shell` itself (same
+// `getLocaleDirection()` pattern business-layout.component.ts already uses), so a
+// component-scoped `&:dir(rtl)` rule works fine for markup the shell owns directly.
+// It does NOT work for these two FontAwesome glyphs — `fa-arrow-left` (the shell's own
+// back button) and `fa-chevron-right` (a plain "this row leads somewhere" disclosure
+// indicator used inline across several routed child pages: customer-home,
+// customer-discover, customer-profile) — because Angular's view encapsulation scopes a
+// component's own styles to its own template; a page rendered through
+// `<router-outlet>` is a different component tree than the shell, so no shell-scoped
+// rule reaches into it. Global, not per-page, so a future page reusing either glyph
+// picks this up for free instead of needing its own copy of the same rule.
+//
+// A horizontal mirror is the correct fix for both glyphs, not a swap to a different
+// icon: "back" points toward the trailing edge of reading order (right, under RTL) and
+// a disclosure chevron points the same way "more content this way" reads (also right
+// under LTR, so it must flip to left under RTL) — `scaleX(-1)` reverses both correctly
+// in one rule.
+.eks-customer-shell[dir='rtl'] {
+  .fa-arrow-left,
+  .fa-chevron-right {
+    display: inline-block;
+    transform: scaleX(-1);
   }
 }
