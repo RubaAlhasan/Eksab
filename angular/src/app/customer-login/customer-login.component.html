@@ -51,6 +51,13 @@
         </form>
       }
 
+      @if (step() === 'phone') {
+        <p class="text-center text-muted small mt-4 mb-0">
+          {{ '::CustomerLogin:NewToEksabli' | abpLocalization }}
+          <a routerLink="/customer-register">{{ '::CustomerLogin:CreateAccount' | abpLocalization }}</a>
+        </p>
+      }
+
       <div class="text-center mt-4">
         <a routerLink="/">{{ '::CustomerLogin:BackToSite' | abpLocalization }}</a>
       </div>

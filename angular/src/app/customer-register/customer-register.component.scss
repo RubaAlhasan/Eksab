@@ -1,0 +1,42 @@
+.customer-register-page {
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+
+.customer-register-card {
+  max-width: 480px;
+  width: 100%;
+}
+
+// Same wordmark treatment as customer-login.component.scss/landing.component.scss's header — no
+// shared component between the three pages, just the two-element markup, so the dot/color are
+// repeated here rather than extracted.
+.wordmark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+
+  .dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--bs-primary, #6366f1);
+    display: inline-block;
+  }
+}
+
+.otp-code-input {
+  letter-spacing: 0.5em;
+  font-size: 1.5rem;
+}
+
+.password-toggle {
+  position: absolute;
+  inset-inline-end: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--eks-text-muted);
+}

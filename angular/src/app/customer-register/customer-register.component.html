@@ -1,0 +1,140 @@
+<div class="customer-register-page d-flex align-items-center justify-content-center">
+  <div class="card customer-register-card">
+    <div class="card-body p-4 p-md-5">
+      <div class="text-center mb-4">
+        <div class="wordmark mb-2"><span class="dot" aria-hidden="true"></span>Eksabli</div>
+        <h3 class="mb-1">{{ '::CustomerRegister:Title' | abpLocalization }}</h3>
+        <p class="text-muted mb-0">{{ '::CustomerRegister:Subtitle' | abpLocalization }}</p>
+      </div>
+
+      @if (step() === 'form') {
+        <form [formGroup]="form" (submit)="onFormSubmit($event)">
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label">{{ '::CustomerRegister:FirstNameLabel' | abpLocalization }}</label>
+              <input type="text" class="form-control" formControlName="firstName" />
+              @if (form.controls.firstName.invalid && form.controls.firstName.touched) {
+                <p class="text-danger small mt-1 mb-0">{{ '::CustomerRegister:FieldRequired' | abpLocalization }}</p>
+              }
+            </div>
+            <div class="col-6">
+              <label class="form-label">{{ '::CustomerRegister:LastNameLabel' | abpLocalization }}</label>
+              <input type="text" class="form-control" formControlName="lastName" />
+              @if (form.controls.lastName.invalid && form.controls.lastName.touched) {
+                <p class="text-danger small mt-1 mb-0">{{ '::CustomerRegister:FieldRequired' | abpLocalization }}</p>
+              }
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">{{ '::CustomerLogin:PhoneLabel' | abpLocalization }}</label>
+            <app-phone-input (valueChange)="onPhoneChange($event)"></app-phone-input>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">
+              {{ '::CustomerRegister:EmailLabel' | abpLocalization }}
+              <span class="text-muted fw-normal">{{ '::CustomerRegister:Optional' | abpLocalization }}</span>
+            </label>
+            <input type="email" class="form-control" formControlName="email" />
+            @if (form.controls.email.invalid && form.controls.email.touched) {
+              <p class="text-danger small mt-1 mb-0">{{ '::CustomerRegister:FieldEmailInvalid' | abpLocalization }}</p>
+            }
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label">
+                {{ '::Wallet:Profile:DateOfBirthLabel' | abpLocalization }}
+                <span class="text-muted fw-normal">{{ '::CustomerRegister:Optional' | abpLocalization }}</span>
+              </label>
+              <input type="date" class="form-control" formControlName="dateOfBirth" />
+            </div>
+            <div class="col-6">
+              <label class="form-label">{{ '::Wallet:Profile:GenderLabel' | abpLocalization }}</label>
+              <select class="form-select" formControlName="gender">
+                <option [ngValue]="null"></option>
+                <option [ngValue]="Gender.Female">{{ '::Wallet:Profile:GenderFemale' | abpLocalization }}</option>
+                <option [ngValue]="Gender.Male">{{ '::Wallet:Profile:GenderMale' | abpLocalization }}</option>
+                <option [ngValue]="Gender.Unspecified">{{ '::Wallet:Profile:GenderUnspecified' | abpLocalization }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label">{{ '::CustomerRegister:PasswordLabel' | abpLocalization }}</label>
+            <div class="position-relative">
+              <input
+                [type]="showPassword() ? 'text' : 'password'"
+                class="form-control pe-5"
+                formControlName="password"
+              />
+              <button
+                type="button"
+                class="btn btn-icon password-toggle"
+                [attr.aria-label]="(showPassword() ? '::CustomerRegister:HidePassword' : '::CustomerRegister:ShowPassword') | abpLocalization"
+                (click)="togglePasswordVisibility()"
+              >
+                <i class="fas" [class.fa-eye]="!showPassword()" [class.fa-eye-slash]="showPassword()"></i>
+              </button>
+            </div>
+            <p class="small mt-1 mb-0" [class.text-danger]="form.controls.password.invalid && form.controls.password.touched" [class.text-muted]="!(form.controls.password.invalid && form.controls.password.touched)">
+              {{ '::CustomerRegister:PasswordHint' | abpLocalization }}
+            </p>
+          </div>
+
+          <button
+            type="submit"
+            class="btn btn-primary w-100 mt-4"
+            [disabled]="form.invalid || !phoneNumber() || isSubmitting()"
+          >
+            @if (isSubmitting()) {
+              <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            }
+            {{ '::CustomerRegister:SubmitButton' | abpLocalization }}
+          </button>
+        </form>
+
+        <p class="text-center text-muted small mt-4 mb-0">
+          {{ '::CustomerRegister:AlreadyHaveAccount' | abpLocalization }}
+          <a routerLink="/customer-login">{{ '::CustomerRegister:LogIn' | abpLocalization }}</a>
+        </p>
+      } @else {
+        <form (submit)="onCodeSubmit($event)">
+          <label class="form-label">{{ '::CustomerLogin:CodeLabel' | abpLocalization }}</label>
+          <p class="text-muted small mb-2">
+            {{ '::CustomerLogin:CodeHint' | abpLocalization }} <strong dir="ltr">{{ phoneNumber() }}</strong>
+          </p>
+          <input
+            type="text"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            class="form-control text-center otp-code-input"
+            dir="ltr"
+            maxlength="6"
+            [value]="code()"
+            (input)="onCodeInput($event)"
+          />
+          <button type="submit" class="btn btn-primary w-100 mt-4" [disabled]="!code() || isSubmitting()">
+            @if (isSubmitting()) {
+              <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            }
+            {{ '::CustomerLogin:Verify' | abpLocalization }}
+          </button>
+          <div class="d-flex justify-content-between mt-3">
+            <button type="button" class="btn btn-link btn-sm p-0" [disabled]="isSubmitting()" (click)="editDetails()">
+              {{ '::CustomerRegister:EditDetails' | abpLocalization }}
+            </button>
+            <button type="button" class="btn btn-link btn-sm p-0" [disabled]="isSubmitting()" (click)="resendCode()">
+              {{ '::CustomerLogin:ResendCode' | abpLocalization }}
+            </button>
+          </div>
+        </form>
+      }
+
+      <div class="text-center mt-4">
+        <a routerLink="/">{{ '::CustomerLogin:BackToSite' | abpLocalization }}</a>
+      </div>
+    </div>
+  </div>
+</div>

@@ -156,6 +156,14 @@ export const APP_ROUTES: Routes = [
     canActivate: [redirectAuthenticatedToHomeGuard],
   },
   {
+    // Sign-up counterpart to '/customer-login' just above — same empty-layout, pre-auth,
+    // redirectAuthenticatedToHomeGuard treatment, for the same reasons.
+    path: 'customer-register',
+    loadComponent: () => import('./customer-register/customer-register.component').then(c => c.CustomerRegisterComponent),
+    data: { layout: eLayoutType.empty },
+    canActivate: [redirectAuthenticatedToHomeGuard],
+  },
+  {
     // Parent shell for the whole Admin Portal — AdminLayoutComponent renders its own sidebar/topbar
     // (registered as `eLayoutType.empty` in route.provider.ts so ABP's own Lepton-X SideMenu layout
     // doesn't *also* wrap these routes — see that file's comment for why this matters). Host-realm
