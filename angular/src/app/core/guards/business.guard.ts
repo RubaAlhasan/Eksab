@@ -31,12 +31,12 @@ export function isBusinessRealm(configState: ConfigStateService): boolean {
 /**
  * Coarse gate for the entire `/business` route subtree — mirrors `adminGuard`'s shape (admin.guard.ts).
  * Redirects a signed-in non-business-realm account (platform admin or Host-realm customer, neither of
- * which resolves to a real tenant) to `/home`, same fallback `adminGuard` uses for a non-admin.
+ * which resolves to a real tenant) to `/customer`, same fallback `adminGuard` uses for a non-admin.
  */
 export const businessRealmGuard: CanActivateFn = () => {
   const configState = inject(ConfigStateService);
   const router = inject(Router);
-  return isBusinessRealm(configState) ? true : router.createUrlTree(['/home']);
+  return isBusinessRealm(configState) ? true : router.createUrlTree(['/customer']);
 };
 
 /**

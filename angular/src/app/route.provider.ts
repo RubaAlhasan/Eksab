@@ -8,12 +8,98 @@ export const APP_ROUTE_PROVIDER = [
 function configureRoutes() {
   const routes = inject(RoutesService);
   routes.add([
+      // Customer app routes — CustomerLayoutComponent (angular/src/app/customer/layout/) renders its
+      // own bottom-nav shell, so these need eLayoutType.empty just like Admin/Business below (otherwise
+      // Lepton-X's stock SideMenu layout would ALSO wrap them, producing double chrome). '/customer/home'
+      // is registered visibly (same generic "Home" link every authenticated user saw at the old bare
+      // '/home' route); the rest are `invisible: true` layout-resolution anchors — none of these routes
+      // carry a `requiredPolicy`, so without `invisible` they'd leak into Lepton-X's stock menu for any
+      // authenticated user on any page still resolving eLayoutType.application (e.g. /account/manage),
+      // same reasoning as '/business/points'/'/business/support-tickets' below.
       {
-        path: '/home',
+        path: '/customer/home',
         name: '::Menu:Home',
         iconClass: 'fas fa-home',
         order: 1,
-        layout: eLayoutType.application,
+        layout: eLayoutType.empty,
+      },
+      {
+        path: '/customer/wallet',
+        name: 'Eksabli::Internal:CustomerWalletLayoutAnchor',
+        invisible: true,
+        layout: eLayoutType.empty,
+      },
+      {
+        path: '/customer/redeem',
+        name: 'Eksabli::Internal:CustomerRedeemLayoutAnchor',
+        invisible: true,
+        layout: eLayoutType.empty,
+      },
+      {
+        path: '/customer/qr',
+        name: 'Eksabli::Internal:CustomerQrLayoutAnchor',
+        invisible: true,
+        layout: eLayoutType.empty,
+      },
+      {
+        path: '/customer/coupons',
+        name: 'Eksabli::Internal:CustomerCouponsLayoutAnchor',
+        invisible: true,
+        layout: eLayoutType.empty,
+      },
+      {
+        path: '/customer/profile',
+        name: 'Eksabli::Internal:CustomerProfileLayoutAnchor',
+        invisible: true,
+        layout: eLayoutType.empty,
+      },
+      // Real bottom-nav tab (Discovery/search+nearby), same "visible, generic link" treatment as
+      // '/customer/home' above.
+      {
+        path: '/customer/search',
+        name: '::Menu:Search',
+        iconClass: 'fas fa-magnifying-glass',
+        order: 2,
+        layout: eLayoutType.empty,
+      },
+      {
+        path: '/customer/store',
+        name: 'Eksabli::Internal:CustomerStoreLayoutAnchor',
+        invisible: true,
+        layout: eLayoutType.empty,
+      },
+      {
+        path: '/customer/favorites',
+        name: 'Eksabli::Internal:CustomerFavoritesLayoutAnchor',
+        invisible: true,
+        layout: eLayoutType.empty,
+      },
+      {
+        path: '/customer/campaigns',
+        name: 'Eksabli::Internal:CustomerCampaignsLayoutAnchor',
+        invisible: true,
+        layout: eLayoutType.empty,
+      },
+      {
+        path: '/customer/referral',
+        name: 'Eksabli::Internal:CustomerReferralLayoutAnchor',
+        invisible: true,
+        layout: eLayoutType.empty,
+      },
+      {
+        path: '/customer/settings',
+        name: 'Eksabli::Internal:CustomerSettingsLayoutAnchor',
+        invisible: true,
+        layout: eLayoutType.empty,
+      },
+      // Real bottom-nav tab (notifications inbox), same "visible, generic link" treatment as
+      // '/customer/home'/'/customer/search' above.
+      {
+        path: '/customer/alerts',
+        name: '::Menu:Alerts',
+        iconClass: 'fas fa-bell',
+        order: 3,
+        layout: eLayoutType.empty,
       },
       // Admin Portal routes use eLayoutType.empty, not .application — AdminLayoutComponent
       // (angular/src/app/admin/layout/) renders its own sidebar/topbar; if these stayed .application,
@@ -201,11 +287,13 @@ function configureRoutes() {
       // only inside BusinessLayoutComponent's own hand-built sidebar (business-layout.component.ts's
       // NAV array), which never reads RoutesService at all. Without `invisible`, a route with no
       // requiredPolicy is exactly the kind Lepton-X's OWN stock menu (used at eLayoutType.application
-      // pages like '/home') renders for literally any authenticated user regardless of realm — which
-      // is how a Host-realm customer ended up seeing "Points Management"/"Support Tickets" links in
-      // their own wallet-view sidebar (confirmed live this session, home.component.ts). '/home' itself
-      // has no requiredPolicy either, but that one's correct as-is: it's meant to show for every
-      // authenticated user, business routes are not.
+      // pages) renders for literally any authenticated user regardless of realm — which is how a
+      // Host-realm customer ended up seeing "Points Management"/"Support Tickets" links in their own
+      // wallet-view sidebar back when the customer app's own '/home' route was still
+      // eLayoutType.application (confirmed live that session, home.component.ts — since replaced by
+      // '/customer/home', eLayoutType.empty, above). '/customer/home' itself has no requiredPolicy
+      // either, but that one's correct as-is: it's meant to show for every authenticated user, business
+      // routes are not.
       {
         path: '/business/points',
         name: '::BusinessPanel:Layout:NavPoints',

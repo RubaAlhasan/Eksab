@@ -1,0 +1,23 @@
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::Wallet:Coupons:Loading' | abpLocalization" />
+} @else if (loadFailed()) {
+  <app-error-state [message]="'::Wallet:Coupons:LoadError' | abpLocalization" (retry)="retry()" />
+} @else if (coupons().length === 0) {
+  <app-empty-state icon="fa-ticket" [title]="'::Wallet:Coupons:Empty' | abpLocalization" />
+} @else {
+  <div class="list-group">
+    @for (coupon of coupons(); track coupon.id) {
+      <div
+        class="list-group-item d-flex justify-content-between align-items-center"
+        [class.eks-clickable]="coupon.status === Status.Pending"
+        (click)="onCouponClick(coupon)"
+      >
+        <div>
+          <div class="fw-semibold">{{ coupon.rewardNameEn }}</div>
+          <div class="text-muted small">{{ coupon.pointsCost }} {{ '::Wallet:PointsSuffix' | abpLocalization }} · {{ coupon.issuedAt | date: 'mediumDate' }}</div>
+        </div>
+        <app-status-badge [label]="statusLabelKey(coupon.status) | abpLocalization" [variant]="statusVariant(coupon.status)" />
+      </div>
+    }
+  </div>
+}

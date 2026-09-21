@@ -1,0 +1,123 @@
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::Wallet:Store:Loading' | abpLocalization" />
+} @else if (loadFailed()) {
+  <app-error-state [message]="'::Wallet:Store:LoadError' | abpLocalization" (retry)="retry()" />
+} @else if (business(); as business) {
+  <div class="card eks-store-header mb-3">
+    <div class="card-body text-center">
+      @if (logoUrl(); as logo) {
+        <img [src]="logo" alt="" class="eks-store-logo mb-2" (error)="logoFailed.set(true)" />
+      } @else {
+        <div class="eks-store-logo eks-store-logo--fallback mb-2">{{ business.name.charAt(0).toUpperCase() }}</div>
+      }
+      <h4 class="mb-1">{{ business.name }}</h4>
+      <p class="text-muted small mb-2">
+        {{ business.categoryNameEn ?? ('::Wallet:Discover:Uncategorized' | abpLocalization) }}
+        · {{ business.branchCount }} {{ '::Wallet:Discover:Branches' | abpLocalization }}
+        @if (business.distanceKm !== null && business.distanceKm !== undefined) {
+          · {{ business.distanceKm | number: '1.1-1' }} {{ '::Wallet:Discover:KmAway' | abpLocalization }}
+        }
+      </p>
+
+      <div class="d-flex gap-2 justify-content-center flex-wrap">
+        <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="isFollowBusy()" (click)="toggleFollow()">
+          <i class="fas" [class.fa-heart]="isFollowing()" [class.fa-regular]="!isFollowing()"></i>
+          {{ (isFollowing() ? '::Wallet:Store:Following' : '::Wallet:Store:Follow') | abpLocalization }}
+        </button>
+
+        @if (isMember()) {
+          <a [routerLink]="['/customer/wallet', business.tenantId]" class="btn btn-primary btn-sm">
+            {{ '::Wallet:Store:ViewMyPoints' | abpLocalization }}
+          </a>
+        } @else if (!showJoinForm()) {
+          <button type="button" class="btn btn-primary btn-sm" (click)="openJoinForm()">
+            {{ '::Wallet:Store:JoinButton' | abpLocalization }}
+          </button>
+        }
+      </div>
+
+      @if (showJoinForm() && !isMember()) {
+        <div class="eks-join-form mt-3">
+          <input
+            type="text"
+            class="form-control form-control-sm mb-2"
+            [placeholder]="'::Wallet:Store:ReferralCodePlaceholder' | abpLocalization"
+            [value]="referralCode()"
+            (input)="onReferralCodeInput($event)"
+          />
+          <div class="d-flex gap-2 justify-content-center">
+            <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="isJoining()" (click)="cancelJoinForm()">
+              {{ '::Wallet:Rewards:CancelButton' | abpLocalization }}
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" [disabled]="isJoining()" (click)="confirmJoin()">
+              {{ '::Wallet:Store:ConfirmJoin' | abpLocalization }}
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="eks-tab-row mb-3">
+    <button type="button" class="eks-tab" [class.active]="activeTab() === 'about'" (click)="selectTab('about')">
+      {{ '::Wallet:Store:AboutTab' | abpLocalization }}
+    </button>
+    <button type="button" class="eks-tab" [class.active]="activeTab() === 'offers'" (click)="selectTab('offers')">
+      {{ '::Wallet:Store:OffersTab' | abpLocalization }}
+    </button>
+    <button type="button" class="eks-tab" [class.active]="activeTab() === 'rewards'" (click)="selectTab('rewards')">
+      {{ '::Wallet:Store:RewardsTab' | abpLocalization }}
+    </button>
+  </div>
+
+  @if (activeTab() === 'about') {
+    <div class="card">
+      <div class="card-body">
+        <p class="mb-2">{{ business.descriptionEn ?? ('::Wallet:Store:NoDescription' | abpLocalization) }}</p>
+        @if (business.website) {
+          <a [href]="business.website" target="_blank" rel="noopener" class="small">{{ business.website }}</a>
+        }
+      </div>
+    </div>
+  } @else if (activeTab() === 'offers') {
+    @if (offers().length === 0) {
+      <p class="text-muted small">{{ '::Wallet:Store:OffersEmpty' | abpLocalization }}</p>
+    } @else {
+      <div class="eks-offer-list">
+        @for (offer of offers(); track offer.id) {
+          <div class="card eks-offer-card">
+            <div class="card-body d-flex align-items-center gap-3">
+              <div class="eks-offer-emoji">{{ campaignTypeEmoji(offer.type) }}</div>
+              <div>
+                <div class="fw-semibold small">{{ offer.nameEn }}</div>
+                <div class="text-muted small">
+                  {{ campaignTypeLabelKey(offer.type) | abpLocalization }}
+                  · {{ '::Wallet:Campaigns:Until' | abpLocalization }} {{ offer.endDate | date: 'mediumDate' }}
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  } @else {
+    @if (previewRewards().length === 0) {
+      <p class="text-muted small">{{ '::Wallet:Store:RewardsEmpty' | abpLocalization }}</p>
+    } @else {
+      <div class="eks-reward-preview-grid mb-2">
+        @for (reward of previewRewards(); track reward.id) {
+          <div class="card eks-reward-preview-card">
+            <div class="card-body text-center">
+              <div class="mb-1">{{ rewardTypeEmoji(reward.type) }}</div>
+              <div class="fw-semibold small">{{ reward.nameEn }}</div>
+              <div class="small">{{ reward.pointsCost }} {{ '::Wallet:PointsSuffix' | abpLocalization }}</div>
+            </div>
+          </div>
+        }
+      </div>
+      <a [routerLink]="['/customer/wallet', business.tenantId, 'rewards']" class="small">
+        {{ '::Wallet:Store:SeeAllRewards' | abpLocalization }}
+      </a>
+    }
+  }
+}

@@ -1,0 +1,65 @@
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::Wallet:Referral:Loading' | abpLocalization" />
+} @else if (wallets().length === 0) {
+  <app-empty-state icon="fa-user-group" [title]="'::Wallet:Referral:NoBusinesses' | abpLocalization" />
+} @else {
+  <div class="mb-3">
+    <label class="form-label small text-muted">{{ '::Wallet:Referral:BusinessLabel' | abpLocalization }}</label>
+    <select class="form-select" (change)="onBusinessChange($event)">
+      @for (wallet of wallets(); track wallet.tenantId) {
+        <option [value]="wallet.tenantId">{{ wallet.businessName }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="card eks-referral-card mb-3">
+    <div class="card-body text-center">
+      @if (isLoadingCode()) {
+        <app-loading-spinner [label]="'::Wallet:Referral:Loading' | abpLocalization" />
+      } @else if (code(); as code) {
+        <p class="text-muted small mb-1">{{ '::Wallet:Referral:YourCode' | abpLocalization }}</p>
+        <div class="eks-referral-code mb-3">{{ code }}</div>
+        <div class="d-flex gap-2 justify-content-center">
+          <button type="button" class="btn btn-outline-secondary btn-sm" (click)="copyCode()">
+            <i class="fas fa-copy"></i> {{ '::Wallet:Referral:CopyCode' | abpLocalization }}
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" (click)="share()">
+            <i class="fas fa-share-nodes"></i> {{ '::Wallet:Referral:ShareCode' | abpLocalization }}
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="eks-stat-row mb-3">
+    <div class="card eks-stat-card">
+      <div class="card-body text-center">
+        <div class="eks-stat-value">{{ completedCount() }}</div>
+        <div class="text-muted small">{{ '::Wallet:Referral:CompletedStat' | abpLocalization }}</div>
+      </div>
+    </div>
+    <div class="card eks-stat-card">
+      <div class="card-body text-center">
+        <div class="eks-stat-value">{{ pendingCount() }}</div>
+        <div class="text-muted small">{{ '::Wallet:Referral:PendingStat' | abpLocalization }}</div>
+      </div>
+    </div>
+  </div>
+
+  <h6 class="mb-2">{{ '::Wallet:Referral:HistoryTitle' | abpLocalization }}</h6>
+  @if (referrals().length === 0) {
+    <p class="text-muted small">{{ '::Wallet:Referral:HistoryEmpty' | abpLocalization }}</p>
+  } @else {
+    <div class="list-group">
+      @for (referral of referrals(); track referral.id) {
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fw-semibold small">{{ businessName(referral) }}</div>
+            <div class="text-muted small">{{ referral.creationTime | date: 'mediumDate' }}</div>
+          </div>
+          <app-status-badge [label]="statusLabelKey(referral.status) | abpLocalization" [variant]="statusVariant(referral.status)" />
+        </div>
+      }
+    </div>
+  }
+}

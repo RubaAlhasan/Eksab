@@ -1,0 +1,86 @@
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { LocalizationPipe } from '@abp/ng.core';
+import { MembershipsService } from '../../proxy/controllers/memberships.service';
+import { WalletService } from '../../proxy/controllers/wallet.service';
+import type { PointsTransactionDto, PointsWalletDto } from '../../proxy/wallets/models';
+import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
+import { isCredit, transactionSourceLabelKey, transactionTypeLabelKey } from '../../shared/utils/transaction-display.util';
+
+/**
+ * "My Points" — a single business's wallet detail. Keyed by `tenantId` (not `membershipId`/`walletId`)
+ * since that's what every downstream endpoint (transaction history, reward catalog, redeem) is actually
+ * keyed by; the wallet itself has no by-id getter so it's filtered from `getMyWallets()`.
+ *
+ * No tier-progress bar: `TiersController` is gated on `Eksabli.Tiers.Default`, a staff-only permission a
+ * customer account never holds, so there's no way to fetch the next tier's threshold from here — same
+ * kind of documented gap as `business-rewards.component.ts`'s missing redemption-rate metric.
+ */
+@Component({
+  selector: 'app-customer-points',
+  templateUrl: './customer-points.component.html',
+  styleUrls: ['./customer-points.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [RouterLink, DatePipe, LocalizationPipe, LoadingSpinnerComponent, EmptyStateComponent, ErrorStateComponent],
+})
+export class CustomerPointsComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  private readonly membershipsService = inject(MembershipsService);
+  private readonly walletService = inject(WalletService);
+
+  // Not a route-param-driven signal/field-initializer snapshot read — Angular's default route reuse
+  // strategy can keep this component instance alive across a same-route, different-param navigation
+  // (same shape as business-customer-details.component.ts's own `route.paramMap.subscribe`), so this is
+  // re-read on every params emission rather than once at construction.
+  protected tenantId = '';
+
+  protected readonly isLoading = signal(true);
+  protected readonly loadFailed = signal(false);
+  protected readonly wallet = signal<PointsWalletDto | null>(null);
+  protected readonly recentActivity = signal<PointsTransactionDto[]>([]);
+
+  protected readonly walletNotFound = computed(() => !this.isLoading() && !this.loadFailed() && !this.wallet());
+
+  protected readonly typeLabelKey = transactionTypeLabelKey;
+  protected readonly sourceLabelKey = transactionSourceLabelKey;
+  protected readonly isCredit = isCredit;
+
+  ngOnInit(): void {
+    this.route.paramMap.subscribe(params => {
+      const tenantId = params.get('tenantId');
+      if (!tenantId) return;
+      this.tenantId = tenantId;
+      this.load(tenantId);
+    });
+  }
+
+  protected retry(): void {
+    if (this.tenantId) this.load(this.tenantId);
+  }
+
+  private load(tenantId: string): void {
+    this.isLoading.set(true);
+    this.loadFailed.set(false);
+
+    this.membershipsService.getMyWallets().subscribe({
+      next: wallets => {
+        this.wallet.set(wallets.find(w => w.tenantId === tenantId) ?? null);
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.isLoading.set(false);
+        this.loadFailed.set(true);
+      },
+    });
+
+    this.walletService
+      .getMyTransactionHistory(tenantId, { maxResultCount: 5, sorting: 'creationTime desc', skipCount: 0 })
+      .subscribe({
+        next: result => this.recentActivity.set(result.items ?? []),
+        error: () => undefined,
+      });
+  }
+}

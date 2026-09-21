@@ -1,0 +1,31 @@
+.eks-balance-banner {
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-lg);
+}
+
+.rewards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.reward-card {
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-md);
+  transition: box-shadow 0.15s;
+
+  &:hover {
+    box-shadow: var(--eks-shadow-sm);
+  }
+
+  &--disabled {
+    opacity: 0.55;
+  }
+
+  &__emoji {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+}

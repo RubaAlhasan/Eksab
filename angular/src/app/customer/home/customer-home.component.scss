@@ -1,0 +1,70 @@
+.customer-home {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.eks-card-flat {
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-lg);
+}
+
+.eks-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.eks-qr-entry {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.15s;
+
+  &:hover {
+    box-shadow: var(--eks-shadow-sm);
+  }
+
+  &__icon {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: var(--eks-radius-md);
+    background: var(--eks-primary-subtle-bg);
+    color: var(--eks-primary-subtle-fg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.125rem;
+  }
+}
+
+.wallet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.wallet-card {
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.15s;
+
+  &:hover {
+    box-shadow: var(--eks-shadow-sm);
+  }
+}
+
+.wallet-balance {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.wallet-balance-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.wallet-balance-label {
+  color: var(--bs-secondary-color, #6c757d);
+}

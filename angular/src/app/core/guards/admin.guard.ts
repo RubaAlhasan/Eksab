@@ -26,10 +26,10 @@ export function isPlatformAdmin(permissionService: PermissionService): boolean {
  * Coarse gate for the entire `/admin` route subtree, on top of (not instead of) each child route's own
  * `permissionGuard` + specific `requiredPolicy`. Redirects a signed-in non-admin (business staff or
  * customer — see `businessRealmGuard` in business.guard.ts for the tenant-realm counterpart, which now
- * has its own real portal) to `/home` rather than showing a 403.
+ * has its own real portal) to `/customer` rather than showing a 403.
  */
 export const adminGuard: CanActivateFn = () => {
   const permissionService = inject(PermissionService);
   const router = inject(Router);
-  return isPlatformAdmin(permissionService) ? true : router.createUrlTree(['/home']);
+  return isPlatformAdmin(permissionService) ? true : router.createUrlTree(['/customer']);
 };

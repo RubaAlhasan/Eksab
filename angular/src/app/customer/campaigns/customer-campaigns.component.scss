@@ -1,0 +1,22 @@
+.eks-campaign-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.eks-campaign-card {
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-md);
+  transition: box-shadow 0.15s;
+
+  &:hover {
+    box-shadow: var(--eks-shadow-sm);
+  }
+}
+
+.eks-campaign-emoji {
+  font-size: 1.75rem;
+  flex-shrink: 0;
+}

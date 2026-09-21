@@ -1,0 +1,43 @@
+<h6 class="mb-2">{{ '::Wallet:Settings:LanguageTitle' | abpLocalization }}</h6>
+<div class="list-group mb-4">
+  @for (lang of languages(); track lang.cultureName) {
+    <button
+      type="button"
+      class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+      (click)="selectLanguage(lang.cultureName)"
+    >
+      {{ lang.displayName }}
+      @if (lang.cultureName === currentLanguage()) {
+        <i class="fas fa-check text-primary"></i>
+      }
+    </button>
+  }
+</div>
+
+<h6 class="mb-2">{{ '::Wallet:Settings:DevicesTitle' | abpLocalization }}</h6>
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::Wallet:Settings:Loading' | abpLocalization" />
+} @else if (devices().length === 0) {
+  <app-empty-state icon="fa-mobile-screen" [title]="'::Wallet:Settings:DevicesEmpty' | abpLocalization" />
+} @else {
+  <div class="list-group">
+    @for (device of devices(); track device.id) {
+      <div class="list-group-item d-flex justify-content-between align-items-center">
+        <div>
+          <div class="fw-semibold small">{{ platformLabelKey(device.platform) | abpLocalization }}</div>
+          @if (device.lastActiveAt) {
+            <div class="text-muted small">{{ '::Wallet:Settings:LastActive' | abpLocalization }}: {{ device.lastActiveAt | date: 'mediumDate' }}</div>
+          }
+        </div>
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-danger"
+          [disabled]="removingIds().has(device.id!)"
+          (click)="removeDevice(device.id!)"
+        >
+          {{ '::Wallet:Settings:RemoveDevice' | abpLocalization }}
+        </button>
+      </div>
+    }
+  </div>
+}

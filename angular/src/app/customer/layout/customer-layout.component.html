@@ -1,0 +1,59 @@
+<div class="eks-customer-shell">
+  @if (showBackButton()) {
+    <header class="eks-customer-topbar">
+      <button
+        type="button"
+        class="btn btn-icon"
+        [attr.aria-label]="'::Wallet:Layout:Back' | abpLocalization"
+        (click)="goBack()"
+      >
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      @if (pageTitleKey()) {
+        <span class="eks-customer-topbar__title">{{ pageTitleKey() | abpLocalization }}</span>
+      }
+    </header>
+  }
+
+  <main class="eks-customer-content">
+    <router-outlet></router-outlet>
+  </main>
+
+  @if (showBottomNav()) {
+    <nav class="eks-customer-bottomnav">
+      <a routerLink="/customer/home" class="eks-customer-bottomnav__link" [class.active]="activeTab() === 'home'">
+        <i class="fas fa-house"></i>
+        <span>{{ '::Wallet:Layout:NavHome' | abpLocalization }}</span>
+      </a>
+      <a
+        routerLink="/customer/search"
+        class="eks-customer-bottomnav__link"
+        [class.active]="activeTab() === 'search'"
+      >
+        <i class="fas fa-magnifying-glass"></i>
+        <span>{{ '::Wallet:Layout:NavSearch' | abpLocalization }}</span>
+      </a>
+      <a
+        routerLink="/customer/alerts"
+        class="eks-customer-bottomnav__link"
+        [class.active]="activeTab() === 'alerts'"
+      >
+        <span class="eks-customer-bottomnav__icon">
+          <i class="fas fa-bell"></i>
+          @if (hub.hasUnread()) {
+            <span class="eks-customer-bottomnav__badge"></span>
+          }
+        </span>
+        <span>{{ '::Wallet:Layout:NavAlerts' | abpLocalization }}</span>
+      </a>
+      <a
+        routerLink="/customer/profile"
+        class="eks-customer-bottomnav__link"
+        [class.active]="activeTab() === 'profile'"
+      >
+        <i class="fas fa-user"></i>
+        <span>{{ '::Wallet:Layout:NavProfile' | abpLocalization }}</span>
+      </a>
+    </nav>
+  }
+</div>

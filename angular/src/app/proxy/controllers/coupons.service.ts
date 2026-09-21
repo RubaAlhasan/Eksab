@@ -18,7 +18,28 @@ export class CouponsService {
       params: { sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
-  
+
+
+  // Hand-added — CouponsController already exposes this (see its own comment: "Polled by the customer
+  // app while a redemption is Pending"), but the generated proxy predates it. Regenerate via
+  // `abp generate-proxy -t ng` to replace this with the real generated version once convenient; the
+  // shape matches every other method in this file exactly, so there's nothing to reconcile.
+  getMyCoupon = (tenantId: string, couponId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, CouponDto>({
+      method: 'GET',
+      url: `/api/app/coupon/${tenantId}/${couponId}`,
+    },
+    { apiName: this.apiName,...config });
+
+
+  // Hand-added — see getMyCoupon's comment above for why.
+  cancelMyCoupon = (tenantId: string, couponId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, CouponDto>({
+      method: 'POST',
+      url: `/api/app/coupon/${tenantId}/${couponId}/cancel`,
+    },
+    { apiName: this.apiName,...config });
+
 
   getMyCoupons = (tenantId?: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, CouponDto[]>({

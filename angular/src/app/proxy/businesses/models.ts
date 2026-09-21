@@ -1,5 +1,5 @@
 import type { TenantApprovalStatus } from '../business-profiles/tenant-approval-status.enum';
-import type { PagedAndSortedResultRequestDto } from '@abp/ng.core';
+import type { PagedAndSortedResultRequestDto, PagedResultRequestDto } from '@abp/ng.core';
 
 export interface AdminTenantDto {
   tenantId?: string;
@@ -23,6 +23,38 @@ export interface AdminTenantDetailStatsDto {
 export interface AdminTenantFilterDto extends PagedAndSortedResultRequestDto {
   approvalStatus?: TenantApprovalStatus | null;
   filterText?: string | null;
+}
+
+// Hand-added — CustomerBusinessController (src/Eksabli.HttpApi/Controllers/CustomerBusinessController.cs)
+// already exists on the backend (customer-facing business directory: search/nearby/store-details/batch
+// lookup, Approved tenants only) but its proxy was never generated. Regenerate via
+// `abp generate-proxy -t ng` to replace these with the real generated versions once convenient; shapes
+// below match the C# DTOs (Eksabli.Businesses namespace) field-for-field.
+export interface CustomerBusinessDto {
+  tenantId: string;
+  name: string;
+  categoryId?: string | null;
+  categoryNameAr?: string | null;
+  categoryNameEn?: string | null;
+  descriptionAr?: string | null;
+  descriptionEn?: string | null;
+  website?: string | null;
+  businessProfileId: string;
+  hasLogo: boolean;
+  logoBlobName?: string | null;
+  branchCount: number;
+  distanceKm?: number | null;
+}
+
+export interface CustomerBusinessFilterDto extends PagedResultRequestDto {
+  filterText?: string | null;
+  categoryId?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
+export interface CustomerBusinessLookupDto {
+  tenantIds: string[];
 }
 
 export interface BusinessRegistrationResultDto {

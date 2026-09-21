@@ -1,0 +1,40 @@
+@if (reward(); as reward) {
+  <div class="card eks-reward-detail mb-3">
+    <div class="card-body">
+      <div class="reward-detail__emoji">{{ rewardTypeEmoji(reward.type) }}</div>
+      <h4 class="mb-2">{{ reward.nameEn }}</h4>
+      <div class="fw-bold fs-4 mb-3">{{ reward.pointsCost }} {{ '::Wallet:PointsSuffix' | abpLocalization }}</div>
+
+      @if (balance() !== null) {
+        <p class="text-muted small mb-3">
+          {{ '::Wallet:Rewards:YourBalance' | abpLocalization }}: {{ balance() }} {{ '::Wallet:PointsSuffix' | abpLocalization }}
+        </p>
+      }
+
+      @if (reward.validTo) {
+        <p class="text-muted small mb-3">{{ '::Wallet:Rewards:ValidUntil' | abpLocalization }}: {{ reward.validTo | date: 'mediumDate' }}</p>
+      }
+
+      @if (!confirmOpen()) {
+        @if (!canAfford()) {
+          <p class="text-danger small mb-2">{{ '::Wallet:Rewards:InsufficientPoints' | abpLocalization }}</p>
+        }
+        <button type="button" class="btn btn-primary w-100" [disabled]="!canAfford() || isRedeeming()" (click)="openConfirm()">
+          {{ '::Wallet:Rewards:RedeemButton' | abpLocalization }}
+        </button>
+      } @else {
+        <div class="eks-confirm-panel">
+          <p class="mb-3">{{ '::Wallet:Rewards:ConfirmMessage' | abpLocalization }}</p>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary flex-fill" [disabled]="isRedeeming()" (click)="cancelConfirm()">
+              {{ '::Wallet:Rewards:CancelButton' | abpLocalization }}
+            </button>
+            <button type="button" class="btn btn-primary flex-fill" [disabled]="isRedeeming()" (click)="confirmRedeem()">
+              {{ '::Wallet:Rewards:ConfirmButton' | abpLocalization }}
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}

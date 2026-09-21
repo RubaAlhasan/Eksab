@@ -1,0 +1,113 @@
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { LocalizationPipe } from '@abp/ng.core';
+import { UserNotificationsService } from '../../proxy/controllers/user-notifications.service';
+import type { UserNotificationDto } from '../../proxy/user-notifications/models';
+import { UserNotificationType } from '../../proxy/user-notifications/user-notification-type.enum';
+import { NotificationHubService } from '../../shared/services/notification-hub.service';
+import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
+import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
+
+const PAGE_SIZE = 15;
+type FilterTab = 'all' | 'unread';
+
+/**
+ * "Alerts" tab — a full, paged inbox (`UserNotificationsService.getList`), distinct from
+ * `NotificationHubService.recentNotifications` (which is a capped-at-30, dropdown-shaped cache for the
+ * staff-portal bell icon this app doesn't use here). Mark-as-read/mark-all-as-read still go through
+ * `NotificationHubService` so the bottom-nav unread badge (also backed by that same service, see
+ * `CustomerLayoutComponent`) stays in sync with what happens on this page — this page additionally
+ * mirrors the change into its own locally-fetched page of rows, which the hub's own cache doesn't cover.
+ */
+@Component({
+  selector: 'app-customer-notifications',
+  templateUrl: './customer-notifications.component.html',
+  styleUrls: ['./customer-notifications.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [DatePipe, LocalizationPipe, LoadingSpinnerComponent, EmptyStateComponent, ErrorStateComponent, PaginationComponent],
+})
+export class CustomerNotificationsComponent implements OnInit {
+  private readonly userNotificationsService = inject(UserNotificationsService);
+  protected readonly hub = inject(NotificationHubService);
+
+  protected readonly Type = UserNotificationType;
+  protected readonly filter = signal<FilterTab>('all');
+  protected readonly notifications = signal<UserNotificationDto[]>([]);
+  protected readonly totalCount = signal(0);
+  protected readonly isLoading = signal(true);
+  protected readonly loadFailed = signal(false);
+  protected readonly pageIndex = signal(0);
+  protected readonly totalPages = computed(() => Math.max(1, Math.ceil(this.totalCount() / PAGE_SIZE)));
+
+  ngOnInit(): void {
+    this.hub.connect();
+    this.load();
+  }
+
+  protected retry(): void {
+    this.load();
+  }
+
+  protected selectFilter(filter: FilterTab): void {
+    if (this.filter() === filter) return;
+    this.filter.set(filter);
+    this.pageIndex.set(0);
+    this.load();
+  }
+
+  protected goToPage(index: number): void {
+    if (index < 0 || index >= this.totalPages()) return;
+    this.pageIndex.set(index);
+    this.load();
+  }
+
+  protected onItemClick(item: UserNotificationDto): void {
+    if (item.isRead) return;
+    this.hub.markAsRead(item.id!);
+    this.notifications.update(list =>
+      list.map(n => (n.id === item.id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n)),
+    );
+  }
+
+  protected markAllAsRead(): void {
+    this.hub.markAllAsRead();
+    this.notifications.update(list => list.map(n => ({ ...n, isRead: true, readAt: new Date().toISOString() })));
+  }
+
+  protected iconFor(type: UserNotificationType): string {
+    switch (type) {
+      case UserNotificationType.Success:
+        return 'fa-circle-check text-success';
+      case UserNotificationType.Warning:
+        return 'fa-triangle-exclamation text-warning';
+      case UserNotificationType.Error:
+        return 'fa-circle-exclamation text-danger';
+      default:
+        return 'fa-circle-info text-info';
+    }
+  }
+
+  private load(): void {
+    this.isLoading.set(true);
+    this.loadFailed.set(false);
+    this.userNotificationsService
+      .getList({
+        isRead: this.filter() === 'unread' ? false : null,
+        skipCount: this.pageIndex() * PAGE_SIZE,
+        maxResultCount: PAGE_SIZE,
+      })
+      .subscribe({
+        next: result => {
+          this.notifications.set(result.items ?? []);
+          this.totalCount.set(result.totalCount ?? 0);
+          this.isLoading.set(false);
+        },
+        error: () => {
+          this.isLoading.set(false);
+          this.loadFailed.set(true);
+        },
+      });
+  }
+}

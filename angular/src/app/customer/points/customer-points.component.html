@@ -1,0 +1,72 @@
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::Wallet:Points:Loading' | abpLocalization" />
+} @else if (loadFailed()) {
+  <app-error-state [message]="'::Wallet:Points:LoadError' | abpLocalization" (retry)="retry()" />
+} @else if (walletNotFound()) {
+  <app-empty-state icon="fa-triangle-exclamation" [title]="'::Wallet:Points:NotFound' | abpLocalization">
+    <a routerLink="/customer/home" class="btn btn-sm btn-outline-primary">{{ '::Wallet:Layout:NavHome' | abpLocalization }}</a>
+  </app-empty-state>
+} @else {
+  <div class="card eks-points-card mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <h5 class="mb-0">{{ wallet()!.businessName ?? ('::Wallet:UnknownBusiness' | abpLocalization) }}</h5>
+        @if (wallet()!.currentTierName) {
+          <span class="badge text-bg-secondary">{{ wallet()!.currentTierName }}</span>
+        }
+      </div>
+      <div class="wallet-balance mb-3">
+        <span class="wallet-balance-value">{{ wallet()!.balance }}</span>
+        <span class="wallet-balance-label">{{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
+      </div>
+      <div class="d-flex gap-4 text-muted small">
+        <span>{{ '::Wallet:Points:LifetimeEarned' | abpLocalization }}: {{ wallet()!.lifetimeEarned }}</span>
+        <span>{{ '::Wallet:Points:LifetimeRedeemed' | abpLocalization }}: {{ wallet()!.lifetimeRedeemed }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="eks-quicklinks mb-3">
+    <a [routerLink]="['/customer/wallet', tenantId, 'rewards']" class="card eks-quicklink">
+      <div class="card-body text-center">
+        <i class="fas fa-gift mb-2"></i>
+        <div class="fw-semibold small">{{ '::Wallet:Points:RewardsLink' | abpLocalization }}</div>
+      </div>
+    </a>
+    <a [routerLink]="['/customer/wallet', tenantId, 'transactions']" class="card eks-quicklink">
+      <div class="card-body text-center">
+        <i class="fas fa-clock-rotate-left mb-2"></i>
+        <div class="fw-semibold small">{{ '::Wallet:Points:HistoryLink' | abpLocalization }}</div>
+      </div>
+    </a>
+  </div>
+
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h6 class="mb-0">{{ '::Wallet:Points:RecentActivity' | abpLocalization }}</h6>
+    @if (recentActivity().length > 0) {
+      <a [routerLink]="['/customer/wallet', tenantId, 'transactions']" class="small">
+        {{ '::Wallet:Points:SeeAll' | abpLocalization }}
+      </a>
+    }
+  </div>
+
+  @if (recentActivity().length === 0) {
+    <p class="text-muted small">{{ '::Wallet:Points:NoActivity' | abpLocalization }}</p>
+  } @else {
+    <div class="list-group">
+      @for (txn of recentActivity(); track txn.id) {
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fw-semibold small">{{ typeLabelKey(txn.type) | abpLocalization }}</div>
+            <div class="text-muted small">
+              {{ sourceLabelKey(txn.source) | abpLocalization }} · {{ txn.creationTime | date: 'mediumDate' }}
+            </div>
+          </div>
+          <span class="fw-bold" [class.text-success]="isCredit(txn.points)" [class.text-danger]="!isCredit(txn.points)">
+            {{ txn.points! > 0 ? '+' : '' }}{{ txn.points }}
+          </span>
+        </div>
+      }
+    </div>
+  }
+}

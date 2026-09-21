@@ -1,0 +1,24 @@
+.eks-profile-card {
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-lg);
+}
+
+.eks-edit-link {
+  position: absolute;
+  top: 0.75rem;
+  inset-inline-end: 0.75rem;
+  color: var(--eks-text-muted);
+}
+
+.eks-profile-avatar {
+  width: 4rem;
+  height: 4rem;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: var(--eks-primary-subtle-bg);
+  color: var(--eks-primary-subtle-fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}

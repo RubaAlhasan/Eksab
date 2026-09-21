@@ -1,0 +1,59 @@
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::Wallet:Redeem:Loading' | abpLocalization" />
+} @else if (loadFailed()) {
+  <app-error-state [message]="'::Wallet:Redeem:LoadError' | abpLocalization" (retry)="retry()" />
+} @else if (coupon(); as coupon) {
+  <div class="card eks-redeem-card">
+    <div class="card-body text-center">
+      @switch (coupon.status) {
+        @case (Status.Pending) {
+          <h5 class="mb-3">{{ '::Wallet:Redeem:Title' | abpLocalization }}</h5>
+          <p class="text-muted small mb-3">{{ '::Wallet:Redeem:Instructions' | abpLocalization }}</p>
+
+          <app-qr-code [value]="coupon.code ?? ''" [size]="200" />
+
+          <div class="eks-redeem-code my-3">{{ formatCode(coupon.code) }}</div>
+
+          @if (pollTimedOut()) {
+            <p class="text-warning small mb-3">{{ '::Wallet:Redeem:TimedOut' | abpLocalization }}</p>
+          } @else if (countdownLabel(); as label) {
+            <p class="text-muted small mb-3">{{ '::Wallet:Redeem:TimeLeft' | abpLocalization }}: {{ label }}</p>
+          }
+
+          @if (!showCancelConfirm()) {
+            <button type="button" class="btn btn-outline-danger btn-sm" (click)="beginCancel()">
+              {{ '::Wallet:Redeem:CancelButton' | abpLocalization }}
+            </button>
+          } @else {
+            <div class="d-flex gap-2 justify-content-center">
+              <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="isCancelling()" (click)="dismissCancel()">
+                {{ '::Wallet:Rewards:CancelButton' | abpLocalization }}
+              </button>
+              <button type="button" class="btn btn-danger btn-sm" [disabled]="isCancelling()" (click)="confirmCancel()">
+                {{ '::Wallet:Redeem:CancelConfirm' | abpLocalization }}
+              </button>
+            </div>
+          }
+        }
+        @case (Status.Redeemed) {
+          <div class="eks-redeem-icon text-success mb-3"><i class="fas fa-circle-check"></i></div>
+          <h5 class="mb-3">{{ '::Wallet:Redeem:StatusRedeemed' | abpLocalization }}</h5>
+          <a routerLink="/customer/home" class="btn btn-primary">{{ '::Wallet:Redeem:BackToCoupons' | abpLocalization }}</a>
+        }
+        @case (Status.Cancelled) {
+          <div class="eks-redeem-icon text-muted mb-3"><i class="fas fa-circle-xmark"></i></div>
+          <h5 class="mb-2">{{ '::Wallet:Redeem:StatusCancelled' | abpLocalization }}</h5>
+          @if (coupon.rejectionReason) {
+            <p class="text-muted small mb-3">{{ coupon.rejectionReason }}</p>
+          }
+          <a routerLink="/customer/coupons" class="btn btn-outline-primary">{{ '::Wallet:Redeem:BackToCoupons' | abpLocalization }}</a>
+        }
+        @default {
+          <div class="eks-redeem-icon text-muted mb-3"><i class="fas fa-clock"></i></div>
+          <h5 class="mb-3">{{ '::Wallet:Redeem:StatusExpired' | abpLocalization }}</h5>
+          <a routerLink="/customer/coupons" class="btn btn-outline-primary">{{ '::Wallet:Redeem:BackToCoupons' | abpLocalization }}</a>
+        }
+      }
+    </div>
+  </div>
+}

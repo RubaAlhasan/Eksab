@@ -1,0 +1,27 @@
+.eks-business-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.eks-business-card {
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-md);
+}
+
+.eks-business-logo {
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--eks-radius-md);
+  object-fit: cover;
+  flex-shrink: 0;
+
+  &--fallback {
+    background: var(--eks-primary-subtle-bg);
+    color: var(--eks-primary-subtle-fg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+}

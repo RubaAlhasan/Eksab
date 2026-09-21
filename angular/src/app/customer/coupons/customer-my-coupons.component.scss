@@ -1,0 +1,7 @@
+.eks-clickable {
+  cursor: pointer;
+
+  &:hover {
+    background: var(--eks-surface-2);
+  }
+}

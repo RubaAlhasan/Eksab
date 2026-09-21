@@ -36,6 +36,21 @@ export interface CreateUpdateCampaignTargetRuleDto {
   parametersJson?: string | null;
 }
 
+// Hand-added — CustomerCampaignController (src/Eksabli.HttpApi/Controllers/CustomerCampaignController.cs)
+// already exists on the backend (customer-safe campaign feed — excludes RulesJson/TargetRules) but its
+// proxy was never generated. Regenerate via `abp generate-proxy -t ng` to replace with the real generated
+// version once convenient; shape matches CustomerCampaignDto (Eksabli.Campaigns namespace) field-for-field.
+export interface CustomerCampaignDto {
+  id: string;
+  tenantId: string;
+  businessName: string;
+  nameAr: string;
+  nameEn: string;
+  type: CampaignType;
+  startDate: string;
+  endDate: string;
+}
+
 export interface TargetSegmentPreviewDto {
   matchedMembershipCount?: number;
 }

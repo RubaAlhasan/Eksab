@@ -100,13 +100,19 @@ export class NotificationHubService {
     this.connectionState.set('disconnected');
   }
 
+  // Persists unconditionally — `id` isn't guaranteed to be in `recentNotifications` (that cache caps at
+  // MAX_KEPT_ITEMS and is only what the bell dropdown ever shows; the customer app's own full paged
+  // inbox, CustomerNotificationsComponent, can mark an older item read that never made this cache). Only
+  // the *cache/badge* update is conditional on the item actually being here.
   markAsRead(id: string): void {
     const item = this.recentNotifications().find((n) => n.id === id);
-    if (!item || item.isRead) {
+    if (item?.isRead) {
       return;
     }
 
-    this.recentNotifications.update((items) => items.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    if (item) {
+      this.recentNotifications.update((items) => items.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    }
     this.unreadCount.update((count) => Math.max(0, count - 1));
 
     this.userNotificationsService.markAsRead(id).subscribe();

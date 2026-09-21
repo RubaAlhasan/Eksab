@@ -27,7 +27,7 @@ const redirectAuthenticatedToHomeGuard: CanActivateFn = () => {
   if (!authService.isAuthenticated) return true;
   if (isPlatformAdmin(permissionService)) return router.createUrlTree(['/admin']);
   if (isBusinessRealm(configState)) return router.createUrlTree(['/business']);
-  return router.createUrlTree(['/home']);
+  return router.createUrlTree(['/customer']);
 };
 
 export const APP_ROUTES: Routes = [
@@ -39,9 +39,108 @@ export const APP_ROUTES: Routes = [
     canActivate: [redirectAuthenticatedToHomeGuard],
   },
   {
-    path: 'home',
-    loadComponent: () => import('./home/home.component').then(c => c.HomeComponent),
+    // Parent shell for the whole Customer app — CustomerLayoutComponent renders its own bottom-nav
+    // shell (see route.provider.ts's '/customer/*' entries for why these need eLayoutType.empty, same
+    // reasoning as Admin/Business below). Host-realm customers only in practice — a business-staff or
+    // platform-admin account isn't itself blocked from typing '/customer' (no dedicated realm guard
+    // exists here, same pre-existing gap the old bare '/home' route had), just never routed here by
+    // redirectAuthenticatedToHomeGuard above.
+    path: 'customer',
+    loadComponent: () => import('./customer/layout/customer-layout.component').then(c => c.CustomerLayoutComponent),
     canActivate: [authGuard],
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'home',
+      },
+      {
+        path: 'home',
+        loadComponent: () => import('./customer/home/customer-home.component').then(c => c.CustomerHomeComponent),
+      },
+      {
+        path: 'wallet/:tenantId',
+        loadComponent: () => import('./customer/points/customer-points.component').then(c => c.CustomerPointsComponent),
+        data: { titleKey: '::Wallet:Points:Title' },
+      },
+      {
+        path: 'wallet/:tenantId/transactions',
+        loadComponent: () =>
+          import('./customer/transactions/customer-transaction-history.component').then(
+            c => c.CustomerTransactionHistoryComponent,
+          ),
+        data: { titleKey: '::Wallet:Transactions:Title' },
+      },
+      {
+        path: 'wallet/:tenantId/rewards',
+        loadComponent: () =>
+          import('./customer/rewards/customer-rewards-catalog.component').then(c => c.CustomerRewardsCatalogComponent),
+        data: { titleKey: '::Wallet:Rewards:Title' },
+      },
+      {
+        path: 'wallet/:tenantId/rewards/:rewardId',
+        loadComponent: () =>
+          import('./customer/rewards/customer-reward-details.component').then(c => c.CustomerRewardDetailsComponent),
+        data: { titleKey: '::Wallet:Rewards:DetailsTitle' },
+      },
+      {
+        path: 'redeem/:tenantId/:couponId',
+        loadComponent: () => import('./customer/redeem/customer-redeem.component').then(c => c.CustomerRedeemComponent),
+        data: { titleKey: '::Wallet:Redeem:Title' },
+      },
+      {
+        path: 'qr',
+        loadComponent: () => import('./customer/qr/customer-wallet-qr.component').then(c => c.CustomerWalletQrComponent),
+        data: { titleKey: '::Wallet:Qr:Title' },
+      },
+      {
+        path: 'coupons',
+        loadComponent: () => import('./customer/coupons/customer-my-coupons.component').then(c => c.CustomerMyCouponsComponent),
+        data: { titleKey: '::Wallet:Coupons:Title' },
+      },
+      {
+        path: 'search',
+        loadComponent: () => import('./customer/discover/customer-discover.component').then(c => c.CustomerDiscoverComponent),
+      },
+      {
+        path: 'store/:tenantId',
+        loadComponent: () => import('./customer/store/customer-store-details.component').then(c => c.CustomerStoreDetailsComponent),
+      },
+      {
+        path: 'favorites',
+        loadComponent: () => import('./customer/favorites/customer-favorites.component').then(c => c.CustomerFavoritesComponent),
+        data: { titleKey: '::Wallet:Favorites:Title' },
+      },
+      {
+        path: 'campaigns',
+        loadComponent: () => import('./customer/campaigns/customer-campaigns.component').then(c => c.CustomerCampaignsComponent),
+        data: { titleKey: '::Wallet:Campaigns:Title' },
+      },
+      {
+        path: 'referral',
+        loadComponent: () => import('./customer/referral/customer-referral.component').then(c => c.CustomerReferralComponent),
+        data: { titleKey: '::Wallet:Referral:Title' },
+      },
+      {
+        path: 'alerts',
+        loadComponent: () =>
+          import('./customer/notifications/customer-notifications.component').then(c => c.CustomerNotificationsComponent),
+      },
+      {
+        path: 'settings',
+        loadComponent: () => import('./customer/settings/customer-settings.component').then(c => c.CustomerSettingsComponent),
+        data: { titleKey: '::Wallet:Settings:Title' },
+      },
+      {
+        path: 'profile',
+        loadComponent: () => import('./customer/profile/customer-profile.component').then(c => c.CustomerProfileComponent),
+      },
+      {
+        path: 'profile/edit',
+        loadComponent: () => import('./customer/profile/customer-edit-profile.component').then(c => c.CustomerEditProfileComponent),
+        data: { titleKey: '::Wallet:Profile:EditTitle' },
+      },
+    ],
   },
   {
     // Phone + OTP web login for a Host-realm customer (member) — see customer-login.component.ts's

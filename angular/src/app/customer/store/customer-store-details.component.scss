@@ -1,0 +1,74 @@
+.eks-store-header {
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-lg);
+}
+
+.eks-store-logo {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: var(--eks-radius-md);
+  object-fit: cover;
+
+  &--fallback {
+    margin-inline: auto;
+    background: var(--eks-primary-subtle-bg);
+    color: var(--eks-primary-subtle-fg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+}
+
+.eks-join-form {
+  max-width: 320px;
+  margin-inline: auto;
+}
+
+.eks-tab-row {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--eks-border);
+}
+
+.eks-tab {
+  padding: 0.5rem 0.25rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-weight: 600;
+  color: var(--eks-text-muted);
+
+  &.active {
+    color: var(--eks-primary);
+    border-bottom-color: var(--eks-primary);
+  }
+}
+
+.eks-offer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.eks-offer-card {
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-md);
+}
+
+.eks-offer-emoji {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.eks-reward-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.625rem;
+}
+
+.eks-reward-preview-card {
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-md);
+}

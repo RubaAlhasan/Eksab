@@ -119,7 +119,7 @@ export class CustomerLoginComponent {
         // for a staff account that happens to hit this page).
         this.configState.refreshAppState().subscribe(() => {
           this.isSubmitting.set(false);
-          this.router.navigateByUrl('/home');
+          this.router.navigateByUrl('/customer');
         });
       })
       .catch((err: unknown) => {

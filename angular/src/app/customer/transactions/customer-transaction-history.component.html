@@ -1,0 +1,28 @@
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::Wallet:Transactions:Loading' | abpLocalization" />
+} @else if (loadFailed()) {
+  <app-error-state [message]="'::Wallet:Transactions:LoadError' | abpLocalization" (retry)="retry()" />
+} @else if (transactions().length === 0) {
+  <app-empty-state icon="fa-receipt" [title]="'::Wallet:Transactions:Empty' | abpLocalization" />
+} @else {
+  <div class="list-group mb-3">
+    @for (txn of transactions(); track txn.id) {
+      <div class="list-group-item d-flex justify-content-between align-items-center">
+        <div>
+          <div class="fw-semibold small">{{ typeLabelKey(txn.type) | abpLocalization }}</div>
+          <div class="text-muted small">
+            {{ sourceLabelKey(txn.source) | abpLocalization }} · {{ txn.creationTime | date: 'medium' }}
+          </div>
+          @if (txn.reason) {
+            <div class="text-muted small fst-italic">{{ txn.reason }}</div>
+          }
+        </div>
+        <span class="fw-bold" [class.text-success]="isCredit(txn.points)" [class.text-danger]="!isCredit(txn.points)">
+          {{ txn.points! > 0 ? '+' : '' }}{{ txn.points }}
+        </span>
+      </div>
+    }
+  </div>
+
+  <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)" />
+}
