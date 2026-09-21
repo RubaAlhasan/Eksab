@@ -1,62 +1,142 @@
-<div class="customer-home">
-  <div class="card eks-card-flat mb-4">
-    <div class="card-body">
-      <h3 class="mb-1">{{ '::Wallet:Greeting' | abpLocalization: greetingName() }}</h3>
-      <p class="text-muted mb-0">{{ '::Wallet:Subtitle' | abpLocalization }}</p>
-    </div>
+<header class="eks-home-header">
+  <a routerLink="/customer/profile" class="eks-home-avatar" aria-hidden="true">
+    <i class="fas fa-user"></i>
+  </a>
+  <div class="eks-home-header__text">
+    <p class="text-muted small mb-0">{{ greetingKey | abpLocalization }}</p>
+    <p class="fw-bold mb-0">{{ greetingName() }}</p>
   </div>
+  <a
+    routerLink="/customer/alerts"
+    class="btn btn-icon eks-home-bell"
+    [attr.aria-label]="'::Wallet:Home:Notifications' | abpLocalization"
+  >
+    <i class="fas fa-bell"></i>
+    @if (hub.hasUnread()) {
+      <span class="eks-home-bell__dot"></span>
+    }
+  </a>
+</header>
 
-  <div class="eks-quick-actions mb-4">
-    <a routerLink="/customer/qr" class="card eks-card-flat eks-qr-entry">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div class="eks-qr-entry__icon">
-          <i class="fas fa-qrcode"></i>
-        </div>
-        <div class="flex-grow-1">
-          <div class="fw-semibold">{{ '::Wallet:Home:ShowQr' | abpLocalization }}</div>
-          <div class="text-muted small">{{ '::Wallet:Qr:Instructions' | abpLocalization }}</div>
-        </div>
-        <i class="fas fa-chevron-right text-muted"></i>
-      </div>
-    </a>
-    <a routerLink="/customer/campaigns" class="card eks-card-flat eks-qr-entry">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div class="eks-qr-entry__icon">
-          <i class="fas fa-bullhorn"></i>
-        </div>
-        <div class="flex-grow-1">
-          <div class="fw-semibold">{{ '::Wallet:Home:ActiveCampaigns' | abpLocalization }}</div>
-          <div class="text-muted small">{{ '::Wallet:Home:ActiveCampaignsHint' | abpLocalization }}</div>
-        </div>
-        <i class="fas fa-chevron-right text-muted"></i>
-      </div>
-    </a>
-  </div>
-
-  @if (isLoading()) {
-    <app-loading-spinner [label]="'::Wallet:Loading' | abpLocalization" />
-  } @else if (loadFailed()) {
-    <app-error-state [message]="'::Wallet:Home:LoadError' | abpLocalization" (retry)="retry()" />
-  } @else if (wallets().length === 0) {
-    <app-empty-state icon="fa-wallet" [title]="'::Wallet:NoBusinesses' | abpLocalization" />
-  } @else {
-    <div class="wallet-grid">
-      @for (wallet of wallets(); track wallet.id) {
-        <a [routerLink]="['/customer/wallet', wallet.tenantId]" class="card wallet-card">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-              <h5 class="mb-0">{{ wallet.businessName ?? ('::Wallet:UnknownBusiness' | abpLocalization) }}</h5>
-              @if (wallet.currentTierName) {
-                <span class="badge text-bg-secondary">{{ wallet.currentTierName }}</span>
-              }
-            </div>
-            <div class="wallet-balance">
-              <span class="wallet-balance-value">{{ wallet.balance }}</span>
-              <span class="wallet-balance-label">{{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
-            </div>
-          </div>
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::Wallet:Loading' | abpLocalization" />
+} @else if (loadFailed()) {
+  <app-error-state [message]="'::Wallet:Home:LoadError' | abpLocalization" (retry)="retry()" />
+} @else {
+  <div class="eks-home-sections">
+    @if (wallets().length === 0) {
+      <app-empty-state icon="fa-wallet" [title]="'::Wallet:NoBusinesses' | abpLocalization">
+        <a routerLink="/customer/search" class="btn btn-sm btn-outline-primary">
+          {{ '::Wallet:Favorites:Discover' | abpLocalization }}
         </a>
-      }
-    </div>
-  }
-</div>
+      </app-empty-state>
+    } @else {
+      <section>
+        <h2 class="eks-home-section__title">{{ '::Wallet:Home:MyBusinesses' | abpLocalization }}</h2>
+        <div class="eks-home-carousel">
+          @for (wallet of wallets(); track wallet.id) {
+            <a [routerLink]="['/customer/wallet', wallet.tenantId]" class="card eks-wallet-card flex-shrink-0">
+              <div class="card-body">
+                <div class="eks-business-logo eks-business-logo--fallback eks-wallet-card__logo">
+                  {{ (wallet.businessName ?? '?').charAt(0).toUpperCase() }}
+                </div>
+                <p class="fw-bold text-truncate mb-1">
+                  {{ wallet.businessName ?? ('::Wallet:UnknownBusiness' | abpLocalization) }}
+                </p>
+                @if (wallet.currentTierName) {
+                  <span class="badge text-bg-secondary mb-2">{{ wallet.currentTierName }}</span>
+                }
+                <div class="eks-wallet-card__balance">
+                  <span class="eks-wallet-card__balance-value">{{ wallet.balance | number }}</span>
+                  <span class="text-muted small">{{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
+                </div>
+              </div>
+            </a>
+          }
+        </div>
+      </section>
+    }
+
+    @if (campaignPreview().length > 0) {
+      <section>
+        <div class="eks-home-section__header">
+          <h2 class="eks-home-section__title">{{ '::Wallet:Home:ActiveCampaigns' | abpLocalization }}</h2>
+          <a routerLink="/customer/campaigns" class="eks-home-section__seeall">
+            {{ '::Wallet:Points:SeeAll' | abpLocalization }}
+          </a>
+        </div>
+        <div class="eks-home-carousel">
+          @for (campaign of campaignPreview(); track campaign.id) {
+            <a [routerLink]="['/customer/store', campaign.tenantId]" class="card eks-campaign-banner flex-shrink-0">
+              <div class="card-body">
+                <p class="eks-campaign-banner__business text-truncate mb-1">{{ campaign.businessName }}</p>
+                <p class="fw-bold text-truncate mb-1">{{ campaignTypeEmoji(campaign.type) }} {{ campaign.nameEn }}</p>
+                <p class="eks-campaign-banner__meta mb-0">
+                  {{ campaignTypeLabelKey(campaign.type) | abpLocalization }}
+                  · {{ '::Wallet:Campaigns:Until' | abpLocalization }} {{ campaign.endDate | date: 'mediumDate' }}
+                </p>
+              </div>
+            </a>
+          }
+        </div>
+      </section>
+    }
+
+    <section class="eks-home-quickactions">
+      <a routerLink="/customer/qr" class="card eks-home-quickaction">
+        <div class="card-body text-center">
+          <div class="eks-home-quickaction__icon">
+            <i class="fas fa-qrcode"></i>
+          </div>
+          <span class="small fw-semibold">{{ '::Wallet:Home:ShowQr' | abpLocalization }}</span>
+        </div>
+      </a>
+      <a routerLink="/customer/coupons" class="card eks-home-quickaction">
+        <div class="card-body text-center">
+          <div class="eks-home-quickaction__icon eks-home-quickaction__icon--alt">
+            <i class="fas fa-ticket"></i>
+          </div>
+          <span class="small fw-semibold">{{ '::Wallet:Profile:MyCoupons' | abpLocalization }}</span>
+        </div>
+      </a>
+    </section>
+
+    @if (discoverBusinesses().length > 0) {
+      <section>
+        <div class="eks-home-section__header">
+          <h2 class="eks-home-section__title">{{ '::Wallet:Home:DiscoverNearby' | abpLocalization }}</h2>
+          <a routerLink="/customer/search" class="eks-home-section__seeall">
+            {{ '::Wallet:Points:SeeAll' | abpLocalization }}
+          </a>
+        </div>
+        <div class="eks-home-discover-grid">
+          @for (business of discoverBusinesses(); track business.tenantId) {
+            <a [routerLink]="['/customer/store', business.tenantId]" class="card eks-discover-card">
+              <div class="card-body">
+                @if (logoUrl(business); as logo) {
+                  <img
+                    [src]="logo"
+                    alt=""
+                    class="eks-business-logo eks-discover-card__logo"
+                    (error)="markLogoFailed(business.tenantId)"
+                  />
+                } @else {
+                  <div class="eks-business-logo eks-business-logo--fallback eks-discover-card__logo">
+                    {{ business.name.charAt(0).toUpperCase() }}
+                  </div>
+                }
+                <p class="fw-semibold text-truncate mb-1">{{ business.name }}</p>
+                <p class="text-muted small mb-0 text-truncate">
+                  {{ business.categoryNameEn ?? ('::Wallet:Discover:Uncategorized' | abpLocalization) }}
+                  @if (business.distanceKm !== null && business.distanceKm !== undefined) {
+                    · {{ business.distanceKm | number: '1.1-1' }} {{ '::Wallet:Discover:KmAway' | abpLocalization }}
+                  }
+                </p>
+              </div>
+            </a>
+          }
+        </div>
+      </section>
+    }
+  </div>
+}

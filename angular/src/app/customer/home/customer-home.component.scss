@@ -1,23 +1,166 @@
-.customer-home {
-  max-width: 720px;
-  margin: 0 auto;
+.eks-home-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
 }
 
-.eks-card-flat {
+.eks-home-avatar {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: var(--eks-primary-subtle-bg);
+  color: var(--eks-primary-subtle-fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
+}
+
+.eks-home-header__text {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.eks-home-bell {
+  position: relative;
+  flex-shrink: 0;
+
+  &__dot {
+    position: absolute;
+    top: 0.4rem;
+    inset-inline-end: 0.4rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--eks-danger);
+  }
+}
+
+.eks-home-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.eks-home-section {
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+
+  &__title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    margin: 0 0 0.75rem;
+  }
+
+  &__header &__title {
+    margin-bottom: 0;
+  }
+
+  &__seeall {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--eks-primary);
+    text-decoration: none;
+  }
+}
+
+.eks-home-carousel {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.eks-business-logo {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--eks-radius-md);
+  object-fit: cover;
+  flex-shrink: 0;
+
+  &--fallback {
+    background: var(--eks-primary-subtle-bg);
+    color: var(--eks-primary-subtle-fg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+}
+
+.eks-wallet-card {
+  width: 11rem;
+  text-decoration: none;
+  color: inherit;
   border: 1px solid var(--eks-border);
-  border-radius: var(--eks-radius-lg);
+  border-radius: var(--eks-radius-md);
+  transition: box-shadow 0.15s;
+
+  &:hover {
+    box-shadow: var(--eks-shadow-sm);
+  }
+
+  &__logo {
+    margin-bottom: 0.75rem;
+  }
+
+  &__balance {
+    display: flex;
+    align-items: baseline;
+    gap: 0.3rem;
+  }
+
+  &__balance-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--eks-primary);
+  }
 }
 
-.eks-quick-actions {
+.eks-campaign-banner {
+  width: 15rem;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-md);
+  background: var(--eks-primary-subtle-bg);
+  transition: box-shadow 0.15s;
+
+  &:hover {
+    box-shadow: var(--eks-shadow-sm);
+  }
+
+  &__business {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--eks-primary-subtle-fg);
+  }
+
+  &__meta {
+    font-size: 0.75rem;
+    color: var(--eks-text-muted);
+  }
+}
+
+.eks-home-quickactions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 0.75rem;
 }
 
-.eks-qr-entry {
-  display: block;
+.eks-home-quickaction {
   text-decoration: none;
   color: inherit;
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-md);
   transition: box-shadow 0.15s;
 
   &:hover {
@@ -25,46 +168,41 @@
   }
 
   &__icon {
-    width: 2.75rem;
-    height: 2.75rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    margin: 0 auto 0.5rem;
     border-radius: var(--eks-radius-md);
     background: var(--eks-primary-subtle-bg);
     color: var(--eks-primary-subtle-fg);
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
-    font-size: 1.125rem;
+
+    &--alt {
+      background: var(--eks-success-subtle-bg);
+      color: var(--eks-success-subtle-fg);
+    }
   }
 }
 
-.wallet-grid {
+.eks-home-discover-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
 }
 
-.wallet-card {
+.eks-discover-card {
   text-decoration: none;
   color: inherit;
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-md);
   transition: box-shadow 0.15s;
 
   &:hover {
     box-shadow: var(--eks-shadow-sm);
   }
-}
 
-.wallet-balance {
-  display: flex;
-  align-items: baseline;
-  gap: 0.35rem;
-}
-
-.wallet-balance-value {
-  font-size: 1.75rem;
-  font-weight: 700;
-}
-
-.wallet-balance-label {
-  color: var(--bs-secondary-color, #6c757d);
+  &__logo {
+    margin-bottom: 0.75rem;
+  }
 }
