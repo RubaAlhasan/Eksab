@@ -71,7 +71,7 @@
   </div>
 
   @if (activeTab() === 'about') {
-    <div class="card">
+    <div class="card mb-3">
       <div class="card-body">
         <p class="mb-2">{{ business.descriptionEn ?? ('::Wallet:Store:NoDescription' | abpLocalization) }}</p>
         @if (business.website) {
@@ -79,6 +79,18 @@
         }
       </div>
     </div>
+
+    @if (branchesWithPhone().length > 0) {
+      <p class="text-muted small fw-semibold mb-2">{{ '::Wallet:Store:PhoneNumbers' | abpLocalization }}</p>
+      <div class="list-group">
+        @for (branch of branchesWithPhone(); track branch.id) {
+          <a [href]="'tel:' + branch.phone" class="list-group-item d-flex justify-content-between align-items-center">
+            <span>{{ branch.name }}</span>
+            <span class="text-muted small" dir="ltr">{{ branch.phone }}</span>
+          </a>
+        }
+      </div>
+    }
   } @else if (activeTab() === 'offers') {
     @if (offers().length === 0) {
       <p class="text-muted small">{{ '::Wallet:Store:OffersEmpty' | abpLocalization }}</p>

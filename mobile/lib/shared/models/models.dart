@@ -53,6 +53,27 @@ class Customer {
   String get fullName => '$firstName $lastName'.trim();
 }
 
+/// One branch's customer-visible name + phone — maps `CustomerBusinessBranchDto`.
+/// A business's phone numbers are exactly its branches' phones (each branch already
+/// has its own `Phone` field, managed today via the Business Portal's branches page);
+/// this is just that same data made visible to members instead of a new phone-list
+/// concept.
+class BusinessBranch {
+  const BusinessBranch({required this.id, required this.name, this.phone});
+
+  factory BusinessBranch.fromJson(Map<String, dynamic> json) {
+    return BusinessBranch(
+      id: (json['id'] as String?) ?? '',
+      name: (json['name'] as String?)?.trim() ?? '',
+      phone: (json['phone'] as String?)?.trim(),
+    );
+  }
+
+  final String id;
+  final String name;
+  final String? phone;
+}
+
 /// Maps `CustomerBusinessDto` (`/api/app/customer-business`).
 class Business {
   const Business({
@@ -70,6 +91,7 @@ class Business {
     this.distanceKm,
     this.following = false,
     this.member = false,
+    this.branchDetails = const [],
   });
 
   factory Business.fromJson(Map<String, dynamic> json) {
@@ -96,6 +118,11 @@ class Business {
           (json['descriptionAr'] as String?)?.trim(),
       website: json['website'] as String?,
       distanceKm: (json['distanceKm'] as num?)?.toDouble(),
+      branchDetails:
+          (json['branches'] as List<dynamic>?)
+              ?.map((b) => BusinessBranch.fromJson(b as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
   }
 
@@ -139,6 +166,9 @@ class Business {
   final bool following;
   final bool member;
 
+  /// Every branch's name + phone — see [BusinessBranch]'s own doc comment.
+  final List<BusinessBranch> branchDetails;
+
   Business copyWith({bool? following, bool? member}) => Business(
     id: id,
     name: name,
@@ -154,6 +184,7 @@ class Business {
     distanceKm: distanceKm,
     following: following ?? this.following,
     member: member ?? this.member,
+    branchDetails: branchDetails,
   );
 
   static String initialsFor(String name) {

@@ -399,9 +399,10 @@ class _StoreDetailsScreenState extends ConsumerState<StoreDetailsScreen> {
                 else
                   Column(
                     children: [
-                      // Only a branch count is exposed to customers, not the
-                      // names or addresses — so the list is numbered.
-                      for (var i = 0; i < biz.branches; i++) ...[
+                      // Each branch's real name + phone (CustomerBusinessDto.branches) — no
+                      // address/location here, same "no full branch locator" scope this
+                      // screen's own file comment already describes for Offers/Rewards.
+                      for (final branch in biz.branchDetails) ...[
                         AppCard(
                           child: Row(
                             children: [
@@ -411,18 +412,27 @@ class _StoreDetailsScreenState extends ConsumerState<StoreDetailsScreen> {
                                 iconSize: 16,
                               ),
                               const SizedBox(width: 12),
-                              Text(
-                                'Branch ${i + 1}',
-                                style: AppText.bodySemi.copyWith(
-                                  color: palette.textPrimary,
+                              Expanded(
+                                child: Text(
+                                  branch.name,
+                                  style: AppText.bodySemi.copyWith(
+                                    color: palette.textPrimary,
+                                  ),
                                 ),
                               ),
+                              if (branch.phone?.isNotEmpty == true)
+                                Text(
+                                  branch.phone!,
+                                  style: AppText.small.copyWith(
+                                    color: palette.textMuted,
+                                  ),
+                                ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 12),
                       ],
-                      if (biz.branches == 0)
+                      if (biz.branchDetails.isEmpty)
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 24),
                           child: Text(

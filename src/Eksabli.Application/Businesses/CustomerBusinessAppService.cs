@@ -160,6 +160,9 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
                     LogoBlobName = p.LogoBlobName,
                     BranchCount = tenantBranches.Count,
                     DistanceKm = NearestBranchDistanceKm(tenantBranches, latitude, longitude),
+                    Branches = tenantBranches
+                        .Select(b => new CustomerBusinessBranchDto { Id = b.Id, Name = b.Name, Phone = b.Phone })
+                        .ToList(),
                 };
             }).ToList();
         }

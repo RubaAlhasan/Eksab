@@ -27,9 +27,11 @@ type StoreTab = 'about' | 'offers' | 'rewards';
  * this same form with extra navigation.
  *
  * No star rating anywhere — `CustomerBusinessDto` has no such field (confirmed by reading it); the
- * prototype's rating is fake data, not translated here. No per-branch address list either — the DTO only
- * exposes an aggregate `BranchCount`, so a "Branches" tab (with pins/addresses) isn't built; the count is
- * shown as a stat instead.
+ * prototype's rating is fake data, not translated here. Still no per-branch address list or a dedicated
+ * "Branches" tab (with pins/addresses) — `BranchCount` stays an aggregate stat — but each branch's own
+ * phone number (already a real per-branch field, `Branch.Phone`) is now surfaced under About as a
+ * "Phone Numbers" list, since a business's phone numbers already are exactly its branches' phones; no
+ * new phone-list concept was added, this just makes existing data customer-visible.
  */
 @Component({
   selector: 'app-customer-store-details',
@@ -77,6 +79,12 @@ export class CustomerStoreDetailsComponent implements OnInit {
     if (!business?.hasLogo || this.logoFailed()) return null;
     return `${environment.apis.default.url}/api/app/business/${business.businessProfileId}/logo?v=${business.logoBlobName ?? ''}`;
   });
+
+  // Only branches that actually have a phone set — a business with some unlisted branches shouldn't
+  // show empty/placeholder rows in what's specifically a "Phone Numbers" list.
+  protected readonly branchesWithPhone = computed(
+    () => this.business()?.branches?.filter(b => !!b.phone) ?? [],
+  );
 
   ngOnInit(): void {
     this.route.paramMap.subscribe(params => {

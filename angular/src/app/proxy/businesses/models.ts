@@ -30,6 +30,12 @@ export interface AdminTenantFilterDto extends PagedAndSortedResultRequestDto {
 // lookup, Approved tenants only) but its proxy was never generated. Regenerate via
 // `abp generate-proxy -t ng` to replace these with the real generated versions once convenient; shapes
 // below match the C# DTOs (Eksabli.Businesses namespace) field-for-field.
+export interface CustomerBusinessBranchDto {
+  id: string;
+  name: string;
+  phone?: string | null;
+}
+
 export interface CustomerBusinessDto {
   tenantId: string;
   name: string;
@@ -44,6 +50,7 @@ export interface CustomerBusinessDto {
   logoBlobName?: string | null;
   branchCount: number;
   distanceKm?: number | null;
+  branches: CustomerBusinessBranchDto[];
 }
 
 export interface CustomerBusinessFilterDto extends PagedResultRequestDto {
