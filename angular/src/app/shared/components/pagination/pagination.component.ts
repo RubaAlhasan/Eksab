@@ -1,14 +1,22 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { LocalizationPipe } from '@abp/ng.core';
 
 /** Real prev/next pagination (0-based pageIndex), replacing the hand-rolled version that lived inline
- *  in admin-tenants.component before this extraction — same behavior, now reusable. */
+ *  in admin-tenants.component before this extraction — same behavior, now reusable. The "Page X of Y"
+ *  text used to be localized there (`AdminPanel:Businesses:PageOf`, now dead/unused — confirmed by
+ *  grep) but came out hardcoded English on extraction; fixed via a new cross-portal `Shared:PageOf`
+ *  key rather than reusing that admin-specific one, since this component is shared by all three
+ *  portals, not just Admin. */
 @Component({
   selector: 'app-pagination',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [LocalizationPipe],
   template: `
     @if (totalPages() > 1) {
       <div class="d-flex align-items-center justify-content-between">
-        <span class="text-muted small">Page {{ pageIndex() + 1 }} of {{ totalPages() }}</span>
+        <span class="text-muted small">
+          {{ '::Shared:PageOf' | abpLocalization: (pageIndex() + 1).toString() : totalPages().toString() }}
+        </span>
         <div class="btn-group">
           <button
             type="button"

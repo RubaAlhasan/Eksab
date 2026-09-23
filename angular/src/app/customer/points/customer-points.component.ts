@@ -43,6 +43,7 @@ export class CustomerPointsComponent implements OnInit {
   protected readonly recentActivity = signal<PointsTransactionDto[]>([]);
 
   protected readonly walletNotFound = computed(() => !this.isLoading() && !this.loadFailed() && !this.wallet());
+  protected readonly reservedPoints = computed(() => this.wallet()?.reserved ?? 0);
 
   protected readonly typeLabelKey = transactionTypeLabelKey;
   protected readonly sourceLabelKey = transactionSourceLabelKey;

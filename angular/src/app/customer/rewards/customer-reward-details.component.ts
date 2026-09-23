@@ -35,6 +35,10 @@ export class CustomerRewardDetailsComponent implements OnInit {
 
   protected readonly reward = signal<RewardDto | undefined>(undefined);
   protected readonly balance = signal<number | null>(null);
+  // See PointsWalletDto.availableBalance's own comment — what's actually spendable, not the raw
+  // balance, since some of it may be held against a Pending redemption started elsewhere.
+  protected readonly availableBalance = signal<number | null>(null);
+  protected readonly reserved = signal(0);
   protected readonly confirmOpen = signal(false);
   protected readonly isRedeeming = signal(false);
 
@@ -43,8 +47,8 @@ export class CustomerRewardDetailsComponent implements OnInit {
 
   protected readonly canAfford = computed(() => {
     const reward = this.reward();
-    const balance = this.balance();
-    return !reward || balance == null || reward.pointsCost == null || balance >= reward.pointsCost;
+    const available = this.availableBalance();
+    return !reward || available == null || reward.pointsCost == null || available >= reward.pointsCost;
   });
 
   ngOnInit(): void {
@@ -65,7 +69,12 @@ export class CustomerRewardDetailsComponent implements OnInit {
       this.reward.set(cached);
 
       this.membershipsService.getMyWallets().subscribe({
-        next: wallets => this.balance.set(wallets.find(w => w.tenantId === tenantId)?.balance ?? null),
+        next: wallets => {
+          const wallet = wallets.find(w => w.tenantId === tenantId);
+          this.balance.set(wallet?.balance ?? null);
+          this.availableBalance.set(wallet?.availableBalance ?? wallet?.balance ?? null);
+          this.reserved.set(wallet?.reserved ?? 0);
+        },
         error: () => undefined,
       });
     });

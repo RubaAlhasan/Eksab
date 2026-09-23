@@ -19,6 +19,9 @@
         <span class="wallet-balance-value">{{ wallet()!.balance }}</span>
         <span class="wallet-balance-label">{{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
       </div>
+      @if (reservedPoints() > 0) {
+        <p class="text-muted small mb-3">{{ '::Wallet:Rewards:PointsOnHold' | abpLocalization: reservedPoints().toString() }}</p>
+      }
       <div class="d-flex gap-4 text-muted small">
         <span>{{ '::Wallet:Points:LifetimeEarned' | abpLocalization }}: {{ wallet()!.lifetimeEarned }}</span>
         <span>{{ '::Wallet:Points:LifetimeRedeemed' | abpLocalization }}: {{ wallet()!.lifetimeRedeemed }}</span>

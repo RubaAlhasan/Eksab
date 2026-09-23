@@ -6,9 +6,12 @@
       <div class="fw-bold fs-4 mb-3">{{ reward.pointsCost }} {{ '::Wallet:PointsSuffix' | abpLocalization }}</div>
 
       @if (balance() !== null) {
-        <p class="text-muted small mb-3">
+        <p class="text-muted small mb-1">
           {{ '::Wallet:Rewards:YourBalance' | abpLocalization }}: {{ balance() }} {{ '::Wallet:PointsSuffix' | abpLocalization }}
         </p>
+      }
+      @if (reserved() > 0) {
+        <p class="text-muted small mb-3">{{ '::Wallet:Rewards:PointsOnHold' | abpLocalization: reserved().toString() }}</p>
       }
 
       @if (reward.validTo) {

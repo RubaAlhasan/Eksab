@@ -40,6 +40,10 @@ export class CustomerRewardsCatalogComponent implements OnInit {
   protected readonly rewards = signal<RewardDto[]>([]);
   protected readonly totalCount = signal(0);
   protected readonly balance = signal<number | null>(null);
+  // Null until loadBalance resolves; separate from `balance` because affordability must check what's
+  // actually spendable, not the raw balance — see PointsWalletDto.availableBalance's own comment.
+  protected readonly availableBalance = signal<number | null>(null);
+  protected readonly reserved = signal(0);
   protected readonly isLoading = signal(true);
   protected readonly loadFailed = signal(false);
   protected readonly pageIndex = signal(0);
@@ -71,8 +75,8 @@ export class CustomerRewardsCatalogComponent implements OnInit {
   }
 
   protected canAfford(reward: RewardDto): boolean {
-    const balance = this.balance();
-    return balance == null || reward.pointsCost == null || balance >= reward.pointsCost;
+    const available = this.availableBalance();
+    return available == null || reward.pointsCost == null || available >= reward.pointsCost;
   }
 
   protected statusLabelKey(status: RewardStatus): string {
@@ -103,7 +107,12 @@ export class CustomerRewardsCatalogComponent implements OnInit {
 
   private loadBalance(tenantId: string): void {
     this.membershipsService.getMyWallets().subscribe({
-      next: wallets => this.balance.set(wallets.find(w => w.tenantId === tenantId)?.balance ?? null),
+      next: wallets => {
+        const wallet = wallets.find(w => w.tenantId === tenantId);
+        this.balance.set(wallet?.balance ?? null);
+        this.availableBalance.set(wallet?.availableBalance ?? wallet?.balance ?? null);
+        this.reserved.set(wallet?.reserved ?? 0);
+      },
       error: () => undefined,
     });
   }

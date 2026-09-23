@@ -1,8 +1,15 @@
 @if (balance() !== null) {
   <div class="card eks-balance-banner mb-3">
-    <div class="card-body d-flex justify-content-between align-items-center">
-      <span class="text-muted small">{{ '::Wallet:Rewards:YourBalance' | abpLocalization }}</span>
-      <span class="fw-bold">{{ balance() }} {{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center">
+        <span class="text-muted small">{{ '::Wallet:Rewards:YourBalance' | abpLocalization }}</span>
+        <span class="fw-bold">{{ balance() }} {{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
+      </div>
+      @if (reserved() > 0) {
+        <div class="text-muted small mt-1">
+          {{ '::Wallet:Rewards:PointsOnHold' | abpLocalization: reserved().toString() }}
+        </div>
+      }
     </div>
   </div>
 }

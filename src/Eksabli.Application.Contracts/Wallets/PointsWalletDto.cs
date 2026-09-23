@@ -11,6 +11,16 @@ public class PointsWalletDto : AuditedEntityDto<Guid>
 
     public int Balance { get; set; }
 
+    // Points held against a Pending redemption the customer already started elsewhere (see
+    // `PointsWallet.Reserved`'s own comment for why this is separate from Balance rather than
+    // already subtracted from it). Customer-facing so the app can warn "some of this is on hold"
+    // and gate a second redemption on what's actually spendable, not the raw balance — the backend
+    // (`PointsWallet.Reserve`) already enforces this either way; this only lets the UI say so before
+    // the customer taps Confirm and hits a rejection.
+    public int Reserved { get; set; }
+
+    public int AvailableBalance { get; set; }
+
     public int LifetimeEarned { get; set; }
 
     public int LifetimeRedeemed { get; set; }

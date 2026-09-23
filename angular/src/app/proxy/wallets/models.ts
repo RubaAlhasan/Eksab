@@ -44,6 +44,10 @@ export interface PointsWalletDto extends AuditedEntityDto<string> {
   membershipId?: string;
   tenantId?: string | null;
   balance?: number;
+  // Points held against a Pending redemption elsewhere — see PointsWallet.Reserved's own comment
+  // (backend) for why this is separate from `balance` rather than already subtracted from it.
+  reserved?: number;
+  availableBalance?: number;
   lifetimeEarned?: number;
   lifetimeRedeemed?: number;
   currentTierId?: string | null;
