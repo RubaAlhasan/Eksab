@@ -7,9 +7,17 @@
   flex-direction: column;
 }
 
+// This shell is deliberately mobile-app-shaped (see customer-layout.component.ts's own comment) —
+// on a viewport wider than a phone, the un-capped topbar/bottomnav used to stretch edge to edge while
+// .eks-customer-content stayed capped at 720px, so the page read as a narrow card floating under a
+// full-bleed header/footer bar with icons flung apart. Capping all three to the same 720px column,
+// centered, makes the whole shell read as one consistent "phone-width app" on any screen size instead.
 .eks-customer-topbar {
   height: 56px;
   flex-shrink: 0;
+  width: 100%;
+  max-width: 720px;
+  margin-inline: auto;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -36,8 +44,11 @@
 
 .eks-customer-bottomnav {
   position: fixed;
-  inset-inline: 0;
+  left: 0;
+  right: 0;
   bottom: 0;
+  max-width: 720px;
+  margin-inline: auto;
   display: flex;
   background: var(--eks-surface);
   border-top: 1px solid var(--eks-border);
