@@ -61,5 +61,12 @@ public class SeedService : ISingletonDependency
         // requires a plan flagged IsTrialDefault to already exist.
         var demoBusinessDataSeederContributor = scope.ServiceProvider.GetRequiredService<DemoBusinessDataSeederContributor>();
         await demoBusinessDataSeederContributor.SeedAsync(new DataSeedContext());
+
+        var demoBookshopDataSeederContributor = scope.ServiceProvider.GetRequiredService<DemoBookshopDataSeederContributor>();
+        await demoBookshopDataSeederContributor.SeedAsync(new DataSeedContext());
+
+        // Must run after both demo business seeders above — looks up each by name and seeds its rewards.
+        var demoRewardsDataSeederContributor = scope.ServiceProvider.GetRequiredService<DemoRewardsDataSeederContributor>();
+        await demoRewardsDataSeederContributor.SeedAsync(new DataSeedContext());
     }
 }
