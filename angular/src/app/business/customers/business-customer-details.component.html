@@ -59,6 +59,17 @@
         <button type="button" class="btn btn-primary w-100" (click)="openAdjustModal()">
           <i class="fas fa-pen me-1"></i>{{ '::BusinessPanel:CustomerDetails:AdjustButton' | abpLocalization }}
         </button>
+
+        @if (canEditMembers() && member()!.status === Status.Active) {
+          <button type="button" class="btn btn-outline-warning w-100 mt-2" [disabled]="isFreezing()" (click)="freezeMember()">
+            <i class="fas fa-snowflake me-1"></i>{{ '::BusinessPanel:Customers:FreezeAction' | abpLocalization }}
+          </button>
+        }
+        @if (canEditMembers() && member()!.status === Status.Frozen) {
+          <button type="button" class="btn btn-outline-success w-100 mt-2" [disabled]="isFreezing()" (click)="reactivateMember()">
+            <i class="fas fa-play me-1"></i>{{ '::BusinessPanel:Customers:ReactivateAction' | abpLocalization }}
+          </button>
+        }
       </div>
     </div>
 

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
 import { MembershipsService } from '../../proxy/controllers/memberships.service';
 import { WalletService } from '../../proxy/controllers/wallet.service';
@@ -28,6 +28,7 @@ import { isCredit, transactionSourceLabelKey, transactionTypeLabelKey } from '..
 })
 export class CustomerPointsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly membershipsService = inject(MembershipsService);
   private readonly walletService = inject(WalletService);
 
@@ -49,6 +50,12 @@ export class CustomerPointsComponent implements OnInit {
   protected readonly sourceLabelKey = transactionSourceLabelKey;
   protected readonly isCredit = isCredit;
 
+  // "Leave this business" — same inline two-step confirm shape customer-redeem.component.ts already
+  // uses for its own Cancel action, rather than a native confirm() dialog.
+  protected readonly showLeaveConfirm = signal(false);
+  protected readonly isLeaving = signal(false);
+  protected readonly leaveFailed = signal(false);
+
   ngOnInit(): void {
     this.route.paramMap.subscribe(params => {
       const tenantId = params.get('tenantId');
@@ -60,6 +67,35 @@ export class CustomerPointsComponent implements OnInit {
 
   protected retry(): void {
     if (this.tenantId) this.load(this.tenantId);
+  }
+
+  protected beginLeave(): void {
+    this.leaveFailed.set(false);
+    this.showLeaveConfirm.set(true);
+  }
+
+  protected cancelLeave(): void {
+    this.showLeaveConfirm.set(false);
+  }
+
+  protected confirmLeave(): void {
+    if (this.isLeaving() || !this.tenantId) return;
+    this.isLeaving.set(true);
+    this.leaveFailed.set(false);
+    this.membershipsService.leave(this.tenantId).subscribe({
+      next: () => {
+        this.isLeaving.set(false);
+        // The wallet this page shows no longer exists in getMyWallets() once membership is Cancelled
+        // (see MembershipAppService.GetMyWalletsAsync) — nothing left here worth staying on.
+        void this.router.navigate(['/customer/home']);
+      },
+      // The interceptor already surfaces the server's own message — same idiom used elsewhere in this
+      // app for expected, user-facing failures.
+      error: () => {
+        this.isLeaving.set(false);
+        this.leaveFailed.set(true);
+      },
+    });
   }
 
   private load(tenantId: string): void {

@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { LocalizationPipe } from '@abp/ng.core';
+import { LocalizationPipe, PermissionService } from '@abp/ng.core';
 import { ToasterService } from '@abp/ng.theme.shared';
 import { MembershipsService } from '../../proxy/controllers/memberships.service';
 import { ReportsService } from '../../proxy/controllers/reports.service';
@@ -77,8 +77,11 @@ export class BusinessCustomerDetailsComponent implements OnInit {
   private readonly couponAuditService = inject(CouponAuditService);
   private readonly posService = inject(PosService);
   private readonly toaster = inject(ToasterService);
+  private readonly permissionService = inject(PermissionService);
 
   protected readonly Status = MembershipStatus;
+  protected readonly canEditMembers = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Memberships.Edit'));
+  protected readonly isFreezing = signal(false);
   protected readonly Type = PointsTransactionType;
   private readonly pageSize = 10;
 
@@ -147,13 +150,25 @@ export class BusinessCustomerDetailsComponent implements OnInit {
   }
 
   protected statusLabelKey(status: MembershipStatus | undefined): string {
-    return status === MembershipStatus.Frozen
-      ? '::BusinessPanel:Customers:StatusFrozen'
-      : '::BusinessPanel:Customers:StatusActive';
+    switch (status) {
+      case MembershipStatus.Frozen:
+        return '::BusinessPanel:Customers:StatusFrozen';
+      case MembershipStatus.Cancelled:
+        return '::BusinessPanel:Customers:StatusCancelled';
+      default:
+        return '::BusinessPanel:Customers:StatusActive';
+    }
   }
 
   protected statusVariant(status: MembershipStatus | undefined): StatusBadgeVariant {
-    return status === MembershipStatus.Frozen ? 'neutral' : 'success';
+    switch (status) {
+      case MembershipStatus.Frozen:
+        return 'neutral';
+      case MembershipStatus.Cancelled:
+        return 'danger';
+      default:
+        return 'success';
+    }
   }
 
   protected selectTab(tab: DetailTab): void {
@@ -252,6 +267,40 @@ export class BusinessCustomerDetailsComponent implements OnInit {
       default:
         return 'success';
     }
+  }
+
+  protected freezeMember(): void {
+    if (!this.membershipId || this.isFreezing()) return;
+    const id = this.membershipId;
+    this.isFreezing.set(true);
+    this.membershipsService.freeze(id).subscribe({
+      next: () => {
+        this.isFreezing.set(false);
+        this.toaster.success('::BusinessPanel:Customers:FreezeSuccessMessage');
+        this.load(id);
+      },
+      error: () => {
+        this.isFreezing.set(false);
+        this.toaster.error('::BusinessPanel:Customers:FreezeErrorMessage');
+      },
+    });
+  }
+
+  protected reactivateMember(): void {
+    if (!this.membershipId || this.isFreezing()) return;
+    const id = this.membershipId;
+    this.isFreezing.set(true);
+    this.membershipsService.reactivate(id).subscribe({
+      next: () => {
+        this.isFreezing.set(false);
+        this.toaster.success('::BusinessPanel:Customers:ReactivateSuccessMessage');
+        this.load(id);
+      },
+      error: () => {
+        this.isFreezing.set(false);
+        this.toaster.error('::BusinessPanel:Customers:ReactivateErrorMessage');
+      },
+    });
   }
 
   protected openAdjustModal(): void {

@@ -79,7 +79,19 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
             var existing = await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == customerId);
             if (existing != null)
             {
-                throw new UserFriendlyException("You are already a member of this business.");
+                // A previously-Cancelled (self-left) membership can rejoin in place — same wallet,
+                // same history, nothing recreated. Frozen (staff-suspended) deliberately stays
+                // blocked here: a customer self-service-joining their way back in would defeat the
+                // point of a staff-initiated suspension.
+                if (existing.Status != MembershipStatus.Cancelled)
+                {
+                    throw new UserFriendlyException("You are already a member of this business.");
+                }
+
+                existing.Reactivate();
+                await _membershipRepository.UpdateAsync(existing, autoSave: true);
+                await TryCreateReferralAsync(input.ReferralCode, existing);
+                return ObjectMapper.Map<Membership, MembershipDto>(existing);
             }
 
             var membership = Membership.Create(GuidGenerator.Create(), customerId, Clock.Now);
@@ -91,6 +103,21 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
             await TryCreateReferralAsync(input.ReferralCode, membership);
 
             return ObjectMapper.Map<Membership, MembershipDto>(membership);
+        }
+    }
+
+    public async Task LeaveAsync(Guid tenantId)
+    {
+        var customerId = CurrentUser.GetId();
+
+        using (_currentTenant.Change(tenantId))
+        {
+            var membership = await _membershipRepository.FirstOrDefaultAsync(
+                    m => m.CustomerId == customerId && m.Status == MembershipStatus.Active)
+                ?? throw new UserFriendlyException("You aren't currently a member of this business.");
+
+            membership.Cancel();
+            await _membershipRepository.UpdateAsync(membership, autoSave: true);
         }
     }
 
@@ -135,7 +162,11 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
 
         using (_dataFilter.Disable<IMultiTenant>())
         {
-            var membershipIds = (await _membershipRepository.GetListAsync(m => m.CustomerId == customerId))
+            // Active only — a Cancelled (self-left) membership's wallet stops appearing in "My
+            // Businesses"/the wallet list, same as if the customer had never joined, even though the
+            // row and its balance/history still exist underneath (see MembershipStatus.Cancelled).
+            var membershipIds = (await _membershipRepository.GetListAsync(
+                    m => m.CustomerId == customerId && m.Status == MembershipStatus.Active))
                 .Select(m => m.Id)
                 .ToList();
 
@@ -298,6 +329,32 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
             TierName = tierName,
             LastActiveAt = wallet?.LastModificationTime
         };
+    }
+
+    // Staff-initiated suspension — ambient tenant already scopes GetAsync to this business's own
+    // memberships (Membership implements IMultiTenant), same as GetMemberAsync above.
+    public async Task FreezeAsync(Guid id)
+    {
+        var membership = await _membershipRepository.GetAsync(id);
+        if (membership.Status != MembershipStatus.Active)
+        {
+            throw new UserFriendlyException("Only an active member can be frozen.");
+        }
+
+        membership.Freeze();
+        await _membershipRepository.UpdateAsync(membership, autoSave: true);
+    }
+
+    public async Task ReactivateAsync(Guid id)
+    {
+        var membership = await _membershipRepository.GetAsync(id);
+        if (membership.Status != MembershipStatus.Frozen)
+        {
+            throw new UserFriendlyException("Only a frozen member can be reactivated.");
+        }
+
+        membership.Reactivate();
+        await _membershipRepository.UpdateAsync(membership, autoSave: true);
     }
 
     // Called only from within GetMyWalletsAsync's own Disable<IMultiTenant> block — no need to

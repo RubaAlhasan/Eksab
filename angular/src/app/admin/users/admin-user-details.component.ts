@@ -126,11 +126,25 @@ export class AdminUserDetailsComponent implements OnInit {
   }
 
   protected membershipStatusLabelKey(status: MembershipStatus | undefined): string {
-    return status === MembershipStatus.Frozen ? '::BusinessPanel:Customers:StatusFrozen' : '::BusinessPanel:Customers:StatusActive';
+    switch (status) {
+      case MembershipStatus.Frozen:
+        return '::BusinessPanel:Customers:StatusFrozen';
+      case MembershipStatus.Cancelled:
+        return '::BusinessPanel:Customers:StatusCancelled';
+      default:
+        return '::BusinessPanel:Customers:StatusActive';
+    }
   }
 
   protected membershipStatusVariant(status: MembershipStatus | undefined): StatusBadgeVariant {
-    return status === MembershipStatus.Frozen ? 'neutral' : 'success';
+    switch (status) {
+      case MembershipStatus.Frozen:
+        return 'neutral';
+      case MembershipStatus.Cancelled:
+        return 'danger';
+      default:
+        return 'success';
+    }
   }
 
   protected typeLabelKey(type: PointsTransactionType | undefined): string {

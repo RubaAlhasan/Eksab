@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Eksabli.BusinessProfiles;
+using Eksabli.Engagement;
 using Eksabli.Memberships;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
@@ -30,12 +31,21 @@ namespace Eksabli.Campaigns;
 //     advertising something they cannot redeem, so the same
 //     ICampaignSegmentEvaluator the Business Portal previews with is reused
 //     here to decide.
+//
+// A customer who FOLLOWS a business without joining also sees that business's broadly-targeted
+// campaigns (untargeted, or an explicit CampaignTargetRuleSegmentType.All rule) — see Follow's own
+// comment on deliberately doubling as a marketing-target concept, which was never wired up anywhere
+// until this. Tier/New Customer/Inactive-restricted campaigns stay member-only: those need real
+// Membership data (join date, wallet, tier) a follower doesn't have, and ICampaignSegmentEvaluator
+// only ever evaluates against actual memberships — not touched here, so the Business Portal's
+// preview/CampaignSweepWorker's real fan-out are both unaffected by this.
 [Authorize]
 [RemoteService(IsEnabled = false)]
 public class CustomerCampaignAppService : ApplicationService, ICustomerCampaignAppService
 {
     private readonly IRepository<Campaign, Guid> _campaignRepository;
     private readonly IRepository<Membership, Guid> _membershipRepository;
+    private readonly IRepository<Follow, Guid> _followRepository;
     private readonly IRepository<BusinessProfile, Guid> _businessProfileRepository;
     private readonly IRepository<Tenant, Guid> _tenantRepository;
     private readonly ICampaignSegmentEvaluator _segmentEvaluator;
@@ -46,6 +56,7 @@ public class CustomerCampaignAppService : ApplicationService, ICustomerCampaignA
     public CustomerCampaignAppService(
         IRepository<Campaign, Guid> campaignRepository,
         IRepository<Membership, Guid> membershipRepository,
+        IRepository<Follow, Guid> followRepository,
         IRepository<BusinessProfile, Guid> businessProfileRepository,
         IRepository<Tenant, Guid> tenantRepository,
         ICampaignSegmentEvaluator segmentEvaluator,
@@ -55,6 +66,7 @@ public class CustomerCampaignAppService : ApplicationService, ICustomerCampaignA
     {
         _campaignRepository = campaignRepository;
         _membershipRepository = membershipRepository;
+        _followRepository = followRepository;
         _businessProfileRepository = businessProfileRepository;
         _tenantRepository = tenantRepository;
         _segmentEvaluator = segmentEvaluator;
@@ -78,18 +90,32 @@ public class CustomerCampaignAppService : ApplicationService, ICustomerCampaignA
         // tenant-scoped, so every query here would return empty without this.
         using (_dataFilter.Disable<IMultiTenant>())
         {
-            // A campaign is only relevant for a business the customer belongs
-            // to — a promotion at a business you have not joined isn't yours.
+            // A campaign is only relevant for a business the customer belongs to — a promotion at a
+            // business you have not joined (or have since left — MembershipStatus.Cancelled) isn't
+            // yours. (Followed-only businesses are handled separately below.)
             var memberships = await _membershipRepository.GetListAsync(m =>
                 m.CustomerId == customerId &&
+                m.Status == MembershipStatus.Active &&
                 (onlyTenantId == null || m.TenantId == onlyTenantId));
 
             var membershipIds = memberships.Select(m => m.Id).ToHashSet();
-            var tenantIds = memberships
+            var memberTenantIds = memberships
                 .Where(m => m.TenantId.HasValue)
                 .Select(m => m.TenantId!.Value)
-                .Distinct()
-                .ToList();
+                .ToHashSet();
+
+            // Followed-but-not-joined businesses only ever contribute their broadly-targeted campaigns
+            // — see this class's own file comment. Excludes any tenant already covered by membership
+            // above, so a business the customer both follows and belongs to isn't evaluated twice.
+            var follows = await _followRepository.GetListAsync(f =>
+                f.CustomerId == customerId &&
+                (onlyTenantId == null || f.TenantId == onlyTenantId));
+            var followedOnlyTenantIds = follows
+                .Where(f => f.TenantId.HasValue && !memberTenantIds.Contains(f.TenantId.Value))
+                .Select(f => f.TenantId!.Value)
+                .ToHashSet();
+
+            var tenantIds = memberTenantIds.Union(followedOnlyTenantIds).ToList();
 
             if (tenantIds.Count == 0)
             {
@@ -137,7 +163,16 @@ public class CustomerCampaignAppService : ApplicationService, ICustomerCampaignA
             var results = new List<CustomerCampaignDto>();
             foreach (var campaign in campaigns)
             {
-                if (!await TargetsCustomerAsync(campaign, membershipIds))
+                var tenantId = campaign.TenantId!.Value;
+
+                // Member: full segment evaluation, unchanged. Followed-only: no Membership to evaluate
+                // a real segment against, so only the broadest campaigns (untargeted, or an explicit
+                // "All" rule) are eligible — see IsBroadlyTargeted.
+                var eligible = memberTenantIds.Contains(tenantId)
+                    ? await TargetsCustomerAsync(campaign, membershipIds)
+                    : IsBroadlyTargeted(campaign);
+
+                if (!eligible)
                 {
                     continue;
                 }
@@ -145,9 +180,9 @@ public class CustomerCampaignAppService : ApplicationService, ICustomerCampaignA
                 results.Add(new CustomerCampaignDto
                 {
                     Id = campaign.Id,
-                    TenantId = campaign.TenantId!.Value,
-                    BusinessName = displayNameByTenantId.GetValueOrDefault(campaign.TenantId!.Value)
-                        ?? tenantNames.GetValueOrDefault(campaign.TenantId!.Value)
+                    TenantId = tenantId,
+                    BusinessName = displayNameByTenantId.GetValueOrDefault(tenantId)
+                        ?? tenantNames.GetValueOrDefault(tenantId)
                         ?? string.Empty,
                     NameAr = campaign.NameAr,
                     NameEn = campaign.NameEn,
@@ -174,4 +209,13 @@ public class CustomerCampaignAppService : ApplicationService, ICustomerCampaignA
         var matched = await _segmentEvaluator.EvaluateAsync(campaign);
         return matched.Any(m => membershipIds.Contains(m.Id));
     }
+
+    // For a followed-only (non-member) customer: true if the campaign isn't restricted to a
+    // membership-based segment at all — either no target rules (untargeted = everyone, same as
+    // TargetsCustomerAsync's own "no rules" shortcut) or an explicit All rule. Deliberately doesn't
+    // call ICampaignSegmentEvaluator — that evaluator only ever works against real Membership rows,
+    // which a follower doesn't have.
+    private static bool IsBroadlyTargeted(Campaign campaign) =>
+        campaign.TargetRules.Count == 0 ||
+        campaign.TargetRules.Any(r => r.SegmentType == CampaignTargetRuleSegmentType.All);
 }

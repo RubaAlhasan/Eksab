@@ -46,7 +46,8 @@ public class ReferralAppService : ApplicationService, IReferralAppService
 
         using (_currentTenant.Change(tenantId))
         {
-            var membership = await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == customerId)
+            var membership = await _membershipRepository.FirstOrDefaultAsync(
+                    m => m.CustomerId == customerId && m.Status == MembershipStatus.Active)
                 ?? throw new UserFriendlyException("You haven't joined this business yet.");
 
             if (membership.ReferralCode == null)

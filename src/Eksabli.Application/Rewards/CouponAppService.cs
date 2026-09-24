@@ -73,7 +73,11 @@ public class CouponAppService : ApplicationService, ICouponAppService
 
         using (_currentTenant.Change(input.TenantId))
         {
-            var membership = await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == customerId)
+            // Active only — starting a brand-new redemption requires current membership. (Viewing or
+            // cancelling an already-existing coupon doesn't go through this check — see
+            // GetOwnCouponAsync's own comment — since that's a past action, not a new one.)
+            var membership = await _membershipRepository.FirstOrDefaultAsync(
+                    m => m.CustomerId == customerId && m.Status == MembershipStatus.Active)
                 ?? throw new UserFriendlyException("You haven't joined this business yet.");
 
             var reward = await _rewardRepository.FirstOrDefaultAsync(r => r.Id == input.RewardId)
@@ -176,7 +180,11 @@ public class CouponAppService : ApplicationService, ICouponAppService
 
     // Loads a coupon and proves it belongs to the caller. Ownership is checked through Membership
     // rather than trusting the id — the ambient tenant filter scopes the row to one business, but not
-    // to one customer within it.
+    // to one customer within it. Deliberately NOT filtered to Status == Active (unlike RedeemAsync's
+    // own membership lookup): viewing or cancelling an already-existing coupon is access to something
+    // that already happened, not a new redemption, so it should keep working even if the customer has
+    // since left the business (MembershipStatus.Cancelled) — RedemptionReservationWorker is the
+    // backstop either way if they never come back to resolve it themselves.
     private async Task<(Coupon Coupon, Membership Membership)> GetOwnCouponAsync(Guid couponId)
     {
         var customerId = CurrentUser.GetId();

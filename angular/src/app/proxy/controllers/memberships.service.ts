@@ -12,6 +12,14 @@ export class MembershipsService {
   apiName = 'Default';
 
 
+  freeze = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: `/api/app/memberships/${id}/freeze`,
+    },
+    { apiName: this.apiName,...config });
+
+
   get = (id: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, MemberDto>({
       method: 'GET',
@@ -58,6 +66,22 @@ export class MembershipsService {
       method: 'POST',
       url: '/api/app/memberships/join',
       body: input,
+    },
+    { apiName: this.apiName,...config });
+
+
+  leave = (tenantId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: `/api/app/memberships/${tenantId}/leave`,
+    },
+    { apiName: this.apiName,...config });
+
+
+  reactivate = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: `/api/app/memberships/${id}/reactivate`,
     },
     { apiName: this.apiName,...config });
 }

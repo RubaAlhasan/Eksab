@@ -98,10 +98,11 @@ public class PosAppService : ApplicationService, IPosAppService
         }
 
         // Ambient tenant is still the caller's own tenant here — Membership's IMultiTenant filter
-        // already scopes this lookup to "this tenant only".
+        // already scopes this lookup to "this tenant only". Active only — a customer who has left
+        // (MembershipStatus.Cancelled) isn't a current member for staff-facing purposes either.
         var membership = user == null
             ? null
-            : await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == user.Id);
+            : await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == user.Id && m.Status == MembershipStatus.Active);
 
         if (user == null || membership == null)
         {
@@ -154,7 +155,7 @@ public class PosAppService : ApplicationService, IPosAppService
     {
         await CheckStaffRoleAsync(EmployeeRole.Owner, EmployeeRole.BranchManager, EmployeeRole.Cashier);
 
-        var membership = await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == customerId)
+        var membership = await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == customerId && m.Status == MembershipStatus.Active)
             ?? throw new UserFriendlyException("This customer hasn't joined your business yet.");
 
         var wallet = await _walletRepository.FirstAsync(w => w.MembershipId == membership.Id);
@@ -178,7 +179,7 @@ public class PosAppService : ApplicationService, IPosAppService
             throw new UserFriendlyException("You've reached today's limit for manual point adjustments.");
         }
 
-        var membership = await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == input.CustomerId)
+        var membership = await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == input.CustomerId && m.Status == MembershipStatus.Active)
             ?? throw new UserFriendlyException("This customer hasn't joined your business yet.");
         var wallet = await _walletRepository.FirstAsync(w => w.MembershipId == membership.Id);
 
@@ -204,7 +205,7 @@ public class PosAppService : ApplicationService, IPosAppService
     {
         await CheckStaffRoleAsync(EmployeeRole.Owner, EmployeeRole.BranchManager, EmployeeRole.Cashier);
 
-        var membership = await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == customerId)
+        var membership = await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == customerId && m.Status == MembershipStatus.Active)
             ?? throw new UserFriendlyException("This customer hasn't joined your business yet.");
 
         var wallet = await _walletRepository.FirstAsync(w => w.MembershipId == membership.Id);

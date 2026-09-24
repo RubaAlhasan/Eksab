@@ -28,6 +28,7 @@ public class EksabliPermissionDefinitionProvider : PermissionDefinitionProvider
         membershipsPermission.AddChild(EksabliPermissions.Memberships.View, L("Permission:Memberships.View"));
         membershipsPermission.AddChild(EksabliPermissions.Memberships.Award, L("Permission:Memberships.Award"));
         membershipsPermission.AddChild(EksabliPermissions.Memberships.Adjust, L("Permission:Memberships.Adjust"));
+        membershipsPermission.AddChild(EksabliPermissions.Memberships.Edit, L("Permission:Memberships.Edit"));
 
         var tiersPermission = myGroup.AddPermission(EksabliPermissions.Tiers.Default, L("Permission:Tiers"));
         tiersPermission.AddChild(EksabliPermissions.Tiers.Create, L("Permission:Tiers.Create"));

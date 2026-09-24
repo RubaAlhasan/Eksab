@@ -35,6 +35,9 @@ public static class EksabliPermissions
         // check inside PosAppService, not via these permissions (see PosAppService.CheckStaffRoleAsync).
         public const string Award = Default + ".Award";
         public const string Adjust = Default + ".Adjust";
+        // Staff-initiated Freeze/Reactivate (MembershipAppService.FreezeAsync/ReactivateAsync) — actually
+        // enforced, unlike Award/Adjust above.
+        public const string Edit = Default + ".Edit";
     }
 
     public static class Tiers

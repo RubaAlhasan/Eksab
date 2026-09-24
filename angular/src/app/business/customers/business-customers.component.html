@@ -45,6 +45,7 @@
         <option value="">{{ '::BusinessPanel:Customers:AllStatuses' | abpLocalization }}</option>
         <option value="0">{{ '::BusinessPanel:Customers:StatusActive' | abpLocalization }}</option>
         <option value="1">{{ '::BusinessPanel:Customers:StatusFrozen' | abpLocalization }}</option>
+        <option value="2">{{ '::BusinessPanel:Customers:StatusCancelled' | abpLocalization }}</option>
       </select>
     </div>
   </div>
@@ -125,11 +126,33 @@
                   </app-status-badge>
                 </td>
                 <td>
-                  @if (member.customerId) {
-                    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="openAdjustModal(member)">
-                      <i class="fas fa-pen me-1"></i>{{ '::BusinessPanel:Customers:AdjustPoints' | abpLocalization }}
-                    </button>
-                  }
+                  <div class="d-flex gap-2">
+                    @if (member.customerId) {
+                      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="openAdjustModal(member)">
+                        <i class="fas fa-pen me-1"></i>{{ '::BusinessPanel:Customers:AdjustPoints' | abpLocalization }}
+                      </button>
+                    }
+                    @if (canEditMembers() && member.status === Status.Active) {
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-warning"
+                        [disabled]="freezeBusyIds().has(member.id)"
+                        (click)="freezeMember(member)"
+                      >
+                        <i class="fas fa-snowflake me-1"></i>{{ '::BusinessPanel:Customers:FreezeAction' | abpLocalization }}
+                      </button>
+                    }
+                    @if (canEditMembers() && member.status === Status.Frozen) {
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-success"
+                        [disabled]="freezeBusyIds().has(member.id)"
+                        (click)="reactivateMember(member)"
+                      >
+                        <i class="fas fa-play me-1"></i>{{ '::BusinessPanel:Customers:ReactivateAction' | abpLocalization }}
+                      </button>
+                    }
+                  </div>
                 </td>
               </tr>
             }

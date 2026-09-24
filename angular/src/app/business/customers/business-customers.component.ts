@@ -59,9 +59,12 @@ const TIER_VARIANTS: StatusBadgeVariant[] = ['neutral', 'info', 'warning', 'succ
  * - "Convert to Campaign Target" per follower — `Eksabli.Followers.ConvertToCampaign` permission
  *   exists but is explicitly "defined for parity/future use" (see EksabliPermissions.cs), no endpoint
  *   backs it. Not rendered — a button with nothing behind it is a dead end, not a feature.
- * - Real `MembershipStatus` is only Active/Frozen (confirmed in the domain enum) — the prototype's
- *   "At Risk"/"Churned" statuses don't exist anywhere in the backend and are not reproduced; the
- *   status filter only offers the two real values.
+ * - The prototype's "At Risk"/"Churned" statuses don't exist anywhere in the backend and are not
+ *   reproduced; the status filter only offers the real values (`MembershipStatus`: Active/Frozen/
+ *   Cancelled — Cancelled added later, for the "leave a business" feature; a cancelled member keeps
+ *   showing here, badged distinctly, rather than disappearing — this list is reused by Coupons/
+ *   Notifications/Subscription usage counts which need every real member, see `GetMembersAsync`'s own
+ *   comment, so nothing here silently drops rows by status).
  *
  * **UPDATE, later session**: the customer-details drill-down page this comment used to say wasn't
  * real-buildable now exists (`business-customer-details.component.ts`, `/business/customers/:id`) —
@@ -137,6 +140,11 @@ export class BusinessCustomersComponent implements OnInit {
   protected readonly tiers = signal<TierDto[]>([]);
 
   protected readonly canViewFollowers = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Followers.View'));
+  protected readonly canEditMembers = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Memberships.Edit'));
+
+  // Freeze/Reactivate — tracked per-row (not a single busy flag) since staff could plausibly act on a
+  // different row while one request is still in flight.
+  protected readonly freezeBusyIds = signal<Set<string>>(new Set());
 
   private readonly followersLoaded = signal(false);
   protected readonly followers = signal<FollowerDto[]>([]);
@@ -180,13 +188,25 @@ export class BusinessCustomersComponent implements OnInit {
   }
 
   protected statusLabelKey(status: MembershipStatus | undefined): string {
-    return status === MembershipStatus.Frozen
-      ? '::BusinessPanel:Customers:StatusFrozen'
-      : '::BusinessPanel:Customers:StatusActive';
+    switch (status) {
+      case MembershipStatus.Frozen:
+        return '::BusinessPanel:Customers:StatusFrozen';
+      case MembershipStatus.Cancelled:
+        return '::BusinessPanel:Customers:StatusCancelled';
+      default:
+        return '::BusinessPanel:Customers:StatusActive';
+    }
   }
 
   protected statusVariant(status: MembershipStatus | undefined): StatusBadgeVariant {
-    return status === MembershipStatus.Frozen ? 'neutral' : 'success';
+    switch (status) {
+      case MembershipStatus.Frozen:
+        return 'neutral';
+      case MembershipStatus.Cancelled:
+        return 'danger';
+      default:
+        return 'success';
+    }
   }
 
   protected tierVariant(tierId: string | undefined | null): StatusBadgeVariant {
@@ -232,6 +252,56 @@ export class BusinessCustomersComponent implements OnInit {
 
   protected retryFollowers(): void {
     this.loadFollowers();
+  }
+
+  protected freezeMember(member: MemberDto): void {
+    if (!member.id || this.freezeBusyIds().has(member.id)) return;
+    const id = member.id;
+    this.freezeBusyIds.update(ids => new Set(ids).add(id));
+    this.membershipsService.freeze(id).subscribe({
+      next: () => {
+        this.freezeBusyIds.update(ids => {
+          const next = new Set(ids);
+          next.delete(id);
+          return next;
+        });
+        this.toaster.success('::BusinessPanel:Customers:FreezeSuccessMessage');
+        this.load();
+      },
+      error: () => {
+        this.freezeBusyIds.update(ids => {
+          const next = new Set(ids);
+          next.delete(id);
+          return next;
+        });
+        this.toaster.error('::BusinessPanel:Customers:FreezeErrorMessage');
+      },
+    });
+  }
+
+  protected reactivateMember(member: MemberDto): void {
+    if (!member.id || this.freezeBusyIds().has(member.id)) return;
+    const id = member.id;
+    this.freezeBusyIds.update(ids => new Set(ids).add(id));
+    this.membershipsService.reactivate(id).subscribe({
+      next: () => {
+        this.freezeBusyIds.update(ids => {
+          const next = new Set(ids);
+          next.delete(id);
+          return next;
+        });
+        this.toaster.success('::BusinessPanel:Customers:ReactivateSuccessMessage');
+        this.load();
+      },
+      error: () => {
+        this.freezeBusyIds.update(ids => {
+          const next = new Set(ids);
+          next.delete(id);
+          return next;
+        });
+        this.toaster.error('::BusinessPanel:Customers:ReactivateErrorMessage');
+      },
+    });
   }
 
   protected openAdjustModal(member: MemberDto): void {

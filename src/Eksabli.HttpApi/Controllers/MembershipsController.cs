@@ -36,10 +36,30 @@ public class MembershipsController : EksabliController
         return _membershipAppService.GetMemberAsync(id);
     }
 
+    [Authorize(EksabliPermissions.Memberships.Edit)]
+    [HttpPost("{id}/freeze")]
+    public Task FreezeAsync(Guid id)
+    {
+        return _membershipAppService.FreezeAsync(id);
+    }
+
+    [Authorize(EksabliPermissions.Memberships.Edit)]
+    [HttpPost("{id}/reactivate")]
+    public Task ReactivateAsync(Guid id)
+    {
+        return _membershipAppService.ReactivateAsync(id);
+    }
+
     [HttpPost("join")]
     public Task<MembershipDto> JoinAsync(JoinBusinessDto input)
     {
         return _membershipAppService.JoinAsync(input);
+    }
+
+    [HttpPost("{tenantId}/leave")]
+    public Task LeaveAsync(Guid tenantId)
+    {
+        return _membershipAppService.LeaveAsync(tenantId);
     }
 
     [HttpGet("my")]

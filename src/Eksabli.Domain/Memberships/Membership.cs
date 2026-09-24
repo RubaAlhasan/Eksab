@@ -57,6 +57,13 @@ public class Membership : AuditedAggregateRoot<Guid>, IMultiTenant
         Status = MembershipStatus.Active;
     }
 
+    // Customer-initiated leave. Doesn't touch the wallet/points/history — see MembershipStatus.Cancelled's
+    // own comment for why.
+    public void Cancel()
+    {
+        Status = MembershipStatus.Cancelled;
+    }
+
     // Set once, by ReferralAppService.GetMyReferralCodeAsync, after it has already confirmed
     // uniqueness within this tenant — this method itself doesn't re-check, same "dumb domain method,
     // validating caller" shape as ChangePlan/ApprovePendingPlanChange on Billing.TenantSubscription.

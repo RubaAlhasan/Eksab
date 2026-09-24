@@ -56,7 +56,7 @@
   @if (recentActivity().length === 0) {
     <p class="text-muted small">{{ '::Wallet:Points:NoActivity' | abpLocalization }}</p>
   } @else {
-    <div class="list-group">
+    <div class="list-group mb-4">
       @for (txn of recentActivity(); track txn.id) {
         <div class="list-group-item d-flex justify-content-between align-items-center">
           <div>
@@ -70,6 +70,28 @@
           </span>
         </div>
       }
+    </div>
+  }
+
+  @if (leaveFailed()) {
+    <p class="text-danger small mb-2">{{ '::Wallet:Points:LeaveErrorMessage' | abpLocalization }}</p>
+  }
+  @if (!showLeaveConfirm()) {
+    <button type="button" class="btn btn-outline-danger btn-sm" (click)="beginLeave()">
+      {{ '::Wallet:Points:LeaveButton' | abpLocalization }}
+    </button>
+  } @else {
+    <p class="text-muted small mb-2">{{ '::Wallet:Points:LeaveConfirmMessage' | abpLocalization }}</p>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="isLeaving()" (click)="cancelLeave()">
+        {{ '::Wallet:Rewards:CancelButton' | abpLocalization }}
+      </button>
+      <button type="button" class="btn btn-danger btn-sm" [disabled]="isLeaving()" (click)="confirmLeave()">
+        @if (isLeaving()) {
+          <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+        }
+        {{ '::Wallet:Points:LeaveConfirmButton' | abpLocalization }}
+      </button>
     </div>
   }
 }
