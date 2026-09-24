@@ -7,6 +7,9 @@ public class UpdateBusinessProfileDto
 {
     public Guid? CategoryId { get; set; }
 
+    [StringLength(BusinessProfileConsts.MaxDisplayNameLength)]
+    public string? DisplayName { get; set; }
+
     [StringLength(BusinessProfileConsts.MaxDescriptionLength)]
     public string? DescriptionAr { get; set; }
 

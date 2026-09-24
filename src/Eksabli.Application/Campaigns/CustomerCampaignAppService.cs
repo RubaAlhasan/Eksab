@@ -97,11 +97,17 @@ public class CustomerCampaignAppService : ApplicationService, ICustomerCampaignA
             }
 
             // Suspended or Pending businesses should not be promoting anything.
-            var approvedTenantIds = (await _businessProfileRepository.GetListAsync(p =>
+            var approvedProfiles = (await _businessProfileRepository.GetListAsync(p =>
                     p.TenantId != null && tenantIds.Contains(p.TenantId.Value)))
                 .Where(p => p.ApprovalStatus == TenantApprovalStatus.Approved)
-                .Select(p => p.TenantId!.Value)
-                .ToHashSet();
+                .ToList();
+            var approvedTenantIds = approvedProfiles.Select(p => p.TenantId!.Value).ToHashSet();
+
+            // Prefer the business's own chosen display name over the technical Tenant.Name — see
+            // BusinessProfile.DisplayName's own comment.
+            var displayNameByTenantId = approvedProfiles
+                .Where(p => !p.DisplayName.IsNullOrWhiteSpace())
+                .ToDictionary(p => p.TenantId!.Value, p => p.DisplayName!);
 
             if (approvedTenantIds.Count == 0)
             {
@@ -140,7 +146,9 @@ public class CustomerCampaignAppService : ApplicationService, ICustomerCampaignA
                 {
                     Id = campaign.Id,
                     TenantId = campaign.TenantId!.Value,
-                    BusinessName = tenantNames.GetValueOrDefault(campaign.TenantId!.Value) ?? string.Empty,
+                    BusinessName = displayNameByTenantId.GetValueOrDefault(campaign.TenantId!.Value)
+                        ?? tenantNames.GetValueOrDefault(campaign.TenantId!.Value)
+                        ?? string.Empty,
                     NameAr = campaign.NameAr,
                     NameEn = campaign.NameEn,
                     Type = campaign.Type,

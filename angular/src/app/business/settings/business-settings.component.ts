@@ -62,11 +62,14 @@ function serializeSocialLinks(instagram: string, facebook: string, rest: Record<
  *   — see `business-subscription.component.ts`'s file comment).
  *
  * What's real and kept, in "Profile & Branding":
- * - **Business name is shown read-only**, from `ConfigStateService`'s own `currentTenant.name` (the
- *   same real tenant-resolution signal `business.guard.ts` already relies on for `.id`) — not
- *   editable, because `UpdateBusinessProfileDto` has no `Name` field at all (confirmed by reading it);
- *   the tenant's name lives on ABP's own `Tenant` entity, with no self-service rename endpoint exposed
- *   anywhere (`TenantManager.CreateAsync` sets it once, at registration).
+ * - **Display Name** is a real, editable `UpdateBusinessProfileDto.DisplayName` field — the customer/
+ *   admin-facing brand name, deliberately separate from ABP's own `Tenant.Name` (the account's
+ *   technical, unique, login-resolution identifier, still not renameable anywhere — `TenantManager
+ *   .CreateAsync` sets it once, at registration, and nothing here changes that). Pre-filled with the
+ *   tenant name on first load so the field never starts blank; the header label next to the logo shows
+ *   whichever one is currently effective (`effectiveDisplayName`), matching exactly what customers see.
+ *   Blank/whitespace clears it server-side (`BusinessProfile.SetDisplayName`), falling back to the
+ *   tenant name again everywhere it's shown.
  * - **Category, Website, Description (bilingual)** are real, straight `UpdateBusinessProfileDto`
  *   fields. Category options come from the real public catalog (`CategoriesService.getList`, the same
  *   `[AllowAnonymous]` read Admin Categories/registration use).
@@ -97,10 +100,21 @@ export class BusinessSettingsComponent implements OnInit {
 
   protected readonly canEdit = computed(() => this.permissionService.getGrantedPolicy('Eksabli.BusinessProfile.Edit'));
 
-  protected readonly businessName = computed(() => {
+  protected readonly tenantName = computed(() => {
     const currentTenant = this.configState.getOne('currentTenant') as { name?: string } | undefined;
     return currentTenant?.name ?? '—';
   });
+
+  // What customers/admins actually see right now — mirrors the same "DisplayName, falling back to
+  // Tenant.Name" precedence every backend reader (CustomerBusinessAppService, MembershipAppService,
+  // CustomerCampaignAppService) applies server-side.
+  protected readonly effectiveDisplayName = computed(() => this.profile()?.displayName || this.tenantName());
+
+  // Only worth surfacing once the two have actually diverged — otherwise it's just the same string
+  // twice.
+  protected readonly showAccountNameHint = computed(
+    () => !!this.profile()?.displayName && this.profile()?.displayName !== this.tenantName(),
+  );
 
   protected readonly isLoading = signal(true);
   protected readonly loadFailed = signal(false);
@@ -119,6 +133,7 @@ export class BusinessSettingsComponent implements OnInit {
   });
 
   protected readonly form = new FormGroup({
+    displayName: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(128)] }),
     categoryId: new FormControl<string | null>(null),
     descriptionEn: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(2000)] }),
     descriptionAr: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(2000)] }),
@@ -146,6 +161,7 @@ export class BusinessSettingsComponent implements OnInit {
     this.isSaving.set(true);
     this.businessService
       .updateProfile({
+        displayName: value.displayName || null,
         categoryId: value.categoryId || null,
         descriptionEn: value.descriptionEn || null,
         descriptionAr: value.descriptionAr || null,
@@ -219,6 +235,9 @@ export class BusinessSettingsComponent implements OnInit {
         const { instagram, facebook, rest } = parseSocialLinks(profile.socialLinksJson);
         this.socialLinksRest = rest;
         this.form.reset({
+          // Pre-filled with the tenant name when no display name is set yet, so the field starts
+          // showing what customers currently see rather than a blank box.
+          displayName: profile.displayName ?? this.tenantName(),
           categoryId: profile.categoryId ?? null,
           descriptionEn: profile.descriptionEn ?? '',
           descriptionAr: profile.descriptionAr ?? '',

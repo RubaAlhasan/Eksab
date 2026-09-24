@@ -146,9 +146,12 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
                 return new CustomerBusinessDto
                 {
                     TenantId = tenantId,
-                    // A tenant row should always exist for a profile, but don't 500 the
-                    // whole directory over one orphaned profile.
-                    Name = tenantNames.GetValueOrDefault(tenantId) ?? string.Empty,
+                    // Prefer the business's own chosen display name over the technical Tenant.Name —
+                    // see BusinessProfile.DisplayName's own comment. A tenant row should always exist
+                    // for a profile, but don't 500 the whole directory over one orphaned profile.
+                    Name = !p.DisplayName.IsNullOrWhiteSpace()
+                        ? p.DisplayName!
+                        : tenantNames.GetValueOrDefault(tenantId) ?? string.Empty,
                     CategoryId = p.CategoryId,
                     CategoryNameAr = category?.NameAr,
                     CategoryNameEn = category?.NameEn,

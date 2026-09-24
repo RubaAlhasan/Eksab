@@ -94,6 +94,14 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
             ownerUserId = ownerUser.Id;
 
             var businessProfile = BusinessProfile.Create(GuidGenerator.Create(), input.CategoryId);
+            // Set explicitly at creation rather than left null to rely on the Tenant.Name fallback
+            // every reader applies (see BusinessProfile.DisplayName's own comment) — makes the row's
+            // own data complete from day one instead of depending on a join for every fresh
+            // registration. Prefers the caller's own DisplayName when given (e.g. the admin create
+            // form lets a platform admin pick a different customer-facing name up front); falls back
+            // to BusinessName, so both start out identical for any caller that never supplies one.
+            businessProfile.SetDisplayName(
+                string.IsNullOrWhiteSpace(input.DisplayName) ? input.BusinessName : input.DisplayName);
             businessProfile.SetDescription(input.DescriptionAr, input.DescriptionEn);
             businessProfile.SetWebsite(input.Website);
             businessProfile.SetSocialLinks(BuildSocialLinksJson(input.InstagramUrl, input.FacebookUrl));
@@ -174,6 +182,7 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
     {
         var profile = await _businessProfileRepository.SingleAsync();
         profile.SetCategory(input.CategoryId);
+        profile.SetDisplayName(input.DisplayName);
         profile.SetDescription(input.DescriptionAr, input.DescriptionEn);
         profile.SetWebsite(input.Website);
         profile.SetSocialLinks(input.SocialLinksJson);

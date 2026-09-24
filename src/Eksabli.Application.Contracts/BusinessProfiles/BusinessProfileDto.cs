@@ -9,6 +9,8 @@ public class BusinessProfileDto : AuditedEntityDto<Guid>
 
     public Guid? CategoryId { get; set; }
 
+    public string? DisplayName { get; set; }
+
     public string? LogoBlobName { get; set; }
 
     public string? DescriptionAr { get; set; }

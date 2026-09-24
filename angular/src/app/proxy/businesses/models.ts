@@ -74,6 +74,7 @@ export interface BusinessRegistrationResultDto {
 
 export interface RegisterBusinessDto {
   businessName: string;
+  displayName?: string | null;
   categoryId?: string | null;
   descriptionAr?: string | null;
   descriptionEn?: string | null;

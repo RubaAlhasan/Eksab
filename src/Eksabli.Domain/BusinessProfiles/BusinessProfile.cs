@@ -11,6 +11,15 @@ public class BusinessProfile : AuditedAggregateRoot<Guid>, IMultiTenant
 
     public Guid? CategoryId { get; private set; }
 
+    // Customer/admin-facing brand name — deliberately separate from ABP's own Tenant.Name/
+    // NormalizedName. Tenant.Name is a technical identifier (unique, used for login/tenant
+    // resolution, set once at registration with no self-service rename anywhere); a business may
+    // reasonably want customers to see something different (different casing/spacing/punctuation,
+    // or a full rebrand) without touching that identifier. Null means "not set yet" — every caller
+    // that reads a customer-facing business name falls back to Tenant.Name in that case, so existing
+    // businesses keep showing exactly what they show today until they explicitly set this.
+    public string? DisplayName { get; private set; }
+
     public string? LogoBlobName { get; private set; }
 
     public string? LogoContentType { get; private set; }
@@ -73,6 +82,13 @@ public class BusinessProfile : AuditedAggregateRoot<Guid>, IMultiTenant
     }
 
     public void SetCategory(Guid? categoryId) => CategoryId = categoryId;
+
+    // Blank/whitespace-only is normalized to null (falls back to Tenant.Name), not stored as an
+    // empty string — same reasoning UpdateProfileAsync's other optional text fields already get for
+    // free from nullable strings, made explicit here since "" and null must behave identically for
+    // the fallback in every reader to be correct.
+    public void SetDisplayName(string? displayName) =>
+        DisplayName = string.IsNullOrWhiteSpace(displayName) ? null : displayName.Trim();
 
     public void SetDescription(string? descriptionAr, string? descriptionEn)
     {

@@ -12,6 +12,13 @@ public class RegisterBusinessDto
     [StringLength(128)]
     public string BusinessName { get; set; } = string.Empty;
 
+    // Optional — the customer/admin-facing brand name (BusinessProfile.DisplayName), separate from
+    // BusinessName above (which becomes the account's technical Tenant.Name/login identifier). Falls
+    // back to BusinessName in BusinessAppService.RegisterAsync when left blank, so a caller that
+    // never heard of this field still gets identical behavior to before it existed.
+    [StringLength(BusinessProfileConsts.MaxDisplayNameLength)]
+    public string? DisplayName { get; set; }
+
     public Guid? CategoryId { get; set; }
 
     [StringLength(BusinessProfileConsts.MaxDescriptionLength)]

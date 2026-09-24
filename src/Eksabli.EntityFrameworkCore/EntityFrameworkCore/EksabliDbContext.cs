@@ -181,6 +181,7 @@ public class EksabliDbContext :
         {
             b.ToTable(EksabliConsts.DbTablePrefix + "BusinessProfiles", EksabliConsts.DbSchema);
             b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.DisplayName).HasMaxLength(BusinessProfileConsts.MaxDisplayNameLength);
             b.Property(x => x.LogoBlobName).HasMaxLength(BusinessProfileConsts.MaxLogoBlobNameLength);
             b.Property(x => x.LogoContentType).HasMaxLength(BusinessProfileConsts.MaxLogoContentTypeLength);
             b.Property(x => x.DescriptionAr).HasMaxLength(BusinessProfileConsts.MaxDescriptionLength);

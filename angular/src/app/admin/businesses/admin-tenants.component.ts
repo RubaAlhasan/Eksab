@@ -116,6 +116,9 @@ export class AdminTenantsComponent implements OnInit {
 
   protected readonly createForm = new FormGroup({
     businessName: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(128)] }),
+    // Optional — see RegisterBusinessDto.DisplayName's own comment. Falls back to businessName
+    // server-side when left blank, so leaving this empty is the same as not having the field at all.
+    displayName: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(128)] }),
     categoryId: new FormControl('', { nonNullable: true }),
     descriptionEn: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(2000)] }),
     descriptionAr: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(2000)] }),
@@ -165,6 +168,7 @@ export class AdminTenantsComponent implements OnInit {
   protected openCreateModal(): void {
     this.createForm.reset({
       businessName: '',
+      displayName: '',
       categoryId: '',
       descriptionEn: '',
       descriptionAr: '',
@@ -197,6 +201,7 @@ export class AdminTenantsComponent implements OnInit {
     this.businessService
       .register({
         businessName: value.businessName,
+        displayName: value.displayName || null,
         categoryId: value.categoryId || null,
         descriptionEn: value.descriptionEn || null,
         descriptionAr: value.descriptionAr || null,

@@ -362,11 +362,19 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
         var nameByTenantId = (await _tenantRepository.GetListAsync(t => tenantIds.Contains(t.Id)))
             .ToDictionary(t => t.Id, t => t.Name);
 
+        // Prefer the business's own chosen display name over the technical Tenant.Name — see
+        // BusinessProfile.DisplayName's own comment.
+        var displayNameByTenantId = (await _businessProfileRepository.GetListAsync(p =>
+                p.TenantId != null && tenantIds.Contains(p.TenantId.Value)))
+            .Where(p => !p.DisplayName.IsNullOrWhiteSpace())
+            .ToDictionary(p => p.TenantId!.Value, p => p.DisplayName!);
+
         foreach (var dto in dtos)
         {
             if (dto.TenantId.HasValue)
             {
-                dto.BusinessName = nameByTenantId.GetValueOrDefault(dto.TenantId.Value);
+                dto.BusinessName = displayNameByTenantId.GetValueOrDefault(dto.TenantId.Value)
+                    ?? nameByTenantId.GetValueOrDefault(dto.TenantId.Value);
             }
         }
     }

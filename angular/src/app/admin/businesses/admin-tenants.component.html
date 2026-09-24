@@ -137,6 +137,12 @@
     </div>
 
     <div>
+      <label class="form-label" for="displayName">{{ '::AdminPanel:Businesses:FieldDisplayName' | abpLocalization }}</label>
+      <input id="displayName" type="text" class="form-control" formControlName="displayName" />
+      <p class="text-muted small mb-0 mt-1">{{ '::AdminPanel:Businesses:DisplayNameHint' | abpLocalization }}</p>
+    </div>
+
+    <div>
       <label class="form-label" for="categoryId">{{ '::AdminPanel:Businesses:FieldCategory' | abpLocalization }}</label>
       <select id="categoryId" class="form-select" formControlName="categoryId">
         <option value="">{{ '::AdminPanel:Businesses:NoCategory' | abpLocalization }}</option>
