@@ -25,6 +25,13 @@ export interface AdminTenantFilterDto extends PagedAndSortedResultRequestDto {
   filterText?: string | null;
 }
 
+// Hand-added, same "backend ahead of the generated proxy" convention as CustomerBusinessDto etc.
+// below — matches Eksabli.Businesses.ImpersonationTokenResultDto field-for-field.
+export interface ImpersonationTokenResultDto {
+  code: string;
+  expiresInSeconds: number;
+}
+
 // Hand-added — CustomerBusinessController (src/Eksabli.HttpApi/Controllers/CustomerBusinessController.cs)
 // already exists on the backend (customer-facing business directory: search/nearby/store-details/batch
 // lookup, Approved tenants only) but its proxy was never generated. Regenerate via

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Eksabli.Branches;
 using Eksabli.BusinessProfiles;
@@ -8,6 +9,7 @@ using Eksabli.Campaigns;
 using Eksabli.EmployeeAssignments;
 using Eksabli.Memberships;
 using Eksabli.Wallets;
+using Microsoft.Extensions.Caching.Distributed;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -33,6 +35,7 @@ public class AdminTenantAppService : ApplicationService, IAdminTenantAppService
     private readonly IRepository<EmployeeAssignment, Guid> _employeeAssignmentRepository;
     private readonly IIdentityUserRepository _identityUserRepository;
     private readonly IDataFilter _dataFilter;
+    private readonly IDistributedCache _impersonationCache;
 
     public AdminTenantAppService(
         IRepository<BusinessProfile, Guid> businessProfileRepository,
@@ -44,7 +47,8 @@ public class AdminTenantAppService : ApplicationService, IAdminTenantAppService
         IRepository<Branch, Guid> branchRepository,
         IRepository<EmployeeAssignment, Guid> employeeAssignmentRepository,
         IIdentityUserRepository identityUserRepository,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        IDistributedCache impersonationCache)
     {
         _businessProfileRepository = businessProfileRepository;
         _tenantRepository = tenantRepository;
@@ -56,6 +60,7 @@ public class AdminTenantAppService : ApplicationService, IAdminTenantAppService
         _employeeAssignmentRepository = employeeAssignmentRepository;
         _identityUserRepository = identityUserRepository;
         _dataFilter = dataFilter;
+        _impersonationCache = impersonationCache;
     }
 
     public async Task<PagedResultDto<AdminTenantDto>> GetListAsync(AdminTenantFilterDto input)
@@ -191,6 +196,27 @@ public class AdminTenantAppService : ApplicationService, IAdminTenantAppService
             var memberCountLookup = await GetMemberCountLookupAsync([tenantId]);
             return ToDto(profile, tenant.Name, memberCountLookup.GetValueOrDefault(tenantId));
         }
+    }
+
+    public async Task<ImpersonationTokenResultDto> GetImpersonationTokenAsync(Guid tenantId)
+    {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            // Confirms the tenant is real before minting anything — same EntityNotFoundException shape
+            // GetAsync above relies on.
+            await _tenantRepository.GetAsync(tenantId);
+        }
+
+        const int expiresInSeconds = 60;
+        var code = GuidGenerator.Create().ToString("N");
+
+        var item = new ImpersonationTokenCacheItem { TenantId = tenantId };
+        await _impersonationCache.SetAsync(
+            ImpersonationTokenCacheItem.CacheKeyPrefix + code,
+            JsonSerializer.SerializeToUtf8Bytes(item),
+            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(expiresInSeconds) });
+
+        return new ImpersonationTokenResultDto { Code = code, ExpiresInSeconds = expiresInSeconds };
     }
 
     private async Task<BusinessProfile> GetBusinessProfileAsync(Guid tenantId)

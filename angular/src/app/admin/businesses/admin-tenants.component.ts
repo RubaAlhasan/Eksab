@@ -2,8 +2,9 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { LocalizationPipe, PermissionService } from '@abp/ng.core';
+import { AuthService, ConfigStateService, LocalizationPipe, PermissionService } from '@abp/ng.core';
 import { Confirmation, ConfirmationService, ToasterService } from '@abp/ng.theme.shared';
+import { OAuthService } from 'angular-oauth2-oidc';
 import { AdminTenantsService } from '../../proxy/controllers/admin-tenants.service';
 import { CategoriesService } from '../../proxy/controllers/categories.service';
 import { AdminSubscriptionsService } from '../../proxy/controllers/admin-subscriptions.service';
@@ -87,6 +88,9 @@ export class AdminTenantsComponent implements OnInit {
   private readonly confirmation = inject(ConfirmationService);
   private readonly toaster = inject(ToasterService);
   private readonly permissionService = inject(PermissionService);
+  private readonly authService = inject(AuthService);
+  private readonly configState = inject(ConfigStateService);
+  private readonly oAuthService = inject(OAuthService);
 
   protected readonly ApprovalStatus = TenantApprovalStatus;
   private readonly pageSize = 10;
@@ -104,6 +108,9 @@ export class AdminTenantsComponent implements OnInit {
 
   protected readonly canViewPlans = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Billing.ManagePlatform'));
   protected readonly canCreate = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Tenants.Approve'));
+  protected readonly canImpersonate = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Tenants.Impersonate'));
+
+  protected readonly isImpersonating = signal(false);
 
   /** Bulk lookups, loaded once — same "load a bounded batch, fall back on failure" shape used
    *  throughout the Admin Portal (see admin-subscriptions.component.ts's tenantNames). */
@@ -302,6 +309,47 @@ export class AdminTenantsComponent implements OnInit {
         this.adminTenantsService.suspend(tenant.tenantId).subscribe(() => {
           this.toaster.success('::AdminPanel:Businesses:SuspendedMessage');
           this.load();
+        });
+      });
+  }
+
+  // "Login as tenant" — mints a single-use code (AdminTenantAppService.GetImpersonationTokenAsync),
+  // then exchanges it for a real access token as that tenant's own "admin" user via the same
+  // AuthService.loginUsingGrant + OAuthService.state reset + ConfigStateService.refreshAppState
+  // sequence customer-login.component.ts's verifyCode() already established for the "otp" grant — see
+  // that method's own comment for why clearing `state` first matters. A hard navigation (not
+  // router.navigateByUrl) on success, deliberately: this admin session's in-memory services/signals
+  // (permissions, currentUser, every component's own state) must not bleed into the impersonated
+  // business session, the same lesson every other stale-SPA-state issue this app has hit taught.
+  protected loginAsTenant(tenant: AdminTenantDto): void {
+    if (!tenant.tenantId || this.isImpersonating()) return;
+    const tenantId = tenant.tenantId;
+
+    this.confirmation
+      .warn('::AdminPanel:Businesses:ImpersonateConfirmMessage', '::AdminPanel:Businesses:ImpersonateConfirmTitle')
+      .subscribe((status) => {
+        if (status !== Confirmation.Status.confirm) return;
+
+        this.isImpersonating.set(true);
+        this.adminTenantsService.getImpersonationToken(tenantId).subscribe({
+          next: (result) => {
+            this.oAuthService.state = '';
+            this.authService
+              .loginUsingGrant('impersonation', { code: result.code })
+              .then(() => {
+                this.configState.refreshAppState().subscribe(() => {
+                  window.location.href = '/business/dashboard';
+                });
+              })
+              .catch(() => {
+                this.isImpersonating.set(false);
+                this.toaster.error('::AdminPanel:Businesses:ImpersonateErrorMessage');
+              });
+          },
+          error: () => {
+            this.isImpersonating.set(false);
+            this.toaster.error('::AdminPanel:Businesses:ImpersonateErrorMessage');
+          },
         });
       });
   }

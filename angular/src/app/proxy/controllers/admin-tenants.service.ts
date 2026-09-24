@@ -1,7 +1,7 @@
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { AdminTenantDetailStatsDto, AdminTenantDto, AdminTenantFilterDto } from '../businesses/models';
+import type { AdminTenantDetailStatsDto, AdminTenantDto, AdminTenantFilterDto, ImpersonationTokenResultDto } from '../businesses/models';
 
 @Injectable({
   providedIn: 'root',
@@ -31,6 +31,14 @@ export class AdminTenantsService {
     this.restService.request<any, AdminTenantDetailStatsDto>({
       method: 'GET',
       url: `/api/app/admin-tenants/${tenantId}/detail-stats`,
+    },
+    { apiName: this.apiName,...config });
+
+
+  getImpersonationToken = (tenantId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, ImpersonationTokenResultDto>({
+      method: 'POST',
+      url: `/api/app/admin-tenants/${tenantId}/impersonation-token`,
     },
     { apiName: this.apiName,...config });
 

@@ -423,6 +423,18 @@ export const APP_ROUTES: Routes = [
         canActivate: [permissionGuard],
         data: { requiredPolicy: 'Eksabli.EmployeeAssignments' },
       },
+      // Stock ABP UI (Roles + the "Permissions" modal on each row) — same "relocate where the SAME
+      // real guards render" shape as '/admin''s own '/identity' mount above: `createRoutes()` already
+      // ships its own authGuard/permissionGuard + per-leaf AbpIdentity.Roles.* requiredPolicy, so this
+      // entry doesn't change what's guarded, just renders it inside BusinessLayoutComponent's shell
+      // instead of Lepton-X's stock chrome (see route.provider.ts's matching layout-resolution anchor).
+      // Lets a business's own Owner manage what each EmployeeRole tier's real ABP Identity Role can do
+      // (see EmployeeAssignmentAppService/EmployeeRolePermissionDefaults) — the actual gap this exists
+      // to close: previously there was no Business-Portal-side way to grant/adjust permissions at all.
+      {
+        path: 'identity',
+        loadChildren: () => import('@abp/ng.identity').then(c => c.createRoutes()),
+      },
       {
         path: 'branches',
         loadComponent: () =>

@@ -150,6 +150,11 @@ public static class EksabliPermissions
         public const string View = Default + ".View";
         public const string Approve = Default + ".Approve";
         public const string Suspend = Default + ".Suspend";
+        // "Login as tenant" (AdminTenantAppService.GetImpersonationTokenAsync +
+        // TenantImpersonationGrantHandler) — lets a platform admin act as a business's own Owner
+        // without knowing their password. Deliberately its own permission, not folded into View, since
+        // it's a materially more sensitive capability than just looking at a tenant's data.
+        public const string Impersonate = Default + ".Impersonate";
     }
 
     // Cross-tenant "Users" directory (Admin Portal) — deliberately its own permission, not reused as

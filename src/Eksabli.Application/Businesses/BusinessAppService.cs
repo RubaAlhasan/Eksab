@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Eksabli.Billing;
@@ -10,6 +11,7 @@ using Eksabli.EmployeeAssignments;
 using Eksabli.Settings;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
+using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.BlobStoring;
 using Volo.Abp.Content;
 using Volo.Abp.Data;
@@ -18,6 +20,7 @@ using Volo.Abp.Domain.Repositories;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
+using Volo.Abp.PermissionManagement;
 using Volo.Abp.Settings;
 using Volo.Abp.TenantManagement;
 
@@ -40,6 +43,8 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
     private readonly ISettingProvider _settingProvider;
     private readonly IBlobContainer<BusinessLogoContainer> _logoContainer;
     private readonly IDataFilter _dataFilter;
+    private readonly IPermissionDefinitionManager _permissionDefinitionManager;
+    private readonly IPermissionDataSeeder _permissionDataSeeder;
 
     public BusinessAppService(
         TenantManager tenantManager,
@@ -55,7 +60,9 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
         IFeatureManager featureManager,
         ISettingProvider settingProvider,
         IBlobContainer<BusinessLogoContainer> logoContainer,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        IPermissionDefinitionManager permissionDefinitionManager,
+        IPermissionDataSeeder permissionDataSeeder)
     {
         _tenantManager = tenantManager;
         _tenantRepository = tenantRepository;
@@ -71,6 +78,8 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
         _settingProvider = settingProvider;
         _logoContainer = logoContainer;
         _dataFilter = dataFilter;
+        _permissionDefinitionManager = permissionDefinitionManager;
+        _permissionDataSeeder = permissionDataSeeder;
     }
 
     public async Task<BusinessRegistrationResultDto> RegisterAsync(RegisterBusinessDto input)
@@ -92,6 +101,8 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
             var ownerUser = await _identityUserRepository.FindByNormalizedUserNameAsync("ADMIN")
                 ?? throw new AbpException("Tenant admin seeding did not produce the expected user.");
             ownerUserId = ownerUser.Id;
+
+            await GrantOwnerRolePermissionsAsync();
 
             var businessProfile = BusinessProfile.Create(GuidGenerator.Create(), input.CategoryId);
             // Set explicitly at creation rather than left null to rely on the Tenant.Name fallback
@@ -129,6 +140,44 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
             BranchId = branchId,
             OwnerUserId = ownerUserId
         };
+    }
+
+    // Without this, the tenant's own "admin" role (just created above by IdentityDataSeedContributor)
+    // had zero permission grants of any kind — every Eksabli.* permission-gated Business Portal
+    // endpoint was unreachable to the Owner themselves, and there was no way to reach the Roles &
+    // Permissions page at all (AbpIdentity.Roles.* ungranted too). Same "grant everything currently
+    // defined" shape as AdminPermissionDataSeederContributor (Host's own "admin" role), but scoped to
+    // just this tenant's real permissions — MultiTenancySides.Tenant/.Both only (Host-only permissions
+    // like Tenants.Approve/Users.View/AuditLogs are explicitly excluded via
+    // EksabliPermissionDefinitionProvider's own MultiTenancySides restrictions, closing the exact
+    // cross-tenant leak that class's own comment already documents from an earlier attempt at this).
+    // Runs inside the caller's _currentTenant.Change(tenant.Id) block, same shape as the other
+    // per-tenant provisioning here — deliberately NOT reused for already-existing tenants (this only
+    // runs at registration time, once).
+    private async Task GrantOwnerRolePermissionsAsync()
+    {
+        var tenantPermissionNames = (await _permissionDefinitionManager.GetPermissionsAsync())
+            .Where(p => p.Name.StartsWith("Eksabli.", StringComparison.Ordinal) && p.MultiTenancySide != MultiTenancySides.Host)
+            .Select(p => p.Name)
+            .Distinct()
+            .ToList();
+
+        // The ABP Identity module's own Roles management (list/create/edit + the "Permissions" modal
+        // that actually grants/revokes) — needed for the Owner to use the Roles & Permissions page at
+        // all, not just to hold Eksabli.* permissions themselves.
+        tenantPermissionNames.AddRange(new[]
+        {
+            "AbpIdentity.Roles",
+            "AbpIdentity.Roles.Create",
+            "AbpIdentity.Roles.Update",
+            "AbpIdentity.Roles.Delete",
+            "AbpIdentity.Roles.ManagePermissions",
+        });
+
+        // "R" — Volo.Abp.PermissionManagement.RolePermissionValueProvider.ProviderName's own value;
+        // see EmployeeAssignmentAppService's own comment for why this layer uses the literal instead
+        // of referencing that type directly.
+        await _permissionDataSeeder.SeedAsync("R", "admin", tenantPermissionNames.ToArray(), CurrentTenant.Id);
     }
 
     // Trial, not permanent freemium — see docs/eksabli-loyalty-platform/01-business-strategy.md#revenue-model--pricing.

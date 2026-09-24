@@ -78,7 +78,7 @@ public class OpenIddictDataSeedContributor : OpenIddictDataSeedContributorBase, 
                     OpenIddictConstants.GrantTypes.ClientCredentials,
                     OpenIddictConstants.GrantTypes.RefreshToken,
                     "LinkLogin",
-                    "Impersonation",
+                    "impersonation",
                     "otp"
                 },
                 scopes: commonScopes,

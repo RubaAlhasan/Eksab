@@ -273,6 +273,15 @@ function configureRoutes() {
         layout: eLayoutType.empty,
         requiredPolicy: 'Eksabli.EmployeeAssignments',
       },
+      // Layout-resolution anchor for the stock ABP Roles page nested under /business in
+      // app.routes.ts — same shape and same reason as '/admin/identity' above (its own real
+      // permission check lives inside the package's own routes, not here).
+      {
+        path: '/business/identity',
+        name: 'Eksabli::Internal:BusinessIdentityLayoutAnchor',
+        invisible: true,
+        layout: eLayoutType.empty,
+      },
       {
         path: '/business/branches',
         name: '::BusinessPanel:Layout:NavBranches',

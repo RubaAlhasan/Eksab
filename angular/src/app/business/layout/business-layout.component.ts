@@ -62,6 +62,10 @@ export class BusinessLayoutComponent {
     { labelKey: '::BusinessPanel:Layout:NavAnalytics', icon: 'fa-chart-line', link: '/business/analytics', permission: 'Eksabli.Reports' },
     { labelKey: '::BusinessPanel:Layout:NavCustomers', icon: 'fa-users', link: '/business/customers', permission: 'Eksabli.Memberships.View' },
     { labelKey: '::BusinessPanel:Layout:NavEmployees', icon: 'fa-user-tie', link: '/business/employees', permission: 'Eksabli.EmployeeAssignments' },
+    // Stock ABP Roles page (list + the "Permissions" modal per role) — see app.routes.ts's own
+    // comment on this mount. Gated on the same permission as Employees above: managing what a tier
+    // can do is the same class of "who runs this business" capability as managing who's on it.
+    { labelKey: '::BusinessPanel:Layout:NavRoles', icon: 'fa-user-shield', link: '/business/identity/roles', permission: 'Eksabli.EmployeeAssignments' },
     { labelKey: '::BusinessPanel:Layout:NavBranches', icon: 'fa-building', link: '/business/branches', permission: 'Eksabli.Branches' },
     // Empty permission = always granted (PermissionService.getGrantedPolicy's own "no key" shape,
     // same convention as AdminLayoutComponent's `AbpAccount::MyAccount` entry) — PosController has no

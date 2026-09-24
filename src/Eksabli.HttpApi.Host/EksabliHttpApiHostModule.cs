@@ -95,6 +95,7 @@ public class EksabliHttpApiHostModule : AbpModule
         PreConfigure<OpenIddictServerBuilder>(builder =>
         {
             builder.AllowCustomFlow("otp");
+            builder.AllowCustomFlow("impersonation");
         });
 
         if (!hostingEnvironment.IsDevelopment())
@@ -219,6 +220,7 @@ public class EksabliHttpApiHostModule : AbpModule
         Configure<AbpOpenIddictExtensionGrantsOptions>(options =>
         {
             options.Grants["otp"] = new OtpLoginGrantHandler();
+            options.Grants["impersonation"] = new TenantImpersonationGrantHandler();
         });
     }
 

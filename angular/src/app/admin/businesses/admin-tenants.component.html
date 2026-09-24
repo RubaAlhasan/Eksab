@@ -101,8 +101,18 @@
                   </button>
                 }
                 @if (tenant.approvalStatus !== ApprovalStatus.Suspended) {
-                  <button type="button" class="btn btn-sm btn-outline-danger" (click)="suspend(tenant)">
+                  <button type="button" class="btn btn-sm btn-outline-danger me-2" (click)="suspend(tenant)">
                     {{ '::AdminPanel:Businesses:Suspend' | abpLocalization }}
+                  </button>
+                }
+                @if (canImpersonate()) {
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-primary"
+                    [disabled]="isImpersonating()"
+                    (click)="loginAsTenant(tenant)"
+                  >
+                    {{ '::AdminPanel:Businesses:LoginAsTenant' | abpLocalization }}
                   </button>
                 }
               </td>

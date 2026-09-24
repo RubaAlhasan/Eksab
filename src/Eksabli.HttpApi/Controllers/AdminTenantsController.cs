@@ -51,4 +51,11 @@ public class AdminTenantsController : EksabliController
     {
         return _adminTenantAppService.SuspendAsync(tenantId);
     }
+
+    [Authorize(EksabliPermissions.Tenants.Impersonate)]
+    [HttpPost("{tenantId}/impersonation-token")]
+    public Task<ImpersonationTokenResultDto> GetImpersonationTokenAsync(Guid tenantId)
+    {
+        return _adminTenantAppService.GetImpersonationTokenAsync(tenantId);
+    }
 }
