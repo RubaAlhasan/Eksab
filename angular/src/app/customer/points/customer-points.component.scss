@@ -29,7 +29,7 @@
   color: inherit;
   border: 1px solid var(--eks-border);
   border-radius: var(--eks-radius-md);
-  transition: box-shadow 0.15s;
+  transition: box-shadow 0.15s ease-out, transform 0.15s ease-out;
 
   i {
     font-size: 1.25rem;
@@ -37,6 +37,7 @@
   }
 
   &:hover {
-    box-shadow: var(--eks-shadow-sm);
+    box-shadow: var(--eks-shadow-lg);
+    transform: translateY(-2px);
   }
 }

@@ -44,7 +44,7 @@
                   {{ wallet.businessName ?? ('::Wallet:UnknownBusiness' | abpLocalization) }}
                 </p>
                 @if (wallet.currentTierName) {
-                  <span class="badge text-bg-secondary mb-2">{{ wallet.currentTierName }}</span>
+                  <span class="eks-tier-badge mb-2">{{ wallet.currentTierName }}</span>
                 }
                 <div class="eks-wallet-card__balance">
                   <span class="eks-wallet-card__balance-value">{{ wallet.balance | number }}</span>

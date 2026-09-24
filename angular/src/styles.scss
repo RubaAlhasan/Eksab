@@ -260,6 +260,19 @@
   box-shadow: var(--eks-shadow-md);
 }
 
+// `.eks-customer-shell` was left out of the rule above — the one shell that stayed flat while Admin/
+// Business already matched the prototype. Not folded into the same rule: unlike those two (bare `.card`,
+// no per-component radius), customer pages already have their own deliberate two-tier radius convention
+// (`--eks-radius-lg` on page-level wrapper cards, `--eks-radius-md` on list-item cards — see e.g.
+// customer-points.component.scss's outer card vs. its quick-link cards), so this only adds the shadow
+// that's genuinely missing everywhere (confirmed by grep: no customer component sets its own resting-
+// state box-shadow, only `:hover` ones), leaving each component's own radius choice alone. The transition
+// is a fallback for any card that doesn't already declare its own — harmless to redeclare where one does.
+.eks-customer-shell .card {
+  box-shadow: var(--eks-shadow-md);
+  transition: box-shadow 0.15s ease-out;
+}
+
 // ---------------------------------------------------------------------------
 // Global responsive safety net. Every page already uses Bootstrap's own
 // responsive grid/utilities correctly (row-cols-*, col-12 col-sm-*, flex-wrap
