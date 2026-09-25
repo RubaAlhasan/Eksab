@@ -248,6 +248,14 @@ class MembershipsNotifier extends AsyncNotifier<List<Membership>> {
     ref.invalidateSelf();
     await future;
   }
+
+  /// Same "refetch, don't guess" shape as [join] — the wallet this membership
+  /// belonged to simply stops appearing in the refetched list.
+  Future<void> leave(String tenantId) async {
+    await ref.read(apiProvider).leaveBusiness(tenantId);
+    ref.invalidateSelf();
+    await future;
+  }
 }
 
 final membershipsProvider =

@@ -15,9 +15,11 @@ import '../../shared/widgets/business_tiles.dart';
 
 /// Prototype: `customer/campaigns.html`.
 ///
-/// Backed by `/api/app/customer-campaign/my`, which returns only campaigns that
-/// are live, from an approved business the customer has joined, and whose
-/// target segment includes them.
+/// Backed by `/api/app/customer-campaign/my`, which returns campaigns that are
+/// live and from an approved business — either one the customer has joined
+/// and whose target segment includes them, or one they only follow, in which
+/// case just its broadly-targeted (untargeted, or an explicit "All" segment)
+/// campaigns show. See CustomerCampaignAppService's own file comment.
 class CampaignsScreen extends ConsumerWidget {
   const CampaignsScreen({super.key});
 
@@ -53,7 +55,8 @@ class CampaignsScreen extends ConsumerWidget {
                 icon: Icons.campaign_outlined,
                 title: 'No active campaigns',
                 message:
-                    'Join more businesses to see the offers they are running.',
+                    'Join or follow more businesses to see the offers they '
+                    'are running.',
               )
             : RefreshIndicator(
                 onRefresh: () async {

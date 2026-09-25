@@ -212,12 +212,17 @@ class Business {
 
 enum MembershipStatus {
   active,
-  frozen;
+  frozen,
+  cancelled;
 
   static MembershipStatus fromJson(Object? raw) =>
       _enumFromJson(raw, MembershipStatus.values, MembershipStatus.active);
 
-  String get label => this == MembershipStatus.active ? 'Active' : 'Frozen';
+  String get label => switch (this) {
+    MembershipStatus.active => 'Active',
+    MembershipStatus.frozen => 'Frozen',
+    MembershipStatus.cancelled => 'Left',
+  };
 }
 
 /// Combines `MembershipDto` and `PointsWalletDto` — the app always needs both
@@ -243,6 +248,11 @@ class Membership {
     balance: (json['balance'] as num?)?.toInt() ?? 0,
     lifetimeEarned: (json['lifetimeEarned'] as num?)?.toInt() ?? 0,
     lifetimeRedeemed: (json['lifetimeRedeemed'] as num?)?.toInt() ?? 0,
+    // Placeholder — PointsWalletDto (this JSON) carries no status of its own; the real value comes
+    // from MembershipDto and is merged in via withStatus() (see EksabliApi.myMemberships()).
+    // Currently always Active in practice regardless: GetMyWalletsAsync already filters to
+    // Status == Active server-side, so a Frozen/Cancelled membership's wallet never reaches here at
+    // all — withStatus() is what makes that real rather than assumed.
     status: MembershipStatus.active,
     tier: (json['currentTierName'] as String?)?.trim(),
     tierFloor: (json['currentTierMinLifetimePoints'] as num?)?.toInt(),
@@ -305,6 +315,20 @@ class Membership {
     lifetimeRedeemed: lifetimeRedeemed,
     status: status,
     joinedAt: value,
+    tier: tier,
+    tierFloor: tierFloor,
+    nextTier: nextTier,
+    nextTierAt: nextTierAt,
+  );
+
+  Membership withStatus(MembershipStatus value) => Membership(
+    businessId: businessId,
+    membershipId: membershipId,
+    balance: balance,
+    lifetimeEarned: lifetimeEarned,
+    lifetimeRedeemed: lifetimeRedeemed,
+    status: value,
+    joinedAt: joinedAt,
     tier: tier,
     tierFloor: tierFloor,
     nextTier: nextTier,

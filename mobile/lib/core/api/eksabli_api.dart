@@ -84,11 +84,16 @@ class EksabliApi {
       for (final m in (memberships.data ?? const []).whereType<Map<String, dynamic>>())
         (m['tenantId'] as String? ?? ''): DateTime.tryParse('${m['joinedAt']}'),
     };
+    final status = <String, MembershipStatus>{
+      for (final m in (memberships.data ?? const []).whereType<Map<String, dynamic>>())
+        (m['tenantId'] as String? ?? ''): MembershipStatus.fromJson(m['status']),
+    };
 
     return (wallets.data ?? const [])
         .whereType<Map<String, dynamic>>()
         .map(Membership.fromWalletJson)
         .map((m) => m.withJoinedAt(joinedAt[m.businessId]))
+        .map((m) => status.containsKey(m.businessId) ? m.withStatus(status[m.businessId]!) : m)
         .toList();
   });
 
@@ -97,6 +102,14 @@ class EksabliApi {
       '/api/app/memberships/join',
       data: {'tenantId': tenantId},
     );
+  });
+
+  /// `POST /api/app/memberships/{tenantId}/leave` — tenantId is a route
+  /// param, not a body field (unlike [joinBusiness]). The wallet this
+  /// membership belonged to stops appearing in [myMemberships] once this
+  /// succeeds (GetMyWalletsAsync filters to Active-only server-side).
+  Future<void> leaveBusiness(String tenantId) => _guard(() async {
+    await _client.post<dynamic>('/api/app/memberships/$tenantId/leave');
   });
 
   /// Short-lived token behind the wallet QR. Server-issued deliberately — an

@@ -20,7 +20,9 @@ import '../../shared/widgets/business_tiles.dart';
 /// join/points CTA, and About / Rewards / Branches tabs.
 ///
 /// The Offers tab is backed by `/api/app/customer-campaign/business/{id}`,
-/// which only returns campaigns this customer is actually targeted by.
+/// which only returns campaigns this customer is actually targeted by — as
+/// a member, or, for a follower who hasn't joined, just its broadly-targeted
+/// ones (see CustomerCampaignAppService's own file comment).
 class StoreDetailsScreen extends ConsumerStatefulWidget {
   const StoreDetailsScreen({super.key, required this.businessId});
 
@@ -282,9 +284,10 @@ class _StoreDetailsScreenState extends ConsumerState<StoreDetailsScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 24),
                             child: Center(
                               child: Text(
-                                biz.member
+                                biz.member || biz.following
                                     ? 'No active offers right now.'
-                                    : 'Join to see offers from this business.',
+                                    : 'Follow or join to see offers from '
+                                          'this business.',
                                 style: AppText.body.copyWith(
                                   color: palette.textMuted,
                                 ),
