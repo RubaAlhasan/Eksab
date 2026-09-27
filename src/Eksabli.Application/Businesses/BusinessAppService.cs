@@ -23,6 +23,7 @@ using Volo.Abp.MultiTenancy;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.Settings;
 using Volo.Abp.TenantManagement;
+using Volo.Abp.Uow;
 
 namespace Eksabli.Businesses;
 
@@ -44,7 +45,9 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
     private readonly IBlobContainer<BusinessLogoContainer> _logoContainer;
     private readonly IDataFilter _dataFilter;
     private readonly IPermissionDefinitionManager _permissionDefinitionManager;
-    private readonly IPermissionDataSeeder _permissionDataSeeder;
+    private readonly IPermissionManager _permissionManager;
+    private readonly IdentityRoleManager _identityRoleManager;
+    private readonly IUnitOfWorkManager _unitOfWorkManager;
 
     public BusinessAppService(
         TenantManager tenantManager,
@@ -62,7 +65,9 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
         IBlobContainer<BusinessLogoContainer> logoContainer,
         IDataFilter dataFilter,
         IPermissionDefinitionManager permissionDefinitionManager,
-        IPermissionDataSeeder permissionDataSeeder)
+        IPermissionManager permissionManager,
+        IdentityRoleManager identityRoleManager,
+        IUnitOfWorkManager unitOfWorkManager)
     {
         _tenantManager = tenantManager;
         _tenantRepository = tenantRepository;
@@ -79,7 +84,9 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
         _logoContainer = logoContainer;
         _dataFilter = dataFilter;
         _permissionDefinitionManager = permissionDefinitionManager;
-        _permissionDataSeeder = permissionDataSeeder;
+        _permissionManager = permissionManager;
+        _identityRoleManager = identityRoleManager;
+        _unitOfWorkManager = unitOfWorkManager;
     }
 
     public async Task<BusinessRegistrationResultDto> RegisterAsync(RegisterBusinessDto input)
@@ -102,7 +109,38 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
                 ?? throw new AbpException("Tenant admin seeding did not produce the expected user.");
             ownerUserId = ownerUser.Id;
 
-            await GrantOwnerRolePermissionsAsync();
+            // Isolated in its own REQUIRES-NEW transaction, as defense in depth — this whole method
+            // runs inside DemoBusinessDataSeederContributor's own nested, [UnitOfWork]-wrapped seed
+            // pass on every Host startup (see that class's own comment on the recursion), and this
+            // permission-granting work failing must never be able to roll back everything ELSE already
+            // done in that same outer pass again (confirmed live: it once took OpenIddictDataSeed
+            // Contributor's own scope/application registration down with it, vanishing the "Eksabli"
+            // API scope from /.well-known/openid-configuration entirely and breaking every login on
+            // the platform, not just this feature). The actual root cause of that failure —
+            // IPermissionDataSeeder.SeedAsync's bulk-insert throwing AbpPermissionGrants' unique-
+            // constraint violation, the exact bug already documented on AdminPermissionDataSeeder
+            // Contributor (a different permission name each run) — is fixed below by not using that
+            // API at all (see GrantOwnerRolePermissionsAsync's and EnsureTierRoleAsync's own comments);
+            // this isolation stays anyway, since anything unexpected here should never be able to
+            // undo unrelated, already-committed seeding again.
+            using (var uow = _unitOfWorkManager.Begin(requiresNew: true, isTransactional: true))
+            {
+                await GrantOwnerRolePermissionsAsync();
+
+                // Eager, not lazy — without this, BranchManager/Cashier/MarketingManager's roles (and
+                // their default permissions) only existed once an Owner had actually invited someone
+                // into that tier, so the Roles & Permissions page couldn't show — or let the Owner
+                // adjust — a tier's permissions before ever using it. EmployeeAssignmentAppService still
+                // calls the same shared helper too, as a safety net for a tenant registered before this
+                // existed.
+                foreach (var role in new[] { EmployeeRole.BranchManager, EmployeeRole.Cashier, EmployeeRole.MarketingManager })
+                {
+                    await EmployeeRolePermissionDefaults.EnsureTierRoleAsync(
+                        role, _identityRoleManager, _permissionManager, GuidGenerator.Create(), tenant.Id);
+                }
+
+                await uow.CompleteAsync();
+            }
 
             var businessProfile = BusinessProfile.Create(GuidGenerator.Create(), input.CategoryId);
             // Set explicitly at creation rather than left null to rely on the Tenant.Name fallback
@@ -165,6 +203,15 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
         // The ABP Identity module's own Roles management (list/create/edit + the "Permissions" modal
         // that actually grants/revokes) — needed for the Owner to use the Roles & Permissions page at
         // all, not just to hold Eksabli.* permissions themselves.
+        //
+        // Users deliberately gets a NARROWER set — view + individual permission overrides only, NOT
+        // Create/Delete/Update/Update.ManageRoles. Creating or deleting a staff login, and changing
+        // who's in which role, must stay exclusively on the Employees page
+        // (EmployeeAssignmentAppService), which keeps EmployeeAssignment.Role and the person's real
+        // ABP role membership in sync together — doing either from the stock Users page instead would
+        // create a second, unsynced path to the same thing (confirmed as a real gap: without this
+        // restriction, the Owner could create a login here with no EmployeeAssignment at all, or move
+        // someone to a role the Employees page's own tier tracking never finds out about).
         tenantPermissionNames.AddRange(new[]
         {
             "AbpIdentity.Roles",
@@ -172,12 +219,21 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
             "AbpIdentity.Roles.Update",
             "AbpIdentity.Roles.Delete",
             "AbpIdentity.Roles.ManagePermissions",
+            "AbpIdentity.Users",
+            "AbpIdentity.Users.ManagePermissions",
         });
 
-        // "R" — Volo.Abp.PermissionManagement.RolePermissionValueProvider.ProviderName's own value;
-        // see EmployeeAssignmentAppService's own comment for why this layer uses the literal instead
-        // of referencing that type directly.
-        await _permissionDataSeeder.SeedAsync("R", "admin", tenantPermissionNames.ToArray(), CurrentTenant.Id);
+        // One call per permission (IPermissionManager.SetForRoleAsync), NOT IPermissionDataSeeder
+        // .SeedAsync's bulk-insert shape — see EmployeeRolePermissionDefaults.EnsureTierRoleAsync's
+        // own comment for why: that bulk API reproducibly threw AbpPermissionGrants' unique-constraint
+        // violation on a list this shaped (a parent permission alongside its own children), which,
+        // running inside this method's caller's shared seed-pass transaction, once rolled back
+        // unrelated, already-committed seeding too (see this method's own call site for the full
+        // story). SetForRoleAsync is a genuine idempotent upsert, safe to call however many times.
+        foreach (var permissionName in tenantPermissionNames)
+        {
+            await _permissionManager.SetForRoleAsync("admin", permissionName, true);
+        }
     }
 
     // Trial, not permanent freemium — see docs/eksabli-loyalty-platform/01-business-strategy.md#revenue-model--pricing.

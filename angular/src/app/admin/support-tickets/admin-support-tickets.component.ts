@@ -269,7 +269,10 @@ export class AdminSupportTicketsComponent implements OnInit {
 
   private loadTenantNames(): void {
     this.tenantsService
-      .getList({ filterText: null, approvalStatus: null, skipCount: 0, maxResultCount: 500 })
+      .getList(
+        { filterText: null, approvalStatus: null, skipCount: 0, maxResultCount: 500 },
+        { skipHandleError: true },
+      )
       .subscribe({
         next: (result) => {
           const map = new Map<string, string>();
@@ -279,7 +282,9 @@ export class AdminSupportTicketsComponent implements OnInit {
           this.tenantNames.set(map);
         },
         // Best-effort — a viewer without Tenants.View just sees raw tenantId values, doesn't block
-        // the ticket queue itself.
+        // the ticket queue itself. skipHandleError: true is load-bearing — see
+        // business-branches.component.ts's loadUsage() for why (@abp/ng.core's RestService reports
+        // any non-2xx to the global 403 overlay independently of this local error handler).
         error: () => undefined,
       });
   }

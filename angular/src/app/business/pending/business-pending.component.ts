@@ -32,7 +32,10 @@ export class BusinessPendingComponent implements OnInit {
   protected readonly status = signal<TenantApprovalStatus | null>(null);
 
   ngOnInit(): void {
-    this.businessService.getProfile().subscribe({
+    // skipHandleError: true — same reason as business.guard.ts's own getProfile() call: a
+    // non-Owner staff account (no Eksabli.BusinessProfile) landing here would otherwise hit the
+    // global 403 overlay on top of this page's own "fail open" handling below.
+    this.businessService.getProfile({ skipHandleError: true }).subscribe({
       next: profile => {
         this.status.set(profile.approvalStatus);
         this.isLoading.set(false);

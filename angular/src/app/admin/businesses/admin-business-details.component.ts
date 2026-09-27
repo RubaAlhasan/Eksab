@@ -392,23 +392,27 @@ export class AdminBusinessDetailsComponent implements OnInit {
   }
 
   private loadDetailStats(tenantId: string): void {
-    this.tenantsService.getDetailStats(tenantId).subscribe({
+    this.tenantsService.getDetailStats(tenantId, { skipHandleError: true }).subscribe({
       next: (stats) => this.detailStats.set(stats),
       // Supplementary stats — the rows/tiles that depend on them just stay hidden (see template),
       // rather than showing an error, same "best-effort" shape as loadOpenTicketsCount below.
+      // skipHandleError: true is load-bearing — see business-branches.component.ts's loadUsage().
       error: () => undefined,
     });
   }
 
   private loadPlanName(tenantId: string): void {
-    this.subscriptionsService.getList({ status: null, tenantId, sorting: undefined, skipCount: 0, maxResultCount: 1 }).subscribe({
+    this.subscriptionsService.getList(
+      { status: null, tenantId, sorting: undefined, skipCount: 0, maxResultCount: 1 },
+      { skipHandleError: true },
+    ).subscribe({
       next: (result) => this.planName.set((result.items ?? [])[0]?.planName ?? null),
       error: () => undefined,
     });
   }
 
   private loadCategoryName(categoryId: string): void {
-    this.categoriesService.get(categoryId).subscribe({
+    this.categoriesService.get(categoryId, { skipHandleError: true }).subscribe({
       next: (category) => this.categoryName.set(category.nameEn ?? null),
       // Best-effort — falls back to the em dash in the template rather than blocking the page.
       error: () => undefined,
@@ -417,10 +421,14 @@ export class AdminBusinessDetailsComponent implements OnInit {
 
   private loadOpenTicketsCount(tenantId: string): void {
     this.ticketsService
-      .getList({ tenantId, status: SupportTicketStatus.Open, priority: null, sorting: undefined, skipCount: 0, maxResultCount: 1 })
+      .getList(
+        { tenantId, status: SupportTicketStatus.Open, priority: null, sorting: undefined, skipCount: 0, maxResultCount: 1 },
+        { skipHandleError: true },
+      )
       .subscribe({
         next: (result) => this.openTicketsCount.set(result.totalCount ?? 0),
         // Supplementary stat — stays null (hidden in the template) rather than showing an error.
+        // skipHandleError: true is load-bearing — see business-branches.component.ts's loadUsage().
         error: () => undefined,
       });
   }

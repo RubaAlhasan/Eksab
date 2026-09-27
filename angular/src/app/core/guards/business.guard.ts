@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { ConfigStateService } from '@abp/ng.core';
+import { ConfigStateService, PermissionService } from '@abp/ng.core';
 import { catchError, map, of } from 'rxjs';
 import { BusinessService } from '../../proxy/controllers/business.service';
 import { TenantApprovalStatus } from '../../proxy/business-profiles/tenant-approval-status.enum';
@@ -53,14 +53,45 @@ export const businessRealmGuard: CanActivateFn = () => {
  * real per-endpoint permission checks, not the actual security boundary, so a transient network
  * failure here shouldn't lock staff out entirely; same reasoning `MembershipAppService.JoinAsync`'s
  * own "missing BusinessProfile fails open" comment uses on the backend.
+ *
+ * `{ skipHandleError: true }` is load-bearing, not decoration — `GET /api/app/business/profile` is
+ * gated on `Eksabli.BusinessProfile`, which NONE of BranchManager/Cashier/MarketingManager's default
+ * permissions grant (only Owner's "admin" role has it — see EmployeeRolePermissionDefaults.cs).
+ * @abp/ng.core's RestService reports any non-2xx response to the global HttpErrorReporterService
+ * (the full-page "[403] You are not authorized!" overlay) independently of this guard's own
+ * `catchError` — without this flag, every non-Owner staff member hit that overlay on literally
+ * every navigation into `/business/*` (this guard runs on the whole subtree's parent route),
+ * confirmed live. Same fix as business-branches.component.ts's loadUsage().
  */
 export const businessApprovalGuard: CanActivateFn = () => {
   const businessService = inject(BusinessService);
   const router = inject(Router);
-  return businessService.getProfile().pipe(
+  return businessService.getProfile({ skipHandleError: true }).pipe(
     map(profile =>
       profile.approvalStatus === TenantApprovalStatus.Approved ? true : router.createUrlTree(['/business/pending']),
     ),
     catchError(() => of(true)),
   );
+};
+
+/**
+ * Picks where bare `/business` actually lands, replacing what used to be a hardcoded
+ * `redirectTo: 'dashboard'`. Dashboard (`ReportsController`, `Eksabli.Reports.Default`) is NOT in
+ * Cashier's default permission set (EmployeeRolePermissionDefaults.cs — Cashier only gets Memberships
+ * .Default/.View/.Award/.Adjust and Rewards.Default/.Redeem) — every other tier (Owner/BranchManager/
+ * MarketingManager) does have Reports, so this only actually changes anything for Cashier. Confirmed
+ * live: a freshly invited Cashier landed straight on a 403 on their very first page after signing in,
+ * simply because `redirectTo: 'dashboard'` never checked whether the current tier could see it.
+ *
+ * `/business/points` (Award Points / POS) is the fallback rather than e.g. `/business/customers` —
+ * it's the one page with no `EksabliPermissions` gate at all (`PosController`'s own staff-role check
+ * instead, see business-points.component.ts's file comment), so it's guaranteed reachable by every
+ * tier, Cashier included, not just "probably fine for Cashier specifically".
+ */
+export const businessHomeGuard: CanActivateFn = () => {
+  const permissionService = inject(PermissionService);
+  const router = inject(Router);
+  return router.createUrlTree([
+    permissionService.getGrantedPolicy('Eksabli.Reports') ? '/business/dashboard' : '/business/points',
+  ]);
 };

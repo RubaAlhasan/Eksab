@@ -255,7 +255,10 @@ export class BusinessSettingsComponent implements OnInit {
   }
 
   private loadCategories(): void {
-    this.categoriesService.getList({ parentCategoryId: null, filterText: null, sorting: 'nameEn asc', skipCount: 0, maxResultCount: 200 }).subscribe({
+    this.categoriesService.getList(
+      { parentCategoryId: null, filterText: null, sorting: 'nameEn asc', skipCount: 0, maxResultCount: 200 },
+      { skipHandleError: true },
+    ).subscribe({
       next: (result) => this.categories.set(result.items ?? []),
       error: () => undefined,
     });

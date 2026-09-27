@@ -66,6 +66,10 @@ export class BusinessLayoutComponent {
     // comment on this mount. Gated on the same permission as Employees above: managing what a tier
     // can do is the same class of "who runs this business" capability as managing who's on it.
     { labelKey: '::BusinessPanel:Layout:NavRoles', icon: 'fa-user-shield', link: '/business/identity/roles', permission: 'Eksabli.EmployeeAssignments' },
+    // Same stock mount, its Users leaf — mainly for the rare one-off permission override on a
+    // specific person (see business-layout's own Roles entry comment); normal staff management is
+    // still Employees above, which keeps a user's tier role in sync automatically.
+    { labelKey: '::BusinessPanel:Layout:NavIdentityUsers', icon: 'fa-address-book', link: '/business/identity/users', permission: 'Eksabli.EmployeeAssignments' },
     { labelKey: '::BusinessPanel:Layout:NavBranches', icon: 'fa-building', link: '/business/branches', permission: 'Eksabli.Branches' },
     // Empty permission = always granted (PermissionService.getGrantedPolicy's own "no key" shape,
     // same convention as AdminLayoutComponent's `AbpAccount::MyAccount` entry) — PosController has no

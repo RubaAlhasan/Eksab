@@ -282,23 +282,31 @@ export class BusinessTransactionsComponent implements OnInit {
   }
 
   private loadBranches(): void {
-    this.branchesService.getList({ sorting: 'name asc', skipCount: 0, maxResultCount: 100 }).subscribe({
+    this.branchesService.getList(
+      { sorting: 'name asc', skipCount: 0, maxResultCount: 100 },
+      { skipHandleError: true },
+    ).subscribe({
       next: (result) => {
         const items = (result.items ?? []).filter((b) => b.id && b.name) as { id: string; name: string }[];
         this.branches.set(items);
         this.branchNameById.set(new Map(items.map((b) => [b.id, b.name])));
       },
+      // Best-effort — a MarketingManager (no Eksabli.Branches) just sees raw branchId values.
+      // skipHandleError: true is load-bearing — see business-branches.component.ts's loadUsage().
       error: () => undefined,
     });
   }
 
   private loadEmployees(): void {
-    this.employeeAssignmentsService.getList({ skipCount: 0, maxResultCount: 500 }).subscribe({
+    this.employeeAssignmentsService.getList({ skipCount: 0, maxResultCount: 500 }, { skipHandleError: true }).subscribe({
       next: (result) => {
         const items = (result.items ?? []).filter((e) => e.userId && e.userEmail) as { userId: string; userEmail: string }[];
         this.employees.set(items);
         this.employeeEmailByUserId.set(new Map(items.map((e) => [e.userId, e.userEmail])));
       },
+      // Best-effort — a BranchManager/MarketingManager (no Eksabli.EmployeeAssignments) just sees
+      // raw userId values. skipHandleError: true is load-bearing — see
+      // business-branches.component.ts's loadUsage() for why.
       error: () => undefined,
     });
   }

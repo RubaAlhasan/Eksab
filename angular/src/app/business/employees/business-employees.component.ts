@@ -272,7 +272,10 @@ export class BusinessEmployeesComponent implements OnInit {
   }
 
   private loadBranches(): void {
-    this.branchesService.getList({ sorting: 'name asc', skipCount: 0, maxResultCount: 500 }).subscribe({
+    this.branchesService.getList(
+      { sorting: 'name asc', skipCount: 0, maxResultCount: 500 },
+      { skipHandleError: true },
+    ).subscribe({
       next: (result) => {
         const items = result.items ?? [];
         this.branches.set(items);
@@ -282,6 +285,8 @@ export class BusinessEmployeesComponent implements OnInit {
         }
         this.branchNameById.set(map);
       },
+      // Best-effort — a MarketingManager (no Eksabli.Branches) just sees raw branchId values.
+      // skipHandleError: true is load-bearing — see business-branches.component.ts's loadUsage().
       error: () => undefined,
     });
   }

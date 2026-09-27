@@ -1,5 +1,10 @@
 using System;
+using System.Threading.Tasks;
 using Eksabli.Permissions;
+using Microsoft.AspNetCore.Identity;
+using Volo.Abp;
+using Volo.Abp.Identity;
+using Volo.Abp.PermissionManagement;
 
 namespace Eksabli.EmployeeAssignments;
 
@@ -88,4 +93,46 @@ public static class EmployeeRolePermissionDefaults
         },
         _ => Array.Empty<string>(), // Owner: relies entirely on the pre-existing "admin" role's own grants.
     };
+
+    // Creates this tier's ABP Identity Role (tenant-scoped) if it doesn't already exist, seeded with
+    // this class's own preset permissions — a no-op after the first call for a given tier, and a
+    // complete no-op for Owner (maps to the tenant's pre-existing "admin" role, never re-provisioned).
+    // Shared by EmployeeAssignmentAppService (lazily, on first invite of a tier) and
+    // BusinessAppService (eagerly, for all three non-Owner tiers at registration — so an Owner can
+    // see and adjust BranchManager/Cashier/MarketingManager's permissions on the Roles page before
+    // ever inviting anyone into them).
+    public static async Task EnsureTierRoleAsync(
+        EmployeeRole role,
+        IdentityRoleManager identityRoleManager,
+        IPermissionManager permissionManager,
+        Guid roleId,
+        Guid? tenantId)
+    {
+        if (role == EmployeeRole.Owner)
+        {
+            return;
+        }
+
+        var roleName = RoleName(role);
+        if (await identityRoleManager.FindByNameAsync(roleName) != null)
+        {
+            return;
+        }
+
+        var identityRole = new IdentityRole(roleId, roleName, tenantId);
+        (await identityRoleManager.CreateAsync(identityRole)).CheckErrors();
+
+        // One call per permission (IPermissionManager.SetForRoleAsync — an idempotent "set granted
+        // state" upsert), NOT IPermissionDataSeeder.SeedAsync's bulk-insert shape. That bulk seeder
+        // reproducibly threw AbpPermissionGrants' unique-constraint violation here — this class's own
+        // list mixes a parent permission (e.g. Eksabli.Memberships) with its children (.View/.Award/
+        // ...), and something about how the seeder resolves that combination inserts the same
+        // (TenantId, Name, ProviderName, ProviderKey) row twice in one batch. SetForRoleAsync grants
+        // one permission at a time and is safe to call for something already granted, at the cost of
+        // N round-trips instead of one — a fine trade for a one-time, first-use-only role setup.
+        foreach (var permissionName in DefaultPermissions(role))
+        {
+            await permissionManager.SetForRoleAsync(roleName, permissionName, true);
+        }
+    }
 }

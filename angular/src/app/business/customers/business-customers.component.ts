@@ -344,7 +344,13 @@ export class BusinessCustomersComponent implements OnInit {
   }
 
   private loadTiers(): void {
-    this.tiersService.getList({ sorting: 'minLifetimePoints asc', skipCount: 0, maxResultCount: 100 }).subscribe({
+    this.tiersService.getList(
+      { sorting: 'minLifetimePoints asc', skipCount: 0, maxResultCount: 100 },
+      { skipHandleError: true },
+    ).subscribe({
+      // Best-effort — BranchManager/Cashier (no Eksabli.Tiers) just see customers without tier
+      // names resolved. skipHandleError: true is load-bearing — see
+      // business-branches.component.ts's loadUsage() for why.
       next: (result) => this.tiers.set(result.items ?? []),
       error: () => undefined,
     });

@@ -26,6 +26,8 @@ using Volo.Abp.Emailing;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity;
 using Volo.Abp.TenantManagement;
+using Volo.Abp.Data;
+using Volo.Abp.PermissionManagement;
 
 namespace Eksabli;
 
@@ -78,6 +80,33 @@ public class EksabliDomainModule : AbpModule
 
         ConfigureFcm(context);
         ConfigureBlobStoring();
+        DisableFrameworkPermissionDataSeedContributor();
+    }
+
+    // Volo.Abp.PermissionManagement.PermissionDataSeedContributor is a framework-registered
+    // IDataSeedContributor, listed in AbpDataSeedOptions.Contributors and run by every generic
+    // IDataSeeder.SeedAsync(...) call — including BusinessAppService.RegisterAsync's own
+    // _dataSeeder.SeedAsync(new DataSeedContext(tenant.Id)) and EksabliDbMigrationService's host pass.
+    // (DataSeeder.SeedAsync resolves contributors from this options list, NOT by asking DI for every
+    // registered IDataSeedContributor, so removing it from DI directly — e.g. via
+    // context.Services.RemoveAll/Remove — has no effect; this options list is the actual hook.)
+    //
+    // It grants every currently-registered, role-compatible, multitenancy-matching permission to the
+    // "admin" role — the exact same "grant everything" job AdminPermissionDataSeederContributor (host)
+    // and BusinessAppService.GrantOwnerRolePermissionsAsync (tenant) already do — but via
+    // IPermissionDataSeeder.SeedAsync's bulk-insert API, which is the SAME buggy bulk API this app's
+    // own code moved away from after it reproducibly threw AbpPermissionGrants' unique-constraint
+    // violation (see AdminPermissionDataSeederContributor's own header comment). Confirmed live: this
+    // framework contributor is what was actually still colliding on every business registration — a
+    // multi-row bulk INSERT of ~64 permissions for the new tenant's "admin" role, containing a
+    // duplicate within the same batch — even after every app-level seed path had already switched to
+    // the one-call-per-permission IPermissionManager.SetForRoleAsync.
+    private void DisableFrameworkPermissionDataSeedContributor()
+    {
+        Configure<AbpDataSeedOptions>(options =>
+        {
+            options.Contributors.Remove(typeof(PermissionDataSeedContributor));
+        });
     }
 
     // Only consumer of BlobStoringDatabaseDomainModule so far — that dependency (and the DatabaseBlob/

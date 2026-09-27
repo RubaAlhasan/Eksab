@@ -229,18 +229,24 @@ export class BusinessCouponsComponent implements OnInit {
   }
 
   private loadBranches(): void {
-    this.branchesService.getList({ sorting: 'name asc', skipCount: 0, maxResultCount: 100 }).subscribe({
+    this.branchesService.getList(
+      { sorting: 'name asc', skipCount: 0, maxResultCount: 100 },
+      { skipHandleError: true },
+    ).subscribe({
       next: (result) => {
         const items = (result.items ?? []).filter((b) => b.id && b.name) as { id: string; name: string }[];
         this.branches.set(items);
         this.branchNameById.set(new Map(items.map((b) => [b.id, b.name])));
       },
+      // Best-effort — a Cashier/MarketingManager (no Eksabli.Branches) just sees raw branchId
+      // values, doesn't block the coupons list. skipHandleError: true is load-bearing — see
+      // business-branches.component.ts's loadUsage() for why.
       error: () => undefined,
     });
   }
 
   private loadEmployees(): void {
-    this.employeeAssignmentsService.getList({ skipCount: 0, maxResultCount: 500 }).subscribe({
+    this.employeeAssignmentsService.getList({ skipCount: 0, maxResultCount: 500 }, { skipHandleError: true }).subscribe({
       next: (result) => {
         const map = new Map<string, string>();
         for (const employee of result.items ?? []) {
@@ -248,13 +254,18 @@ export class BusinessCouponsComponent implements OnInit {
         }
         this.employeeEmailByUserId.set(map);
       },
+      // Best-effort — a Cashier (no Eksabli.EmployeeAssignments) just sees raw userId values.
+      // skipHandleError: true is load-bearing — see business-branches.component.ts's loadUsage().
       error: () => undefined,
     });
   }
 
   private loadMembers(): void {
     this.membershipsService
-      .getMembers({ filterText: null, tierId: null, status: null, sorting: undefined, skipCount: 0, maxResultCount: 500 })
+      .getMembers(
+        { filterText: null, tierId: null, status: null, sorting: undefined, skipCount: 0, maxResultCount: 500 },
+        { skipHandleError: true },
+      )
       .subscribe({
         next: (result) => {
           const map = new Map<string, string>();
@@ -264,6 +275,9 @@ export class BusinessCouponsComponent implements OnInit {
           }
           this.memberNameByMembershipId.set(map);
         },
+        // Best-effort — a MarketingManager (no Eksabli.Memberships.View) just sees raw membershipId
+        // values. skipHandleError: true is load-bearing — see business-branches.component.ts's
+        // loadUsage() for why.
         error: () => undefined,
       });
   }

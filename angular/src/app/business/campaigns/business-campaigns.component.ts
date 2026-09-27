@@ -515,7 +515,7 @@ export class BusinessCampaignsComponent implements OnInit {
   private loadPerformance(nonDraftCampaigns: CampaignDto[]): void {
     for (const campaign of nonDraftCampaigns) {
       if (!campaign.id) continue;
-      this.reportsService.getCampaignPerformance(campaign.id).subscribe({
+      this.reportsService.getCampaignPerformance(campaign.id, { skipHandleError: true }).subscribe({
         next: (performance) => {
           const map = new Map(this.performanceByCampaignId());
           map.set(campaign.id!, performance);
@@ -527,7 +527,13 @@ export class BusinessCampaignsComponent implements OnInit {
   }
 
   private loadTiers(): void {
-    this.tiersService.getList({ sorting: 'minLifetimePoints asc', skipCount: 0, maxResultCount: 100 }).subscribe({
+    this.tiersService.getList(
+      { sorting: 'minLifetimePoints asc', skipCount: 0, maxResultCount: 100 },
+      { skipHandleError: true },
+    ).subscribe({
+      // Best-effort — BranchManager/MarketingManager (no Eksabli.Tiers) just see campaigns without
+      // tier names resolved. skipHandleError: true is load-bearing — see
+      // business-branches.component.ts's loadUsage() for why.
       next: (result) => this.tiers.set(result.items ?? []),
       error: () => undefined,
     });

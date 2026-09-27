@@ -176,7 +176,13 @@ export class BusinessBranchesComponent implements OnInit {
   }
 
   private loadUsage(): void {
-    this.billingService.getMyUsage().subscribe({
+    // skipHandleError: true is load-bearing, not decoration — @abp/ng.core's RestService reports
+    // ANY non-2xx response to the global HttpErrorReporterService itself (the full-page "[403] You
+    // are not authorized!" overlay), independently of whatever this call's own `error` callback does.
+    // Without it, a BranchManager (correctly lacking Eksabli.Billing.ManageOwn) got that overlay on
+    // every visit to this page, even though Branches' own Eksabli.Branches.Default WAS granted and
+    // load() below would have succeeded fine — confirmed live.
+    this.billingService.getMyUsage({ skipHandleError: true }).subscribe({
       next: (result) => this.usage.set(result),
       // Best-effort — a viewer without Billing.ManageOwn just doesn't see the quota banner.
       error: () => undefined,

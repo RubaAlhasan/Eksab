@@ -2,7 +2,7 @@ import { AuthService, ConfigStateService, PermissionService, authGuard, eLayoutT
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, Routes } from '@angular/router';
 import { adminGuard, isPlatformAdmin } from './core/guards/admin.guard';
-import { businessApprovalGuard, businessRealmGuard, isBusinessRealm } from './core/guards/business.guard';
+import { businessApprovalGuard, businessHomeGuard, businessRealmGuard, isBusinessRealm } from './core/guards/business.guard';
 import { mustChangePasswordGuard } from './core/guards/must-change-password.guard';
 
 /**
@@ -381,10 +381,18 @@ export const APP_ROUTES: Routes = [
     children: [
       {
         // Bare '/business' lands here — matches redirectAuthenticatedToHomeGuard's own destination
-        // for a business-realm account and the prototype's own IA (Dashboard is the landing page).
+        // for a business-realm account. `businessHomeGuard` (core/guards/business.guard.ts) picks
+        // Dashboard or, for a tier without Eksabli.Reports (Cashier), a page it can actually reach —
+        // NOT a plain `redirectTo: 'dashboard'` (what this was before), which sent every tier there
+        // unconditionally and 403'd Cashier on their very first page after login. `loadComponent`
+        // here is never actually rendered — `businessHomeGuard` always returns a UrlTree, never
+        // `true` — it's only present because Angular's router requires SOME component/redirectTo/
+        // children on every route regardless of what the guard does at runtime (NG04014).
         path: '',
         pathMatch: 'full',
-        redirectTo: 'dashboard',
+        loadComponent: () =>
+          import('./business/dashboard/business-dashboard.component').then(c => c.BusinessDashboardComponent),
+        canActivate: [businessHomeGuard],
       },
       {
         path: 'dashboard',

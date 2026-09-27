@@ -412,7 +412,10 @@ export class AdminSubscriptionsComponent implements OnInit {
 
   private loadTenantNames(): void {
     this.tenantsService
-      .getList({ filterText: null, approvalStatus: null, skipCount: 0, maxResultCount: 500 })
+      .getList(
+        { filterText: null, approvalStatus: null, skipCount: 0, maxResultCount: 500 },
+        { skipHandleError: true },
+      )
       .subscribe({
         next: (result) => {
           const map = new Map<string, string>();
@@ -422,7 +425,8 @@ export class AdminSubscriptionsComponent implements OnInit {
           this.tenantNames.set(map);
         },
         // Name resolution failing shouldn't block the subscriptions list itself — rows just fall back
-        // to showing the raw tenantId (see `tenantName()` above).
+        // to showing the raw tenantId (see `tenantName()` above). skipHandleError: true is
+        // load-bearing — see business-branches.component.ts's loadUsage() for why.
         error: () => undefined,
       });
   }

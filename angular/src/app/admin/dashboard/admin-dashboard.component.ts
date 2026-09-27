@@ -240,20 +240,21 @@ export class AdminDashboardComponent implements OnInit {
 
   private loadMrr(): void {
     this.mrrLoading.set(true);
-    this.subscriptionsService.getStats().subscribe({
+    this.subscriptionsService.getStats({ skipHandleError: true }).subscribe({
       next: (stats) => {
         this.mrr.set(stats.approxMrr);
         this.mrrLoading.set(false);
       },
       // Best-effort — the tile just stays hidden (see the template's `mrr(); as value` guard),
-      // doesn't block the rest of the dashboard.
+      // doesn't block the rest of the dashboard. skipHandleError: true is load-bearing — see
+      // business-branches.component.ts's loadUsage() for why.
       error: () => this.mrrLoading.set(false),
     });
   }
 
   private loadMrrTrend(): void {
     this.mrrTrendLoading.set(true);
-    this.subscriptionsService.getMrrTrend().subscribe({
+    this.subscriptionsService.getMrrTrend({ skipHandleError: true }).subscribe({
       next: (points) => {
         this.mrrTrendPoints.set(points);
         this.mrrTrendLoading.set(false);
@@ -268,14 +269,20 @@ export class AdminDashboardComponent implements OnInit {
     this.ticketsFailed.set(false);
 
     this.ticketsService
-      .getList({ status: SupportTicketStatus.Open, priority: null, tenantId: null, sorting: undefined, skipCount: 0, maxResultCount: 1 })
+      .getList(
+        { status: SupportTicketStatus.Open, priority: null, tenantId: null, sorting: undefined, skipCount: 0, maxResultCount: 1 },
+        { skipHandleError: true },
+      )
       .subscribe({
         next: (result) => this.openTicketsCount.set(result.totalCount ?? 0),
         error: () => undefined,
       });
 
     this.ticketsService
-      .getList({ status: null, priority: null, tenantId: null, sorting: 'lastModificationTime desc', skipCount: 0, maxResultCount: 4 })
+      .getList(
+        { status: null, priority: null, tenantId: null, sorting: 'lastModificationTime desc', skipCount: 0, maxResultCount: 4 },
+        { skipHandleError: true },
+      )
       .subscribe({
         next: (result) => {
           this.recentTickets.set(result.items ?? []);
@@ -290,7 +297,10 @@ export class AdminDashboardComponent implements OnInit {
 
   private loadCategories(): void {
     this.categoriesLoading.set(true);
-    this.categoriesService.getList({ parentCategoryId: null, filterText: null, skipCount: 0, maxResultCount: 500 }).subscribe({
+    this.categoriesService.getList(
+      { parentCategoryId: null, filterText: null, skipCount: 0, maxResultCount: 500 },
+      { skipHandleError: true },
+    ).subscribe({
       next: (result) => {
         const items = result.items ?? [];
         this.categories.set(items);

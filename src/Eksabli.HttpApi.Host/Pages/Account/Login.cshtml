@@ -8,7 +8,7 @@
 @using Volo.Abp.Identity;
 @using Volo.Abp.Settings
 @using Eksabli.Localization
-@model Volo.Abp.Account.Web.Pages.Account.LoginModel
+@model Eksabli.Pages.Account.LoginModel
 @inject IHtmlLocalizer<AccountResource> L
 @inject IStringLocalizer<EksabliResource> LApp
 @inject IThemeManager ThemeManager
@@ -17,9 +17,11 @@
 @*
     Re-skin of the STOCK Volo.Abp.Account.Web Login page (view-override convention: a loose .cshtml at
     the identical virtual path — /Pages/Account/Login.cshtml — takes precedence over the compiled one
-    shipped inside the Volo.Abp.Account.Web package). This is the real page every user hits; nothing
-    about the auth flow itself changed, only the presentation. Matches prototype/business/login.html's
-    split-screen shape, adapted to real constraints:
+    shipped inside the Volo.Abp.Account.Web package). This is the real page every user hits — originally
+    only the presentation changed, but Login.cshtml.cs now also overrides OnPostAsync for one auth-flow
+    gap (invited staff with ShouldChangePasswordOnNextLogin had no way to actually change it here — see
+    that file's own header comment). Matches prototype/business/login.html's split-screen shape,
+    adapted to real constraints:
 
     - `Layout` is deliberately left untouched (`ThemeManager.CurrentTheme.GetAccountLayout()`, the
       LeptonXLite account layout — decompiled and read via ilspycmd against the actual installed 5.5.0

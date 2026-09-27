@@ -382,7 +382,10 @@ export class AdminTenantsComponent implements OnInit {
   }
 
   private loadCategoryNames(): void {
-    this.categoriesService.getList({ parentCategoryId: null, filterText: null, skipCount: 0, maxResultCount: 500 }).subscribe({
+    this.categoriesService.getList(
+      { parentCategoryId: null, filterText: null, skipCount: 0, maxResultCount: 500 },
+      { skipHandleError: true },
+    ).subscribe({
       next: (result) => {
         const items = result.items ?? [];
         const map = new Map<string, string>();
@@ -399,7 +402,10 @@ export class AdminTenantsComponent implements OnInit {
   }
 
   private loadPlanNames(): void {
-    this.subscriptionsService.getList({ status: null, sorting: undefined, skipCount: 0, maxResultCount: 500 }).subscribe({
+    this.subscriptionsService.getList(
+      { status: null, sorting: undefined, skipCount: 0, maxResultCount: 500 },
+      { skipHandleError: true },
+    ).subscribe({
       next: (result) => {
         const map = new Map<string, string>();
         for (const subscription of result.items ?? []) {
@@ -408,7 +414,8 @@ export class AdminTenantsComponent implements OnInit {
         this.planNames.set(map);
       },
       // Best-effort — a viewer without Billing.ManagePlatform (or a fetch failure) just sees "—" in
-      // the Plan column for every row, doesn't block the businesses list itself.
+      // the Plan column for every row, doesn't block the businesses list itself. skipHandleError:
+      // true is load-bearing — see business-branches.component.ts's loadUsage() for why.
       error: () => undefined,
     });
   }

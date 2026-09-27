@@ -20,20 +20,20 @@ public class EmployeeAssignmentAppService : ApplicationService, IEmployeeAssignm
     private readonly IdentityUserManager _identityUserManager;
     private readonly IIdentityUserRepository _identityUserRepository;
     private readonly IdentityRoleManager _identityRoleManager;
-    private readonly IPermissionDataSeeder _permissionDataSeeder;
+    private readonly IPermissionManager _permissionManager;
 
     public EmployeeAssignmentAppService(
         IEmployeeAssignmentRepository repository,
         IdentityUserManager identityUserManager,
         IIdentityUserRepository identityUserRepository,
         IdentityRoleManager identityRoleManager,
-        IPermissionDataSeeder permissionDataSeeder)
+        IPermissionManager permissionManager)
     {
         _repository = repository;
         _identityUserManager = identityUserManager;
         _identityUserRepository = identityUserRepository;
         _identityRoleManager = identityRoleManager;
-        _permissionDataSeeder = permissionDataSeeder;
+        _permissionManager = permissionManager;
     }
 
     public async Task<PagedResultDto<EmployeeAssignmentDto>> GetListAsync(PagedAndSortedResultRequestDto input)
@@ -73,7 +73,10 @@ public class EmployeeAssignmentAppService : ApplicationService, IEmployeeAssignm
         // Branches, ...) was silently unreachable to them, leaving only whatever PosAppService
         // .CheckStaffRoleAsync checks directly against EmployeeAssignment.Role. See
         // EmployeeRolePermissionDefaults's own comment for the tier -> role/permissions mapping.
-        await EnsureTierRoleAsync(input.Role);
+        // Usually already created eagerly by BusinessAppService.RegisterAsync — this is just the
+        // safety net for a tenant registered before that existed, or a tier none of it covers.
+        await EmployeeRolePermissionDefaults.EnsureTierRoleAsync(
+            input.Role, _identityRoleManager, _permissionManager, GuidGenerator.Create(), CurrentTenant.Id);
         (await _identityUserManager.AddToRoleAsync(user, EmployeeRolePermissionDefaults.RoleName(input.Role))).CheckErrors();
 
         var assignment = EmployeeAssignment.Create(GuidGenerator.Create(), user.Id, input.Role, input.BranchId);
@@ -123,37 +126,6 @@ public class EmployeeAssignmentAppService : ApplicationService, IEmployeeAssignm
         await _repository.DeleteAsync(id);
     }
 
-    // Creates this tier's ABP Identity Role (tenant-scoped) the first time it's ever needed, seeded
-    // with EmployeeRolePermissionDefaults' preset permissions — a no-op after that first call, and a
-    // complete no-op for Owner (maps to the tenant's pre-existing "admin" role, never re-provisioned).
-    private async Task EnsureTierRoleAsync(EmployeeRole role)
-    {
-        if (role == EmployeeRole.Owner)
-        {
-            return;
-        }
-
-        var roleName = EmployeeRolePermissionDefaults.RoleName(role);
-        if (await _identityRoleManager.FindByNameAsync(roleName) != null)
-        {
-            return;
-        }
-
-        var identityRole = new IdentityRole(GuidGenerator.Create(), roleName, CurrentTenant.Id);
-        (await _identityRoleManager.CreateAsync(identityRole)).CheckErrors();
-
-        var defaultPermissions = EmployeeRolePermissionDefaults.DefaultPermissions(role);
-        if (defaultPermissions.Length > 0)
-        {
-            // "R" — Volo.Abp.PermissionManagement.RolePermissionValueProvider.ProviderName's own
-            // value. That type lives in Volo.Abp.PermissionManagement.Domain.Identity, which this
-            // (Application) layer doesn't reference (only Eksabli.Domain does, for
-            // AdminPermissionDataSeederContributor) — not worth a new package reference just for
-            // this one well-known, stable literal.
-            await _permissionDataSeeder.SeedAsync("R", roleName, defaultPermissions, CurrentTenant.Id);
-        }
-    }
-
     private async Task MoveUserBetweenTierRolesAsync(IdentityUser user, EmployeeRole oldRole, EmployeeRole newRole)
     {
         var oldRoleName = EmployeeRolePermissionDefaults.RoleName(oldRole);
@@ -162,7 +134,8 @@ public class EmployeeAssignmentAppService : ApplicationService, IEmployeeAssignm
             (await _identityUserManager.RemoveFromRoleAsync(user, oldRoleName)).CheckErrors();
         }
 
-        await EnsureTierRoleAsync(newRole);
+        await EmployeeRolePermissionDefaults.EnsureTierRoleAsync(
+            newRole, _identityRoleManager, _permissionManager, GuidGenerator.Create(), CurrentTenant.Id);
         var newRoleName = EmployeeRolePermissionDefaults.RoleName(newRole);
         if (!await _identityUserManager.IsInRoleAsync(user, newRoleName))
         {
