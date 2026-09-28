@@ -81,6 +81,24 @@ public class EksabliDomainModule : AbpModule
         ConfigureFcm(context);
         ConfigureBlobStoring();
         DisableFrameworkPermissionDataSeedContributor();
+        ConfigureBackgroundJobs();
+    }
+
+    // Unlike background WORKERS (registered below in OnApplicationInitializationAsync via
+    // AddBackgroundWorkerAsync), ABP does NOT auto-discover per-item queue JOBS by conventional DI
+    // registration — a job type has to be explicitly mapped here or the job executer has nothing to
+    // resolve the stored job name back to at dequeue time. Without this, every NotificationDispatchJob
+    // enqueued by CampaignSweepWorker/ReferralCompletionService/NotificationAppService.SendAsync
+    // (Business Portal's own "Compose" send) inserted fine but then failed at execution with "Undefined
+    // background job for the job name: Eksabli.Notifications.NotificationDispatchArgs" and sat
+    // abandoned forever at Status=Queued — confirmed live against AbpBackgroundJobs (IsAbandoned=true)
+    // and the host's own error log.
+    private void ConfigureBackgroundJobs()
+    {
+        Configure<AbpBackgroundJobOptions>(options =>
+        {
+            options.AddJob<NotificationDispatchJob>();
+        });
     }
 
     // Volo.Abp.PermissionManagement.PermissionDataSeedContributor is a framework-registered
