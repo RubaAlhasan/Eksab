@@ -87,14 +87,6 @@ public partial class EksabliPointsWalletToPointsWalletDtoMapper : MapperBase<Poi
 }
 
 [Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
-public partial class EksabliPointsTransactionToPointsTransactionDtoMapper : MapperBase<PointsTransaction, PointsTransactionDto>
-{
-    public override partial PointsTransactionDto Map(PointsTransaction source);
-
-    public override partial void Map(PointsTransaction source, PointsTransactionDto destination);
-}
-
-[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
 public partial class EksabliTierToTierDtoMapper : MapperBase<Tier, TierDto>
 {
     public override partial TierDto Map(Tier source);

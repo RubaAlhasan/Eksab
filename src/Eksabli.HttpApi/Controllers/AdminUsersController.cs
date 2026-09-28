@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Eksabli.Permissions;
 using Eksabli.Platform;
-using Eksabli.Wallets;
+using Eksabli.Reports;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.Application.Dtos;
@@ -34,7 +34,7 @@ public class AdminUsersController : EksabliController
     }
 
     [HttpGet("memberships/{membershipId:guid}/transactions")]
-    public Task<PagedResultDto<PointsTransactionDto>> GetCustomerTransactionsAsync(
+    public Task<PagedResultDto<TransactionListItemDto>> GetCustomerTransactionsAsync(
         Guid membershipId, [FromQuery] Guid tenantId, [FromQuery] PagedAndSortedResultRequestDto input)
     {
         return _adminUserAppService.GetCustomerTransactionsAsync(membershipId, tenantId, input);

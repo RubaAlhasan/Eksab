@@ -5,7 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
 import { AdminUsersService } from '../../proxy/controllers/admin-users.service';
 import type { AdminCustomerDetailDto, AdminCustomerMembershipDto } from '../../proxy/platform/models';
-import type { PointsTransactionDto } from '../../proxy/wallets/models';
+import type { TransactionListItemDto } from '../../proxy/reports/models';
 import { PointsTransactionType } from '../../proxy/wallets/points-transaction-type.enum';
 import { PointsTransactionSource } from '../../proxy/wallets/points-transaction-source.enum';
 import { MembershipStatus } from '../../proxy/memberships/membership-status.enum';
@@ -15,6 +15,7 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { StatusBadgeComponent, StatusBadgeVariant } from '../../shared/components/status-badge/status-badge.component';
+import { ModalComponent } from '../../shared/components/modal/modal.component';
 
 /**
  * Admin Portal > Users > Customer Details — the drill-down `admin-users.component.html` never had
@@ -59,6 +60,7 @@ import { StatusBadgeComponent, StatusBadgeVariant } from '../../shared/component
     EmptyStateComponent,
     PaginationComponent,
     StatusBadgeComponent,
+    ModalComponent,
   ],
 })
 export class AdminUserDetailsComponent implements OnInit {
@@ -78,12 +80,18 @@ export class AdminUserDetailsComponent implements OnInit {
 
   // --- Expanded membership's transaction ledger ---
   protected readonly expandedMembershipId = signal<string | null>(null);
-  protected readonly transactions = signal<PointsTransactionDto[]>([]);
+  protected readonly transactions = signal<TransactionListItemDto[]>([]);
   protected readonly transactionsTotalCount = signal(0);
   protected readonly transactionsPageIndex = signal(0);
   protected readonly transactionsTotalPages = computed(() => Math.max(1, Math.ceil(this.transactionsTotalCount() / this.pageSize)));
   protected readonly transactionsLoading = signal(false);
   protected readonly transactionsFailed = signal(false);
+
+  // Row-level "where did these points come from" drill-down — same pattern as the Business Portal's
+  // own Transactions pages, against the same TransactionListItemDto.Components breakdown
+  // TransactionListItemBuilder resolves server-side (shared with ReportsAppService).
+  protected readonly selectedTransaction = signal<TransactionListItemDto | null>(null);
+  protected readonly transactionDetailsOpen = signal(false);
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
@@ -212,6 +220,15 @@ export class AdminUserDetailsComponent implements OnInit {
 
   protected retryTransactions(membership: AdminCustomerMembershipDto): void {
     this.loadTransactions(membership);
+  }
+
+  protected openTransactionDetails(txn: TransactionListItemDto): void {
+    this.selectedTransaction.set(txn);
+    this.transactionDetailsOpen.set(true);
+  }
+
+  protected closeTransactionDetails(): void {
+    this.transactionDetailsOpen.set(false);
   }
 
   protected goToTransactionsPage(index: number, membership: AdminCustomerMembershipDto): void {

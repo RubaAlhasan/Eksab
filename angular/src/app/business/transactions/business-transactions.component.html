@@ -70,18 +70,19 @@
           <th>{{ '::BusinessPanel:Transactions:ColumnBranch' | abpLocalization }}</th>
           <th>{{ '::BusinessPanel:Transactions:ColumnStaff' | abpLocalization }}</th>
           <th>{{ '::BusinessPanel:Transactions:ColumnDate' | abpLocalization }}</th>
+          <th class="text-end">{{ '::BusinessPanel:Transactions:ColumnDetails' | abpLocalization }}</th>
         </tr>
       </thead>
       <tbody>
         @if (isLoading()) {
           <tr>
-            <td colspan="7">
+            <td colspan="8">
               <app-loading-spinner [label]="'::BusinessPanel:Transactions:Loading' | abpLocalization"></app-loading-spinner>
             </td>
           </tr>
         } @else if (loadFailed()) {
           <tr>
-            <td colspan="7">
+            <td colspan="8">
               <app-error-state
                 [message]="'::BusinessPanel:Transactions:LoadErrorMessage' | abpLocalization"
                 [retryLabel]="'::BusinessPanel:Transactions:TryAgain' | abpLocalization"
@@ -92,7 +93,7 @@
           </tr>
         } @else if (transactions().length === 0) {
           <tr>
-            <td colspan="7">
+            <td colspan="8">
               <app-empty-state
                 icon="fa-receipt"
                 [title]="'::BusinessPanel:Transactions:EmptyTitle' | abpLocalization"
@@ -111,10 +112,20 @@
               <td class="fw-semibold" [class.text-success]="(txn.points ?? 0) > 0" [class.text-danger]="(txn.points ?? 0) < 0">
                 {{ (txn.points ?? 0) > 0 ? '+' : '' }}{{ txn.points }}
               </td>
-              <td class="text-muted">{{ sourceLabelKey(txn.source) | abpLocalization }}</td>
+              <td class="text-muted">
+                {{ sourceLabelKey(txn.source) | abpLocalization }}
+                @if ((txn.components?.length ?? 0) > 1) {
+                  <span class="badge rounded-pill text-bg-light border ms-1">+{{ txn.components!.length - 1 }}</span>
+                }
+              </td>
               <td class="text-muted">{{ branchName(txn) }}</td>
               <td class="text-muted">{{ staffEmail(txn) }}</td>
               <td class="text-muted">{{ txn.creationTime | date: 'medium' }}</td>
+              <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="openTransactionDetails(txn)">
+                  <i class="fas fa-circle-info me-1"></i>{{ '::BusinessPanel:Transactions:ViewDetails' | abpLocalization }}
+                </button>
+              </td>
             </tr>
           }
         }
@@ -127,3 +138,72 @@
     </div>
   }
 </div>
+
+<app-modal
+  [open]="transactionDetailsOpen()"
+  [title]="'::BusinessPanel:Transactions:DetailsTitle' | abpLocalization"
+  (closed)="closeTransactionDetails()"
+>
+  @if (selectedTransaction(); as txn) {
+    <div class="d-flex flex-column gap-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <app-status-badge [label]="typeLabelKey(txn.type) | abpLocalization" [variant]="typeVariant(txn.type)"></app-status-badge>
+        <span class="fs-5 fw-bold" [class.text-success]="(txn.points ?? 0) > 0" [class.text-danger]="(txn.points ?? 0) < 0">
+          {{ (txn.points ?? 0) > 0 ? '+' : '' }}{{ txn.points }}
+        </span>
+      </div>
+
+      <div class="d-flex flex-column gap-2 small">
+        <div class="d-flex justify-content-between">
+          <span class="text-muted">{{ '::BusinessPanel:Transactions:ColumnCustomer' | abpLocalization }}</span>
+          <span class="fw-semibold">{{ customerName(txn) }}</span>
+        </div>
+        <div class="d-flex justify-content-between">
+          <span class="text-muted">{{ '::BusinessPanel:Transactions:ColumnDate' | abpLocalization }}</span>
+          <span class="fw-semibold">{{ txn.creationTime | date: 'medium' }}</span>
+        </div>
+        @if (branchName(txn) !== '—') {
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">{{ '::BusinessPanel:Transactions:ColumnBranch' | abpLocalization }}</span>
+            <span class="fw-semibold">{{ branchName(txn) }}</span>
+          </div>
+        }
+        @if (staffEmail(txn) !== '—') {
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">{{ '::BusinessPanel:Transactions:ColumnStaff' | abpLocalization }}</span>
+            <span class="fw-semibold">{{ staffEmail(txn) }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="d-flex flex-column gap-2">
+        <span class="text-muted small">{{ '::BusinessPanel:Transactions:DetailsBreakdown' | abpLocalization }}</span>
+        @for (component of txn.components; track component.id) {
+          <div class="d-flex justify-content-between align-items-start border rounded p-2">
+            <div>
+              <span class="d-block fw-semibold small">{{ sourceLabelKey(component.source) | abpLocalization }}</span>
+              @if (component.referenceName) {
+                <span class="d-block text-muted small">{{ component.referenceName }}</span>
+              }
+              @if (component.tierMultiplier) {
+                <span class="d-block text-muted small">{{ '::BusinessPanel:Transactions:DetailsMultiplier' | abpLocalization }} &times;{{ component.tierMultiplier }}</span>
+              }
+              @if (component.reason) {
+                <span class="d-block text-muted small">{{ component.reason }}</span>
+              }
+            </div>
+            <span class="fw-semibold small" [class.text-success]="(component.points ?? 0) > 0" [class.text-danger]="(component.points ?? 0) < 0">
+              {{ (component.points ?? 0) > 0 ? '+' : '' }}{{ component.points }}
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <div slot="footer" class="d-flex justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeTransactionDetails()">
+      {{ '::BusinessPanel:Customers:Cancel' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

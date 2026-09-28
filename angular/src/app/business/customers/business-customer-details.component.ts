@@ -101,6 +101,10 @@ export class BusinessCustomerDetailsComponent implements OnInit {
   protected readonly transactionsFailed = signal(false);
   private transactionsLoaded = false;
 
+  // Row-level "where did these points come from" drill-down — see openTransactionDetails().
+  protected readonly selectedTransaction = signal<TransactionListItemDto | null>(null);
+  protected readonly transactionDetailsOpen = signal(false);
+
   protected readonly coupons = signal<CouponDto[]>([]);
   protected readonly couponsTotalCount = signal(0);
   protected readonly couponsPageIndex = signal(0);
@@ -189,6 +193,19 @@ export class BusinessCustomerDetailsComponent implements OnInit {
 
   protected retryTransactions(): void {
     this.loadTransactions();
+  }
+
+  // Each row is one PointsTransaction ledger entry — one point event. Type/Points/Source/Date on the
+  // row already identify *what kind* of event it was; this modal answers *which* campaign/tier/reward/
+  // referral/staff action actually produced it, via the names ReportsAppService.GetTransactionsListAsync
+  // resolves server-side (ReferenceName is polymorphic per Source — see that method's own comment).
+  protected openTransactionDetails(txn: TransactionListItemDto): void {
+    this.selectedTransaction.set(txn);
+    this.transactionDetailsOpen.set(true);
+  }
+
+  protected closeTransactionDetails(): void {
+    this.transactionDetailsOpen.set(false);
   }
 
   protected retryCoupons(): void {

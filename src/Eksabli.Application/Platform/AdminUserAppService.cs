@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Eksabli.CustomerProfiles;
 using Eksabli.EmployeeAssignments;
 using Eksabli.Memberships;
+using Eksabli.Reports;
 using Eksabli.Wallets;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -31,6 +32,7 @@ public class AdminUserAppService : ApplicationService, IAdminUserAppService
     private readonly IRepository<PointsTransaction, Guid> _transactionRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
+    private readonly TransactionListItemBuilder _transactionListItemBuilder;
 
     public AdminUserAppService(
         IRepository<CustomerProfile, Guid> customerProfileRepository,
@@ -42,7 +44,8 @@ public class AdminUserAppService : ApplicationService, IAdminUserAppService
         IRepository<Tier, Guid> tierRepository,
         IRepository<PointsTransaction, Guid> transactionRepository,
         ICurrentTenant currentTenant,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        TransactionListItemBuilder transactionListItemBuilder)
     {
         _customerProfileRepository = customerProfileRepository;
         _employeeAssignmentRepository = employeeAssignmentRepository;
@@ -54,6 +57,7 @@ public class AdminUserAppService : ApplicationService, IAdminUserAppService
         _transactionRepository = transactionRepository;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
+        _transactionListItemBuilder = transactionListItemBuilder;
     }
 
     // Cross-tenant/cross-realm "user directory" for platform staff — see prototype/admin/users.html.
@@ -171,7 +175,7 @@ public class AdminUserAppService : ApplicationService, IAdminUserAppService
     // at a time, so scoping the filter to exactly that tenant is both simpler and tighter than disabling
     // it outright. A membershipId that doesn't belong to tenantId resolves to "no wallet found" (the
     // filter simply won't match it), never another tenant's data.
-    public async Task<PagedResultDto<PointsTransactionDto>> GetCustomerTransactionsAsync(Guid membershipId, Guid tenantId, PagedAndSortedResultRequestDto input)
+    public async Task<PagedResultDto<TransactionListItemDto>> GetCustomerTransactionsAsync(Guid membershipId, Guid tenantId, PagedAndSortedResultRequestDto input)
     {
         using (_currentTenant.Change(tenantId))
         {
@@ -188,8 +192,12 @@ public class AdminUserAppService : ApplicationService, IAdminUserAppService
             var transactions = await AsyncExecuter.ToListAsync(query);
             var totalCount = await AsyncExecuter.CountAsync(queryable.Where(t => t.WalletId == wallet.Id));
 
-            var dtos = ObjectMapper.Map<List<PointsTransaction>, List<PointsTransactionDto>>(transactions);
-            return new PagedResultDto<PointsTransactionDto>(totalCount, dtos);
+            // Same grouped-by-process, resolved-names shape the Business Portal's own Transactions
+            // table shows (TransactionListItemBuilder, shared with ReportsAppService.GetTransactionsListAsync)
+            // — an admin looking at a customer's history sees the exact same "where did these points come
+            // from" breakdown staff do, not a second, poorer copy of this.
+            var items = await _transactionListItemBuilder.BuildAsync(transactions);
+            return new PagedResultDto<TransactionListItemDto>(totalCount, items);
         }
     }
 

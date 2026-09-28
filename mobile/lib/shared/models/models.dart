@@ -361,7 +361,8 @@ enum TransactionSource {
   referral,
   birthday,
   manual,
-  reward;
+  reward,
+  tier;
 
   static TransactionSource fromJson(Object? raw) =>
       _enumFromJson(raw, TransactionSource.values, TransactionSource.purchase);
@@ -373,10 +374,50 @@ enum TransactionSource {
     TransactionSource.birthday => 'Birthday bonus',
     TransactionSource.manual => 'Manual adjustment',
     TransactionSource.reward => 'Reward redemption',
+    TransactionSource.tier => 'Tier bonus',
   };
 }
 
-/// Maps `PointsTransactionDto`.
+/// One raw ledger row inside a `PointTransaction.components` breakdown — mirrors
+/// `TransactionComponentDto`. See that DTO's own comment for how `referenceName` is resolved
+/// (polymorphic per `source`: the Tier name, Campaign name, redeemed Reward's name, or referred
+/// customer's name).
+class PointTransactionComponent {
+  const PointTransactionComponent({
+    required this.id,
+    required this.source,
+    required this.points,
+    this.referenceName,
+    this.tierMultiplier,
+    this.reason,
+  });
+
+  factory PointTransactionComponent.fromJson(Map<String, dynamic> json) =>
+      PointTransactionComponent(
+        id: (json['id'] as String?) ?? '',
+        source: TransactionSource.fromJson(json['source']),
+        points: (json['points'] as num?)?.toInt() ?? 0,
+        referenceName: (json['referenceName'] as String?)?.trim(),
+        tierMultiplier: (json['tierMultiplier'] as num?)?.toDouble(),
+        reason: (json['reason'] as String?)?.trim(),
+      );
+
+  final String id;
+  final TransactionSource source;
+  final int points;
+  final String? referenceName;
+  final double? tierMultiplier;
+
+  /// Free-text note from staff, when present (Manual/Adjust components only).
+  final String? reason;
+
+  bool get isCredit => points > 0;
+}
+
+/// Maps `TransactionListItemDto` — one row per real-world process, which can bundle more than one
+/// raw ledger component (e.g. a purchase that also earned a tier and/or campaign bonus, all sharing
+/// one `PointsTransaction.BatchId` server-side — see `TransactionListItemBuilder`). `points`/`source`
+/// here are the collapsed row's own (net sum / primary component); `components` is the full breakdown.
 class PointTransaction {
   const PointTransaction({
     required this.id,
@@ -385,7 +426,8 @@ class PointTransaction {
     required this.points,
     required this.source,
     required this.date,
-    this.reason,
+    this.branchName,
+    this.components = const [],
   });
 
   factory PointTransaction.fromJson(Map<String, dynamic> json, String businessId) =>
@@ -396,7 +438,11 @@ class PointTransaction {
         points: (json['points'] as num?)?.toInt() ?? 0,
         source: TransactionSource.fromJson(json['source']),
         date: DateTime.tryParse('${json['creationTime']}') ?? DateTime.now(),
-        reason: (json['reason'] as String?)?.trim(),
+        branchName: (json['branchName'] as String?)?.trim(),
+        components: ((json['components'] as List<dynamic>?) ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(PointTransactionComponent.fromJson)
+            .toList(),
       );
 
   final String id;
@@ -406,15 +452,26 @@ class PointTransaction {
   final TransactionSource source;
   final DateTime date;
 
-  /// Free-text note from staff, when present.
-  final String? reason;
+  /// Where these points were earned/spent, when resolvable (null for customer/system-triggered rows
+  /// or a staff member with all-branch access) — see `TransactionListItemDto.BranchName`.
+  final String? branchName;
+
+  /// One entry per raw ledger row this process produced — almost always 1, up to 4 for a purchase
+  /// that also earned a tier and/or campaign bonus. What the transaction detail sheet expands into.
+  final List<PointTransactionComponent> components;
 
   bool get isCredit => points > 0;
+
+  /// A single-component process (the common case) surfaces that component's own reason, same as this
+  /// getter always did before components existed; a multi-component purchase has no one reason to show.
+  String? get reason =>
+      components.length == 1 ? components.single.reason : null;
 
   /// The server has no description field, so build one from source + reason —
   /// which is what those fields are for.
   String get description {
-    if (reason != null && reason!.isNotEmpty) return reason!;
+    final r = reason;
+    if (r != null && r.isNotEmpty) return r;
     return switch (type) {
       TransactionType.expire => 'Points expired',
       TransactionType.refund => 'Refund — ${source.label}',

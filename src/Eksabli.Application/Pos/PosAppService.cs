@@ -231,12 +231,18 @@ public class PosAppService : ApplicationService, IPosAppService
         // "Spend X Get Y" campaigns.
         var purchasePoints = preview.BasePoints;
 
+        // One checkout, one batch — every row this call inserts shares this id so the Business Portal's
+        // Transactions ledger can collapse them back into a single row (see PointsTransaction.BatchId /
+        // ReportsAppService.GetTransactionsListAsync). Generated even when only one row ends up produced.
+        var batchId = GuidGenerator.Create();
+
         var transaction = PointsTransaction.Create(
             GuidGenerator.Create(),
             wallet.Id,
             PointsTransactionType.Earn,
             purchasePoints,
-            PointsTransactionSource.Purchase);
+            PointsTransactionSource.Purchase,
+            batchId: batchId);
         await _transactionRepository.InsertAsync(transaction);
         wallet.ApplyTransaction(PointsTransactionType.Earn, purchasePoints);
 
@@ -249,7 +255,8 @@ public class PosAppService : ApplicationService, IPosAppService
                 preview.TierExtraPoints,
                 PointsTransactionSource.Tier,
                 referenceId: tierId.Value,
-                tierMultiplierSnapshot: tierMultiplier);
+                tierMultiplierSnapshot: tierMultiplier,
+                batchId: batchId);
             await _transactionRepository.InsertAsync(tierTransaction);
             wallet.ApplyTransaction(PointsTransactionType.Earn, preview.TierExtraPoints);
         }
@@ -262,7 +269,8 @@ public class PosAppService : ApplicationService, IPosAppService
                 PointsTransactionType.Earn,
                 preview.CampaignMultiplierExtraPoints,
                 PointsTransactionSource.Campaign,
-                referenceId: preview.CampaignId.Value);
+                referenceId: preview.CampaignId.Value,
+                batchId: batchId);
             await _transactionRepository.InsertAsync(multiplierTransaction);
             wallet.ApplyTransaction(PointsTransactionType.Earn, preview.CampaignMultiplierExtraPoints);
         }
@@ -275,7 +283,8 @@ public class PosAppService : ApplicationService, IPosAppService
                 PointsTransactionType.Earn,
                 preview.CampaignBonusPoints,
                 PointsTransactionSource.Campaign,
-                referenceId: preview.BonusCampaignId.Value);
+                referenceId: preview.BonusCampaignId.Value,
+                batchId: batchId);
             await _transactionRepository.InsertAsync(bonusTransaction);
             wallet.ApplyTransaction(PointsTransactionType.Earn, preview.CampaignBonusPoints);
         }

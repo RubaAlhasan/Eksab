@@ -2,7 +2,7 @@ import { RestService, Rest } from '@abp/ng.core';
 import type { PagedAndSortedResultRequestDto, PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 import type { AdminCustomerDetailDto, AdminUserDto, AdminUserFilterDto } from '../platform/models';
-import type { PointsTransactionDto } from '../wallets/models';
+import type { TransactionListItemDto } from '../reports/models';
 
 @Injectable({
   providedIn: 'root',
@@ -21,7 +21,7 @@ export class AdminUsersService {
 
 
   getCustomerTransactions = (membershipId: string, tenantId: string, input: PagedAndSortedResultRequestDto, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, PagedResultDto<PointsTransactionDto>>({
+    this.restService.request<any, PagedResultDto<TransactionListItemDto>>({
       method: 'GET',
       url: `/api/app/admin-users/memberships/${membershipId}/transactions`,
       params: { tenantId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },

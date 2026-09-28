@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using Eksabli.Wallets;
+using Eksabli.Reports;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -24,5 +24,5 @@ public interface IAdminUserAppService : IApplicationService
     // "switch ambient tenant, then query normally" shape as Wallets.WalletAppService
     // .GetMyTransactionHistoryAsync, just parameterized by an explicit membershipId/tenantId instead of
     // the caller's own CustomerId (this runs as Host-realm staff looking at an arbitrary customer).
-    Task<PagedResultDto<PointsTransactionDto>> GetCustomerTransactionsAsync(Guid membershipId, Guid tenantId, PagedAndSortedResultRequestDto input);
+    Task<PagedResultDto<TransactionListItemDto>> GetCustomerTransactionsAsync(Guid membershipId, Guid tenantId, PagedAndSortedResultRequestDto input);
 }

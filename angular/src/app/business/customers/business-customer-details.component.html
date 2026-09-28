@@ -114,6 +114,7 @@
                     <th>{{ '::BusinessPanel:Transactions:ColumnPoints' | abpLocalization }}</th>
                     <th>{{ '::BusinessPanel:Transactions:ColumnSource' | abpLocalization }}</th>
                     <th>{{ '::BusinessPanel:Transactions:ColumnDate' | abpLocalization }}</th>
+                    <th class="text-end">{{ '::BusinessPanel:Transactions:ColumnDetails' | abpLocalization }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -123,8 +124,18 @@
                       <td class="fw-semibold" [class.text-success]="(txn.points ?? 0) > 0" [class.text-danger]="(txn.points ?? 0) < 0">
                         {{ (txn.points ?? 0) > 0 ? '+' : '' }}{{ txn.points }}
                       </td>
-                      <td class="text-muted">{{ sourceLabelKey(txn.source) | abpLocalization }}</td>
+                      <td class="text-muted">
+                        {{ sourceLabelKey(txn.source) | abpLocalization }}
+                        @if ((txn.components?.length ?? 0) > 1) {
+                          <span class="badge rounded-pill text-bg-light border ms-1">+{{ txn.components!.length - 1 }}</span>
+                        }
+                      </td>
                       <td class="text-muted">{{ txn.creationTime | date: 'mediumDate' }}</td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="openTransactionDetails(txn)">
+                          <i class="fas fa-circle-info me-1"></i>{{ '::BusinessPanel:Transactions:ViewDetails' | abpLocalization }}
+                        </button>
+                      </td>
                     </tr>
                   }
                 </tbody>
@@ -211,6 +222,74 @@
         <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
       }
       {{ '::BusinessPanel:Customers:ApplyAdjustment' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>
+
+<app-modal
+  [open]="transactionDetailsOpen()"
+  [title]="'::BusinessPanel:Transactions:DetailsTitle' | abpLocalization"
+  (closed)="closeTransactionDetails()"
+>
+  @if (selectedTransaction(); as txn) {
+    <div class="d-flex flex-column gap-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <app-status-badge [label]="typeLabelKey(txn.type) | abpLocalization" [variant]="typeVariant(txn.type)"></app-status-badge>
+        <span class="fs-5 fw-bold" [class.text-success]="(txn.points ?? 0) > 0" [class.text-danger]="(txn.points ?? 0) < 0">
+          {{ (txn.points ?? 0) > 0 ? '+' : '' }}{{ txn.points }}
+        </span>
+      </div>
+
+      <div class="d-flex flex-column gap-2 small">
+        <div class="d-flex justify-content-between">
+          <span class="text-muted">{{ '::BusinessPanel:Transactions:ColumnDate' | abpLocalization }}</span>
+          <span class="fw-semibold">{{ txn.creationTime | date: 'medium' }}</span>
+        </div>
+        @if (txn.branchName) {
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">{{ '::BusinessPanel:Transactions:ColumnBranch' | abpLocalization }}</span>
+            <span class="fw-semibold">{{ txn.branchName }}</span>
+          </div>
+        }
+        @if (txn.staffEmail) {
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">{{ '::BusinessPanel:Transactions:ColumnStaff' | abpLocalization }}</span>
+            <span class="fw-semibold">{{ txn.staffEmail }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- One block per raw ledger row this process produced — a purchase that also earned a tier
+           and/or campaign bonus shows every component here, even though the table above collapsed
+           them into a single row. -->
+      <div class="d-flex flex-column gap-2">
+        <span class="text-muted small">{{ '::BusinessPanel:Transactions:DetailsBreakdown' | abpLocalization }}</span>
+        @for (component of txn.components; track component.id) {
+          <div class="d-flex justify-content-between align-items-start border rounded p-2">
+            <div>
+              <span class="d-block fw-semibold small">{{ sourceLabelKey(component.source) | abpLocalization }}</span>
+              @if (component.referenceName) {
+                <span class="d-block text-muted small">{{ component.referenceName }}</span>
+              }
+              @if (component.tierMultiplier) {
+                <span class="d-block text-muted small">{{ '::BusinessPanel:Transactions:DetailsMultiplier' | abpLocalization }} &times;{{ component.tierMultiplier }}</span>
+              }
+              @if (component.reason) {
+                <span class="d-block text-muted small">{{ component.reason }}</span>
+              }
+            </div>
+            <span class="fw-semibold small" [class.text-success]="(component.points ?? 0) > 0" [class.text-danger]="(component.points ?? 0) < 0">
+              {{ (component.points ?? 0) > 0 ? '+' : '' }}{{ component.points }}
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <div slot="footer" class="d-flex justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeTransactionDetails()">
+      {{ '::BusinessPanel:Customers:Cancel' | abpLocalization }}
     </button>
   </div>
 </app-modal>

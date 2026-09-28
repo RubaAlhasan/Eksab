@@ -35,6 +35,13 @@ public class PointsTransaction : AuditedAggregateRoot<Guid>, IMultiTenant
     // types that don't go through the tier-multiplier stage (Redeem/Expire/Adjust/Refund).
     public decimal? TierMultiplierSnapshot { get; private set; }
 
+    // Links the up-to-four rows one PosAppService.AwardPointsCoreAsync call can insert (base Purchase +
+    // Tier bonus + per-campaign bonus) back into the single checkout that produced them — a customer
+    // spending money once is one process, not several unrelated ledger rows. Same value across every row
+    // from that one call; null for every other creator (Adjust/Redeem/Expire/Referral/CampaignSweepWorker
+    // /PointsExpirationWorker), which each only ever insert one row per event and need no grouping.
+    public Guid? BatchId { get; private set; }
+
     protected PointsTransaction()
     {
         /* Required by the ORM */
@@ -50,7 +57,8 @@ public class PointsTransaction : AuditedAggregateRoot<Guid>, IMultiTenant
         DateTime? expiresAt,
         Guid? createdByEmployeeId,
         string? reason,
-        decimal? tierMultiplierSnapshot)
+        decimal? tierMultiplierSnapshot,
+        Guid? batchId)
         : base(id)
     {
         WalletId = walletId;
@@ -62,6 +70,7 @@ public class PointsTransaction : AuditedAggregateRoot<Guid>, IMultiTenant
         CreatedByEmployeeId = createdByEmployeeId;
         Reason = reason;
         TierMultiplierSnapshot = tierMultiplierSnapshot;
+        BatchId = batchId;
     }
 
     public static PointsTransaction Create(
@@ -74,8 +83,9 @@ public class PointsTransaction : AuditedAggregateRoot<Guid>, IMultiTenant
         DateTime? expiresAt = null,
         Guid? createdByEmployeeId = null,
         string? reason = null,
-        decimal? tierMultiplierSnapshot = null)
+        decimal? tierMultiplierSnapshot = null,
+        Guid? batchId = null)
     {
-        return new PointsTransaction(id, walletId, type, points, source, referenceId, expiresAt, createdByEmployeeId, reason, tierMultiplierSnapshot);
+        return new PointsTransaction(id, walletId, type, points, source, referenceId, expiresAt, createdByEmployeeId, reason, tierMultiplierSnapshot, batchId);
     }
 }

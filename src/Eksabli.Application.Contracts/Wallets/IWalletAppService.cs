@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Eksabli.Reports;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -10,5 +11,5 @@ namespace Eksabli.Wallets;
 [RemoteService(IsEnabled = false)]
 public interface IWalletAppService : IApplicationService
 {
-    Task<PagedResultDto<PointsTransactionDto>> GetMyTransactionHistoryAsync(Guid tenantId, GetMyTransactionHistoryInput input);
+    Task<PagedResultDto<TransactionListItemDto>> GetMyTransactionHistoryAsync(Guid tenantId, GetMyTransactionHistoryInput input);
 }

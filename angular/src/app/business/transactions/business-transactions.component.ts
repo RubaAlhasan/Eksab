@@ -15,6 +15,7 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { StatusBadgeComponent, StatusBadgeVariant } from '../../shared/components/status-badge/status-badge.component';
+import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { downloadBlob } from '../../shared/utils/download-blob';
 
 function startOfMonth(date: Date): Date {
@@ -75,6 +76,7 @@ function toDateInputValue(date: Date): string {
     EmptyStateComponent,
     PaginationComponent,
     StatusBadgeComponent,
+    ModalComponent,
   ],
 })
 export class BusinessTransactionsComponent implements OnInit {
@@ -104,6 +106,12 @@ export class BusinessTransactionsComponent implements OnInit {
 
   protected readonly canExport = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Reports.Export'));
   protected readonly isExporting = signal(false);
+
+  // Row-level "where did these points come from" drill-down — same pattern as the Customer Details
+  // page's Transactions tab (business-customer-details.component.ts), against the same
+  // TransactionListItemDto.Components breakdown ReportsAppService.GetTransactionsListAsync resolves.
+  protected readonly selectedTransaction = signal<TransactionListItemDto | null>(null);
+  protected readonly transactionDetailsOpen = signal(false);
 
   protected readonly form = new FormGroup({
     from: new FormControl(toDateInputValue(startOfMonth(new Date())), { nonNullable: true, validators: [Validators.required] }),
@@ -148,6 +156,15 @@ export class BusinessTransactionsComponent implements OnInit {
     if (index < 0 || index >= this.totalPages()) return;
     this.pageIndex.set(index);
     this.load();
+  }
+
+  protected openTransactionDetails(txn: TransactionListItemDto): void {
+    this.selectedTransaction.set(txn);
+    this.transactionDetailsOpen.set(true);
+  }
+
+  protected closeTransactionDetails(): void {
+    this.transactionDetailsOpen.set(false);
   }
 
   protected customerName(txn: TransactionListItemDto): string {

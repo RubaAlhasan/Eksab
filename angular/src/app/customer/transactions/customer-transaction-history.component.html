@@ -22,23 +22,82 @@
   } @else {
     <div class="list-group mb-3">
       @for (txn of transactions(); track txn.id) {
-        <div class="list-group-item d-flex justify-content-between align-items-center">
-          <div>
-            <div class="fw-semibold small">{{ typeLabelKey(txn.type) | abpLocalization }}</div>
+        <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" (click)="openTransactionDetails(txn)">
+          <div class="text-start">
+            <div class="fw-semibold small">
+              {{ typeLabelKey(txn.type) | abpLocalization }}
+              @if ((txn.components?.length ?? 0) > 1) {
+                <span class="badge rounded-pill text-bg-light border ms-1">+{{ txn.components!.length - 1 }}</span>
+              }
+            </div>
             <div class="text-muted small">
               {{ sourceLabelKey(txn.source) | abpLocalization }} · {{ txn.creationTime | date: 'medium' }}
             </div>
-            @if (txn.reason) {
-              <div class="text-muted small fst-italic">{{ txn.reason }}</div>
-            }
           </div>
           <span class="fw-bold" [class.text-success]="isCredit(txn.points)" [class.text-danger]="!isCredit(txn.points)">
             {{ txn.points! > 0 ? '+' : '' }}{{ txn.points }}
           </span>
-        </div>
+        </button>
       }
     </div>
 
     <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)" />
   }
 }
+
+<app-modal
+  [open]="transactionDetailsOpen()"
+  [title]="'::Wallet:Transactions:DetailsTitle' | abpLocalization"
+  (closed)="closeTransactionDetails()"
+>
+  @if (selectedTransaction(); as txn) {
+    <div class="d-flex flex-column gap-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">{{ typeLabelKey(txn.type) | abpLocalization }}</span>
+        <span class="fs-5 fw-bold" [class.text-success]="isCredit(txn.points)" [class.text-danger]="!isCredit(txn.points)">
+          {{ txn.points! > 0 ? '+' : '' }}{{ txn.points }}
+        </span>
+      </div>
+
+      <div class="d-flex flex-column gap-2 small">
+        <div class="d-flex justify-content-between">
+          <span class="text-muted">{{ txn.creationTime | date: 'medium' }}</span>
+        </div>
+        @if (txn.branchName) {
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">{{ txn.branchName }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="d-flex flex-column gap-2">
+        <span class="text-muted small">{{ '::Wallet:Transactions:DetailsBreakdown' | abpLocalization }}</span>
+        @for (component of txn.components; track component.id) {
+          <div class="d-flex justify-content-between align-items-start border rounded p-2">
+            <div>
+              <span class="d-block fw-semibold small">{{ sourceLabelKey(component.source) | abpLocalization }}</span>
+              @if (component.referenceName) {
+                <span class="d-block text-muted small">{{ component.referenceName }}</span>
+              }
+              @if (component.tierMultiplier) {
+                <span class="d-block text-muted small">{{ '::Wallet:Transactions:DetailsMultiplier' | abpLocalization }} &times;{{ component.tierMultiplier }}</span>
+              }
+              @if (component.reason) {
+                <span class="d-block text-muted small">{{ component.reason }}</span>
+              }
+            </div>
+            <span class="fw-semibold small" [class.text-success]="isCredit(component.points)" [class.text-danger]="!isCredit(component.points)">
+              {{ component.points! > 0 ? '+' : '' }}{{ component.points }}
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <div slot="footer" class="d-flex justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeTransactionDetails()">
+      {{ '::Wallet:Rewards:CancelButton' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

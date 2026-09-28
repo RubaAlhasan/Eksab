@@ -46,6 +46,7 @@ public class ReportsAppService : ApplicationService, IReportsAppService
     private readonly IRepository<CustomerProfile, Guid> _customerProfileRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDistributedCache<TransactionsExcelDownloadTokenCacheItem, string> _excelDownloadTokenCache;
+    private readonly TransactionListItemBuilder _transactionListItemBuilder;
 
     public ReportsAppService(
         IRepository<Membership, Guid> membershipRepository,
@@ -61,7 +62,8 @@ public class ReportsAppService : ApplicationService, IReportsAppService
         IRepository<Notification, Guid> notificationGenericRepository,
         IRepository<CustomerProfile, Guid> customerProfileRepository,
         ICurrentTenant currentTenant,
-        IDistributedCache<TransactionsExcelDownloadTokenCacheItem, string> excelDownloadTokenCache)
+        IDistributedCache<TransactionsExcelDownloadTokenCacheItem, string> excelDownloadTokenCache,
+        TransactionListItemBuilder transactionListItemBuilder)
     {
         _membershipRepository = membershipRepository;
         _walletRepository = walletRepository;
@@ -77,6 +79,7 @@ public class ReportsAppService : ApplicationService, IReportsAppService
         _customerProfileRepository = customerProfileRepository;
         _currentTenant = currentTenant;
         _excelDownloadTokenCache = excelDownloadTokenCache;
+        _transactionListItemBuilder = transactionListItemBuilder;
     }
 
     public async Task<DashboardHomeDto> GetDashboardHomeAsync()
@@ -429,61 +432,12 @@ public class ReportsAppService : ApplicationService, IReportsAppService
             skipCount: input.SkipCount,
             maxResultCount: input.MaxResultCount);
 
-        // Rows with no staff attribution (customer/system-triggered) or a staff member with all-branch
-        // access (BranchId null) simply have no resolvable branch — only needed for this page now.
-        var employeeIds = page.Where(t => t.CreatedByEmployeeId.HasValue).Select(t => t.CreatedByEmployeeId!.Value).Distinct().ToList();
-        var employeeBranchLookup = employeeIds.Count == 0
-            ? new Dictionary<Guid, Guid?>()
-            : (await _employeeAssignmentRepository.GetListAsync(e => employeeIds.Contains(e.UserId)))
-                .ToDictionary(e => e.UserId, e => e.BranchId);
-
-        var walletIds = page.Select(t => t.WalletId).Distinct().ToList();
-        var walletToMembership = (await _walletRepository.GetListAsync(w => walletIds.Contains(w.Id)))
-            .ToDictionary(w => w.Id, w => w.MembershipId);
-
-        var membershipIds = walletToMembership.Values.Distinct().ToList();
-        var membershipToCustomer = (await _membershipRepository.GetListAsync(m => membershipIds.Contains(m.Id)))
-            .ToDictionary(m => m.Id, m => m.CustomerId);
-
-        Dictionary<Guid, CustomerProfile> profileLookup;
-        using (_currentTenant.Change(null)) // CustomerProfile is Host-realm
-        {
-            var customerIds = membershipToCustomer.Values.Distinct().ToList();
-            profileLookup = (await _customerProfileRepository.GetListAsync(p => customerIds.Contains(p.UserId)))
-                .ToDictionary(p => p.UserId);
-        }
-
-        var items = page.Select(t =>
-        {
-            Guid? customerId = null;
-            CustomerProfile? profile = null;
-            if (walletToMembership.TryGetValue(t.WalletId, out var membershipId) &&
-                membershipToCustomer.TryGetValue(membershipId, out var custId))
-            {
-                customerId = custId;
-                profileLookup.TryGetValue(custId, out profile);
-            }
-
-            Guid? branchId = null;
-            if (t.CreatedByEmployeeId.HasValue)
-            {
-                employeeBranchLookup.TryGetValue(t.CreatedByEmployeeId.Value, out branchId);
-            }
-
-            return new TransactionListItemDto
-            {
-                Id = t.Id,
-                CustomerId = customerId,
-                CustomerFirstName = profile?.FirstName,
-                CustomerLastName = profile?.LastName,
-                Type = t.Type,
-                Points = t.Points,
-                Source = t.Source,
-                BranchId = branchId,
-                StaffId = t.CreatedByEmployeeId,
-                CreationTime = t.CreationTime
-            };
-        }).ToList();
+        // totalCount/paging above is still counted in raw ledger rows, not the grouped-by-process rows
+        // TransactionListItemBuilder returns — a batch of up to 4 rows always lands together in this
+        // page-sized window at the current page size (10), and a page showing slightly fewer than 10
+        // rows once purchases with bonuses collapse is a fine trade-off for not having to make ledger
+        // pagination itself batch-aware.
+        var items = await _transactionListItemBuilder.BuildAsync(page);
 
         return new PagedResultDto<TransactionListItemDto>(totalCount, items);
     }

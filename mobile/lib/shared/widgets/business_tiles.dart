@@ -5,6 +5,7 @@ import '../../app/theme/app_tokens.dart';
 import '../models/models.dart';
 import 'app_avatar.dart';
 import 'app_badge.dart';
+import 'app_button.dart';
 import 'app_card.dart';
 
 /// Row used by Nearby Stores, Search results, Favorites, and My Memberships:
@@ -188,9 +189,14 @@ class TransactionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final meta = _meta(transaction.type);
+    // A purchase that also earned a tier and/or campaign bonus bundles more than one raw ledger
+    // component into this one row (see PointTransaction's own comment) — the badge is the only hint
+    // there's a breakdown behind it until the row is tapped.
+    final extraComponents = transaction.components.length - 1;
 
     return AppCard(
       padding: const EdgeInsets.all(14),
+      onTap: () => _showDetails(context, transaction),
       child: Row(
         children: [
           IconTile(icon: meta.icon, tone: meta.color, iconSize: 16),
@@ -200,10 +206,20 @@ class TransactionRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  transaction.description,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.bodySemi.copyWith(color: palette.textPrimary),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        transaction.description,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.bodySemi.copyWith(color: palette.textPrimary),
+                      ),
+                    ),
+                    if (extraComponents > 0) ...[
+                      const SizedBox(width: 6),
+                      AppBadge('+$extraComponents'),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -261,6 +277,148 @@ class TransactionRow extends StatelessWidget {
       label: 'Refund',
     ),
   };
+
+  /// "Where did these points come from" — one card per raw ledger component, same breakdown the
+  /// Business/Admin web portals show for this exact row (`TransactionListItemBuilder` server-side).
+  static Future<void> _showDetails(
+    BuildContext context,
+    PointTransaction transaction,
+  ) {
+    final meta = _meta(transaction.type);
+
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final palette = AppPalette.of(sheetContext);
+        final amountColor = transaction.isCredit
+            ? (palette.isDark ? AppColors.success300 : AppColors.success600)
+            : (palette.isDark ? AppColors.danger300 : AppColors.danger600);
+
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            20,
+            24,
+            24 + MediaQuery.viewInsetsOf(sheetContext).bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    meta.label,
+                    style: AppText.title.copyWith(color: palette.textPrimary),
+                  ),
+                  Text(
+                    '${transaction.isCredit ? '+' : ''}${transaction.points}',
+                    style: AppText.title.copyWith(color: amountColor),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                formatDate(transaction.date, withYear: true),
+                style: AppText.small.copyWith(color: palette.textMuted),
+              ),
+              if (transaction.branchName != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  transaction.branchName!,
+                  style: AppText.small.copyWith(color: palette.textMuted),
+                ),
+              ],
+              const SizedBox(height: 16),
+              Text(
+                'BREAKDOWN',
+                style: AppText.overline.copyWith(color: palette.textMuted),
+              ),
+              const SizedBox(height: 8),
+              ...transaction.components.map(
+                (component) => _ComponentTile(component: component),
+              ),
+              const SizedBox(height: 8),
+              AppButton(
+                label: 'Close',
+                variant: AppButtonVariant.secondary,
+                expand: true,
+                onPressed: () => Navigator.of(sheetContext).pop(),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ComponentTile extends StatelessWidget {
+  const _ComponentTile({required this.component});
+
+  final PointTransactionComponent component;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final amountColor = component.isCredit
+        ? (palette.isDark ? AppColors.success300 : AppColors.success600)
+        : (palette.isDark ? AppColors.danger300 : AppColors.danger600);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: palette.border),
+        borderRadius: AppRadius.rMd,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  component.source.label,
+                  style: AppText.bodySemi.copyWith(color: palette.textPrimary),
+                ),
+                if (component.referenceName != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    component.referenceName!,
+                    style: AppText.small.copyWith(color: palette.textMuted),
+                  ),
+                ],
+                if (component.tierMultiplier != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    '×${component.tierMultiplier}',
+                    style: AppText.small.copyWith(color: palette.textMuted),
+                  ),
+                ],
+                if (component.reason != null && component.reason!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    component.reason!,
+                    style: AppText.small.copyWith(color: palette.textMuted),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '${component.isCredit ? '+' : ''}${component.points}',
+            style: AppText.bodySemi.copyWith(color: amountColor),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------

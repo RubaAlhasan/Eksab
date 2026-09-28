@@ -35,7 +35,7 @@ export function transactionSourceLabelKey(source: PointsTransactionSource | unde
   }
 }
 
-/** `PointsTransactionDto.points` is already signed correctly at the source (confirmed by reading
+/** `TransactionListItemDto.points` is already signed correctly at the source (confirmed by reading
  *  `PosAppService`/`PointsWallet`/`PointsExpirationWorker` — Redeem/Expire are written negative, Earn/
  *  Refund positive, Adjust carries whatever signed amount staff entered) — display just follows the
  *  real sign, no per-type inference needed. */

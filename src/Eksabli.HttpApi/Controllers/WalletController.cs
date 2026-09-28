@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Eksabli.Reports;
 using Eksabli.Wallets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,7 +21,7 @@ public class WalletController : EksabliController
     }
 
     [HttpGet("{tenantId}/transactions")]
-    public Task<PagedResultDto<PointsTransactionDto>> GetMyTransactionHistoryAsync(Guid tenantId, [FromQuery] GetMyTransactionHistoryInput input)
+    public Task<PagedResultDto<TransactionListItemDto>> GetMyTransactionHistoryAsync(Guid tenantId, [FromQuery] GetMyTransactionHistoryInput input)
     {
         return _walletAppService.GetMyTransactionHistoryAsync(tenantId, input);
     }

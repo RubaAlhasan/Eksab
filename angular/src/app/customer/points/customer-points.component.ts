@@ -4,7 +4,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
 import { MembershipsService } from '../../proxy/controllers/memberships.service';
 import { WalletService } from '../../proxy/controllers/wallet.service';
-import type { PointsTransactionDto, PointsWalletDto } from '../../proxy/wallets/models';
+import type { PointsWalletDto } from '../../proxy/wallets/models';
+import type { TransactionListItemDto } from '../../proxy/reports/models';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
@@ -41,7 +42,7 @@ export class CustomerPointsComponent implements OnInit {
   protected readonly isLoading = signal(true);
   protected readonly loadFailed = signal(false);
   protected readonly wallet = signal<PointsWalletDto | null>(null);
-  protected readonly recentActivity = signal<PointsTransactionDto[]>([]);
+  protected readonly recentActivity = signal<TransactionListItemDto[]>([]);
 
   protected readonly walletNotFound = computed(() => !this.isLoading() && !this.loadFailed() && !this.wallet());
   protected readonly reservedPoints = computed(() => this.wallet()?.reserved ?? 0);

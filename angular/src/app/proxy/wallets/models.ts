@@ -1,5 +1,5 @@
 import type { PointRuleType } from './point-rule-type.enum';
-import type { AuditedEntityDto, EntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
+import type { AuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
 import type { PointsTransactionType } from './points-transaction-type.enum';
 import type { PointsTransactionSource } from './points-transaction-source.enum';
 
@@ -25,19 +25,6 @@ export interface PointRuleDto extends AuditedEntityDto<string> {
   tenantId?: string | null;
   ruleType?: PointRuleType;
   pointsPerUnit?: number;
-}
-
-export interface PointsTransactionDto extends EntityDto<string> {
-  walletId?: string;
-  type?: PointsTransactionType;
-  points?: number;
-  source?: PointsTransactionSource;
-  referenceId?: string | null;
-  expiresAt?: string | null;
-  createdByEmployeeId?: string | null;
-  reason?: string | null;
-  tierMultiplierSnapshot?: number | null;
-  creationTime?: string;
 }
 
 export interface PointsWalletDto extends AuditedEntityDto<string> {

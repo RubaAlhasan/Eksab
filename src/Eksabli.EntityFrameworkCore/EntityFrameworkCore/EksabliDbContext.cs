@@ -251,6 +251,7 @@ public class EksabliDbContext :
             b.HasIndex(x => new { x.WalletId, x.CreationTime });
             b.HasIndex(x => new { x.TenantId, x.ExpiresAt });
             b.HasIndex(x => new { x.TenantId, x.CreationTime });
+            b.HasIndex(x => x.BatchId);
         });
 
         builder.Entity<Tier>(b =>

@@ -102,5 +102,17 @@ export interface TransactionListItemDto extends EntityDto<string> {
   source?: PointsTransactionSource;
   branchId?: string | null;
   staffId?: string | null;
+  branchName?: string | null;
+  staffEmail?: string | null;
   creationTime?: string;
+  components?: TransactionComponentDto[];
+}
+
+export interface TransactionComponentDto {
+  id?: string;
+  source?: PointsTransactionSource;
+  points?: number;
+  referenceName?: string | null;
+  tierMultiplier?: number | null;
+  reason?: string | null;
 }

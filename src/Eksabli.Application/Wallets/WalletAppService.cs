@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Dynamic.Core;
 using System.Threading.Tasks;
+using Eksabli.Reports;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -21,20 +22,23 @@ public class WalletAppService : ApplicationService, IWalletAppService
     private readonly IRepository<PointsWallet, Guid> _walletRepository;
     private readonly IRepository<PointsTransaction, Guid> _transactionRepository;
     private readonly ICurrentTenant _currentTenant;
+    private readonly TransactionListItemBuilder _transactionListItemBuilder;
 
     public WalletAppService(
         IRepository<Membership, Guid> membershipRepository,
         IRepository<PointsWallet, Guid> walletRepository,
         IRepository<PointsTransaction, Guid> transactionRepository,
-        ICurrentTenant currentTenant)
+        ICurrentTenant currentTenant,
+        TransactionListItemBuilder transactionListItemBuilder)
     {
         _membershipRepository = membershipRepository;
         _walletRepository = walletRepository;
         _transactionRepository = transactionRepository;
         _currentTenant = currentTenant;
+        _transactionListItemBuilder = transactionListItemBuilder;
     }
 
-    public async Task<PagedResultDto<PointsTransactionDto>> GetMyTransactionHistoryAsync(Guid tenantId, GetMyTransactionHistoryInput input)
+    public async Task<PagedResultDto<TransactionListItemDto>> GetMyTransactionHistoryAsync(Guid tenantId, GetMyTransactionHistoryInput input)
     {
         var customerId = CurrentUser.GetId();
 
@@ -60,8 +64,17 @@ public class WalletAppService : ApplicationService, IWalletAppService
             var transactions = await AsyncExecuter.ToListAsync(query);
             var totalCount = await AsyncExecuter.CountAsync(filtered);
 
-            var dtos = ObjectMapper.Map<List<PointsTransaction>, List<PointsTransactionDto>>(transactions);
-            return new PagedResultDto<PointsTransactionDto>(totalCount, dtos);
+            // Same grouped-by-process, resolved-names shape the Business/Admin portals show
+            // (TransactionListItemBuilder) — minus who-handled-it staff attribution, which is an
+            // internal operational detail with no business being shown to the customer it's about.
+            var items = await _transactionListItemBuilder.BuildAsync(transactions);
+            foreach (var item in items)
+            {
+                item.StaffId = null;
+                item.StaffEmail = null;
+            }
+
+            return new PagedResultDto<TransactionListItemDto>(totalCount, items);
         }
     }
 }
