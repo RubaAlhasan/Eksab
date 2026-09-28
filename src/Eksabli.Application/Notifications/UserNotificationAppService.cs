@@ -5,6 +5,8 @@ using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Authorization;
+using Volo.Abp.Data;
+using Volo.Abp.MultiTenancy;
 using Volo.Abp.Users;
 using Volo.Abp.Validation;
 
@@ -15,11 +17,13 @@ public class UserNotificationAppService : ApplicationService, IUserNotificationA
 {
     private readonly IUserNotificationRepository _repository;
     private readonly INotificationPublisher _notificationPublisher;
+    private readonly IDataFilter _dataFilter;
 
-    public UserNotificationAppService(IUserNotificationRepository repository, INotificationPublisher notificationPublisher)
+    public UserNotificationAppService(IUserNotificationRepository repository, INotificationPublisher notificationPublisher, IDataFilter dataFilter)
     {
         _repository = repository;
         _notificationPublisher = notificationPublisher;
+        _dataFilter = dataFilter;
     }
 
     public async Task<PagedResultDto<UserNotificationDto>> GetListAsync(UserNotificationListFilterDto input)
@@ -39,14 +43,28 @@ public class UserNotificationAppService : ApplicationService, IUserNotificationA
     public async Task MarkAsReadAsync(Guid id)
     {
         var userId = CurrentUser.GetId();
-        var notification = await _repository.GetAsync(id);
+
+        // GetAsync here is the base IRepository<UserNotification, Guid> method, still subject to the
+        // same IMultiTenant filter EfCoreUserNotificationRepository's own methods had to disable — see
+        // that class's comment. Without this, tapping a notification whose TenantId isn't the reader's
+        // own ambient tenant (i.e. almost all of them) 404s instead of marking it read.
+        UserNotification notification;
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            notification = await _repository.GetAsync(id);
+        }
+
         if (notification.UserId != userId)
         {
             throw new AbpAuthorizationException("You can only mark your own notifications as read.");
         }
 
         notification.MarkAsRead(Clock.Now);
-        await _repository.UpdateAsync(notification);
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            await _repository.UpdateAsync(notification);
+        }
     }
 
     public async Task MarkAllAsReadAsync()

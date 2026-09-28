@@ -97,6 +97,37 @@ public abstract class UserNotificationAppService_Tests<TStartupModule> : Eksabli
         }
     }
 
+    // Regression test for a real gap: the customer reading their feed is a Host-realm identity with no
+    // one "current" business tenant (they can belong to many at once), but UserNotification.TenantId is
+    // the SENDING business's tenant — the standard IMultiTenant filter silently excluded every
+    // business-originated notification the moment the reader's ambient tenant wasn't that exact
+    // business. The test above never caught this because it (correctly, for what it was testing) reads
+    // back inside the same _currentTenant.Change(tenantId) block used to publish — this one reproduces
+    // the real customer scenario: no ambient tenant at all.
+    [Fact]
+    public async Task Should_Read_A_Business_Notification_With_No_Ambient_Tenant_Selected()
+    {
+        var tenantId = await CreateTenantAsync();
+        var userId = await CreateUserAsync(tenantId);
+
+        await WithUnitOfWorkAsync(() => _notificationPublisher.PublishToUserAsync(
+            userId, tenantId, UserNotificationType.Success, "Bonus!", "You earned bonus points.", "Referral"));
+
+        using (_currentTenant.Change(null)) // the customer's own session: Host-realm, no business selected
+        using (LoginAs(userId))
+        {
+            (await WithUnitOfWorkAsync(() => _userNotificationAppService.GetUnreadCountAsync())).ShouldBe(1);
+
+            var list = await WithUnitOfWorkAsync(() => _userNotificationAppService.GetListAsync(new UserNotificationListFilterDto()));
+            list.TotalCount.ShouldBe(1);
+            list.Items[0].Title.ShouldBe("Bonus!");
+
+            await WithUnitOfWorkAsync(() => _userNotificationAppService.MarkAsReadAsync(list.Items[0].Id));
+
+            (await WithUnitOfWorkAsync(() => _userNotificationAppService.GetUnreadCountAsync())).ShouldBe(0);
+        }
+    }
+
     [Fact]
     public async Task Should_Not_Let_A_User_Mark_Someone_Elses_Notification_As_Read()
     {
