@@ -32,6 +32,37 @@ function notInPastValidator(control: AbstractControl): ValidationErrors | null {
   return value < today ? { pastDate: true } : null;
 }
 
+// `<input type="date">` gives back a bare "yyyy-MM-dd" LOCAL calendar date with no time zone of its
+// own. `new Date("yyyy-MM-dd").toISOString()` parses that string as UTC midnight per the ECMAScript
+// date-only rule — wrong for any business ahead of UTC (this one is in Syria, UTC+3): a campaign
+// "starting today" got stored ~3 hours into the future relative to real UTC "now" and didn't actually
+// go live until well past local midnight. Confirmed live: a real "Spend X Get Y" campaign, started
+// today per the local calendar, sat un-applied because `CampaignRulesEngine`'s own `StartDate <= now`
+// check (genuine UTC on both sides) was still false. Build the UTC instant from the LOCAL calendar
+// day's own start/end instead — same "never run a local date through .toISOString()" reasoning
+// `toDateInputValue` already documents in business-transactions.component.ts, just the write side of it.
+function localDayStartIso(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
+}
+
+// A campaign "through" its end date should cover that whole local day, not expire at its first instant.
+function localDayEndIso(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
+}
+
+// The read-side inverse, for repopulating the wizard on edit — recovers the LOCAL calendar date a
+// stored UTC instant belongs to. `iso.substring(0, 10)` (the previous approach) would silently read
+// back the wrong day for the same ahead-of-UTC reason as above.
+function isoToLocalDateInput(iso: string): string {
+  const date = new Date(iso);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 /**
  * Business Portal > Campaigns — mirrors prototype/business/campaigns.html, built against
  * `CampaignAppService`'s real CRUD + `ActivateAsync`/`PreviewTargetSegmentAsync`, plus
@@ -171,6 +202,33 @@ export class BusinessCampaignsComponent implements OnInit {
   ngOnInit(): void {
     this.loadTiers();
     this.load();
+
+    // Neither field had a validator before this — a "Spend X Get Y" (or Birthday/WinBack/Vip/
+    // NewCustomer) campaign could be saved and Activated with Bonus Points left blank. The backend
+    // then silently treats that as a real 0 (`CampaignRulesEngine`'s own `candidateBonus > bonusPoints`
+    // comparison never lets a 0 win over its own 0 starting point), so the campaign ran with no visible
+    // error yet never actually awarded anything — confirmed live against a real "Spend X Get Y" campaign
+    // that had Bonus Points left empty. Re-applied on every `type` change (including the `reset()` calls
+    // in `openWizard`/`populateEditWizard`, which always re-emit `valueChanges` even to the same value).
+    this.step1Form.controls.type.valueChanges.subscribe((type) => this.applyRuleFieldValidators(type));
+  }
+
+  private applyRuleFieldValidators(type: CampaignType): void {
+    const spendThreshold = this.step1Form.controls.spendThreshold;
+    const bonusPoints = this.step1Form.controls.bonusPoints;
+
+    spendThreshold.clearValidators();
+    bonusPoints.clearValidators();
+
+    if (type === CampaignType.SpendXGetY) {
+      spendThreshold.setValidators([Validators.required, Validators.min(1)]);
+      bonusPoints.setValidators([Validators.required, Validators.min(1)]);
+    } else if (type === CampaignType.Birthday || type === CampaignType.WinBack || type === CampaignType.Vip || type === CampaignType.NewCustomer) {
+      bonusPoints.setValidators([Validators.required, Validators.min(1)]);
+    }
+
+    spendThreshold.updateValueAndValidity();
+    bonusPoints.updateValueAndValidity();
   }
 
   protected retry(): void {
@@ -309,8 +367,8 @@ export class BusinessCampaignsComponent implements OnInit {
       nameEn: campaign.nameEn ?? '',
       nameAr: campaign.nameAr ?? '',
       type,
-      startDate: campaign.startDate ? campaign.startDate.substring(0, 10) : '',
-      endDate: campaign.endDate ? campaign.endDate.substring(0, 10) : '',
+      startDate: campaign.startDate ? isoToLocalDateInput(campaign.startDate) : '',
+      endDate: campaign.endDate ? isoToLocalDateInput(campaign.endDate) : '',
       ...rules,
     });
     this.step2Form.reset({ segmentType, ...segmentParams });
@@ -331,7 +389,14 @@ export class BusinessCampaignsComponent implements OnInit {
   }
 
   protected nextFromStep1(): void {
-    if (this.step1Form.controls.nameEn.invalid || this.step1Form.controls.nameAr.invalid || this.step1Form.controls.startDate.invalid || this.step1Form.controls.endDate.invalid) {
+    if (
+      this.step1Form.controls.nameEn.invalid ||
+      this.step1Form.controls.nameAr.invalid ||
+      this.step1Form.controls.startDate.invalid ||
+      this.step1Form.controls.endDate.invalid ||
+      this.step1Form.controls.spendThreshold.invalid ||
+      this.step1Form.controls.bonusPoints.invalid
+    ) {
       this.step1Form.markAllAsTouched();
       return;
     }
@@ -363,8 +428,8 @@ export class BusinessCampaignsComponent implements OnInit {
       nameAr: s1.nameAr,
       type: s1.type,
       rulesJson,
-      startDate: new Date(s1.startDate).toISOString(),
-      endDate: new Date(s1.endDate).toISOString(),
+      startDate: localDayStartIso(s1.startDate),
+      endDate: localDayEndIso(s1.endDate),
       targetRules,
     };
 

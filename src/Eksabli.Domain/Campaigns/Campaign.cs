@@ -94,6 +94,34 @@ public class Campaign : FullAuditedAggregateRoot<Guid>, IMultiTenant
             throw new UserFriendlyException("Only a draft campaign can be activated.");
         }
 
+        // Mirrors the wizard's own required-field validators (business-campaigns.component.ts,
+        // applyRuleFieldValidators) — without this, a campaign could go Active with a real 0 for
+        // Threshold/Bonus, which CampaignRulesEngine's own "candidateBonus > bonusPoints" comparison
+        // (which starts at 0) then treats identically to "this campaign didn't apply", silently earning
+        // nothing. Caught live: a real "Spend X Get Y" campaign, Active and inside its date range,
+        // awarded 0 bonus points on a $200 sale because Bonus Points had been left blank at creation.
+        // Checked only here, not in SetRules — a still-being-configured Draft can legitimately have no
+        // rules yet; only going live half-configured is the actual problem.
+        var rules = CampaignRules.Parse(RulesJson);
+        switch (Type)
+        {
+            case CampaignType.SpendXGetY:
+                if (rules.SpendThreshold is null or <= 0 || rules.BonusPoints is null or <= 0)
+                {
+                    throw new UserFriendlyException("A \"Spend X, Get Y\" campaign needs a spend threshold and bonus points that are both greater than zero before it can be activated.");
+                }
+                break;
+            case CampaignType.Birthday:
+            case CampaignType.WinBack:
+            case CampaignType.Vip:
+            case CampaignType.NewCustomer:
+                if (rules.BonusPoints is null or <= 0)
+                {
+                    throw new UserFriendlyException("This campaign type needs bonus points greater than zero before it can be activated.");
+                }
+                break;
+        }
+
         Status = CampaignStatus.Active;
     }
 

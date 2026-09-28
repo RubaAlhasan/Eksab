@@ -58,6 +58,7 @@ public abstract class CampaignAppService_Tests<TStartupModule> : EksabliApplicat
             NameAr = "استعادة العملاء",
             NameEn = "Win-back",
             Type = CampaignType.WinBack,
+            RulesJson = "{\"bonusPoints\":50}",
             StartDate = DateTime.UtcNow,
             EndDate = DateTime.UtcNow.AddDays(30),
             TargetRules =
@@ -88,5 +89,25 @@ public abstract class CampaignAppService_Tests<TStartupModule> : EksabliApplicat
         var preview = await WithUnitOfWorkAsync(() => _campaignAppService.PreviewTargetSegmentAsync(created.Id));
 
         preview.MatchedMembershipCount.ShouldBe(0);
+    }
+
+    // Regression test for a real production bug: a "Spend X, Get Y" campaign was saved and Activated
+    // with Bonus Points left blank. It showed as Active and in its date range, but
+    // CampaignRulesEngine.EvaluateAsync's own "candidateBonus > bonusPoints" comparison (which starts at
+    // 0) never let a 0 bonus win, so every POS sale it should have topped up silently earned nothing.
+    [Fact]
+    public async Task Should_Not_Activate_A_SpendXGetY_Campaign_With_No_Bonus_Points()
+    {
+        var created = await WithUnitOfWorkAsync(() => _campaignAppService.CreateAsync(new CreateUpdateCampaignDto
+        {
+            NameAr = "أنفق واحصل",
+            NameEn = "Spend X Get Y",
+            Type = CampaignType.SpendXGetY,
+            RulesJson = "{\"spendThreshold\":100}", // BonusPoints left unset — the exact bug
+            StartDate = DateTime.UtcNow,
+            EndDate = DateTime.UtcNow.AddDays(30)
+        }));
+
+        await Should.ThrowAsync<Exception>(() => WithUnitOfWorkAsync(() => _campaignAppService.ActivateAsync(created.Id)));
     }
 }

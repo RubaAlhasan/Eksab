@@ -169,11 +169,17 @@
         <div class="row g-3">
           <div class="col-12 col-sm-6">
             <label class="form-label" for="spendThreshold">{{ '::BusinessPanel:Campaigns:FieldSpendThreshold' | abpLocalization }}</label>
-            <input id="spendThreshold" type="number" min="0" class="form-control" formControlName="spendThreshold" />
+            <input id="spendThreshold" type="number" min="1" class="form-control" formControlName="spendThreshold" />
+            @if (step1Form.controls.spendThreshold.invalid && step1Form.controls.spendThreshold.touched) {
+              <p class="text-danger small mt-1">{{ '::BusinessPanel:Campaigns:FieldRequired' | abpLocalization }}</p>
+            }
           </div>
           <div class="col-12 col-sm-6">
             <label class="form-label" for="bonusPoints1">{{ '::BusinessPanel:Campaigns:FieldBonusPoints' | abpLocalization }}</label>
-            <input id="bonusPoints1" type="number" min="0" class="form-control" formControlName="bonusPoints" />
+            <input id="bonusPoints1" type="number" min="1" class="form-control" formControlName="bonusPoints" />
+            @if (step1Form.controls.bonusPoints.invalid && step1Form.controls.bonusPoints.touched) {
+              <p class="text-danger small mt-1">{{ '::BusinessPanel:Campaigns:FieldRequired' | abpLocalization }}</p>
+            }
           </div>
         </div>
       }
@@ -185,14 +191,20 @@
           </div>
           <div class="col-12 col-sm-6">
             <label class="form-label" for="bonusPoints2">{{ '::BusinessPanel:Campaigns:FieldBonusPoints' | abpLocalization }}</label>
-            <input id="bonusPoints2" type="number" min="0" class="form-control" formControlName="bonusPoints" />
+            <input id="bonusPoints2" type="number" min="1" class="form-control" formControlName="bonusPoints" />
+            @if (step1Form.controls.bonusPoints.invalid && step1Form.controls.bonusPoints.touched) {
+              <p class="text-danger small mt-1">{{ '::BusinessPanel:Campaigns:FieldRequired' | abpLocalization }}</p>
+            }
           </div>
         </div>
       }
       @if (step1Form.controls.type.value === Type.WinBack || step1Form.controls.type.value === Type.Vip || step1Form.controls.type.value === Type.NewCustomer) {
         <div>
           <label class="form-label" for="bonusPoints3">{{ '::BusinessPanel:Campaigns:FieldBonusPoints' | abpLocalization }}</label>
-          <input id="bonusPoints3" type="number" min="0" class="form-control" formControlName="bonusPoints" />
+          <input id="bonusPoints3" type="number" min="1" class="form-control" formControlName="bonusPoints" />
+          @if (step1Form.controls.bonusPoints.invalid && step1Form.controls.bonusPoints.touched) {
+            <p class="text-danger small mt-1">{{ '::BusinessPanel:Campaigns:FieldRequired' | abpLocalization }}</p>
+          }
         </div>
       }
       @if (step1Form.controls.type.value === Type.Referral) {
