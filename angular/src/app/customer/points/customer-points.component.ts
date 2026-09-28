@@ -9,6 +9,7 @@ import type { TransactionListItemDto } from '../../proxy/reports/models';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
+import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { isCredit, transactionSourceLabelKey, transactionTypeLabelKey } from '../../shared/utils/transaction-display.util';
 
 /**
@@ -25,7 +26,7 @@ import { isCredit, transactionSourceLabelKey, transactionTypeLabelKey } from '..
   templateUrl: './customer-points.component.html',
   styleUrls: ['./customer-points.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DatePipe, LocalizationPipe, LoadingSpinnerComponent, EmptyStateComponent, ErrorStateComponent],
+  imports: [RouterLink, DatePipe, LocalizationPipe, LoadingSpinnerComponent, EmptyStateComponent, ErrorStateComponent, ModalComponent],
 })
 export class CustomerPointsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -51,6 +52,12 @@ export class CustomerPointsComponent implements OnInit {
   protected readonly sourceLabelKey = transactionSourceLabelKey;
   protected readonly isCredit = isCredit;
 
+  // Same "one row per process, click for the breakdown" pattern as the full Transaction History page
+  // (customer-transaction-history.component.ts) — this preview showed each row's fields inline with no
+  // way to see the per-component breakdown behind a multi-component row.
+  protected readonly selectedTransaction = signal<TransactionListItemDto | null>(null);
+  protected readonly transactionDetailsOpen = signal(false);
+
   // "Leave this business" — same inline two-step confirm shape customer-redeem.component.ts already
   // uses for its own Cancel action, rather than a native confirm() dialog.
   protected readonly showLeaveConfirm = signal(false);
@@ -68,6 +75,15 @@ export class CustomerPointsComponent implements OnInit {
 
   protected retry(): void {
     if (this.tenantId) this.load(this.tenantId);
+  }
+
+  protected openTransactionDetails(txn: TransactionListItemDto): void {
+    this.selectedTransaction.set(txn);
+    this.transactionDetailsOpen.set(true);
+  }
+
+  protected closeTransactionDetails(): void {
+    this.transactionDetailsOpen.set(false);
   }
 
   protected beginLeave(): void {
