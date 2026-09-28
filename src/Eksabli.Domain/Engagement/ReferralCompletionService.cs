@@ -7,6 +7,7 @@ using Volo.Abp.BackgroundJobs;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Guids;
+using Volo.Abp.MultiTenancy;
 
 namespace Eksabli.Engagement;
 
@@ -20,6 +21,8 @@ public class ReferralCompletionService : IReferralCompletionService, ITransientD
     private readonly IBackgroundJobManager _backgroundJobManager;
     private readonly IGuidGenerator _guidGenerator;
     private readonly ITierRecomputeService _tierRecomputeService;
+    private readonly INotificationPublisher _notificationPublisher;
+    private readonly ICurrentTenant _currentTenant;
 
     public ReferralCompletionService(
         IReferralRepository referralRepository,
@@ -29,7 +32,9 @@ public class ReferralCompletionService : IReferralCompletionService, ITransientD
         INotificationRepository notificationRepository,
         IBackgroundJobManager backgroundJobManager,
         IGuidGenerator guidGenerator,
-        ITierRecomputeService tierRecomputeService)
+        ITierRecomputeService tierRecomputeService,
+        INotificationPublisher notificationPublisher,
+        ICurrentTenant currentTenant)
     {
         _referralRepository = referralRepository;
         _membershipRepository = membershipRepository;
@@ -39,6 +44,8 @@ public class ReferralCompletionService : IReferralCompletionService, ITransientD
         _backgroundJobManager = backgroundJobManager;
         _guidGenerator = guidGenerator;
         _tierRecomputeService = tierRecomputeService;
+        _notificationPublisher = notificationPublisher;
+        _currentTenant = currentTenant;
     }
 
     public async Task TryCompleteAsync(Membership refereeMembership, PointsWallet refereeWallet, bool isFirstEarn)
@@ -64,8 +71,8 @@ public class ReferralCompletionService : IReferralCompletionService, ITransientD
         await AwardBonusAsync(refereeWallet, referral.Id);
         await AwardBonusAsync(referrerWallet, referral.Id);
 
-        await NotifyAsync(refereeMembership.Id, "You've earned a referral bonus for joining!");
-        await NotifyAsync(referrerMembership.Id, "Your referral just earned you a bonus — thanks for spreading the word!");
+        await NotifyAsync(refereeMembership, "You've earned a referral bonus for joining!");
+        await NotifyAsync(referrerMembership, "Your referral just earned you a bonus — thanks for spreading the word!");
     }
 
     private async Task AwardBonusAsync(PointsWallet wallet, Guid referralId)
@@ -88,16 +95,28 @@ public class ReferralCompletionService : IReferralCompletionService, ITransientD
         await _walletRepository.UpdateAsync(wallet);
     }
 
-    private async Task NotifyAsync(Guid membershipId, string body)
+    // Writes both the Push-channel delivery record (NotificationSender -> IPushNotificationSender,
+    // which has no real provider configured — see that class's own comment) AND the actual in-app inbox
+    // row via INotificationPublisher, which the customer's /customer/alerts page reads. Without the
+    // latter a referral bonus notification never reached the customer anywhere.
+    private async Task NotifyAsync(Membership membership, string body)
     {
         var notification = Notification.Create(
             _guidGenerator.Create(),
-            membershipId,
+            membership.Id,
             NotificationChannel.Push,
             "Referral bonus!",
             body);
         await _notificationRepository.InsertAsync(notification);
 
         await _backgroundJobManager.EnqueueAsync(new NotificationDispatchArgs { NotificationId = notification.Id });
+
+        await _notificationPublisher.PublishToUserAsync(
+            membership.CustomerId,
+            _currentTenant.Id,
+            UserNotificationType.Success,
+            "Referral bonus!",
+            body,
+            category: "Referral");
     }
 }

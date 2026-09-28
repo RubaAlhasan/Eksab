@@ -42,13 +42,13 @@ public class CampaignSweepWorker : AsyncPeriodicBackgroundWorkerBase
             using var uow = unitOfWorkManager.Begin(requiresNew: true, isTransactional: true);
             using (currentTenant.Change(tenant.Id))
             {
-                await ProcessTenantAsync(workerContext.ServiceProvider);
+                await ProcessTenantAsync(workerContext.ServiceProvider, tenant.Id);
             }
             await uow.CompleteAsync();
         }
     }
 
-    private static async Task ProcessTenantAsync(IServiceProvider serviceProvider)
+    private static async Task ProcessTenantAsync(IServiceProvider serviceProvider, Guid tenantId)
     {
         var campaignRepository = serviceProvider.GetRequiredService<ICampaignRepository>();
         var notificationRepository = serviceProvider.GetRequiredService<INotificationRepository>();
@@ -58,6 +58,16 @@ public class CampaignSweepWorker : AsyncPeriodicBackgroundWorkerBase
         var backgroundJobManager = serviceProvider.GetRequiredService<IBackgroundJobManager>();
         var guidGenerator = serviceProvider.GetRequiredService<IGuidGenerator>();
         var clock = serviceProvider.GetRequiredService<IClock>();
+        // The Notification/NotificationChannel.Push row below only ever reaches a real device via
+        // NotificationSender -> IPushNotificationSender, and the registered implementation
+        // (NullPushNotificationSender) is a dev placeholder that just logs — no FCM/APNs is configured
+        // anywhere in this codebase (same documented gap as "no SMTP sender configured" elsewhere). Without
+        // this, a customer had no way to ever see a campaign/birthday bonus notification: it only existed
+        // as this Push-channel delivery record, never in the in-app inbox /customer/alerts actually reads
+        // (UserNotification, written only via INotificationPublisher). INotificationPublisher's own doc
+        // comment says it's "commonly called from background jobs/workers with no request-scoped tenant
+        // context" — exactly this worker — it just was never wired up here.
+        var notificationPublisher = serviceProvider.GetRequiredService<INotificationPublisher>();
 
         var now = clock.Now;
 
@@ -131,6 +141,14 @@ public class CampaignSweepWorker : AsyncPeriodicBackgroundWorkerBase
                 await notificationRepository.InsertAsync(notification);
 
                 await backgroundJobManager.EnqueueAsync(new NotificationDispatchArgs { NotificationId = notification.Id });
+
+                await notificationPublisher.PublishToUserAsync(
+                    membership.CustomerId,
+                    tenantId,
+                    UserNotificationType.Success,
+                    campaign.NameEn,
+                    BuildBody(campaign, rules),
+                    category: campaign.Type.ToString());
 
                 remainingQuota--;
             }
