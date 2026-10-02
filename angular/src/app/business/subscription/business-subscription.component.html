@@ -29,7 +29,7 @@
             {{ '::BusinessPanel:Subscription:RenewsPrefix' | abpLocalization }}
             {{ sub.renewalDate | date: 'longDate' }}
             @if (currentPlan(); as plan) {
-              · {{ plan.monthlyPrice | number: '1.0-2' }}
+              · {{ planPrice(plan) | number: '1.0-2' }} {{ currencyCode() }}
               {{ '::BusinessPanel:Subscription:PerMonth' | abpLocalization }}
             }
           </p>
@@ -112,7 +112,7 @@
             <div class="d-flex align-items-center justify-content-between p-2 rounded" [class.bg-primary-subtle]="plan.id === currentPlan()?.id">
               <div>
                 <p class="fw-bold small mb-0">{{ plan.name }}</p>
-                <p class="text-muted small mb-0">{{ plan.monthlyPrice | number: '1.0-2' }}/{{ '::BusinessPanel:Subscription:MoAbbrev' | abpLocalization }}</p>
+                <p class="text-muted small mb-0">{{ planPrice(plan) | number: '1.0-2' }} {{ currencyCode() }}/{{ '::BusinessPanel:Subscription:MoAbbrev' | abpLocalization }}</p>
               </div>
               @if (plan.id === currentPlan()?.id) {
                 <app-status-badge [label]="'::BusinessPanel:Subscription:CurrentPlan' | abpLocalization" variant="info"></app-status-badge>

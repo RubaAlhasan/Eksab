@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Eksabli.Notifications;
 using Eksabli.Reporting;
+using Eksabli.Shared;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -70,24 +71,45 @@ public class AdminSubscriptionAppService : ApplicationService, IAdminSubscriptio
         {
             var queryable = await _subscriptionRepository.GetQueryableAsync();
 
-            var activeByPlan = await AsyncExecuter.ToListAsync(
+            // Grouped by (PlanId, Currency), not just PlanId — a plan's SYP and USD subscribers each
+            // contribute to a different currency's MRR, never combined (no conversion is applied
+            // anywhere — see CurrencyAmountDto's own comment).
+            var activeByPlanAndCurrency = await AsyncExecuter.ToListAsync(
                 queryable
                     .Where(s => s.Status == TenantSubscriptionStatus.Active)
-                    .GroupBy(s => s.PlanId)
-                    .Select(g => new { PlanId = g.Key, Count = g.Count() }));
+                    .GroupBy(s => new { s.PlanId, s.Currency })
+                    .Select(g => new { g.Key.PlanId, g.Key.Currency, Count = g.Count() }));
 
             var trialingCount = await AsyncExecuter.CountAsync(
                 queryable.Where(s => s.Status == TenantSubscriptionStatus.Trialing));
 
             var planPrices = await AsyncExecuter.ToListAsync(
-                (await _planRepository.GetQueryableAsync()).Select(p => new { p.Id, p.MonthlyPrice }));
-            var priceByPlanId = planPrices.ToDictionary(p => p.Id, p => p.MonthlyPrice);
+                (await _planRepository.GetQueryableAsync()).Select(p => new { p.Id, p.MonthlyPriceSyp, p.MonthlyPriceUsd }));
+            var priceByPlanId = planPrices.ToDictionary(p => p.Id, p => p);
+
+            var approxMrrByCurrency = activeByPlanAndCurrency
+                .GroupBy(x => x.Currency)
+                .Select(g => new CurrencyAmountDto
+                {
+                    Currency = g.Key,
+                    Amount = g.Sum(x =>
+                    {
+                        if (!priceByPlanId.TryGetValue(x.PlanId, out var price))
+                        {
+                            return 0m;
+                        }
+
+                        var monthlyPrice = x.Currency == Currency.Syp ? price.MonthlyPriceSyp : price.MonthlyPriceUsd;
+                        return monthlyPrice * x.Count;
+                    })
+                })
+                .ToList();
 
             return new AdminSubscriptionStatsDto
             {
-                ActiveCount = activeByPlan.Sum(x => x.Count),
+                ActiveCount = activeByPlanAndCurrency.Sum(x => x.Count),
                 TrialingCount = trialingCount,
-                ApproxMrr = activeByPlan.Sum(x => priceByPlanId.GetValueOrDefault(x.PlanId) * x.Count)
+                ApproxMrrByCurrency = approxMrrByCurrency
             };
         }
     }
@@ -108,16 +130,23 @@ public class AdminSubscriptionAppService : ApplicationService, IAdminSubscriptio
             var paidInvoices = await AsyncExecuter.ToListAsync(
                 queryable.Where(i => i.Status == InvoiceStatus.Paid && i.PaidAt != null && i.PaidAt >= from));
 
-            var amountByMonth = paidInvoices
-                .GroupBy(i => new { i.PaidAt!.Value.Year, i.PaidAt!.Value.Month })
-                .ToDictionary(g => (g.Key.Year, g.Key.Month), g => g.Sum(i => i.Amount));
+            // Grouped by (Year, Month, Currency) — never summed across currencies. A month with paid
+            // invoices in only one currency simply has one entry in AmountsByCurrency, not a forced
+            // zero entry for the other.
+            var amountsByMonthAndCurrency = paidInvoices
+                .GroupBy(i => new { i.PaidAt!.Value.Year, i.PaidAt!.Value.Month, i.Currency })
+                .Select(g => new { g.Key.Year, g.Key.Month, g.Key.Currency, Amount = g.Sum(i => i.Amount) })
+                .ToList();
 
             return months
                 .Select(m => new MrrTrendPointDto
                 {
                     Year = m.Year,
                     Month = m.Month,
-                    Amount = amountByMonth.GetValueOrDefault((m.Year, m.Month))
+                    AmountsByCurrency = amountsByMonthAndCurrency
+                        .Where(a => a.Year == m.Year && a.Month == m.Month)
+                        .Select(a => new CurrencyAmountDto { Currency = a.Currency, Amount = a.Amount })
+                        .ToList()
                 })
                 .ToList();
         }
@@ -290,13 +319,24 @@ public class AdminSubscriptionAppService : ApplicationService, IAdminSubscriptio
             return;
         }
 
-        var planIds = dtos.Select(d => d.PlanId).Distinct().ToList();
+        // Both the current plan AND any pending one — a row with a pending change needs both names to
+        // render "Growth -> Requested: Scale" (PendingPlanName was previously left unset here, so the
+        // Subscriptions list always showed the request with no target plan name, even though the
+        // notification fired for it already had the real name).
+        var planIds = dtos.Select(d => d.PlanId)
+            .Concat(dtos.Where(d => d.PendingPlanId.HasValue).Select(d => d.PendingPlanId!.Value))
+            .Distinct()
+            .ToList();
         var plans = await _planRepository.GetListAsync(p => planIds.Contains(p.Id));
         var lookup = plans.ToDictionary(p => p.Id, p => p.Name);
 
         foreach (var dto in dtos)
         {
             dto.PlanName = lookup.GetValueOrDefault(dto.PlanId);
+            if (dto.PendingPlanId.HasValue)
+            {
+                dto.PendingPlanName = lookup.GetValueOrDefault(dto.PendingPlanId.Value);
+            }
         }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using Eksabli.Branches;
 using Eksabli.BusinessProfiles;
+using Eksabli.Shared;
 
 namespace Eksabli.Businesses;
 
@@ -66,4 +67,10 @@ public class RegisterBusinessDto
     [Required]
     [StringLength(128, MinimumLength = 6)]
     public string OwnerPassword { get; set; } = string.Empty;
+
+    // The currency this business will be billed in — set once at registration (see
+    // TenantSubscription.Currency's own comment for why there's no later self-service change).
+    // Defaults to Syp so any caller that never heard of this field gets identical behavior to before
+    // it existed.
+    public Currency Currency { get; set; } = Currency.Syp;
 }

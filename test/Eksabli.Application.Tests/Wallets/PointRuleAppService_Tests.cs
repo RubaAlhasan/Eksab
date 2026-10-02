@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Eksabli.Shared;
 using Shouldly;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -23,7 +24,8 @@ public abstract class PointRuleAppService_Tests<TStartupModule> : EksabliApplica
         var created = await WithUnitOfWorkAsync(() => _pointRuleAppService.CreateAsync(new CreateUpdatePointRuleDto
         {
             RuleType = PointRuleType.PerCurrencyUnit,
-            PointsPerUnit = 1m
+            PointsPerUnit = 1m,
+            Currency = Currency.Syp
         }));
 
         var list = await WithUnitOfWorkAsync(() => _pointRuleAppService.GetListAsync(new PagedAndSortedResultRequestDto()));
@@ -32,7 +34,8 @@ public abstract class PointRuleAppService_Tests<TStartupModule> : EksabliApplica
         var updated = await WithUnitOfWorkAsync(() => _pointRuleAppService.UpdateAsync(created.Id, new CreateUpdatePointRuleDto
         {
             RuleType = PointRuleType.PerCurrencyUnit,
-            PointsPerUnit = 2m
+            PointsPerUnit = 2m,
+            Currency = Currency.Syp
         }));
         updated.PointsPerUnit.ShouldBe(2m);
 
@@ -56,6 +59,76 @@ public abstract class PointRuleAppService_Tests<TStartupModule> : EksabliApplica
             {
                 RuleType = PointRuleType.PerVisit,
                 PointsPerUnit = 10m
+            }));
+        });
+    }
+
+    [Fact]
+    public async Task Should_Not_Create_Duplicate_PerCurrencyUnit_Rule_For_Same_Currency()
+    {
+        await WithUnitOfWorkAsync(() => _pointRuleAppService.CreateAsync(new CreateUpdatePointRuleDto
+        {
+            RuleType = PointRuleType.PerCurrencyUnit,
+            PointsPerUnit = 1m,
+            Currency = Currency.Syp
+        }));
+
+        await Assert.ThrowsAsync<UserFriendlyException>(async () =>
+        {
+            await WithUnitOfWorkAsync(() => _pointRuleAppService.CreateAsync(new CreateUpdatePointRuleDto
+            {
+                RuleType = PointRuleType.PerCurrencyUnit,
+                PointsPerUnit = 2m,
+                Currency = Currency.Syp
+            }));
+        });
+    }
+
+    [Fact]
+    public async Task Should_Allow_PerCurrencyUnit_Rules_For_Different_Currencies()
+    {
+        var sypRule = await WithUnitOfWorkAsync(() => _pointRuleAppService.CreateAsync(new CreateUpdatePointRuleDto
+        {
+            RuleType = PointRuleType.PerCurrencyUnit,
+            PointsPerUnit = 1m,
+            Currency = Currency.Syp
+        }));
+
+        var usdRule = await WithUnitOfWorkAsync(() => _pointRuleAppService.CreateAsync(new CreateUpdatePointRuleDto
+        {
+            RuleType = PointRuleType.PerCurrencyUnit,
+            PointsPerUnit = 5m,
+            Currency = Currency.Usd
+        }));
+
+        sypRule.Id.ShouldNotBe(usdRule.Id);
+        usdRule.PointsPerUnit.ShouldBe(5m);
+    }
+
+    [Fact]
+    public async Task Should_Reject_PerCurrencyUnit_Rule_With_No_Currency()
+    {
+        await Assert.ThrowsAsync<UserFriendlyException>(async () =>
+        {
+            await WithUnitOfWorkAsync(() => _pointRuleAppService.CreateAsync(new CreateUpdatePointRuleDto
+            {
+                RuleType = PointRuleType.PerCurrencyUnit,
+                PointsPerUnit = 1m,
+                Currency = null
+            }));
+        });
+    }
+
+    [Fact]
+    public async Task Should_Reject_PerVisit_Rule_With_A_Currency()
+    {
+        await Assert.ThrowsAsync<UserFriendlyException>(async () =>
+        {
+            await WithUnitOfWorkAsync(() => _pointRuleAppService.CreateAsync(new CreateUpdatePointRuleDto
+            {
+                RuleType = PointRuleType.PerVisit,
+                PointsPerUnit = 10m,
+                Currency = Currency.Syp
             }));
         });
     }

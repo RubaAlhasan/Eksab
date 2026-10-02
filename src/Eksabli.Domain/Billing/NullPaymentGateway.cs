@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Volo.Abp.DependencyInjection;
+using Eksabli.Shared;
 
 namespace Eksabli.Billing;
 
@@ -14,11 +15,11 @@ public class NullPaymentGateway : IPaymentGateway, ITransientDependency
 {
     public ILogger<NullPaymentGateway> Logger { get; set; } = NullLogger<NullPaymentGateway>.Instance;
 
-    public Task<PaymentGatewayResult> ChargeAsync(Guid tenantId, decimal amount, string description)
+    public Task<PaymentGatewayResult> ChargeAsync(Guid tenantId, decimal amount, Currency currency, string description)
     {
         Logger.LogWarning(
-            "[DEV PAYMENT PLACEHOLDER — no real payment provider configured yet] TenantId: {TenantId} | Amount: {Amount} | {Description}",
-            tenantId, amount, description);
+            "[DEV PAYMENT PLACEHOLDER — no real payment provider configured yet] TenantId: {TenantId} | Amount: {Amount} {Currency} | {Description}",
+            tenantId, amount, currency, description);
 
         return Task.FromResult(new PaymentGatewayResult
         {

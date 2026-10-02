@@ -1,5 +1,6 @@
 import type { TenantApprovalStatus } from '../business-profiles/tenant-approval-status.enum';
 import type { PagedAndSortedResultRequestDto, PagedResultRequestDto } from '@abp/ng.core';
+import type { Currency } from '../shared/currency.enum';
 
 export interface AdminTenantDto {
   tenantId?: string;
@@ -95,4 +96,6 @@ export interface RegisterBusinessDto {
   branchLongitude?: number | null;
   ownerEmail: string;
   ownerPassword: string;
+  // Defaults to Syp server-side when omitted — see the backend DTO's own comment.
+  currency?: Currency;
 }

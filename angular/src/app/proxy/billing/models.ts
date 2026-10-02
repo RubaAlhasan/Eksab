@@ -2,6 +2,7 @@ import type { AuditedEntityDto, FullAuditedEntityDto, PagedAndSortedResultReques
 import type { InvoiceStatus } from './invoice-status.enum';
 import type { PaymentStatus } from './payment-status.enum';
 import type { TenantSubscriptionStatus } from './tenant-subscription-status.enum';
+import type { Currency } from '../shared/currency.enum';
 
 export interface AdminInvoiceFilterDto extends PagedAndSortedResultRequestDto {
   status?: InvoiceStatus | null;
@@ -21,7 +22,8 @@ export interface AdminSubscriptionFilterDto extends PagedAndSortedResultRequestD
 export interface AdminSubscriptionStatsDto {
   activeCount: number;
   trialingCount: number;
-  approxMrr: number;
+  // Never summed across currencies — the platform applies no SYP<->USD conversion anywhere.
+  approxMrrByCurrency: CurrencyAmountDto[];
 }
 
 export interface ChangePlanDto {
@@ -30,14 +32,23 @@ export interface ChangePlanDto {
 
 export interface CreateUpdateSubscriptionPlanDto {
   name: string;
-  monthlyPrice?: number;
+  monthlyPriceSyp?: number;
+  monthlyPriceUsd?: number;
   featureLimitsJson?: string;
   isTrialDefault?: boolean;
+}
+
+// One currency's worth of a money aggregate — see AdminSubscriptionStatsDto.approxMrrByCurrency /
+// MrrTrendPointDto.amountsByCurrency for why this is never combined across currencies.
+export interface CurrencyAmountDto {
+  currency?: Currency;
+  amount?: number;
 }
 
 export interface InvoiceDto extends AuditedEntityDto<string> {
   tenantSubscriptionId?: string;
   amount?: number;
+  currency?: Currency;
   status?: InvoiceStatus;
   dueDate?: string;
   paidAt?: string | null;
@@ -46,7 +57,8 @@ export interface InvoiceDto extends AuditedEntityDto<string> {
 export interface MrrTrendPointDto {
   year: number;
   month: number;
-  amount: number;
+  // Only lists currencies with at least one paid invoice that month — never a forced zero entry.
+  amountsByCurrency: CurrencyAmountDto[];
 }
 
 export interface PaymentDto extends AuditedEntityDto<string> {
@@ -63,7 +75,8 @@ export interface RecordManualPaymentDto {
 
 export interface SubscriptionPlanDto extends FullAuditedEntityDto<string> {
   name?: string;
-  monthlyPrice?: number;
+  monthlyPriceSyp?: number;
+  monthlyPriceUsd?: number;
   featureLimitsJson?: string;
   isTrialDefault?: boolean;
 }
@@ -72,6 +85,7 @@ export interface TenantSubscriptionDto extends AuditedEntityDto<string> {
   tenantId?: string | null;
   planId?: string;
   planName?: string | null;
+  currency?: Currency;
   startDate?: string;
   renewalDate?: string;
   status?: TenantSubscriptionStatus;

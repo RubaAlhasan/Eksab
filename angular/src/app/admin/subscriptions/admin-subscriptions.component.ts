@@ -5,10 +5,11 @@ import { LocalizationPipe, PermissionService } from '@abp/ng.core';
 import { Confirmation, ConfirmationService, ToasterService } from '@abp/ng.theme.shared';
 import { AdminSubscriptionsService } from '../../proxy/controllers/admin-subscriptions.service';
 import { AdminTenantsService } from '../../proxy/controllers/admin-tenants.service';
-import type { InvoiceDto, PaymentDto, TenantSubscriptionDto } from '../../proxy/billing/models';
+import type { CurrencyAmountDto, InvoiceDto, PaymentDto, TenantSubscriptionDto } from '../../proxy/billing/models';
 import { TenantSubscriptionStatus } from '../../proxy/billing/tenant-subscription-status.enum';
 import { InvoiceStatus } from '../../proxy/billing/invoice-status.enum';
 import { PaymentStatus } from '../../proxy/billing/payment-status.enum';
+import { Currency } from '../../proxy/shared/currency.enum';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
@@ -112,7 +113,8 @@ export class AdminSubscriptionsComponent implements OnInit {
   protected readonly statsLoading = signal(true);
   protected readonly activeCount = signal<number | null>(null);
   protected readonly trialingCount = signal<number | null>(null);
-  protected readonly approxMrr = signal<number | null>(null);
+  // Never summed across currencies — see CurrencyAmountDto's own comment (backend).
+  protected readonly approxMrrByCurrency = signal<CurrencyAmountDto[]>([]);
 
   protected readonly expandedId = signal<string | null>(null);
   protected readonly invoices = signal<InvoiceDto[]>([]);
@@ -161,6 +163,10 @@ export class AdminSubscriptionsComponent implements OnInit {
 
   protected retry(): void {
     this.load();
+  }
+
+  protected currencyCode(currency: Currency | undefined): string {
+    return currency === Currency.Usd ? 'USD' : 'SYP';
   }
 
   protected subStatusLabelKey(status: TenantSubscriptionStatus | undefined): string {
@@ -401,7 +407,7 @@ export class AdminSubscriptionsComponent implements OnInit {
       next: (stats) => {
         this.activeCount.set(stats.activeCount);
         this.trialingCount.set(stats.trialingCount);
-        this.approxMrr.set(stats.approxMrr);
+        this.approxMrrByCurrency.set(stats.approxMrrByCurrency ?? []);
         this.statsLoading.set(false);
       },
       // Stats are supplementary — leave them null (hidden in the template) rather than showing an

@@ -7,6 +7,8 @@ import { AdminTenantsService } from '../../proxy/controllers/admin-tenants.servi
 import { CategoriesService } from '../../proxy/controllers/categories.service';
 import type { SupportTicketMetricsDto, TenantGrowthPointDto } from '../../proxy/platform-reports/models';
 import type { CategoryDto } from '../../proxy/platform/models';
+import type { CurrencyAmountDto } from '../../proxy/billing/models';
+import { Currency } from '../../proxy/shared/currency.enum';
 import { SupportTicketPriority } from '../../proxy/platform/support-ticket-priority.enum';
 import { SupportTicketStatus } from '../../proxy/platform/support-ticket-status.enum';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -48,7 +50,8 @@ export class AdminReportsComponent implements OnInit {
   protected readonly totalBusinesses = signal<number | null>(null);
 
   protected readonly mrrLoading = signal(false);
-  protected readonly mrr = signal<number | null>(null);
+  // Never summed across currencies — see CurrencyAmountDto's own comment (backend).
+  protected readonly mrrByCurrency = signal<CurrencyAmountDto[]>([]);
 
   protected readonly growthLoading = signal(true);
   protected readonly growthFailed = signal(false);
@@ -174,11 +177,15 @@ export class AdminReportsComponent implements OnInit {
     });
   }
 
+  protected currencyCode(currency: Currency | undefined): string {
+    return currency === Currency.Usd ? 'USD' : 'SYP';
+  }
+
   private loadMrr(): void {
     this.mrrLoading.set(true);
     this.subscriptionsService.getStats().subscribe({
       next: (stats) => {
-        this.mrr.set(stats.approxMrr);
+        this.mrrByCurrency.set(stats.approxMrrByCurrency ?? []);
         this.mrrLoading.set(false);
       },
       error: () => this.mrrLoading.set(false),

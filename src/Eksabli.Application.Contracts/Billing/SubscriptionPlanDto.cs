@@ -7,7 +7,9 @@ public class SubscriptionPlanDto : FullAuditedEntityDto<Guid>
 {
     public string Name { get; set; } = string.Empty;
 
-    public decimal MonthlyPrice { get; set; }
+    public decimal MonthlyPriceSyp { get; set; }
+
+    public decimal MonthlyPriceUsd { get; set; }
 
     public string FeatureLimitsJson { get; set; } = "{}";
 

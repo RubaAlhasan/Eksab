@@ -1,6 +1,7 @@
 using System;
 using Volo.Abp.Domain.Entities.Auditing;
 using Volo.Abp.MultiTenancy;
+using Eksabli.Shared;
 
 namespace Eksabli.Billing;
 
@@ -27,22 +28,30 @@ public class TenantSubscription : AuditedAggregateRoot<Guid>, IMultiTenant
 
     public DateTime? PlanChangeRequestedAt { get; private set; }
 
+    // The currency this tenant is billed in — set once, here, at creation. Deliberately no
+    // ChangeCurrency method: the platform applies no SYP<->USD conversion anywhere, so there is no
+    // principled way to carry a billing-currency change forward without either converting the next
+    // invoice or losing comparability with the tenant's already-issued invoice history. A tenant that
+    // needs to switch currency is a support/offline operation, not a self-service one.
+    public Currency Currency { get; private set; }
+
     protected TenantSubscription()
     {
     }
 
-    private TenantSubscription(Guid id, Guid planId, DateTime startDate, DateTime renewalDate, TenantSubscriptionStatus status)
+    private TenantSubscription(Guid id, Guid planId, DateTime startDate, DateTime renewalDate, TenantSubscriptionStatus status, Currency currency)
         : base(id)
     {
         PlanId = planId;
         StartDate = startDate;
         RenewalDate = renewalDate;
         Status = status;
+        Currency = currency;
     }
 
-    public static TenantSubscription Create(Guid id, Guid planId, DateTime startDate, DateTime renewalDate, TenantSubscriptionStatus status)
+    public static TenantSubscription Create(Guid id, Guid planId, DateTime startDate, DateTime renewalDate, TenantSubscriptionStatus status, Currency currency)
     {
-        return new TenantSubscription(id, planId, startDate, renewalDate, status);
+        return new TenantSubscription(id, planId, startDate, renewalDate, status, currency);
     }
 
     public void ChangePlan(Guid planId) => PlanId = planId;

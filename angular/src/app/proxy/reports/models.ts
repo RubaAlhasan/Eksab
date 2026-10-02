@@ -2,6 +2,7 @@ import type { PagedAndSortedResultRequestDto, EntityDto } from '@abp/ng.core';
 import type { NotificationChannel } from '../notifications/notification-channel.enum';
 import type { PointsTransactionType } from '../wallets/points-transaction-type.enum';
 import type { PointsTransactionSource } from '../wallets/points-transaction-source.enum';
+import type { Currency } from '../shared/currency.enum';
 
 export interface BranchComparisonDto {
   branchId?: string;
@@ -115,4 +116,7 @@ export interface TransactionComponentDto {
   referenceName?: string | null;
   tierMultiplier?: number | null;
   reason?: string | null;
+  // Source=Purchase only — the sale amount/currency that produced this batch's points.
+  amount?: number | null;
+  currency?: Currency | null;
 }

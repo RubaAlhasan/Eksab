@@ -36,8 +36,11 @@
               <app-status-badge [label]="'::AdminPanel:Plans:TrialDefault' | abpLocalization" variant="neutral"></app-status-badge>
             }
           </div>
-          <p class="fs-4 fw-bolder mb-4">
-            ${{ plan.monthlyPrice }}<span class="small text-muted fw-semibold">/{{ '::AdminPanel:Plans:PerMonth' | abpLocalization }}</span>
+          <p class="fs-6 fw-bolder mb-1">
+            {{ plan.monthlyPriceSyp }} SYP<span class="small text-muted fw-semibold">/{{ '::AdminPanel:Plans:PerMonth' | abpLocalization }}</span>
+          </p>
+          <p class="fs-6 fw-bolder mb-4">
+            {{ plan.monthlyPriceUsd }} USD<span class="small text-muted fw-semibold">/{{ '::AdminPanel:Plans:PerMonth' | abpLocalization }}</span>
           </p>
           <div class="d-flex flex-column gap-1 small text-muted mb-4">
             @for (chip of summarizeFeatureLimits(plan.featureLimitsJson); track chip) {
@@ -87,15 +90,27 @@
       }
     </div>
 
-    <div>
-      <label class="form-label" for="plan-price">{{ '::AdminPanel:Plans:FieldMonthlyPrice' | abpLocalization }}</label>
-      <div class="input-group">
-        <span class="input-group-text">$</span>
-        <input id="plan-price" type="number" min="0" step="0.01" class="form-control" formControlName="monthlyPrice" />
+    <div class="row g-3">
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="plan-price-syp">{{ '::AdminPanel:Plans:FieldMonthlyPriceSyp' | abpLocalization }}</label>
+        <div class="input-group">
+          <span class="input-group-text">SYP</span>
+          <input id="plan-price-syp" type="number" min="0" step="0.01" class="form-control" formControlName="monthlyPriceSyp" />
+        </div>
+        @if (form.controls.monthlyPriceSyp.invalid && form.controls.monthlyPriceSyp.touched) {
+          <p class="text-danger small mt-1">{{ '::AdminPanel:Plans:PriceInvalid' | abpLocalization }}</p>
+        }
       </div>
-      @if (form.controls.monthlyPrice.invalid && form.controls.monthlyPrice.touched) {
-        <p class="text-danger small mt-1">{{ '::AdminPanel:Plans:PriceInvalid' | abpLocalization }}</p>
-      }
+      <div class="col-12 col-sm-6">
+        <label class="form-label" for="plan-price-usd">{{ '::AdminPanel:Plans:FieldMonthlyPriceUsd' | abpLocalization }}</label>
+        <div class="input-group">
+          <span class="input-group-text">USD</span>
+          <input id="plan-price-usd" type="number" min="0" step="0.01" class="form-control" formControlName="monthlyPriceUsd" />
+        </div>
+        @if (form.controls.monthlyPriceUsd.invalid && form.controls.monthlyPriceUsd.touched) {
+          <p class="text-danger small mt-1">{{ '::AdminPanel:Plans:PriceInvalid' | abpLocalization }}</p>
+        }
+      </div>
     </div>
 
     <div class="row g-3">

@@ -4,6 +4,7 @@ import { LocalizationPipe } from '@abp/ng.core';
 import { BillingService } from '../../proxy/controllers/billing.service';
 import type { InvoiceDto } from '../../proxy/billing/models';
 import { InvoiceStatus } from '../../proxy/billing/invoice-status.enum';
+import { Currency } from '../../proxy/shared/currency.enum';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
@@ -64,6 +65,12 @@ export class BusinessBillingComponent implements OnInit {
 
   protected retry(): void {
     this.load();
+  }
+
+  // Compact code for inline display next to an amount (e.g. "49.00 SYP") — the full localized name
+  // ('::Currency:Syp' = "SYP — Syrian Pound") reads awkwardly repeated on every row.
+  protected currencyCode(currency: Currency | undefined): string {
+    return currency === Currency.Usd ? 'USD' : 'SYP';
   }
 
   protected statusLabelKey(status: InvoiceStatus | undefined): string {

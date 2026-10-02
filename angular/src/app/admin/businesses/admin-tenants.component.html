@@ -244,6 +244,18 @@
     <p class="text-muted small mb-0">{{ '::AdminPanel:Businesses:LocationHint' | abpLocalization }}</p>
 
     <hr class="my-0" />
+    <p class="fw-semibold small text-uppercase text-muted mb-0">{{ '::AdminPanel:Businesses:BillingHeading' | abpLocalization }}</p>
+
+    <div>
+      <label class="form-label" for="currency">{{ '::AdminPanel:Businesses:FieldCurrency' | abpLocalization }}</label>
+      <select id="currency" class="form-select" formControlName="currency">
+        <option [ngValue]="Currency.Syp">{{ '::Currency:Syp' | abpLocalization }}</option>
+        <option [ngValue]="Currency.Usd">{{ '::Currency:Usd' | abpLocalization }}</option>
+      </select>
+      <p class="text-muted small mb-0 mt-1">{{ '::AdminPanel:Businesses:CurrencyHint' | abpLocalization }}</p>
+    </div>
+
+    <hr class="my-0" />
     <p class="fw-semibold small text-uppercase text-muted mb-0">{{ '::AdminPanel:Businesses:OwnerHeading' | abpLocalization }}</p>
 
     <div class="row g-3">

@@ -245,7 +245,9 @@ public class TransactionListItemBuilder : ITransientDependency
                         Points = t.Points,
                         ReferenceName = ResolveReferenceName(t),
                         TierMultiplier = t.TierMultiplierSnapshot,
-                        Reason = t.Reason
+                        Reason = t.Reason,
+                        Amount = t.Amount,
+                        Currency = t.Currency
                     }).ToList()
                 };
             }).ToList();

@@ -38,13 +38,26 @@ public class PointRuleAppService : ApplicationService, IPointRuleAppService
 
     public async Task<PointRuleDto> CreateAsync(CreateUpdatePointRuleDto input)
     {
-        var existing = await _repository.FirstOrDefaultAsync(r => r.RuleType == input.RuleType);
-        if (existing != null)
+        if (input.RuleType == PointRuleType.PerCurrencyUnit && input.Currency == null)
         {
-            throw new UserFriendlyException($"A point rule of type '{input.RuleType}' already exists for this business.");
+            throw new UserFriendlyException("A currency is required for a per-currency-unit point rule.");
         }
 
-        var rule = PointRule.Create(GuidGenerator.Create(), input.RuleType, input.PointsPerUnit);
+        if (input.RuleType == PointRuleType.PerVisit && input.Currency != null)
+        {
+            throw new UserFriendlyException("A per-visit point rule has no currency.");
+        }
+
+        var existing = await _repository.FirstOrDefaultAsync(r => r.RuleType == input.RuleType && r.Currency == input.Currency);
+        if (existing != null)
+        {
+            var message = input.RuleType == PointRuleType.PerCurrencyUnit
+                ? $"A point rule of type '{input.RuleType}' for currency '{input.Currency}' already exists for this business."
+                : $"A point rule of type '{input.RuleType}' already exists for this business.";
+            throw new UserFriendlyException(message);
+        }
+
+        var rule = PointRule.Create(GuidGenerator.Create(), input.RuleType, input.PointsPerUnit, input.Currency);
         await _repository.InsertAsync(rule);
         return ObjectMapper.Map<PointRule, PointRuleDto>(rule);
     }

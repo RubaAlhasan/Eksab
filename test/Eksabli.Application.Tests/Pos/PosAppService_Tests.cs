@@ -7,6 +7,7 @@ using Eksabli.CustomerProfiles;
 using Eksabli.EmployeeAssignments;
 using Eksabli.Memberships;
 using Eksabli.Rewards;
+using Eksabli.Shared;
 using Eksabli.Wallets;
 using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
@@ -230,7 +231,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         {
             using (_currentTenant.Change(tenantId))
             {
-                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m), autoSave: true);
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m, Currency.Syp), autoSave: true);
 
                 var gold = Wallets.Tier.Create(Guid.NewGuid(), "Gold", 0, 1.5m);
                 await _tierRepository.InsertAsync(gold, autoSave: true);
@@ -246,7 +247,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         using (_currentTenant.Change(tenantId))
         using (LoginAs(cashierId))
         {
-            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 2.5m }));
+            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 2.5m, Currency = Currency.Syp }));
         }
 
         // 2.5 base * 1.5 multiplier = 3.75 -> floor -> 3, split as 2 (raw base) + 1 (tier's own extra).
@@ -286,7 +287,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         {
             using (_currentTenant.Change(tenantId))
             {
-                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m), autoSave: true);
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m, Currency.Syp), autoSave: true);
             }
         });
         var campaignId = await CreateActiveCampaignAsync(tenantId, CampaignType.SpendXGetY, """{"spendThreshold":100,"bonusPoints":10}""");
@@ -295,7 +296,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         using (_currentTenant.Change(tenantId))
         using (LoginAs(cashierId))
         {
-            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 200m }));
+            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 200m, Currency = Currency.Syp }));
         }
 
         // 200 base (1 pt/$1, no tier) + 10 flat bonus = 210, split across two ledger rows.
@@ -334,7 +335,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         {
             using (_currentTenant.Change(tenantId))
             {
-                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m), autoSave: true);
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m, Currency.Syp), autoSave: true);
             }
         });
         var campaignId = await CreateActiveCampaignAsync(tenantId, CampaignType.DoublePoints, """{"multiplier":2}""");
@@ -343,7 +344,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         using (_currentTenant.Change(tenantId))
         using (LoginAs(cashierId))
         {
-            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 50m }));
+            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 50m, Currency = Currency.Syp }));
         }
 
         // 50 base * 2 multiplier = 100, split into a 50-point Purchase row (the tier-only baseline,
@@ -381,7 +382,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         {
             using (_currentTenant.Change(tenantId))
             {
-                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m), autoSave: true);
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m, Currency.Syp), autoSave: true);
             }
         });
         var multiplierCampaignId = await CreateActiveCampaignAsync(tenantId, CampaignType.DoublePoints, """{"multiplier":2}""");
@@ -391,7 +392,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         using (_currentTenant.Change(tenantId))
         using (LoginAs(cashierId))
         {
-            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 200m }));
+            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 200m, Currency = Currency.Syp }));
         }
 
         // 200 base * 2 multiplier = 400, + 10 flat bonus = 410 total: 200 Purchase + 200 multiplier
@@ -432,7 +433,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         {
             using (_currentTenant.Change(tenantId))
             {
-                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m), autoSave: true);
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m, Currency.Syp), autoSave: true);
 
                 var gold = Wallets.Tier.Create(Guid.NewGuid(), "Gold", 0, 1.25m);
                 await _tierRepository.InsertAsync(gold, autoSave: true);
@@ -450,7 +451,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         using (_currentTenant.Change(tenantId))
         using (LoginAs(cashierId))
         {
-            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 200m }));
+            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 200m, Currency = Currency.Syp }));
         }
 
         // 200 base * 1.25 tier = 250, * 2 campaign multiplier = 500, + 10 flat bonus = 510 total:
@@ -492,7 +493,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         {
             using (_currentTenant.Change(tenantId))
             {
-                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m), autoSave: true);
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m, Currency.Syp), autoSave: true);
             }
         });
 
@@ -500,7 +501,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         using (_currentTenant.Change(tenantId))
         using (LoginAs(cashierId))
         {
-            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 50m }));
+            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 50m, Currency = Currency.Syp }));
         }
 
         result.PointsAwarded.ShouldBe(50);
@@ -544,6 +545,147 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
     }
 
     [Fact]
+    public async Task Should_Award_Points_For_A_Usd_Purchase_Using_The_Usd_Rule()
+    {
+        var tenantId = await CreateTenantAsync();
+        var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var (customerId, _) = await CreateCustomerAsync();
+        var walletId = await JoinBusinessAsync(tenantId, customerId);
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                // Independent SYP and USD rates — the USD award below must use the USD rule's rate
+                // (5 pts/$), never the SYP one (1 pt/unit).
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m, Currency.Syp), autoSave: true);
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 5m, Currency.Usd), autoSave: true);
+            }
+        });
+
+        AwardPointsResultDto result = null!;
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashierId))
+        {
+            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 10m, Currency = Currency.Usd }));
+        }
+
+        result.PointsAwarded.ShouldBe(50); // 10 * 5 (USD rate), not 10 * 1 (SYP rate)
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var purchaseTx = await _transactionRepository.SingleAsync(t => t.WalletId == walletId && t.Source == PointsTransactionSource.Purchase);
+                purchaseTx.Amount.ShouldBe(10m);
+                purchaseTx.Currency.ShouldBe(Currency.Usd);
+            }
+        });
+    }
+
+    [Fact]
+    public async Task Should_Fall_Back_To_PerVisit_When_No_Rule_Exists_For_The_Given_Currency()
+    {
+        var tenantId = await CreateTenantAsync();
+        var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var (customerId, _) = await CreateCustomerAsync();
+        await JoinBusinessAsync(tenantId, customerId);
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                // Only a SYP PerCurrencyUnit rule exists. A USD purchase must fall back to PerVisit —
+                // same "no rule configured" graceful fallback as no PerCurrencyUnit rule at all, not an
+                // error — see PosAppService.ComputePointsAsync's own comment.
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m, Currency.Syp), autoSave: true);
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerVisit, 7m), autoSave: true);
+            }
+        });
+
+        AwardPointsResultDto result = null!;
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashierId))
+        {
+            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 100m, Currency = Currency.Usd }));
+        }
+
+        result.PointsAwarded.ShouldBe(7);
+    }
+
+    [Fact]
+    public async Task Should_Reject_A_Purchase_Amount_Given_Without_A_Currency()
+    {
+        var tenantId = await CreateTenantAsync();
+        var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var (customerId, _) = await CreateCustomerAsync();
+        await JoinBusinessAsync(tenantId, customerId);
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m, Currency.Syp), autoSave: true);
+            }
+        });
+
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashierId))
+        {
+            await Assert.ThrowsAsync<UserFriendlyException>(async () =>
+            {
+                await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 10m, Currency = null }));
+            });
+        }
+    }
+
+    [Fact]
+    public async Task Should_Record_Amount_And_Currency_Only_On_The_Purchase_Row()
+    {
+        var tenantId = await CreateTenantAsync();
+        var cashierId = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var (customerId, _) = await CreateCustomerAsync();
+        var walletId = await JoinBusinessAsync(tenantId, customerId);
+        Guid goldTierId = default;
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1m, Currency.Syp), autoSave: true);
+
+                var gold = Wallets.Tier.Create(Guid.NewGuid(), "Gold", 0, 1.5m);
+                await _tierRepository.InsertAsync(gold, autoSave: true);
+                goldTierId = gold.Id;
+
+                var wallet = await _walletRepository.GetAsync(walletId);
+                wallet.ChangeTier(gold.Id);
+                await _walletRepository.UpdateAsync(wallet);
+            }
+        });
+
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashierId))
+        {
+            await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 10m, Currency = Currency.Syp }));
+        }
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var purchaseTx = await _transactionRepository.SingleAsync(t => t.WalletId == walletId && t.Source == PointsTransactionSource.Purchase);
+                purchaseTx.Amount.ShouldBe(10m);
+                purchaseTx.Currency.ShouldBe(Currency.Syp);
+
+                var tierTx = await _transactionRepository.SingleAsync(t => t.WalletId == walletId && t.Source == PointsTransactionSource.Tier);
+                tierTx.Amount.ShouldBeNull();
+                tierTx.Currency.ShouldBeNull();
+            }
+        });
+    }
+
+    [Fact]
     public async Task Should_Auto_Upgrade_Tier_And_Snapshot_The_PreUpgrade_Multiplier()
     {
         var tenantId = await CreateTenantAsync();
@@ -556,7 +698,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         {
             using (_currentTenant.Change(tenantId))
             {
-                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 10m), autoSave: true);
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 10m, Currency.Syp), autoSave: true);
 
                 // Silver's own multiplier is 1.2, not 1.0 — a real (non-1.0) pre-upgrade multiplier, so
                 // this award actually produces a Tier-sourced row to assert the snapshot on below.
@@ -576,7 +718,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         using (_currentTenant.Change(tenantId))
         using (LoginAs(cashierId))
         {
-            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 6m }));
+            result = await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 6m, Currency = Currency.Syp }));
         }
 
         result.PointsAwarded.ShouldBe(72); // 6 * 10 = 60 base, * 1.2 (Silver, pre-upgrade) = 72
@@ -713,7 +855,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         {
             await Assert.ThrowsAsync<UserFriendlyException>(async () =>
             {
-                await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 10m }));
+                await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 10m, Currency = Currency.Syp }));
             });
         }
 
@@ -740,7 +882,7 @@ public abstract class PosAppService_Tests<TStartupModule> : EksabliApplicationTe
         {
             await Assert.ThrowsAsync<AbpAuthorizationException>(async () =>
             {
-                await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 10m }));
+                await WithUnitOfWorkAsync(() => _posAppService.AwardPointsByCustomerIdAsync(customerId, new AwardPointsByCustomerIdDto { PurchaseAmount = 10m, Currency = Currency.Syp }));
             });
         }
     }

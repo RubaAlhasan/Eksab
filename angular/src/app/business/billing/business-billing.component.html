@@ -13,7 +13,7 @@
         {{ '::BusinessPanel:Billing:DuePrefix' | abpLocalization }} {{ invoice.dueDate | date: 'longDate' }}
       </p>
       <div class="d-flex align-items-center justify-content-between">
-        <p class="fs-3 fw-extrabold mb-0">{{ invoice.amount | number: '1.0-2' }}</p>
+        <p class="fs-3 fw-extrabold mb-0">{{ invoice.amount | number: '1.0-2' }} {{ currencyCode(invoice.currency) }}</p>
         <app-status-badge [label]="statusLabelKey(invoice.status) | abpLocalization" [variant]="statusVariant(invoice.status)"></app-status-badge>
       </div>
     } @else {
@@ -56,7 +56,7 @@
           @for (invoice of invoices(); track invoice.id) {
             <tr>
               <td class="fw-semibold">{{ invoice.dueDate | date: 'MMMM y' }}</td>
-              <td>{{ invoice.amount | number: '1.0-2' }}</td>
+              <td>{{ invoice.amount | number: '1.0-2' }} {{ currencyCode(invoice.currency) }}</td>
               <td><app-status-badge [label]="statusLabelKey(invoice.status) | abpLocalization" [variant]="statusVariant(invoice.status)"></app-status-badge></td>
               <td class="text-muted">{{ invoice.paidAt ? (invoice.paidAt | date: 'mediumDate') : '—' }}</td>
             </tr>

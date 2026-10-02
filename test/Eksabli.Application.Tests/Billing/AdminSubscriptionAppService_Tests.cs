@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Eksabli.Features;
 using Eksabli.Notifications;
+using Eksabli.Shared;
 using Microsoft.AspNetCore.Identity;
 using Shouldly;
 using Volo.Abp;
@@ -63,7 +64,7 @@ public abstract class AdminSubscriptionAppService_Tests<TStartupModule> : Eksabl
         return userId;
     }
 
-    private async Task<(Guid TenantId, Guid SubscriptionId)> CreateTenantWithSubscriptionAsync()
+    private async Task<(Guid TenantId, Guid SubscriptionId)> CreateTenantWithSubscriptionAsync(Currency currency = Currency.Syp)
     {
         Guid tenantId = default, subscriptionId = default;
 
@@ -78,10 +79,10 @@ public abstract class AdminSubscriptionAppService_Tests<TStartupModule> : Eksabl
         {
             using (_currentTenant.Change(tenantId))
             {
-                var plan = SubscriptionPlan.Create(Guid.NewGuid(), "Growth", 49m, "{}");
+                var plan = SubscriptionPlan.Create(Guid.NewGuid(), "Growth", 49m, 5m, "{}");
                 await _planRepository.InsertAsync(plan, autoSave: true);
 
-                var subscription = TenantSubscription.Create(Guid.NewGuid(), plan.Id, DateTime.UtcNow, DateTime.UtcNow.AddDays(14), TenantSubscriptionStatus.Trialing);
+                var subscription = TenantSubscription.Create(Guid.NewGuid(), plan.Id, DateTime.UtcNow, DateTime.UtcNow.AddDays(14), TenantSubscriptionStatus.Trialing, currency);
                 await _subscriptionRepository.InsertAsync(subscription, autoSave: true);
                 subscriptionId = subscription.Id;
             }
@@ -115,6 +116,36 @@ public abstract class AdminSubscriptionAppService_Tests<TStartupModule> : Eksabl
         list.Items.Select(s => s.TenantId).ShouldNotContain(tenantB);
     }
 
+    // Regression test for a real bug: SetPlanNamesAsync (used by GetListAsync) only ever resolved
+    // PlanId -> PlanName, never PendingPlanId -> PendingPlanName — so the Subscriptions list always
+    // showed a pending request as "Growth -> Requested:" with no target plan name, even though the
+    // single-row responses from Approve/RejectPlanChangeAsync (and the notification fired at request
+    // time) always had the real name. Caught live via a screenshot of the Admin Portal.
+    [Fact]
+    public async Task GetListAsync_Should_Resolve_The_Pending_Plan_Name_For_A_Requested_Change()
+    {
+        var (tenantId, subscriptionId) = await CreateTenantWithSubscriptionAsync();
+
+        Guid newPlanId = default;
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var scalePlan = SubscriptionPlan.Create(Guid.NewGuid(), "Scale", 149m, 20m, "{}");
+                await _planRepository.InsertAsync(scalePlan, autoSave: true);
+                newPlanId = scalePlan.Id;
+            }
+        });
+        await RequestPlanChangeAsync(tenantId, subscriptionId, newPlanId);
+
+        var list = await WithUnitOfWorkAsync(() => _adminSubscriptionAppService.GetListAsync(new AdminSubscriptionFilterDto { TenantId = tenantId }));
+
+        var dto = list.Items.Single();
+        dto.PlanName.ShouldBe("Growth");
+        dto.PendingPlanId.ShouldBe(newPlanId);
+        dto.PendingPlanName.ShouldBe("Scale");
+    }
+
     [Fact]
     public async Task RecordManualPaymentAsync_Should_Mark_Invoice_Paid_And_Insert_A_Payment()
     {
@@ -125,7 +156,7 @@ public abstract class AdminSubscriptionAppService_Tests<TStartupModule> : Eksabl
         {
             using (_currentTenant.Change(tenantId))
             {
-                var invoice = Invoice.Create(Guid.NewGuid(), subscriptionId, 49m, DateTime.UtcNow);
+                var invoice = Invoice.Create(Guid.NewGuid(), subscriptionId, 49m, Currency.Syp, DateTime.UtcNow);
                 await _invoiceRepository.InsertAsync(invoice, autoSave: true);
                 invoiceId = invoice.Id;
             }
@@ -151,7 +182,7 @@ public abstract class AdminSubscriptionAppService_Tests<TStartupModule> : Eksabl
         {
             using (_currentTenant.Change(tenantId))
             {
-                var invoice = Invoice.Create(Guid.NewGuid(), subscriptionId, 49m, DateTime.UtcNow);
+                var invoice = Invoice.Create(Guid.NewGuid(), subscriptionId, 49m, Currency.Syp, DateTime.UtcNow);
                 await _invoiceRepository.InsertAsync(invoice, autoSave: true);
                 invoiceId = invoice.Id;
             }
@@ -183,11 +214,11 @@ public abstract class AdminSubscriptionAppService_Tests<TStartupModule> : Eksabl
         {
             using (_currentTenant.Change(tenantId))
             {
-                var invoiceA = Invoice.Create(Guid.NewGuid(), subscriptionId, 49m, DateTime.UtcNow);
+                var invoiceA = Invoice.Create(Guid.NewGuid(), subscriptionId, 49m, Currency.Syp, DateTime.UtcNow);
                 await _invoiceRepository.InsertAsync(invoiceA, autoSave: true);
                 invoiceAId = invoiceA.Id;
 
-                var invoiceB = Invoice.Create(Guid.NewGuid(), subscriptionId, 49m, DateTime.UtcNow);
+                var invoiceB = Invoice.Create(Guid.NewGuid(), subscriptionId, 49m, Currency.Syp, DateTime.UtcNow);
                 await _invoiceRepository.InsertAsync(invoiceB, autoSave: true);
                 invoiceBId = invoiceB.Id;
             }
@@ -228,7 +259,7 @@ public abstract class AdminSubscriptionAppService_Tests<TStartupModule> : Eksabl
         {
             using (_currentTenant.Change(tenantId))
             {
-                var scalePlan = SubscriptionPlan.Create(Guid.NewGuid(), "Scale", 149m, "{}");
+                var scalePlan = SubscriptionPlan.Create(Guid.NewGuid(), "Scale", 149m, 20m, "{}");
                 await _planRepository.InsertAsync(scalePlan, autoSave: true);
                 newPlanId = scalePlan.Id;
             }
@@ -258,7 +289,7 @@ public abstract class AdminSubscriptionAppService_Tests<TStartupModule> : Eksabl
         {
             using (_currentTenant.Change(tenantId))
             {
-                var scalePlan = SubscriptionPlan.Create(Guid.NewGuid(), "Scale", 149m, "{}");
+                var scalePlan = SubscriptionPlan.Create(Guid.NewGuid(), "Scale", 149m, 20m, "{}");
                 await _planRepository.InsertAsync(scalePlan, autoSave: true);
                 newPlanId = scalePlan.Id;
             }
@@ -287,7 +318,7 @@ public abstract class AdminSubscriptionAppService_Tests<TStartupModule> : Eksabl
         {
             using (_currentTenant.Change(tenantId))
             {
-                var scalePlan = SubscriptionPlan.Create(Guid.NewGuid(), "Scale", 149m, $"{{\"{EksabliFeatures.MaxBranches}\":\"25\"}}");
+                var scalePlan = SubscriptionPlan.Create(Guid.NewGuid(), "Scale", 149m, 20m, $"{{\"{EksabliFeatures.MaxBranches}\":\"25\"}}");
                 await _planRepository.InsertAsync(scalePlan, autoSave: true);
                 newPlanId = scalePlan.Id;
             }
@@ -327,7 +358,7 @@ public abstract class AdminSubscriptionAppService_Tests<TStartupModule> : Eksabl
         {
             using (_currentTenant.Change(tenantId))
             {
-                var scalePlan = SubscriptionPlan.Create(Guid.NewGuid(), "Scale", 149m, "{}");
+                var scalePlan = SubscriptionPlan.Create(Guid.NewGuid(), "Scale", 149m, 20m, "{}");
                 await _planRepository.InsertAsync(scalePlan, autoSave: true);
                 newPlanId = scalePlan.Id;
             }
@@ -357,5 +388,65 @@ public abstract class AdminSubscriptionAppService_Tests<TStartupModule> : Eksabl
 
         await Assert.ThrowsAsync<UserFriendlyException>(() =>
             WithUnitOfWorkAsync(() => _adminSubscriptionAppService.RejectPlanChangeAsync(subscriptionId)));
+    }
+
+    [Fact]
+    public async Task GetStatsAsync_Should_Return_Separate_Mrr_Per_Currency()
+    {
+        var (sypTenantId, sypSubscriptionId) = await CreateTenantWithSubscriptionAsync(Currency.Syp);
+        var (usdTenantId, usdSubscriptionId) = await CreateTenantWithSubscriptionAsync(Currency.Usd);
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(sypTenantId))
+            {
+                var subscription = await _subscriptionRepository.GetAsync(sypSubscriptionId);
+                subscription.MarkActive();
+                await _subscriptionRepository.UpdateAsync(subscription, autoSave: true);
+            }
+
+            using (_currentTenant.Change(usdTenantId))
+            {
+                var subscription = await _subscriptionRepository.GetAsync(usdSubscriptionId);
+                subscription.MarkActive();
+                await _subscriptionRepository.UpdateAsync(subscription, autoSave: true);
+            }
+        });
+
+        // CreateTenantWithSubscriptionAsync seeds a fresh "Growth" plan (49 SYP / 5 USD) per tenant —
+        // one active subscriber each, so ApproxMrrByCurrency must show 49 SYP and 5 USD, never a single
+        // combined 54.
+        var stats = await WithUnitOfWorkAsync(() => _adminSubscriptionAppService.GetStatsAsync());
+
+        stats.ApproxMrrByCurrency.Count.ShouldBe(2);
+        stats.ApproxMrrByCurrency.Single(a => a.Currency == Currency.Syp).Amount.ShouldBe(49m);
+        stats.ApproxMrrByCurrency.Single(a => a.Currency == Currency.Usd).Amount.ShouldBe(5m);
+    }
+
+    [Fact]
+    public async Task GetMrrTrendAsync_Should_Not_Mix_Currencies_In_The_Same_Month()
+    {
+        var (tenantId, subscriptionId) = await CreateTenantWithSubscriptionAsync();
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var sypInvoice = Invoice.Create(Guid.NewGuid(), subscriptionId, 49m, Currency.Syp, DateTime.UtcNow);
+                sypInvoice.MarkPaid(DateTime.UtcNow);
+                await _invoiceRepository.InsertAsync(sypInvoice, autoSave: true);
+
+                var usdInvoice = Invoice.Create(Guid.NewGuid(), subscriptionId, 5m, Currency.Usd, DateTime.UtcNow);
+                usdInvoice.MarkPaid(DateTime.UtcNow);
+                await _invoiceRepository.InsertAsync(usdInvoice, autoSave: true);
+            }
+        });
+
+        var trend = await WithUnitOfWorkAsync(() => _adminSubscriptionAppService.GetMrrTrendAsync());
+
+        var thisMonth = trend.Single(m => m.Year == DateTime.UtcNow.Year && m.Month == DateTime.UtcNow.Month);
+        thisMonth.AmountsByCurrency.Count.ShouldBe(2);
+        thisMonth.AmountsByCurrency.Single(a => a.Currency == Currency.Syp).Amount.ShouldBe(49m);
+        thisMonth.AmountsByCurrency.Single(a => a.Currency == Currency.Usd).Amount.ShouldBe(5m);
     }
 }

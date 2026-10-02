@@ -31,7 +31,7 @@ public class EfCoreSubscriptionPlanRepository : EfCoreRepository<EksabliDbContex
 
         var items = await AsyncExecuter.ToListAsync(
             queryable
-                .OrderBy(sorting.IsNullOrWhiteSpace() ? "MonthlyPrice" : sorting)
+                .OrderBy(sorting.IsNullOrWhiteSpace() ? "MonthlyPriceSyp" : sorting)
                 .Skip(skipCount)
                 .Take(maxResultCount),
             GetCancellationToken(cancellationToken));
