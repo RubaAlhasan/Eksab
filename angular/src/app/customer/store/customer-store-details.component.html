@@ -14,7 +14,7 @@
     <h1 class="h4 fw-bold mb-1">{{ business.name }}</h1>
     <p class="text-muted small mb-3">
       {{ business.categoryNameEn ?? ('::Wallet:Discover:Uncategorized' | abpLocalization) }}
-      · {{ business.branchCount }} {{ '::Wallet:Discover:Branches' | abpLocalization }}
+      · {{ business.branchCount }} {{ (business.branchCount === 1 ? '::Wallet:Discover:Branch' : '::Wallet:Discover:Branches') | abpLocalization }}
       @if (business.distanceKm !== null && business.distanceKm !== undefined) {
         · {{ business.distanceKm | number: '1.1-1' }} {{ '::Wallet:Discover:KmAway' | abpLocalization }}
       }
@@ -74,8 +74,27 @@
   @if (activeTab() === 'about') {
     <section class="eks-panel mb-3">
       <p class="mb-2">{{ business.descriptionEn ?? ('::Wallet:Store:NoDescription' | abpLocalization) }}</p>
-      @if (business.website) {
-        <a [href]="business.website" target="_blank" rel="noopener" class="small">{{ business.website }}</a>
+      @if (business.website || business.instagram || business.facebook) {
+        <div class="eks-social-links mt-3">
+          @if (business.website; as website) {
+            <a [href]="toExternalHref(website)" target="_blank" rel="noopener" class="eks-social-link">
+              <i class="fas fa-globe" aria-hidden="true"></i>
+              <span dir="ltr">{{ displayUrl(website) }}</span>
+            </a>
+          }
+          @if (business.instagram; as instagram) {
+            <a [href]="toExternalHref(instagram)" target="_blank" rel="noopener" class="eks-social-link">
+              <i class="fa-brands fa-instagram" aria-hidden="true"></i>
+              <span>Instagram</span>
+            </a>
+          }
+          @if (business.facebook; as facebook) {
+            <a [href]="toExternalHref(facebook)" target="_blank" rel="noopener" class="eks-social-link">
+              <i class="fa-brands fa-facebook-f" aria-hidden="true"></i>
+              <span>Facebook</span>
+            </a>
+          }
+        </div>
       }
     </section>
 

@@ -105,6 +105,7 @@ export const APP_ROUTES: Routes = [
       {
         path: 'store/:tenantId',
         loadComponent: () => import('./customer/store/customer-store-details.component').then(c => c.CustomerStoreDetailsComponent),
+        data: { titleKey: '::Wallet:Store:Title' },
       },
       {
         path: 'favorites',

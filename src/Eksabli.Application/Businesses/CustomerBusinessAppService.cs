@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Eksabli.Branches;
 using Eksabli.BusinessProfiles;
@@ -101,6 +102,26 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
 
     // Single place that assembles the projection: profiles (Approved only) joined to
     // tenant names, category names and branch data.
+    // BusinessProfile.SocialLinksJson is a freeform blob (see BusinessAppService.BuildSocialLinksJson). Read one key
+    // defensively: malformed or unexpected JSON means "not set", never a failed directory request.
+    private static string? ReadSocialLink(string? socialLinksJson, string key)
+    {
+        if (socialLinksJson.IsNullOrWhiteSpace()) return null;
+        try
+        {
+            using var document = JsonDocument.Parse(socialLinksJson!);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object) return null;
+            if (!root.TryGetProperty(key, out var value) || value.ValueKind != JsonValueKind.String) return null;
+            var link = value.GetString();
+            return link.IsNullOrWhiteSpace() ? null : link!.Trim();
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     private async Task<List<CustomerBusinessDto>> BuildAsync(
         System.Linq.Expressions.Expression<Func<BusinessProfile, bool>> profileFilter,
         double? latitude = null,
@@ -158,6 +179,8 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
                     DescriptionAr = p.DescriptionAr,
                     DescriptionEn = p.DescriptionEn,
                     Website = p.Website,
+                    Instagram = ReadSocialLink(p.SocialLinksJson, "instagram"),
+                    Facebook = ReadSocialLink(p.SocialLinksJson, "facebook"),
                     BusinessProfileId = p.Id,
                     HasLogo = !p.LogoBlobName.IsNullOrWhiteSpace(),
                     LogoBlobName = p.LogoBlobName,

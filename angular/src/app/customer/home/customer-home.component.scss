@@ -60,7 +60,7 @@
     border-radius: var(--eks-radius-pill);
     background: var(--eks-primary-500);
     transform-origin: left;
-    animation: eks-grow-x 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation: eks-grow-x 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
     animation-delay: var(--eks-rise-delay, 0ms);
   }
 
@@ -140,40 +140,119 @@
   gap: 1.75rem;
 }
 
+// Horizontal carousel. It bleeds to the screen edge so cards scroll past the page margin instead of being cut
+// off at it, snaps card by card, and hides its scrollbar (the swipe is the affordance).
 .eks-home-carousel {
   display: flex;
   gap: 0.75rem;
   overflow-x: auto;
-  padding-bottom: 0.25rem;
+  margin-inline: -1rem;
+  padding: 0.25rem 1rem 0.5rem;
+  scroll-padding-inline: 1rem;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  > * {
+    scroll-snap-align: start;
+  }
+}
+
+// Business card in the "My Businesses" carousel. A soft brand tint at the top, the name on up to two lines
+// (never cut mid-word), and the balance pinned to the bottom so every card in the row lines up.
+// Two businesses or fewer: show them side by side, both complete, instead of a scrolling row where the second
+// card would sit half off-screen. Three or more keep the swipeable carousel.
+.eks-home-carousel--fit {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-inline: 0;
+  padding: 0.25rem 0 0.5rem;
+  overflow: visible;
+
+  > .eks-wallet-card {
+    width: auto;
+  }
 }
 
 .eks-wallet-card {
-  width: 11rem;
-  text-decoration: none;
-  color: inherit;
+  flex-shrink: 0;
+  width: 12.5rem;
+  min-height: 10.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 1rem;
   border: 1px solid var(--eks-border);
-  border-radius: var(--eks-radius-md);
-  transition: box-shadow 0.15s ease-out, transform 0.15s ease-out;
+  border-radius: var(--eks-radius-lg);
+  background: linear-gradient(180deg, var(--eks-primary-subtle-bg) 0%, var(--eks-surface) 45%);
+  box-shadow: var(--eks-shadow-md);
+  color: inherit;
+  text-align: start;
+  text-decoration: none;
+  transition: box-shadow 0.2s ease-out, transform 0.2s ease-out;
 
   &:hover {
     box-shadow: var(--eks-shadow-lg);
     transform: translateY(-2px);
+    color: inherit;
   }
 
-  &__logo {
-    margin-bottom: 0.75rem;
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--eks-primary);
+    outline-offset: 2px;
+  }
+
+  &__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  &__name {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.6em;
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow-wrap: break-word;
+  }
+
+  // One unbroken long name: a single line that ends in an ellipsis; the full name is in the tooltip.
+  &__name--single {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   &__balance {
+    margin-top: auto;
     display: flex;
     align-items: baseline;
     gap: 0.3rem;
   }
 
-  &__balance-value {
-    font-size: 1.25rem;
-    font-weight: 700;
+  &__value {
+    font-size: 1.375rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
     color: var(--eks-primary);
+  }
+
+  &__unit {
+    font-size: 0.75rem;
+    color: var(--eks-text-muted);
   }
 }
 

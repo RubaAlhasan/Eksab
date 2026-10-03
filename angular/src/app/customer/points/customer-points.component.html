@@ -26,7 +26,7 @@
     </div>
 
     <div class="eks-points-hero__balance">
-      <span class="eks-points-hero__value">{{ wallet()!.balance | number }}</span>
+      <span class="eks-points-hero__value"><app-animated-number [value]="wallet()!.balance ?? 0" /></span>
       <span class="eks-points-hero__unit">{{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
     </div>
 
@@ -56,7 +56,15 @@
         <span class="d-block small fw-semibold">{{ '::Wallet:Points:RewardsLink' | abpLocalization }}</span>
       </div>
     </a>
-    <a [routerLink]="['/customer/wallet', tenantId, 'transactions']" class="card eks-points-quicklink eks-rise" style="--eks-rise-delay: 140ms">
+    <a [routerLink]="['/customer/store', tenantId]" class="card eks-points-quicklink eks-rise" style="--eks-rise-delay: 140ms">
+      <div class="card-body text-center">
+        <span class="eks-points-quicklink__icon" aria-hidden="true">
+          <i class="fas fa-store"></i>
+        </span>
+        <span class="d-block small fw-semibold">{{ '::Wallet:Points:BusinessLink' | abpLocalization }}</span>
+      </div>
+    </a>
+    <a [routerLink]="['/customer/wallet', tenantId, 'transactions']" class="card eks-points-quicklink eks-rise" style="--eks-rise-delay: 200ms">
       <div class="card-body text-center">
         <span class="eks-points-quicklink__icon" aria-hidden="true">
           <i class="fas fa-clock-rotate-left"></i>

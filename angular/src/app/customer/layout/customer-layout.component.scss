@@ -166,7 +166,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.15s ease-out, box-shadow 0.15s ease-out;
+    transition: background-color 0.2s ease-out, box-shadow 0.2s ease-out, transform 0.18s ease-out;
+
+    // Pressing a tab dips its icon pill, so the tap is felt before the page changes.
+    .eks-customer-bottomnav__link:active & {
+      transform: scale(0.9);
+    }
   }
 
   &__icon {

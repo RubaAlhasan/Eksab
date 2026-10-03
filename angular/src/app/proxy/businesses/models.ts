@@ -53,6 +53,8 @@ export interface CustomerBusinessDto {
   descriptionAr?: string | null;
   descriptionEn?: string | null;
   website?: string | null;
+  instagram?: string | null;
+  facebook?: string | null;
   businessProfileId: string;
   hasLogo: boolean;
   logoBlobName?: string | null;

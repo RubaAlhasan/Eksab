@@ -22,7 +22,7 @@
 // `backwards`, not `both`: the finished animation must release its transform, or the hover lift on
 // `.eks-activity-row--action` would be stuck underneath the animation's own final value.
 .eks-rise {
-  animation: eks-rise 0.45s ease-out backwards;
+  animation: eks-rise 0.7s ease-out backwards;
   animation-delay: var(--eks-rise-delay, 0ms);
 }
 
@@ -66,7 +66,7 @@
 // coloured banner. The balance figure carries the brand colour; everything else is neutral.
 // ---------------------------------------------------------------------------
 .eks-hero {
-  background: var(--eks-surface);
+  background: linear-gradient(165deg, var(--eks-primary-subtle-bg) 0%, var(--eks-surface) 60%);
   color: var(--eks-text);
   border: 1px solid var(--eks-border);
   border-radius: var(--eks-radius-lg);
@@ -746,5 +746,54 @@
     color: var(--eks-primary-fg);
     font-size: 0.6875rem;
     font-weight: 700;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Motion. Every routed page eases in when its tab or screen changes: the element the router inserts after
+// <router-outlet> gets the animation, so no page has to opt in. `backwards` releases the transform once the
+// animation ends, so a fixed-position child (a modal) is never trapped inside a transformed ancestor.
+// ---------------------------------------------------------------------------
+@keyframes eks-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.eks-customer-shell .eks-customer-content > router-outlet + * {
+  animation: eks-page-in 0.5s ease-out backwards;
+}
+
+// Tap feedback: anything tappable presses in slightly, so a touch reads as received.
+.eks-customer-shell {
+  .btn {
+    transition: transform 0.2s ease-out, background-color 0.15s ease-out, box-shadow 0.15s ease-out,
+      color 0.15s ease-out, border-color 0.15s ease-out;
+  }
+
+  .btn:not(:disabled):active {
+    transform: scale(0.98);
+  }
+
+  .eks-row--action:active,
+  .eks-tile:active {
+    transform: scale(0.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eks-customer-shell .eks-customer-content > router-outlet + *,
+  .eks-customer-shell .btn,
+  .eks-customer-shell .eks-row--action:active,
+  .eks-customer-shell .eks-tile:active {
+    animation: none;
+    transform: none;
+    transition: none;
   }
 }

@@ -22,7 +22,7 @@
   @if (!isLoading() && !loadFailed() && wallets().length > 0) {
     <div class="eks-home-hero__balance">
       <p class="eks-home-hero__balance-label mb-0">{{ '::Wallet:Home:StatTotalPoints' | abpLocalization }}</p>
-      <p class="eks-home-hero__balance-value mb-0">{{ totalPoints() | number }}</p>
+      <p class="eks-home-hero__balance-value mb-0"><app-animated-number [value]="totalPoints()" /></p>
     </div>
 
     @if (balanceSegments().length > 1) {
@@ -90,24 +90,28 @@
     } @else {
       <section class="eks-home-span eks-rise" style="--eks-rise-delay: 80ms">
         <h2 class="eks-section-title">{{ '::Wallet:Home:MyBusinesses' | abpLocalization }}</h2>
-        <div class="eks-home-carousel">
+        <div class="eks-home-carousel" [class.eks-home-carousel--fit]="wallets().length <= 2">
           @for (wallet of wallets(); track wallet.id) {
-            <a [routerLink]="['/customer/wallet', wallet.tenantId]" class="card eks-wallet-card flex-shrink-0">
-              <div class="card-body">
-                <div class="eks-business-logo eks-business-logo--fallback eks-wallet-card__logo">
+            <a [routerLink]="['/customer/wallet', wallet.tenantId]" class="eks-wallet-card">
+              <span class="eks-wallet-card__top">
+                <span class="eks-business-logo eks-business-logo--fallback" aria-hidden="true">
                   {{ (wallet.businessName ?? '?').charAt(0).toUpperCase() }}
-                </div>
-                <p class="fw-bold text-truncate mb-1">
-                  {{ wallet.businessName ?? ('::Wallet:UnknownBusiness' | abpLocalization) }}
-                </p>
+                </span>
                 @if (wallet.currentTierName) {
-                  <span class="eks-tier-badge mb-2">{{ wallet.currentTierName }}</span>
+                  <span class="eks-tier-badge">{{ wallet.currentTierName }}</span>
                 }
-                <div class="eks-wallet-card__balance">
-                  <span class="eks-wallet-card__balance-value">{{ wallet.balance | number }}</span>
-                  <span class="text-muted small">{{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
-                </div>
-              </div>
+              </span>
+              <span
+                class="eks-wallet-card__name"
+                [class.eks-wallet-card__name--single]="isUnbrokenLongName(wallet.businessName)"
+                [attr.title]="wallet.businessName"
+              >
+                {{ wallet.businessName ?? ('::Wallet:UnknownBusiness' | abpLocalization) }}
+              </span>
+              <span class="eks-wallet-card__balance">
+                <span class="eks-wallet-card__value">{{ wallet.balance | number }}</span>
+                <span class="eks-wallet-card__unit">{{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
+              </span>
             </a>
           }
         </div>

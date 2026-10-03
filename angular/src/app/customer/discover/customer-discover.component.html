@@ -69,7 +69,7 @@
             @if (business.distanceKm !== null && business.distanceKm !== undefined) {
               · {{ business.distanceKm | number: '1.1-1' }} {{ '::Wallet:Discover:KmAway' | abpLocalization }}
             }
-            · {{ business.branchCount }} {{ '::Wallet:Discover:Branches' | abpLocalization }}
+            · {{ business.branchCount }} {{ (business.branchCount === 1 ? '::Wallet:Discover:Branch' : '::Wallet:Discover:Branches') | abpLocalization }}
           </span>
         </span>
         <span class="eks-row__end"><i class="fas fa-chevron-right"></i></span>

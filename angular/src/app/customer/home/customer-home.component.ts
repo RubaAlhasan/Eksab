@@ -19,6 +19,7 @@ import type { CouponDto } from '../../proxy/rewards/models';
 import { CouponStatus } from '../../proxy/rewards/coupon-status.enum';
 import type { TransactionListItemDto } from '../../proxy/reports/models';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { AnimatedNumberComponent } from '../../shared/components/animated-number/animated-number.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { campaignTypeEmoji, campaignTypeLabelKey } from '../../shared/utils/campaign-display.util';
 import { isCredit, transactionSourceLabelKey, transactionTypeLabelKey } from '../../shared/utils/transaction-display.util';
@@ -67,6 +68,7 @@ interface RecentActivityItem {
     LocalizationPipe,
     EmptyStateComponent,
     ErrorStateComponent,
+    AnimatedNumberComponent,
   ],
 })
 export class CustomerHomeComponent implements OnInit {
@@ -135,6 +137,13 @@ export class CustomerHomeComponent implements OnInit {
     }
     return map;
   });
+
+  // A business name with no spaces cannot wrap cleanly, so it is shown on one line with an ellipsis instead of
+  // being split mid-word. Names with spaces wrap at the spaces as normal.
+  protected isUnbrokenLongName(name: string | null | undefined): boolean {
+    const trimmed = (name ?? '').trim();
+    return trimmed.length > 12 && !/\s/.test(trimmed);
+  }
 
   protected rewardBusinessName(coupon: CouponDto): string | null {
     return coupon.tenantId ? (this.businessNameByTenantId().get(coupon.tenantId) ?? null) : null;

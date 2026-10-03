@@ -44,6 +44,12 @@ public class CustomerBusinessDto
 
     public string? Website { get; set; }
 
+    // The business's own social profiles, read from BusinessProfile.SocialLinksJson under the "instagram" and
+    // "facebook" keys the business settings screen writes. Null when not set.
+    public string? Instagram { get; set; }
+
+    public string? Facebook { get; set; }
+
     // The logo is served by BusinessController.GetLogoAsync, which is keyed by
     // BusinessProfile id (not tenant id) and is AllowAnonymous — so the client can
     // use it directly as an image URL. Null LogoBlobName means "no logo uploaded".

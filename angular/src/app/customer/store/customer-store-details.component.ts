@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
 import { environment } from '../../../environments/environment';
 import { CustomerBusinessService } from '../../proxy/controllers/customer-business.service';
@@ -12,6 +12,7 @@ import type { CustomerBusinessDto } from '../../proxy/businesses/models';
 import type { RewardDto } from '../../proxy/rewards/models';
 import type { CustomerCampaignDto } from '../../proxy/campaigns/models';
 import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
+import { displayUrl, toExternalHref } from '../../shared/utils/contact-display.util';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { rewardTypeEmoji } from '../../shared/utils/reward-display.util';
 import { campaignTypeEmoji, campaignTypeLabelKey } from '../../shared/utils/campaign-display.util';
@@ -42,7 +43,6 @@ type StoreTab = 'about' | 'offers' | 'rewards';
 })
 export class CustomerStoreDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly customerBusinessService = inject(CustomerBusinessService);
   private readonly followsService = inject(FollowsService);
   private readonly membershipsService = inject(MembershipsService);
@@ -57,6 +57,8 @@ export class CustomerStoreDetailsComponent implements OnInit {
   protected readonly loadFailed = signal(false);
   protected readonly business = signal<CustomerBusinessDto | null>(null);
   protected readonly isMember = signal(false);
+  protected readonly toExternalHref = toExternalHref;
+  protected readonly displayUrl = displayUrl;
   protected readonly isFollowing = signal(false);
   protected readonly isFollowBusy = signal(false);
   protected readonly logoFailed = signal(false);
@@ -152,9 +154,13 @@ export class CustomerStoreDetailsComponent implements OnInit {
     if (this.isJoining()) return;
     this.isJoining.set(true);
     this.membershipsService.join({ tenantId: this.tenantId, referralCode: this.referralCode() || null }).subscribe({
+      // Stay on the business page: About, phone numbers, offers and rewards are the reason someone opened it,
+      // and the points page has no link back here. The header switches to "View My Points" instead.
       next: () => {
         this.isJoining.set(false);
-        void this.router.navigate(['/customer/wallet', this.tenantId]);
+        this.isMember.set(true);
+        this.showJoinForm.set(false);
+        this.referralCode.set('');
       },
       // The interceptor already surfaces the server's own message — same idiom used elsewhere in this
       // app for expected, user-facing failures.
