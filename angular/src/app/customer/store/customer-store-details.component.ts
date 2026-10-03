@@ -11,7 +11,7 @@ import { CustomerCampaignService } from '../../proxy/controllers/customer-campai
 import type { CustomerBusinessDto } from '../../proxy/businesses/models';
 import type { RewardDto } from '../../proxy/rewards/models';
 import type { CustomerCampaignDto } from '../../proxy/campaigns/models';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { rewardTypeEmoji } from '../../shared/utils/reward-display.util';
 import { campaignTypeEmoji, campaignTypeLabelKey } from '../../shared/utils/campaign-display.util';
@@ -38,7 +38,7 @@ type StoreTab = 'about' | 'offers' | 'rewards';
   templateUrl: './customer-store-details.component.html',
   styleUrls: ['./customer-store-details.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DatePipe, DecimalPipe, LocalizationPipe, LoadingSpinnerComponent, ErrorStateComponent],
+  imports: [RouterLink, DatePipe, DecimalPipe, LocalizationPipe, SkeletonListComponent, ErrorStateComponent],
 })
 export class CustomerStoreDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);

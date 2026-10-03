@@ -1,17 +1,10 @@
-.eks-redeem-card {
-  border: 1px solid var(--eks-border);
-  border-radius: var(--eks-radius-lg);
+// The redemption card. Its contents are shared kit primitives (.eks-panel, .eks-code, .eks-icon-tile);
+// this only sets the width the card reads best at.
+.eks-redeem {
   max-width: 420px;
   margin: 0 auto;
 }
 
-.eks-redeem-code {
+.eks-redeem__code {
   font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  font-family: monospace;
-}
-
-.eks-redeem-icon {
-  font-size: 2.5rem;
 }

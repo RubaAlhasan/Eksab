@@ -5,6 +5,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { LocalizationPipe, SessionStateService, getLocaleDirection } from '@abp/ng.core';
 import { NotificationHubService } from '../../shared/services/notification-hub.service';
+import { CustomerThemeService } from '../../shared/services/customer-theme.service';
 
 type CustomerTab = 'home' | 'search' | 'alerts' | 'profile' | null;
 
@@ -38,6 +39,12 @@ export class CustomerLayoutComponent {
   private readonly location = inject(Location);
   private readonly sessionState = inject(SessionStateService);
   protected readonly hub = inject(NotificationHubService);
+
+  // See CustomerThemeService's own comment for why this lives in a shared service rather than a local
+  // signal like BusinessLayoutComponent/AdminLayoutComponent use — their toggle button sits in their
+  // own topbar; this shell's topbar only appears on drill-in pages, so the control lives on Settings
+  // (a routed child) instead, which needs to reach the shell's own `[class.dark]` binding.
+  protected readonly theme = inject(CustomerThemeService);
 
   constructor() {
     this.hub.connect();

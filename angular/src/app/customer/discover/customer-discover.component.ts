@@ -7,7 +7,7 @@ import { CategoriesService } from '../../proxy/controllers/categories.service';
 import { CustomerBusinessService } from '../../proxy/controllers/customer-business.service';
 import type { CategoryDto } from '../../proxy/platform/models';
 import type { CustomerBusinessDto } from '../../proxy/businesses/models';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
@@ -31,7 +31,7 @@ const SEARCH_DEBOUNCE_MS = 350;
   templateUrl: './customer-discover.component.html',
   styleUrls: ['./customer-discover.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DecimalPipe, LocalizationPipe, LoadingSpinnerComponent, EmptyStateComponent, ErrorStateComponent, PaginationComponent],
+  imports: [RouterLink, DecimalPipe, LocalizationPipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent, PaginationComponent],
 })
 export class CustomerDiscoverComponent implements OnInit {
   private readonly categoriesService = inject(CategoriesService);

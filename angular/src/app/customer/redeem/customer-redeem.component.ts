@@ -4,7 +4,7 @@ import { LocalizationPipe } from '@abp/ng.core';
 import { CouponsService } from '../../proxy/controllers/coupons.service';
 import type { CouponDto } from '../../proxy/rewards/models';
 import { CouponStatus } from '../../proxy/rewards/coupon-status.enum';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { QrCodeComponent } from '../../shared/components/qr-code/qr-code.component';
 
@@ -27,7 +27,7 @@ const POLL_SAFETY_CAP_MS = 20 * 60 * 1000;
   templateUrl: './customer-redeem.component.html',
   styleUrls: ['./customer-redeem.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LocalizationPipe, LoadingSpinnerComponent, ErrorStateComponent, QrCodeComponent],
+  imports: [RouterLink, LocalizationPipe, SkeletonListComponent, ErrorStateComponent, QrCodeComponent],
 })
 export class CustomerRedeemComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);

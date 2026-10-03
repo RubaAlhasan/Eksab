@@ -46,7 +46,6 @@ const passwordPolicyValidator: ValidatorFn = control => {
 @Component({
   selector: 'app-customer-register',
   templateUrl: './customer-register.component.html',
-  styleUrls: ['./customer-register.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, LocalizationPipe, PhoneInputComponent, RouterLink],
 })

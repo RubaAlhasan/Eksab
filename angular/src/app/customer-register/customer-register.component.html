@@ -1,9 +1,18 @@
-<div class="customer-register-page d-flex align-items-center justify-content-center">
-  <div class="card customer-register-card">
-    <div class="card-body p-4 p-md-5">
+<div class="eks-auth-page eks-customer-shell">
+  <div class="eks-auth-card eks-auth-card--wide">
+    <div class="p-4 p-md-5">
+      <div class="eks-auth-brand mb-4">
+        <span class="eks-auth-brand__mark" aria-hidden="true">E</span>
+        <span>Eksabli</span>
+      </div>
+
+      <div class="eks-auth-steps mb-4" aria-hidden="true">
+        <span class="eks-auth-steps__step is-on"></span>
+        <span class="eks-auth-steps__step" [class.is-on]="step() === 'code'"></span>
+      </div>
+
       <div class="text-center mb-4">
-        <div class="wordmark mb-2"><span class="dot" aria-hidden="true"></span>Eksabli</div>
-        <h3 class="mb-1">{{ '::CustomerRegister:Title' | abpLocalization }}</h3>
+        <h1 class="h3 fw-bold mb-1">{{ '::CustomerRegister:Title' | abpLocalization }}</h1>
         <p class="text-muted mb-0">{{ '::CustomerRegister:Subtitle' | abpLocalization }}</p>
       </div>
 
@@ -11,14 +20,14 @@
         <form [formGroup]="form" (submit)="onFormSubmit($event)">
           <div class="row g-2 mb-3">
             <div class="col-6">
-              <label class="form-label">{{ '::CustomerRegister:FirstNameLabel' | abpLocalization }}</label>
+              <label class="form-label fw-semibold">{{ '::CustomerRegister:FirstNameLabel' | abpLocalization }}</label>
               <input type="text" class="form-control" formControlName="firstName" />
               @if (form.controls.firstName.invalid && form.controls.firstName.touched) {
                 <p class="text-danger small mt-1 mb-0">{{ '::CustomerRegister:FieldRequired' | abpLocalization }}</p>
               }
             </div>
             <div class="col-6">
-              <label class="form-label">{{ '::CustomerRegister:LastNameLabel' | abpLocalization }}</label>
+              <label class="form-label fw-semibold">{{ '::CustomerRegister:LastNameLabel' | abpLocalization }}</label>
               <input type="text" class="form-control" formControlName="lastName" />
               @if (form.controls.lastName.invalid && form.controls.lastName.touched) {
                 <p class="text-danger small mt-1 mb-0">{{ '::CustomerRegister:FieldRequired' | abpLocalization }}</p>
@@ -27,12 +36,12 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label">{{ '::CustomerLogin:PhoneLabel' | abpLocalization }}</label>
+            <label class="form-label fw-semibold">{{ '::CustomerLogin:PhoneLabel' | abpLocalization }}</label>
             <app-phone-input (valueChange)="onPhoneChange($event)"></app-phone-input>
           </div>
 
           <div class="mb-3">
-            <label class="form-label">
+            <label class="form-label fw-semibold">
               {{ '::CustomerRegister:EmailLabel' | abpLocalization }}
               <span class="text-muted fw-normal">{{ '::CustomerRegister:Optional' | abpLocalization }}</span>
             </label>
@@ -44,14 +53,14 @@
 
           <div class="row g-2 mb-3">
             <div class="col-6">
-              <label class="form-label">
+              <label class="form-label fw-semibold">
                 {{ '::Wallet:Profile:DateOfBirthLabel' | abpLocalization }}
                 <span class="text-muted fw-normal">{{ '::CustomerRegister:Optional' | abpLocalization }}</span>
               </label>
               <input type="date" class="form-control" formControlName="dateOfBirth" />
             </div>
             <div class="col-6">
-              <label class="form-label">{{ '::Wallet:Profile:GenderLabel' | abpLocalization }}</label>
+              <label class="form-label fw-semibold">{{ '::Wallet:Profile:GenderLabel' | abpLocalization }}</label>
               <select class="form-select" formControlName="gender">
                 <option [ngValue]="null"></option>
                 <option [ngValue]="Gender.Female">{{ '::Wallet:Profile:GenderFemale' | abpLocalization }}</option>
@@ -62,7 +71,7 @@
           </div>
 
           <div class="mb-2">
-            <label class="form-label">{{ '::CustomerRegister:PasswordLabel' | abpLocalization }}</label>
+            <label class="form-label fw-semibold">{{ '::CustomerRegister:PasswordLabel' | abpLocalization }}</label>
             <div class="position-relative">
               <input
                 [type]="showPassword() ? 'text' : 'password'"
@@ -71,7 +80,7 @@
               />
               <button
                 type="button"
-                class="btn btn-icon password-toggle"
+                class="btn btn-icon eks-password-toggle"
                 [attr.aria-label]="(showPassword() ? '::CustomerRegister:HidePassword' : '::CustomerRegister:ShowPassword') | abpLocalization"
                 (click)="togglePasswordVisibility()"
               >
@@ -85,7 +94,7 @@
 
           <button
             type="submit"
-            class="btn btn-primary w-100 mt-4"
+            class="btn btn-primary btn-lg w-100 mt-4"
             [disabled]="form.invalid || !phoneNumber() || isSubmitting()"
           >
             @if (isSubmitting()) {
@@ -101,21 +110,21 @@
         </p>
       } @else {
         <form (submit)="onCodeSubmit($event)">
-          <label class="form-label">{{ '::CustomerLogin:CodeLabel' | abpLocalization }}</label>
-          <p class="text-muted small mb-2">
+          <label class="form-label fw-semibold">{{ '::CustomerLogin:CodeLabel' | abpLocalization }}</label>
+          <p class="text-muted small mb-3">
             {{ '::CustomerLogin:CodeHint' | abpLocalization }} <strong dir="ltr">{{ phoneNumber() }}</strong>
           </p>
           <input
             type="text"
             inputmode="numeric"
             autocomplete="one-time-code"
-            class="form-control text-center otp-code-input"
+            class="form-control form-control-lg eks-otp-input"
             dir="ltr"
             maxlength="6"
             [value]="code()"
             (input)="onCodeInput($event)"
           />
-          <button type="submit" class="btn btn-primary w-100 mt-4" [disabled]="!code() || isSubmitting()">
+          <button type="submit" class="btn btn-primary btn-lg w-100 mt-4" [disabled]="!code() || isSubmitting()">
             @if (isSubmitting()) {
               <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
             }
@@ -133,7 +142,7 @@
       }
 
       <div class="text-center mt-4">
-        <a routerLink="/">{{ '::CustomerLogin:BackToSite' | abpLocalization }}</a>
+        <a routerLink="/" class="small">{{ '::CustomerLogin:BackToSite' | abpLocalization }}</a>
       </div>
     </div>
   </div>

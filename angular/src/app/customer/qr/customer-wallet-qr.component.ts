@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { LocalizationPipe } from '@abp/ng.core';
 import { MembershipsService } from '../../proxy/controllers/memberships.service';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { QrCodeComponent } from '../../shared/components/qr-code/qr-code.component';
 
@@ -15,9 +15,8 @@ import { QrCodeComponent } from '../../shared/components/qr-code/qr-code.compone
 @Component({
   selector: 'app-customer-wallet-qr',
   templateUrl: './customer-wallet-qr.component.html',
-  styleUrls: ['./customer-wallet-qr.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LocalizationPipe, LoadingSpinnerComponent, ErrorStateComponent, QrCodeComponent],
+  imports: [LocalizationPipe, SkeletonListComponent, ErrorStateComponent, QrCodeComponent],
 })
 export class CustomerWalletQrComponent implements OnInit, OnDestroy {
   private readonly membershipsService = inject(MembershipsService);

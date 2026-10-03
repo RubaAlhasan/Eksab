@@ -1,0 +1,56 @@
+<app-modal [open]="open()" [title]="'::Wallet:Transactions:DetailsTitle' | abpLocalization" (closed)="closed.emit()">
+  @if (transaction(); as txn) {
+    <div class="eks-txn-detail">
+      <div class="eks-txn-detail__summary">
+        <div class="eks-txn-detail__summary-text">
+          <p class="eks-txn-detail__type mb-0">{{ typeLabelKey(txn.type) | abpLocalization }}</p>
+          <p class="eks-txn-detail__date mb-0">{{ txn.creationTime | date: 'medium' }}</p>
+        </div>
+        <span class="eks-txn-detail__amount" [class.eks-txn-detail__amount--credit]="isCredit(txn.points)">
+          {{ txn.points! > 0 ? '+' : '' }}{{ txn.points }}
+        </span>
+      </div>
+
+      @if (txn.branchName) {
+        <p class="eks-txn-detail__branch mb-0">
+          <i class="fas fa-store" aria-hidden="true"></i>
+          {{ txn.branchName }}
+        </p>
+      }
+
+      <div class="eks-txn-detail__breakdown">
+        <p class="eks-txn-detail__label mb-0">{{ '::Wallet:Transactions:DetailsBreakdown' | abpLocalization }}</p>
+        @for (component of txn.components; track component.id) {
+          <div class="eks-txn-detail__component">
+            <div class="eks-txn-detail__component-text">
+              <span class="eks-txn-detail__component-title">{{ sourceLabelKey(component.source) | abpLocalization }}</span>
+              @if (component.referenceName) {
+                <span class="eks-txn-detail__component-meta">{{ component.referenceName }}</span>
+              }
+              @if (component.tierMultiplier) {
+                <span class="eks-txn-detail__component-meta">
+                  {{ '::Wallet:Transactions:DetailsMultiplier' | abpLocalization }} &times;{{ component.tierMultiplier }}
+                </span>
+              }
+              @if (component.reason) {
+                <span class="eks-txn-detail__component-meta">{{ component.reason }}</span>
+              }
+            </div>
+            <span
+              class="eks-txn-detail__component-points"
+              [class.eks-txn-detail__component-points--credit]="isCredit(component.points)"
+            >
+              {{ component.points! > 0 ? '+' : '' }}{{ component.points }}
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <div slot="footer" class="d-flex justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closed.emit()">
+      {{ '::Wallet:Rewards:CancelButton' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

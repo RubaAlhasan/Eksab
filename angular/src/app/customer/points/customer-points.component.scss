@@ -1,43 +1,84 @@
-.eks-points-card {
-  border: 1px solid var(--eks-border);
-  border-radius: var(--eks-radius-lg);
+// The balance hero sits on the shared `.eks-hero` band (customer-kit). These rules add only what is specific
+// to the points figure: the business name row and the large balance numeral.
+.eks-points-hero {
+  padding-top: 1.5rem;
+
+  &__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  &__business {
+    min-width: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--eks-text-muted);
+  }
+
+  &__balance {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+  }
+
+  &__value {
+    color: var(--eks-primary);
+    font-size: 2.75rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+
+  &__unit {
+    font-size: 0.9375rem;
+    color: var(--eks-text-muted);
+  }
+
+  &__reserved {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--eks-text-muted);
+  }
 }
 
-.wallet-balance {
-  display: flex;
-  align-items: baseline;
-  gap: 0.35rem;
-}
-
-.wallet-balance-value {
-  font-size: 2rem;
-  font-weight: 700;
-}
-
-.wallet-balance-label {
-  color: var(--bs-secondary-color, #6c757d);
-}
-
-.eks-quicklinks {
+// Two quick-link tiles, styled to match the home page's quick actions.
+.eks-points-quicklinks {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: 0.75rem;
 }
 
-.eks-quicklink {
+.eks-points-quicklink {
   text-decoration: none;
   color: inherit;
   border: 1px solid var(--eks-border);
   border-radius: var(--eks-radius-md);
   transition: box-shadow 0.15s ease-out, transform 0.15s ease-out;
 
-  i {
-    font-size: 1.25rem;
-    color: var(--eks-primary);
-  }
-
   &:hover {
     box-shadow: var(--eks-shadow-lg);
     transform: translateY(-2px);
+  }
+
+  &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    margin: 0 auto 0.5rem;
+    border-radius: var(--eks-radius-md);
+    background: var(--eks-primary-subtle-bg);
+    color: var(--eks-primary-subtle-fg);
+  }
+}
+
+.eks-points-leave {
+  .btn {
+    min-height: 2.25rem;
   }
 }

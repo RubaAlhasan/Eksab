@@ -5,7 +5,7 @@ import { environment } from '../../../environments/environment';
 import { FollowsService } from '../../proxy/controllers/follows.service';
 import { CustomerBusinessService } from '../../proxy/controllers/customer-business.service';
 import type { CustomerBusinessDto } from '../../proxy/businesses/models';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 
@@ -18,9 +18,8 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 @Component({
   selector: 'app-customer-favorites',
   templateUrl: './customer-favorites.component.html',
-  styleUrls: ['./customer-favorites.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LocalizationPipe, LoadingSpinnerComponent, EmptyStateComponent, ErrorStateComponent],
+  imports: [RouterLink, LocalizationPipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent],
 })
 export class CustomerFavoritesComponent implements OnInit {
   private readonly followsService = inject(FollowsService);

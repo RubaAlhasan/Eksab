@@ -24,7 +24,6 @@ type Step = 'phone' | 'code';
 @Component({
   selector: 'app-customer-login',
   templateUrl: './customer-login.component.html',
-  styleUrls: ['./customer-login.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [LocalizationPipe, PhoneInputComponent, RouterLink],
 })

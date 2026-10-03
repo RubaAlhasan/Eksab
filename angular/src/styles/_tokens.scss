@@ -6,10 +6,10 @@
 // component stylesheet is a bug: add or reuse a token here instead.
 //
 // Dark mode is a `.dark` CLASS on each portal shell root (AdminLayoutComponent /
-// BusinessLayoutComponent set it from their own `darkMode` signal — it is NOT a
-// `prefers-color-scheme` query), so the dark overrides at the bottom are scoped to
-// `.eks-admin-shell.dark` / `.eks-biz-shell.dark`. Components inside either shell
-// inherit the right value automatically.
+// BusinessLayoutComponent / CustomerLayoutComponent set it from their own `darkMode` signal — it is
+// NOT a `prefers-color-scheme` query), so the dark overrides at the bottom are scoped to
+// `.eks-admin-shell.dark` / `.eks-biz-shell.dark` / `.eks-customer-shell.dark`. Components inside any
+// of the three shells inherit the right value automatically.
 //
 // Two things are deliberately NOT themed from here:
 //   * `LandingComponent` ships its own `:host`-scoped paper/teal/gold palette — it's a
@@ -202,7 +202,8 @@
 // role aliases flip — the ramps above are absolute and stay put.
 // =============================================================================
 .eks-admin-shell.dark,
-.eks-biz-shell.dark {
+.eks-biz-shell.dark,
+.eks-customer-shell.dark {
   --eks-bg: var(--eks-neutral-900);
   --eks-surface: var(--eks-neutral-800);
   --eks-surface-2: var(--eks-neutral-700);

@@ -5,7 +5,7 @@ import { UserNotificationsService } from '../../proxy/controllers/user-notificat
 import type { UserNotificationDto } from '../../proxy/user-notifications/models';
 import { UserNotificationType } from '../../proxy/user-notifications/user-notification-type.enum';
 import { NotificationHubService } from '../../shared/services/notification-hub.service';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
@@ -24,9 +24,8 @@ type FilterTab = 'all' | 'unread';
 @Component({
   selector: 'app-customer-notifications',
   templateUrl: './customer-notifications.component.html',
-  styleUrls: ['./customer-notifications.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, LocalizationPipe, LoadingSpinnerComponent, EmptyStateComponent, ErrorStateComponent, PaginationComponent],
+  imports: [DatePipe, LocalizationPipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent, PaginationComponent],
 })
 export class CustomerNotificationsComponent implements OnInit {
   private readonly userNotificationsService = inject(UserNotificationsService);

@@ -1,46 +1,47 @@
 @if (isLoading()) {
-  <app-loading-spinner [label]="'::Wallet:Profile:Loading' | abpLocalization" />
+  <app-skeleton-list variant="panel" [label]="'::Wallet:Profile:Loading' | abpLocalization" />
 } @else if (loadFailed()) {
   <app-error-state [message]="'::Wallet:Profile:LoadError' | abpLocalization" (retry)="retry()" />
 } @else {
-  <div class="card eks-profile-card mb-3">
-    <div class="card-body text-center position-relative">
-      <a routerLink="/customer/profile/edit" class="eks-edit-link" [attr.aria-label]="'::Wallet:Profile:EditLink' | abpLocalization">
-        <i class="fas fa-pen"></i>
-      </a>
-      <div class="eks-profile-avatar mb-2">
-        <i class="fas fa-user"></i>
-      </div>
-      <h5 class="mb-1">{{ displayName() ?? phoneNumber() ?? ('::Wallet:UnknownBusiness' | abpLocalization) }}</h5>
-      @if (phoneNumber()) {
-        <p class="text-muted small mb-0">{{ '::Wallet:Profile:PhoneLabel' | abpLocalization }}: {{ phoneNumber() }}</p>
-      }
-      <p class="text-muted small mb-0">
-        {{ '::Wallet:Profile:EmailLabel' | abpLocalization }}: {{ email() ?? ('::Wallet:Profile:NotSet' | abpLocalization) }}
-      </p>
-    </div>
-  </div>
+  <section class="eks-panel eks-rise eks-profile text-center mb-4">
+    <a routerLink="/customer/profile/edit" class="eks-edit-link" [attr.aria-label]="'::Wallet:Profile:EditLink' | abpLocalization">
+      <i class="fas fa-pen"></i>
+    </a>
+    <span class="eks-avatar-lg mx-auto mb-3" aria-hidden="true"><i class="fas fa-user"></i></span>
+    <h1 class="h5 fw-bold mb-1">{{ displayName() ?? phoneNumber() ?? ('::Wallet:UnknownBusiness' | abpLocalization) }}</h1>
+    @if (phoneNumber()) {
+      <p class="text-muted small mb-0">{{ '::Wallet:Profile:PhoneLabel' | abpLocalization }}: {{ phoneNumber() }}</p>
+    }
+    <p class="text-muted small mb-0">
+      {{ '::Wallet:Profile:EmailLabel' | abpLocalization }}: {{ email() ?? ('::Wallet:Profile:NotSet' | abpLocalization) }}
+    </p>
+  </section>
 
-  <div class="list-group mb-3">
-    <a routerLink="/customer/coupons" class="list-group-item d-flex justify-content-between align-items-center">
-      <span><i class="fas fa-ticket me-2 text-muted"></i>{{ '::Wallet:Profile:MyCoupons' | abpLocalization }}</span>
-      <i class="fas fa-chevron-right text-muted"></i>
+  <div class="eks-list mb-4">
+    <a routerLink="/customer/coupons" class="eks-row eks-row--action">
+      <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-ticket"></i></span>
+      <span class="eks-row__body"><span class="eks-row__title">{{ '::Wallet:Profile:MyCoupons' | abpLocalization }}</span></span>
+      <span class="eks-row__end"><i class="fas fa-chevron-right"></i></span>
     </a>
-    <a routerLink="/customer/favorites" class="list-group-item d-flex justify-content-between align-items-center">
-      <span><i class="fas fa-heart me-2 text-muted"></i>{{ '::Wallet:Profile:Favorites' | abpLocalization }}</span>
-      <i class="fas fa-chevron-right text-muted"></i>
+    <a routerLink="/customer/favorites" class="eks-row eks-row--action">
+      <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-heart"></i></span>
+      <span class="eks-row__body"><span class="eks-row__title">{{ '::Wallet:Profile:Favorites' | abpLocalization }}</span></span>
+      <span class="eks-row__end"><i class="fas fa-chevron-right"></i></span>
     </a>
-    <a routerLink="/customer/referral" class="list-group-item d-flex justify-content-between align-items-center">
-      <span><i class="fas fa-user-group me-2 text-muted"></i>{{ '::Wallet:Profile:ReferFriend' | abpLocalization }}</span>
-      <i class="fas fa-chevron-right text-muted"></i>
+    <a routerLink="/customer/referral" class="eks-row eks-row--action">
+      <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-user-group"></i></span>
+      <span class="eks-row__body"><span class="eks-row__title">{{ '::Wallet:Profile:ReferFriend' | abpLocalization }}</span></span>
+      <span class="eks-row__end"><i class="fas fa-chevron-right"></i></span>
     </a>
-    <a routerLink="/customer/birthday-rewards" class="list-group-item d-flex justify-content-between align-items-center">
-      <span><i class="fas fa-cake-candles me-2 text-muted"></i>{{ '::Wallet:Profile:BirthdayRewards' | abpLocalization }}</span>
-      <i class="fas fa-chevron-right text-muted"></i>
+    <a routerLink="/customer/birthday-rewards" class="eks-row eks-row--action">
+      <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-cake-candles"></i></span>
+      <span class="eks-row__body"><span class="eks-row__title">{{ '::Wallet:Profile:BirthdayRewards' | abpLocalization }}</span></span>
+      <span class="eks-row__end"><i class="fas fa-chevron-right"></i></span>
     </a>
-    <a routerLink="/customer/settings" class="list-group-item d-flex justify-content-between align-items-center">
-      <span><i class="fas fa-gear me-2 text-muted"></i>{{ '::Wallet:Profile:Settings' | abpLocalization }}</span>
-      <i class="fas fa-chevron-right text-muted"></i>
+    <a routerLink="/customer/settings" class="eks-row eks-row--action">
+      <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-gear"></i></span>
+      <span class="eks-row__body"><span class="eks-row__title">{{ '::Wallet:Profile:Settings' | abpLocalization }}</span></span>
+      <span class="eks-row__end"><i class="fas fa-chevron-right"></i></span>
     </a>
   </div>
 
