@@ -20,6 +20,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Meta, Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
+import { SeoService } from '../shared/services/seo.service';
 
 interface WalletCard {
   tenant: 't1' | 't2' | 't3';
@@ -67,6 +68,7 @@ export class LandingComponent {
   private readonly localization = inject(LocalizationService);
   private readonly titleService = inject(Title);
   private readonly metaService = inject(Meta);
+  private readonly seo = inject(SeoService);
 
   /** Reflects ABP's actual active culture (session state), not component-local UI state. */
   readonly currentLang = toSignal(this.sessionState.getLanguage$(), {
@@ -218,7 +220,8 @@ export class LandingComponent {
 
     document.documentElement.lang = lang;
 
-    const pageUrl = `${window.location.origin}${window.location.pathname}`;
+    // The configured production origin, not the host this page happens to be loaded from.
+    const pageUrl = this.seo.canonicalUrl('/');
     this.metaService.updateTag({ property: 'og:url', content: pageUrl });
     this.updateCanonicalLink(pageUrl);
     this.updateStructuredData(pageUrl, title, description);

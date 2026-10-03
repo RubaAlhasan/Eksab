@@ -168,14 +168,22 @@
       </a>
     </section>
 
-    @if (campaignPreview().length > 0) {
-      <section class="eks-home-span eks-rise" style="--eks-rise-delay: 260ms">
-        <div class="eks-section-header">
-          <h2 class="eks-section-title">{{ '::Wallet:Home:ActiveCampaigns' | abpLocalization }}</h2>
-          <a routerLink="/customer/campaigns" class="eks-section-link">
-            {{ '::Wallet:Points:SeeAll' | abpLocalization }}
-          </a>
+    <section class="eks-home-span eks-rise" style="--eks-rise-delay: 260ms">
+      <div class="eks-section-header">
+        <h2 class="eks-section-title">{{ '::Wallet:Home:ActiveCampaigns' | abpLocalization }}</h2>
+        <a routerLink="/customer/campaigns" class="eks-section-link">
+          {{ '::Wallet:Points:SeeAll' | abpLocalization }}
+        </a>
+      </div>
+      @if (!campaignsLoaded()) {
+        <div class="eks-home-carousel" role="status">
+          <span class="visually-hidden">{{ '::Wallet:Campaigns:Loading' | abpLocalization }}</span>
+          <div class="eks-skeleton eks-skeleton-card" aria-hidden="true"></div>
+          <div class="eks-skeleton eks-skeleton-card" aria-hidden="true"></div>
         </div>
+      } @else if (campaignsFailed()) {
+        <app-error-state [message]="'::Wallet:Campaigns:LoadError' | abpLocalization" (retry)="retryCampaigns()" />
+      } @else if (campaignPreview().length > 0) {
         <div class="eks-home-carousel">
           @for (campaign of campaignPreview(); track campaign.id) {
             <a [routerLink]="['/customer/store', campaign.tenantId]" class="card eks-campaign-banner flex-shrink-0">
@@ -190,8 +198,13 @@
             </a>
           }
         </div>
-      </section>
-    }
+      } @else {
+        <div class="eks-panel eks-home-empty">
+          <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-bullhorn"></i></span>
+          <p class="text-muted small mb-0">{{ '::Wallet:Campaigns:Empty' | abpLocalization }}</p>
+        </div>
+      }
+    </section>
 
     @if (rewardsPreview().length > 0) {
       <section class="eks-home-span eks-rise" style="--eks-rise-delay: 320ms">

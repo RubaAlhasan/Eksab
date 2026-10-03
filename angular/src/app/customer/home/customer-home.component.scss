@@ -397,3 +397,12 @@
     animation: none;
   }
 }
+
+// Shown in place of the campaign carousel when nothing is running: the same panel and icon tile as the rest of
+// the page, so an empty state looks deliberate rather than broken.
+.eks-home-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+}

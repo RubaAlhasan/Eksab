@@ -87,6 +87,10 @@ export class CustomerHomeComponent implements OnInit {
   protected readonly displayName = signal<string | null>(null);
 
   protected readonly campaigns = signal<CustomerCampaignDto[]>([]);
+  // The section is always shown once the feed has answered, so an empty feed reads as "nothing running" rather
+  // than as a missing section. A failed request hides it instead of claiming there are no campaigns.
+  protected readonly campaignsLoaded = signal(false);
+  protected readonly campaignsFailed = signal(false);
   protected readonly discoverCandidates = signal<CustomerBusinessDto[]>([]);
 
   // Recent activity and rewards previews are genuinely secondary content (the hero stats and wallet
@@ -189,10 +193,7 @@ export class CustomerHomeComponent implements OnInit {
       error: () => undefined,
     });
 
-    this.customerCampaignService.getMyFeed().subscribe({
-      next: campaigns => this.campaigns.set(campaigns),
-      error: () => undefined,
-    });
+    this.loadCampaigns();
 
     this.customerBusinessService
       .getList({
@@ -222,6 +223,24 @@ export class CustomerHomeComponent implements OnInit {
 
   protected retry(): void {
     this.load();
+  }
+
+  protected retryCampaigns(): void {
+    this.loadCampaigns();
+  }
+
+  private loadCampaigns(): void {
+    this.campaignsFailed.set(false);
+    this.customerCampaignService.getMyFeed().subscribe({
+      next: campaigns => {
+        this.campaigns.set(campaigns);
+        this.campaignsLoaded.set(true);
+      },
+      error: () => {
+        this.campaignsLoaded.set(true);
+        this.campaignsFailed.set(true);
+      },
+    });
   }
 
   // Per-card fallback state for Discover-preview logos (a Set keyed by tenantId) — same pattern as
