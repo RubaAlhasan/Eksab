@@ -1,0 +1,660 @@
+// =============================================================================
+// Customer Portal kit — visual primitives promoted out of individual customer pages once a second page
+// needed them (same "promote on second use" rule as the utilities in styles.scss). Every colour comes from
+// a --eks-* token in _tokens.scss; no raw hex here.
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// Entrance motion. Cards rise in with a short stagger; `prefers-reduced-motion` turns it all off.
+// ---------------------------------------------------------------------------
+@keyframes eks-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// `backwards`, not `both`: the finished animation must release its transform, or the hover lift on
+// `.eks-activity-row--action` would be stuck underneath the animation's own final value.
+.eks-rise {
+  animation: eks-rise 0.45s ease-out backwards;
+  animation-delay: var(--eks-rise-delay, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eks-rise,
+  .eks-skeleton::after {
+    animation: none;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Section heading row: title on the left, optional "See all" link on the right.
+// ---------------------------------------------------------------------------
+.eks-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.eks-section-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+
+  .eks-section-header & {
+    margin-bottom: 0;
+  }
+}
+
+.eks-section-link {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--eks-primary);
+  text-decoration: none;
+}
+
+// ---------------------------------------------------------------------------
+// Hero card — the page's headline block. It uses the SAME surface, border and shadow as every other card
+// on the customer pages, so the top of a page belongs to the same system instead of being a separate
+// coloured banner. The balance figure carries the brand colour; everything else is neutral.
+// ---------------------------------------------------------------------------
+.eks-hero {
+  background: var(--eks-surface);
+  color: var(--eks-text);
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-lg);
+  padding: 1.25rem 1.25rem 0.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--eks-shadow-md);
+
+  &__stats {
+    display: flex;
+    align-items: stretch;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    padding-bottom: 1.25rem;
+    border-top: 1px solid var(--eks-border);
+  }
+
+  &__stat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+    text-align: center;
+  }
+
+  &__stat-value {
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+
+  &__stat-label {
+    font-size: 0.6875rem;
+    color: var(--eks-text-muted);
+  }
+
+  &__stat-divider {
+    width: 1px;
+    background: var(--eks-border);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Loyalty tier pill — one consistent premium treatment for whatever a business calls its tiers (names are
+// free text per business, so this is deliberately name-agnostic).
+// ---------------------------------------------------------------------------
+.eks-tier-badge {
+  display: inline-block;
+  padding: 0.2rem 0.625rem;
+  border-radius: var(--eks-radius-pill);
+  background: var(--eks-primary-subtle-bg);
+  color: var(--eks-primary-subtle-fg);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+// ---------------------------------------------------------------------------
+// Filter chip row (All / Earned / Redeemed ...). Scrolls sideways on a phone rather than wrapping.
+// ---------------------------------------------------------------------------
+.eks-chip-row {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.eks-chip {
+  flex-shrink: 0;
+  padding: 0.375rem 0.875rem;
+  border-radius: var(--eks-radius-pill);
+  border: 1px solid var(--eks-border);
+  background: var(--eks-surface);
+  color: var(--eks-text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 0.15s ease-out, border-color 0.15s ease-out;
+
+  &.active {
+    background: var(--eks-primary);
+    border-color: var(--eks-primary);
+    color: var(--eks-primary-fg);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Activity row — one transaction or event: a direction icon, a title + meta stack, and a signed amount.
+// Used by the home page, My Points and Transaction History. The `--action` modifier makes the whole row a
+// button (it opens a detail view); the plain row is display-only.
+// ---------------------------------------------------------------------------
+.eks-activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.eks-activity-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-md);
+  background: var(--eks-surface);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+
+  &--action {
+    cursor: pointer;
+    transition: box-shadow 0.15s ease-out, transform 0.15s ease-out, background-color 0.15s ease-out;
+
+    &:hover {
+      box-shadow: var(--eks-shadow-md);
+      transform: translateY(-1px);
+      background: var(--eks-surface-2);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--eks-primary);
+      outline-offset: 2px;
+    }
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8125rem;
+
+    &--credit {
+      background: var(--eks-success-subtle-bg);
+      color: var(--eks-success-subtle-fg);
+    }
+
+    &--debit {
+      background: var(--eks-surface-2);
+      color: var(--eks-text-muted);
+    }
+  }
+
+  &__text {
+    flex-grow: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    display: block;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    margin: 0;
+  }
+
+  &__meta {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--eks-text-muted);
+    margin: 0;
+  }
+
+  // Debit stays neutral rather than red: spending points is not an error, and red on every redemption
+  // would make the list read as a list of failures.
+  &__points {
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: var(--eks-text-muted);
+
+    &--credit {
+      color: var(--eks-success);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Loading placeholders. `.eks-skeleton` itself lives in styles.scss; these are the sized variants.
+// ---------------------------------------------------------------------------
+.eks-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.eks-skeleton-row {
+  height: 3.75rem;
+}
+
+.eks-skeleton-hero {
+  height: 10rem;
+  margin-bottom: 1.5rem;
+  border-radius: var(--eks-radius-lg);
+}
+
+.eks-skeleton-card {
+  flex-shrink: 0;
+  width: 11rem;
+  height: 8.5rem;
+}
+
+// ---------------------------------------------------------------------------
+// Pre-auth pages (customer login / register). They sit OUTSIDE the customer shell, so each carries
+// `.eks-customer-shell` on its own root to pick up the shell's Bootstrap variable overrides (violet
+// primary, not Lepton-X's blue) and its global rules. They never set `.dark`, so they stay light.
+// ---------------------------------------------------------------------------
+.eks-auth-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1.5rem;
+  background:
+    radial-gradient(60rem 30rem at 50% -10%, var(--eks-primary-subtle-bg), transparent 70%),
+    var(--eks-bg);
+
+  a {
+    color: var(--eks-primary);
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--eks-primary-hover);
+      text-decoration: underline;
+    }
+  }
+}
+
+.eks-auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--eks-surface);
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-lg);
+  box-shadow: var(--eks-shadow-lg);
+
+  &--wide {
+    max-width: 480px;
+  }
+
+  .form-control,
+  .form-select {
+    background-color: var(--eks-surface);
+  }
+}
+
+.eks-auth-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+
+  &__mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--eks-radius-sm);
+    background: var(--eks-primary);
+    color: var(--eks-primary-fg);
+    font-size: 0.9375rem;
+    font-weight: 800;
+  }
+}
+
+// Two-segment progress bar: phone/details first, then the code. Decorative — the step's own title says
+// where the user is, so it is aria-hidden.
+.eks-auth-steps {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.375rem;
+
+  &__step {
+    height: 0.25rem;
+    border-radius: var(--eks-radius-pill);
+    background: var(--eks-surface-2);
+    transition: background-color 0.2s ease-out;
+
+    &.is-on {
+      background: var(--eks-primary);
+    }
+  }
+}
+
+// The one-time-code field: large, spaced digits. The extra start padding offsets the trailing letter-
+// spacing so the digits sit optically centred rather than shifted left.
+.eks-otp-input {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5em;
+  text-align: center;
+  padding-inline-start: calc(0.75rem + 0.5em);
+}
+
+.eks-password-toggle {
+  position: absolute;
+  inset-inline-end: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--eks-text-muted);
+}
+
+// ---------------------------------------------------------------------------
+// Panels, lists and tiles — the containers every customer list page is built from. They share one surface,
+// one border and one radius, so a list on any page is recognisably the same component.
+// ---------------------------------------------------------------------------
+.eks-panel {
+  background: var(--eks-surface);
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-lg);
+  box-shadow: var(--eks-shadow-md);
+  padding: 1.25rem;
+}
+
+.eks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.eks-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-md);
+  background: var(--eks-surface);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+
+  &--action {
+    cursor: pointer;
+    transition: box-shadow 0.15s ease-out, transform 0.15s ease-out, background-color 0.15s ease-out;
+
+    &:hover {
+      box-shadow: var(--eks-shadow-md);
+      transform: translateY(-1px);
+      background: var(--eks-surface-2);
+      color: inherit;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--eks-primary);
+      outline-offset: 2px;
+    }
+  }
+
+  // A row that holds two separate controls (a link and a button): the link takes the free space.
+  &__link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-grow: 1;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  &__body {
+    flex-grow: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    display: block;
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin: 0;
+  }
+
+  &__meta {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--eks-text-muted);
+    margin: 0;
+  }
+
+  &__end {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--eks-text-muted);
+  }
+}
+
+// Square icon chip. The emoji variant takes a neutral tint so a reward's own emoji isn't tinted violet.
+.eks-icon-tile {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--eks-radius-md);
+  background: var(--eks-primary-subtle-bg);
+  color: var(--eks-primary-subtle-fg);
+  font-size: 0.9375rem;
+
+  &--emoji {
+    background: var(--eks-surface-2);
+    color: inherit;
+    font-size: 1.25rem;
+  }
+
+  &--xl {
+    width: 4rem;
+    height: 4rem;
+    font-size: 2rem;
+  }
+}
+
+// Grid of square-ish cards — rewards, reward previews. Columns fill the width; each card is one link or block.
+.eks-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.75rem;
+}
+
+.eks-tile {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-md);
+  background: var(--eks-surface);
+  box-shadow: var(--eks-shadow-sm);
+  color: inherit;
+  text-decoration: none;
+  transition: box-shadow 0.15s ease-out, transform 0.15s ease-out;
+
+  &:hover {
+    box-shadow: var(--eks-shadow-lg);
+    transform: translateY(-2px);
+    color: inherit;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--eks-primary);
+    outline-offset: 2px;
+  }
+
+  &--center {
+    align-items: center;
+    text-align: center;
+  }
+
+  &--disabled {
+    opacity: 0.55;
+  }
+
+  // Pushes the figure to the bottom of the card, so a row of cards lines its prices up.
+  > .eks-points-figure {
+    margin-top: auto;
+  }
+}
+
+// The brand-coloured figure used for points costs and balances across the customer pages.
+.eks-points-figure {
+  font-weight: 800;
+  color: var(--eks-primary);
+}
+
+// Balance line: a muted label on the left, the figure on the right.
+.eks-balance {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+
+  &__value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--eks-primary);
+  }
+
+  &__unit {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--eks-text-muted);
+  }
+}
+
+// Business logo — one definition for every page that shows a business's picture or its initial.
+.eks-business-logo {
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--eks-radius-md);
+  object-fit: cover;
+
+  &--fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--eks-primary-subtle-bg);
+    color: var(--eks-primary-subtle-fg);
+    font-weight: 700;
+  }
+}
+
+// Underline tabs (About / Offers / Rewards). Same visual language as the section links elsewhere.
+.eks-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--eks-border);
+}
+
+.eks-tab {
+  margin-bottom: -1px;
+  padding: 0.5rem 0.25rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--eks-text-muted);
+
+  &.active {
+    color: var(--eks-primary);
+    border-bottom-color: var(--eks-primary);
+  }
+}
+
+// Small stat tiles (referral counts and similar). The figure is brand-coloured, like every other headline number.
+.eks-stat-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.eks-stat {
+  padding: 1rem;
+  text-align: center;
+  background: var(--eks-surface);
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-md);
+
+  &__value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--eks-primary);
+  }
+
+  &__label {
+    font-size: 0.75rem;
+    color: var(--eks-text-muted);
+  }
+}
+
+// Codes the member has to read out or type (referral code, redemption code): monospace, spaced out.
+.eks-code {
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', monospace;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--eks-text);
+}
+
+// Unread marker on a notification row.
+.eks-unread-dot {
+  flex-shrink: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--eks-primary);
+}
+
+.eks-skeleton-panel {
+  height: 14rem;
+  margin-bottom: 1rem;
+  border-radius: var(--eks-radius-lg);
+}
+
+.eks-skeleton-tile {
+  height: 9.5rem;
+}

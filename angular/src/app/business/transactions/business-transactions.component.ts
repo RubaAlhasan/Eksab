@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LocalizationPipe, PermissionService } from '@abp/ng.core';
@@ -9,6 +9,7 @@ import { EmployeeAssignmentsService } from '../../proxy/controllers/employee-ass
 import type { TransactionListItemDto } from '../../proxy/reports/models';
 import { PointsTransactionType } from '../../proxy/wallets/points-transaction-type.enum';
 import { PointsTransactionSource } from '../../proxy/wallets/points-transaction-source.enum';
+import { Currency } from '../../proxy/shared/currency.enum';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
@@ -68,6 +69,7 @@ function toDateInputValue(date: Date): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
+    DecimalPipe,
     ReactiveFormsModule,
     LocalizationPipe,
     PageHeaderComponent,
@@ -210,6 +212,10 @@ export class BusinessTransactionsComponent implements OnInit {
       default:
         return 'success';
     }
+  }
+
+  protected currencyCode(currency: Currency | null | undefined): string {
+    return currency === Currency.Usd ? 'USD' : 'SYP';
   }
 
   protected sourceLabelKey(source: PointsTransactionSource | undefined): string {

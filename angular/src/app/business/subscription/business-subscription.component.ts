@@ -9,6 +9,7 @@ import { MembershipsService } from '../../proxy/controllers/memberships.service'
 import type { SubscriptionPlanDto, TenantSubscriptionDto, UsageDto } from '../../proxy/billing/models';
 import { TenantSubscriptionStatus } from '../../proxy/billing/tenant-subscription-status.enum';
 import { MembershipStatus } from '../../proxy/memberships/membership-status.enum';
+import { Currency } from '../../proxy/shared/currency.enum';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
@@ -150,6 +151,12 @@ export class BusinessSubscriptionComponent implements OnInit {
   protected readonly smsEnabled = computed(() => parseFeatureToggle(this.currentPlan()?.featureLimitsJson, FEATURE_KEYS.smsNotifications));
   protected readonly pushEnabled = computed(() => parseFeatureToggle(this.currentPlan()?.featureLimitsJson, FEATURE_KEYS.pushNotifications));
 
+  // The tenant's own billing currency (TenantSubscription.Currency, set once and never changed — see
+  // its own backend comment) — every plan card/price shown on this page is resolved against THIS
+  // currency only. No conversion happens anywhere: a tenant billed in USD never sees a SYP number here.
+  protected readonly tenantCurrency = computed(() => this.subscription()?.currency ?? Currency.Syp);
+  protected readonly currencyCode = computed(() => (this.tenantCurrency() === Currency.Usd ? 'USD' : 'SYP'));
+
   ngOnInit(): void {
     this.load();
   }
@@ -165,6 +172,10 @@ export class BusinessSubscriptionComponent implements OnInit {
 
   protected isOverLimit(used: number | null, max: number | null): boolean {
     return used != null && max != null && used > max;
+  }
+
+  protected planPrice(plan: SubscriptionPlanDto): number {
+    return this.tenantCurrency() === Currency.Usd ? (plan.monthlyPriceUsd ?? 0) : (plan.monthlyPriceSyp ?? 0);
   }
 
   protected statusLabelKey(status: TenantSubscriptionStatus | undefined): string {
@@ -242,7 +253,7 @@ export class BusinessSubscriptionComponent implements OnInit {
       error: () => undefined,
     });
 
-    this.plansService.getList({ sorting: 'monthlyPrice asc', skipCount: 0, maxResultCount: 20 }).subscribe({
+    this.plansService.getList({ sorting: 'monthlyPriceSyp asc', skipCount: 0, maxResultCount: 20 }).subscribe({
       next: (result) => this.plans.set(result.items ?? []),
       error: () => undefined,
     });

@@ -6,7 +6,7 @@ import { CustomerCampaignService } from '../../proxy/controllers/customer-campai
 import { CustomerProfileService } from '../../proxy/controllers/customer-profile.service';
 import { CampaignType } from '../../proxy/campaigns/campaign-type.enum';
 import type { CustomerCampaignDto } from '../../proxy/campaigns/models';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 
@@ -21,9 +21,8 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 @Component({
   selector: 'app-customer-birthday-rewards',
   templateUrl: './customer-birthday-rewards.component.html',
-  styleUrls: ['./customer-birthday-rewards.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DatePipe, LocalizationPipe, LoadingSpinnerComponent, EmptyStateComponent, ErrorStateComponent],
+  imports: [RouterLink, DatePipe, LocalizationPipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent],
 })
 export class CustomerBirthdayRewardsComponent implements OnInit {
   private readonly customerCampaignService = inject(CustomerCampaignService);

@@ -1,22 +1,20 @@
 @if (isLoading()) {
-  <app-loading-spinner [label]="'::Wallet:Qr:Loading' | abpLocalization" />
+  <app-skeleton-list variant="panel" [label]="'::Wallet:Qr:Loading' | abpLocalization" />
 } @else if (loadFailed()) {
   <app-error-state [message]="'::Wallet:Qr:LoadError' | abpLocalization" (retry)="retry()" />
 } @else if (token(); as token) {
-  <div class="card eks-qr-card">
-    <div class="card-body text-center">
-      <h5 class="mb-2">{{ '::Wallet:Qr:Title' | abpLocalization }}</h5>
-      <p class="text-muted small mb-3">{{ '::Wallet:Qr:Instructions' | abpLocalization }}</p>
+  <section class="eks-panel eks-rise eks-qr text-center">
+    <h1 class="h5 fw-bold mb-2">{{ '::Wallet:Qr:Title' | abpLocalization }}</h1>
+    <p class="text-muted small mb-3">{{ '::Wallet:Qr:Instructions' | abpLocalization }}</p>
 
-      <app-qr-code [value]="token" [size]="220" />
+    <app-qr-code [value]="token" [size]="220" />
 
-      @if (countdownLabel(); as label) {
-        <p class="text-muted small mt-3 mb-2">{{ '::Wallet:Qr:ExpiresIn' | abpLocalization }}: {{ label }}s</p>
-      }
+    @if (countdownLabel(); as label) {
+      <p class="text-muted small mt-3 mb-2">{{ '::Wallet:Qr:ExpiresIn' | abpLocalization }}: {{ label }}s</p>
+    }
 
-      <button type="button" class="btn btn-outline-secondary btn-sm" (click)="refresh()">
-        {{ '::Wallet:Qr:Refresh' | abpLocalization }}
-      </button>
-    </div>
-  </div>
+    <button type="button" class="btn btn-outline-secondary btn-sm" (click)="refresh()">
+      {{ '::Wallet:Qr:Refresh' | abpLocalization }}
+    </button>
+  </section>
 }

@@ -1,25 +1,82 @@
-<header class="eks-home-header">
-  <a routerLink="/customer/profile" class="eks-home-avatar" aria-hidden="true">
-    <i class="fas fa-user"></i>
-  </a>
-  <div class="eks-home-header__text">
-    <p class="text-muted small mb-0">{{ greetingKey | abpLocalization }}</p>
-    <p class="fw-bold mb-0">{{ greetingName() }}</p>
+<section class="eks-hero eks-home-hero eks-rise">
+  <div class="eks-home-hero__top">
+    <a routerLink="/customer/profile" class="eks-avatar-md eks-home-hero__avatar" aria-hidden="true">
+      <i class="fas fa-user"></i>
+    </a>
+    <div class="eks-home-hero__text">
+      <p class="eks-home-hero__greeting">{{ greetingKey | abpLocalization }}</p>
+      <p class="eks-home-hero__name">{{ greetingName() }}</p>
+    </div>
+    <a
+      routerLink="/customer/alerts"
+      class="btn btn-icon eks-home-bell"
+      [attr.aria-label]="'::Wallet:Home:Notifications' | abpLocalization"
+    >
+      <i class="fas fa-bell"></i>
+      @if (hub.hasUnread()) {
+        <span class="eks-home-bell__dot"></span>
+      }
+    </a>
   </div>
-  <a
-    routerLink="/customer/alerts"
-    class="btn btn-icon eks-home-bell"
-    [attr.aria-label]="'::Wallet:Home:Notifications' | abpLocalization"
-  >
-    <i class="fas fa-bell"></i>
-    @if (hub.hasUnread()) {
-      <span class="eks-home-bell__dot"></span>
+
+  @if (!isLoading() && !loadFailed() && wallets().length > 0) {
+    <div class="eks-home-hero__balance">
+      <p class="eks-home-hero__balance-label mb-0">{{ '::Wallet:Home:StatTotalPoints' | abpLocalization }}</p>
+      <p class="eks-home-hero__balance-value mb-0">{{ totalPoints() | number }}</p>
+    </div>
+
+    @if (balanceSegments().length > 1) {
+      <div class="eks-home-hero__split" aria-hidden="true">
+        @for (segment of balanceSegments(); track $index; let i = $index) {
+          <span
+            class="eks-home-hero__seg"
+            [style.width.%]="segment.share"
+            [style.opacity]="segment.opacity"
+            [style.--eks-rise-delay]="i * 90 + 'ms'"
+          ></span>
+        }
+      </div>
+      <ul class="eks-home-hero__legend">
+        @for (segment of balanceSegments(); track $index) {
+          <li class="eks-home-hero__legend-item">
+            <span class="eks-home-hero__legend-dot" [style.opacity]="segment.opacity" aria-hidden="true"></span>
+            <span class="eks-home-hero__legend-name text-truncate">
+              {{ segment.name || ('::Wallet:UnknownBusiness' | abpLocalization) }}
+            </span>
+            <span class="eks-home-hero__legend-value">{{ segment.balance | number }}</span>
+          </li>
+        }
+      </ul>
     }
-  </a>
-</header>
+
+    <div class="eks-hero__stats">
+      <div class="eks-hero__stat">
+        <span class="eks-hero__stat-value">{{ businessCount() }}</span>
+        <span class="eks-hero__stat-label">{{ '::Wallet:Home:StatBusinesses' | abpLocalization }}</span>
+      </div>
+      <div class="eks-hero__stat-divider" aria-hidden="true"></div>
+      <div class="eks-hero__stat">
+        <span class="eks-hero__stat-value">{{ activeCouponsCount() }}</span>
+        <span class="eks-hero__stat-label">{{ '::Wallet:Home:StatActiveRewards' | abpLocalization }}</span>
+      </div>
+    </div>
+  }
+</section>
 
 @if (isLoading()) {
-  <app-loading-spinner [label]="'::Wallet:Loading' | abpLocalization" />
+  <div class="eks-home-sections" role="status">
+    <span class="visually-hidden">{{ '::Wallet:Loading' | abpLocalization }}</span>
+    <div class="eks-home-carousel" aria-hidden="true">
+      @for (card of [1, 2, 3]; track card) {
+        <div class="eks-skeleton eks-skeleton-card"></div>
+      }
+    </div>
+    <div class="eks-skeleton-list" aria-hidden="true">
+      @for (row of [1, 2, 3]; track row) {
+        <div class="eks-skeleton eks-skeleton-row"></div>
+      }
+    </div>
+  </div>
 } @else if (loadFailed()) {
   <app-error-state [message]="'::Wallet:Home:LoadError' | abpLocalization" (retry)="retry()" />
 } @else {
@@ -31,8 +88,8 @@
         </a>
       </app-empty-state>
     } @else {
-      <section>
-        <h2 class="eks-home-section__title">{{ '::Wallet:Home:MyBusinesses' | abpLocalization }}</h2>
+      <section class="eks-home-span eks-rise" style="--eks-rise-delay: 80ms">
+        <h2 class="eks-section-title">{{ '::Wallet:Home:MyBusinesses' | abpLocalization }}</h2>
         <div class="eks-home-carousel">
           @for (wallet of wallets(); track wallet.id) {
             <a [routerLink]="['/customer/wallet', wallet.tenantId]" class="card eks-wallet-card flex-shrink-0">
@@ -57,11 +114,61 @@
       </section>
     }
 
+    @if (!recentActivityLoading() && recentActivity().length > 0) {
+      <section class="eks-rise" style="--eks-rise-delay: 140ms">
+        <div class="eks-section-header">
+          <h2 class="eks-section-title">{{ '::Wallet:Home:RecentActivity' | abpLocalization }}</h2>
+        </div>
+        <div class="eks-activity-list">
+          @for (item of recentActivity(); track item.transaction.id) {
+            <div class="eks-activity-row">
+              <span
+                class="eks-activity-row__icon"
+                [class.eks-activity-row__icon--credit]="isCredit(item.transaction.points)"
+                [class.eks-activity-row__icon--debit]="!isCredit(item.transaction.points)"
+              >
+                <i class="fas" [class.fa-arrow-up]="isCredit(item.transaction.points)" [class.fa-arrow-down]="!isCredit(item.transaction.points)"></i>
+              </span>
+              <span class="eks-activity-row__text">
+                <span class="eks-activity-row__title text-truncate">{{ item.businessName }}</span>
+                <span class="eks-activity-row__meta text-truncate">
+                  {{ transactionTypeLabelKey(item.transaction.type) | abpLocalization }}
+                  · {{ item.transaction.creationTime | date: 'mediumDate' }}
+                </span>
+              </span>
+              <span class="eks-activity-row__points" [class.eks-activity-row__points--credit]="isCredit(item.transaction.points)">
+                {{ isCredit(item.transaction.points) ? '+' : '' }}{{ item.transaction.points }}
+              </span>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <section class="eks-home-quickactions eks-rise" style="--eks-rise-delay: 200ms">
+      <a routerLink="/customer/qr" class="card eks-home-quickaction">
+        <div class="card-body text-center">
+          <div class="eks-home-quickaction__icon">
+            <i class="fas fa-qrcode"></i>
+          </div>
+          <span class="small fw-semibold">{{ '::Wallet:Home:ShowQr' | abpLocalization }}</span>
+        </div>
+      </a>
+      <a routerLink="/customer/coupons" class="card eks-home-quickaction">
+        <div class="card-body text-center">
+          <div class="eks-home-quickaction__icon">
+            <i class="fas fa-ticket"></i>
+          </div>
+          <span class="small fw-semibold">{{ '::Wallet:Profile:MyCoupons' | abpLocalization }}</span>
+        </div>
+      </a>
+    </section>
+
     @if (campaignPreview().length > 0) {
-      <section>
-        <div class="eks-home-section__header">
-          <h2 class="eks-home-section__title">{{ '::Wallet:Home:ActiveCampaigns' | abpLocalization }}</h2>
-          <a routerLink="/customer/campaigns" class="eks-home-section__seeall">
+      <section class="eks-home-span eks-rise" style="--eks-rise-delay: 260ms">
+        <div class="eks-section-header">
+          <h2 class="eks-section-title">{{ '::Wallet:Home:ActiveCampaigns' | abpLocalization }}</h2>
+          <a routerLink="/customer/campaigns" class="eks-section-link">
             {{ '::Wallet:Points:SeeAll' | abpLocalization }}
           </a>
         </div>
@@ -82,30 +189,35 @@
       </section>
     }
 
-    <section class="eks-home-quickactions">
-      <a routerLink="/customer/qr" class="card eks-home-quickaction">
-        <div class="card-body text-center">
-          <div class="eks-home-quickaction__icon">
-            <i class="fas fa-qrcode"></i>
-          </div>
-          <span class="small fw-semibold">{{ '::Wallet:Home:ShowQr' | abpLocalization }}</span>
+    @if (rewardsPreview().length > 0) {
+      <section class="eks-home-span eks-rise" style="--eks-rise-delay: 320ms">
+        <div class="eks-section-header">
+          <h2 class="eks-section-title">{{ '::Wallet:Home:RewardsHeading' | abpLocalization }}</h2>
+          <a routerLink="/customer/coupons" class="eks-section-link">
+            {{ '::Wallet:Points:SeeAll' | abpLocalization }}
+          </a>
         </div>
-      </a>
-      <a routerLink="/customer/coupons" class="card eks-home-quickaction">
-        <div class="card-body text-center">
-          <div class="eks-home-quickaction__icon eks-home-quickaction__icon--alt">
-            <i class="fas fa-ticket"></i>
-          </div>
-          <span class="small fw-semibold">{{ '::Wallet:Profile:MyCoupons' | abpLocalization }}</span>
+        <div class="eks-home-carousel">
+          @for (coupon of rewardsPreview(); track coupon.id) {
+            <a routerLink="/customer/coupons" class="card eks-reward-preview flex-shrink-0">
+              <div class="card-body">
+                <div class="eks-reward-preview__icon"><i class="fas fa-gift"></i></div>
+                <p class="fw-bold text-truncate mb-1">{{ coupon.rewardNameEn }}</p>
+                @if (rewardBusinessName(coupon); as businessName) {
+                  <p class="eks-reward-preview__business text-truncate mb-0">{{ businessName }}</p>
+                }
+              </div>
+            </a>
+          }
         </div>
-      </a>
-    </section>
+      </section>
+    }
 
     @if (discoverBusinesses().length > 0) {
-      <section>
-        <div class="eks-home-section__header">
-          <h2 class="eks-home-section__title">{{ '::Wallet:Home:DiscoverNearby' | abpLocalization }}</h2>
-          <a routerLink="/customer/search" class="eks-home-section__seeall">
+      <section class="eks-home-span eks-rise" style="--eks-rise-delay: 380ms">
+        <div class="eks-section-header">
+          <h2 class="eks-section-title">{{ '::Wallet:Home:DiscoverNearby' | abpLocalization }}</h2>
+          <a routerLink="/customer/search" class="eks-section-link">
             {{ '::Wallet:Points:SeeAll' | abpLocalization }}
           </a>
         </div>

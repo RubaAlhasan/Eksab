@@ -1,24 +1,23 @@
 @if (isLoading()) {
-  <app-loading-spinner [label]="'::Wallet:Campaigns:Loading' | abpLocalization" />
+  <app-skeleton-list [count]="4" [label]="'::Wallet:Campaigns:Loading' | abpLocalization" />
 } @else if (loadFailed()) {
   <app-error-state [message]="'::Wallet:Campaigns:LoadError' | abpLocalization" (retry)="retry()" />
 } @else if (campaigns().length === 0) {
   <app-empty-state icon="fa-bullhorn" [title]="'::Wallet:Campaigns:Empty' | abpLocalization" />
 } @else {
-  <div class="eks-campaign-list">
+  <div class="eks-list">
     @for (campaign of campaigns(); track campaign.id) {
-      <a [routerLink]="['/customer/store', campaign.tenantId]" class="card eks-campaign-card">
-        <div class="card-body d-flex align-items-center gap-3">
-          <div class="eks-campaign-emoji">{{ campaignTypeEmoji(campaign.type) }}</div>
-          <div class="flex-grow-1">
-            <div class="text-muted small">{{ campaign.businessName }}</div>
-            <div class="fw-semibold">{{ campaign.nameEn }}</div>
-            <div class="text-muted small">
-              {{ campaignTypeLabelKey(campaign.type) | abpLocalization }}
-              · {{ '::Wallet:Campaigns:Until' | abpLocalization }} {{ campaign.endDate | date: 'mediumDate' }}
-            </div>
-          </div>
-        </div>
+      <a [routerLink]="['/customer/store', campaign.tenantId]" class="eks-row eks-row--action eks-rise">
+        <span class="eks-icon-tile eks-icon-tile--emoji" aria-hidden="true">{{ campaignTypeEmoji(campaign.type) }}</span>
+        <span class="eks-row__body">
+          <span class="eks-row__meta">{{ campaign.businessName }}</span>
+          <span class="eks-row__title">{{ campaign.nameEn }}</span>
+          <span class="eks-row__meta">
+            {{ campaignTypeLabelKey(campaign.type) | abpLocalization }}
+            · {{ '::Wallet:Campaigns:Until' | abpLocalization }} {{ campaign.endDate | date: 'mediumDate' }}
+          </span>
+        </span>
+        <span class="eks-row__end"><i class="fas fa-chevron-right"></i></span>
       </a>
     }
   </div>

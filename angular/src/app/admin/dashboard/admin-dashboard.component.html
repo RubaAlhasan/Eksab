@@ -20,14 +20,17 @@
       <div class="eks-stat-card__label">{{ '::AdminPanel:Dashboard:StatPendingApprovals' | abpLocalization }}</div>
     </div>
   </div>
-  @if (canViewMrr() && !mrrLoading() && mrr() !== null) {
-    <div class="card eks-stat-card">
-      <div class="card-body">
-        <div class="eks-stat-card__icon bg-success-subtle text-success-emphasis"><i class="fas fa-money-bill-wave"></i></div>
-        <div class="eks-stat-card__value">${{ mrr() | number: '1.0-0' }}</div>
-        <div class="eks-stat-card__label">{{ '::AdminPanel:Dashboard:StatMrr' | abpLocalization }}</div>
+  @if (canViewMrr() && !mrrLoading()) {
+    <!-- One card per currency, never summed together — see CurrencyAmountDto's own comment (backend). -->
+    @for (mrr of mrrByCurrency(); track mrr.currency) {
+      <div class="card eks-stat-card">
+        <div class="card-body">
+          <div class="eks-stat-card__icon bg-success-subtle text-success-emphasis"><i class="fas fa-money-bill-wave"></i></div>
+          <div class="eks-stat-card__value">{{ mrr.amount | number: '1.0-0' }} {{ currencyCode(mrr.currency) }}</div>
+          <div class="eks-stat-card__label">{{ '::AdminPanel:Dashboard:StatMrr' | abpLocalization }}</div>
+        </div>
       </div>
-    </div>
+    }
   }
   @if (canViewTickets() && openTicketsCount() !== null) {
     <div class="card eks-stat-card">
@@ -49,11 +52,30 @@
             <h2 class="fw-bold small mb-0">{{ '::AdminPanel:Dashboard:StatMrr' | abpLocalization }}</h2>
             <p class="text-muted small mb-0">{{ '::AdminPanel:Dashboard:MrrTrendSubtitle' | abpLocalization }}</p>
           </div>
-          @if (mrrTrendGrowthPct(); as pct) {
-            <span class="badge" [class.bg-success-subtle]="pct >= 0" [class.text-success-emphasis]="pct >= 0" [class.bg-danger-subtle]="pct < 0" [class.text-danger-emphasis]="pct < 0">
-              {{ pct >= 0 ? '+' : '' }}{{ pct }}% {{ '::AdminPanel:Dashboard:MrrTrendGrowthSuffix' | abpLocalization }}
-            </span>
-          }
+          <div class="d-flex align-items-center gap-2">
+            @if (mrrTrendGrowthPct(); as pct) {
+              <span class="badge" [class.bg-success-subtle]="pct >= 0" [class.text-success-emphasis]="pct >= 0" [class.bg-danger-subtle]="pct < 0" [class.text-danger-emphasis]="pct < 0">
+                {{ pct >= 0 ? '+' : '' }}{{ pct }}% {{ '::AdminPanel:Dashboard:MrrTrendGrowthSuffix' | abpLocalization }}
+              </span>
+            }
+            <!-- Only shown when more than one currency actually has trend data — a single-currency
+                 platform never sees a toggle with nothing to toggle to. -->
+            @if (mrrTrendAvailableCurrencies().length > 1) {
+              <div class="btn-group btn-group-sm" role="group">
+                @for (currency of mrrTrendAvailableCurrencies(); track currency) {
+                  <button
+                    type="button"
+                    class="btn"
+                    [class.btn-primary]="mrrTrendCurrency() === currency"
+                    [class.btn-outline-secondary]="mrrTrendCurrency() !== currency"
+                    (click)="setMrrTrendCurrency(currency)"
+                  >
+                    {{ currencyCode(currency) }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
         </div>
         @if (mrrTrendLoading()) {
           <app-loading-spinner [label]="'::AdminPanel:Dashboard:Loading' | abpLocalization"></app-loading-spinner>
@@ -62,7 +84,7 @@
         } @else {
           <div class="eks-growth-chart">
             @for (bar of mrrTrendBars(); track bar.label) {
-              <div class="eks-growth-chart__col" [title]="bar.label + ': $' + (bar.value | number: '1.0-0')">
+              <div class="eks-growth-chart__col" [title]="bar.label + ': ' + (bar.value | number: '1.0-0') + ' ' + currencyCode(mrrTrendCurrency())">
                 <div class="eks-growth-chart__bar" [style.height.%]="(bar.value / mrrTrendMax()) * 100"></div>
                 <span class="eks-growth-chart__label">{{ bar.label }}</span>
               </div>

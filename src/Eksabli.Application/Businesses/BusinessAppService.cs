@@ -9,6 +9,7 @@ using Eksabli.BusinessProfiles;
 using Eksabli.Branches;
 using Eksabli.EmployeeAssignments;
 using Eksabli.Settings;
+using Eksabli.Shared;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Authorization.Permissions;
@@ -167,7 +168,7 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
             var employeeAssignment = EmployeeAssignment.Create(GuidGenerator.Create(), ownerUserId, EmployeeRole.Owner);
             await _employeeAssignmentRepository.InsertAsync(employeeAssignment, autoSave: true);
 
-            await ProvisionTrialSubscriptionAsync(tenant.Id);
+            await ProvisionTrialSubscriptionAsync(tenant.Id, input.Currency);
         }
 
         return new BusinessRegistrationResultDto
@@ -239,7 +240,7 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
     // Trial, not permanent freemium — see docs/eksabli-loyalty-platform/01-business-strategy.md#revenue-model--pricing.
     // Runs inside the caller's _currentTenant.Change(tenant.Id) block, same shape as the other
     // per-tenant provisioning above (BusinessProfile/Branch/EmployeeAssignment).
-    private async Task ProvisionTrialSubscriptionAsync(Guid tenantId)
+    private async Task ProvisionTrialSubscriptionAsync(Guid tenantId, Currency currency)
     {
         var trialPlan = await _subscriptionPlanRepository.FirstOrDefaultAsync(p => p.IsTrialDefault)
             ?? throw new AbpException("No subscription plan is flagged as the trial default.");
@@ -254,7 +255,8 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
             trialPlan.Id,
             Clock.Now,
             Clock.Now.AddDays(trialLengthDays),
-            TenantSubscriptionStatus.Trialing);
+            TenantSubscriptionStatus.Trialing,
+            currency);
         await _tenantSubscriptionRepository.InsertAsync(subscription, autoSave: true);
 
         var limits = SubscriptionPlanFeatureLimits.Parse(trialPlan.FeatureLimitsJson);

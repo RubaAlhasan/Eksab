@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Eksabli.Shared;
 using Eksabli.Wallets;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
@@ -44,7 +45,7 @@ public class DefaultLoyaltyProgramDataSeederContributor : IDataSeedContributor, 
         // its point rules but kept its tiers — doesn't silently skip re-seeding the other half.
         if (await _pointRuleRepository.GetCountAsync() == 0)
         {
-            await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1), autoSave: true);
+            await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 1, Currency.Syp), autoSave: true);
             await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerVisit, 10), autoSave: true);
         }
 

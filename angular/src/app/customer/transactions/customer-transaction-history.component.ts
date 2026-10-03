@@ -5,11 +5,10 @@ import { LocalizationPipe } from '@abp/ng.core';
 import { WalletService } from '../../proxy/controllers/wallet.service';
 import type { TransactionListItemDto } from '../../proxy/reports/models';
 import { PointsTransactionType } from '../../proxy/wallets/points-transaction-type.enum';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
-import { ModalComponent } from '../../shared/components/modal/modal.component';
+import { TransactionDetailModalComponent } from '../../shared/components/transaction-detail-modal/transaction-detail-modal.component';
 import { isCredit, transactionSourceLabelKey, transactionTypeLabelKey } from '../../shared/utils/transaction-display.util';
 
 // Prototype's transaction-history.html shows a type-filter chip row (All + every type actually present
@@ -27,9 +26,8 @@ const FILTER_TYPES: PointsTransactionType[] = [
 @Component({
   selector: 'app-customer-transaction-history',
   templateUrl: './customer-transaction-history.component.html',
-  styleUrls: ['./customer-transaction-history.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, LocalizationPipe, LoadingSpinnerComponent, EmptyStateComponent, ErrorStateComponent, PaginationComponent, ModalComponent],
+  imports: [DatePipe, LocalizationPipe, EmptyStateComponent, ErrorStateComponent, PaginationComponent, TransactionDetailModalComponent],
 })
 export class CustomerTransactionHistoryComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);

@@ -6,10 +6,9 @@ import { MembershipsService } from '../../proxy/controllers/memberships.service'
 import { WalletService } from '../../proxy/controllers/wallet.service';
 import type { PointsWalletDto } from '../../proxy/wallets/models';
 import type { TransactionListItemDto } from '../../proxy/reports/models';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
-import { ModalComponent } from '../../shared/components/modal/modal.component';
+import { TransactionDetailModalComponent } from '../../shared/components/transaction-detail-modal/transaction-detail-modal.component';
 import { isCredit, transactionSourceLabelKey, transactionTypeLabelKey } from '../../shared/utils/transaction-display.util';
 
 /**
@@ -26,7 +25,7 @@ import { isCredit, transactionSourceLabelKey, transactionTypeLabelKey } from '..
   templateUrl: './customer-points.component.html',
   styleUrls: ['./customer-points.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DatePipe, LocalizationPipe, LoadingSpinnerComponent, EmptyStateComponent, ErrorStateComponent, ModalComponent],
+  imports: [RouterLink, DatePipe, LocalizationPipe, EmptyStateComponent, ErrorStateComponent, TransactionDetailModalComponent],
 })
 export class CustomerPointsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);

@@ -69,11 +69,12 @@ public class SubscriptionRenewalWorker : AsyncPeriodicBackgroundWorkerBase
     {
         var plan = await planRepository.GetAsync(subscription.PlanId);
         var now = clock.Now;
+        var amount = plan.GetMonthlyPrice(subscription.Currency);
 
-        var invoice = Invoice.Create(guidGenerator.Create(), subscription.Id, plan.MonthlyPrice, now);
+        var invoice = Invoice.Create(guidGenerator.Create(), subscription.Id, amount, subscription.Currency, now);
         await invoiceRepository.InsertAsync(invoice);
 
-        var chargeResult = await paymentGateway.ChargeAsync(subscription.TenantId!.Value, plan.MonthlyPrice, $"Eksabli subscription renewal — {plan.Name}");
+        var chargeResult = await paymentGateway.ChargeAsync(subscription.TenantId!.Value, amount, subscription.Currency, $"Eksabli subscription renewal — {plan.Name}");
 
         var payment = Payment.Create(guidGenerator.Create(), invoice.Id, chargeResult.ProviderName);
         if (chargeResult.Succeeded)

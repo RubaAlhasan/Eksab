@@ -8,6 +8,7 @@ using Eksabli.EmployeeAssignments;
 using Eksabli.Engagement;
 using Eksabli.Memberships;
 using Eksabli.Rewards;
+using Eksabli.Shared;
 using Eksabli.Wallets;
 using Microsoft.Extensions.Caching.Distributed;
 using Volo.Abp;
@@ -138,12 +139,12 @@ public class PosAppService : ApplicationService, IPosAppService
         await _qrCache.RemoveAsync(cacheKey); // single-use — burn on any successful read
 
         var cached = JsonSerializer.Deserialize<WalletQrCacheItem>(bytes)!;
-        return await AwardPointsCoreAsync(cached.CustomerId, input.PurchaseAmount);
+        return await AwardPointsCoreAsync(cached.CustomerId, input.PurchaseAmount, input.Currency);
     }
 
     public async Task<AwardPointsResultDto> AwardPointsByCustomerIdAsync(Guid customerId, AwardPointsByCustomerIdDto input)
     {
-        return await AwardPointsCoreAsync(customerId, input.PurchaseAmount);
+        return await AwardPointsCoreAsync(customerId, input.PurchaseAmount, input.Currency);
     }
 
     // Read-only counterpart of AwardPointsCoreAsync's calculation step — same staff-role gate, same
@@ -161,7 +162,8 @@ public class PosAppService : ApplicationService, IPosAppService
         var wallet = await _walletRepository.FirstAsync(w => w.MembershipId == membership.Id);
         var (tierMultiplier, tierName) = await GetCurrentTierInfoAsync(wallet);
 
-        return await ComputePointsAsync(input.PurchaseAmount, tierMultiplier, tierName);
+        ValidatePurchaseCurrency(input.PurchaseAmount, input.Currency);
+        return await ComputePointsAsync(input.PurchaseAmount, input.Currency, tierMultiplier, tierName);
     }
 
     public async Task<AwardPointsResultDto> ManualAdjustAsync(ManualAdjustDto input)
@@ -201,9 +203,10 @@ public class PosAppService : ApplicationService, IPosAppService
 
     // Private helper, not a manager service — pipeline/ledger/tier-recompute logic shared by both
     // award paths (QR and phone/customer-id) so it isn't duplicated.
-    private async Task<AwardPointsResultDto> AwardPointsCoreAsync(Guid customerId, decimal? purchaseAmount)
+    private async Task<AwardPointsResultDto> AwardPointsCoreAsync(Guid customerId, decimal? purchaseAmount, Currency? currency)
     {
         await CheckStaffRoleAsync(EmployeeRole.Owner, EmployeeRole.BranchManager, EmployeeRole.Cashier);
+        ValidatePurchaseCurrency(purchaseAmount, currency);
 
         var membership = await _membershipRepository.FirstOrDefaultAsync(m => m.CustomerId == customerId && m.Status == MembershipStatus.Active)
             ?? throw new UserFriendlyException("This customer hasn't joined your business yet.");
@@ -212,7 +215,7 @@ public class PosAppService : ApplicationService, IPosAppService
         var (tierMultiplier, tierName) = await GetCurrentTierInfoAsync(wallet);
         var tierId = wallet.CurrentTierId; // captured before ApplyTransaction/RecomputeAsync touch it below
 
-        var preview = await ComputePointsAsync(purchaseAmount, tierMultiplier, tierName);
+        var preview = await ComputePointsAsync(purchaseAmount, currency, tierMultiplier, tierName);
         var isFirstEarn = wallet.LifetimeEarned == 0; // the qualifying action for referral completion
 
         // Split into up to four ledger rows when the tier and/or a real-time campaign
@@ -242,7 +245,9 @@ public class PosAppService : ApplicationService, IPosAppService
             PointsTransactionType.Earn,
             purchasePoints,
             PointsTransactionSource.Purchase,
-            batchId: batchId);
+            batchId: batchId,
+            amount: purchaseAmount,
+            currency: currency);
         await _transactionRepository.InsertAsync(transaction);
         wallet.ApplyTransaction(PointsTransactionType.Earn, purchasePoints);
 
@@ -326,7 +331,7 @@ public class PosAppService : ApplicationService, IPosAppService
     // implementation — the Angular Award Points screen renders this breakdown directly rather than
     // reimplementing the pipeline client-side (see business-points.component.ts's own comment on why
     // that would be a drift risk).
-    private async Task<PointsPreviewDto> ComputePointsAsync(decimal? purchaseAmount, decimal tierMultiplier, string? tierName)
+    private async Task<PointsPreviewDto> ComputePointsAsync(decimal? purchaseAmount, Currency? currency, decimal tierMultiplier, string? tierName)
     {
         decimal basePoints = 0m;
         PointRuleType? ruleType = null;
@@ -334,7 +339,12 @@ public class PosAppService : ApplicationService, IPosAppService
 
         if (purchaseAmount.HasValue)
         {
-            var rule = await _pointRuleRepository.FirstOrDefaultAsync(r => r.RuleType == PointRuleType.PerCurrencyUnit);
+            // Scoped to the given currency — a business may have independent SYP and USD rates. If
+            // none is configured for this specific currency, basePoints simply stays 0m and the PerVisit
+            // fallback below applies, exactly like today's "no PerCurrencyUnit rule at all" behavior —
+            // deliberately not a hard error, since a currency gap in rule configuration shouldn't block
+            // an award that a flat PerVisit rule can still cover.
+            var rule = await _pointRuleRepository.FirstOrDefaultAsync(r => r.RuleType == PointRuleType.PerCurrencyUnit && r.Currency == currency);
             if (rule != null)
             {
                 basePoints = purchaseAmount.Value * rule.PointsPerUnit;
@@ -376,6 +386,7 @@ public class PosAppService : ApplicationService, IPosAppService
             BasePoints = rawBasePoints,
             RuleType = ruleType,
             PointsPerUnit = pointsPerUnit,
+            Currency = ruleType == PointRuleType.PerCurrencyUnit ? currency : null,
             TierMultiplier = tierMultiplier,
             TierName = tierName,
             TierExtraPoints = tierExtraPoints,
@@ -388,6 +399,17 @@ public class PosAppService : ApplicationService, IPosAppService
             BonusCampaignId = campaignResult.BonusCampaignId,
             TotalPoints = total
         };
+    }
+
+    // A purchase amount with no currency is a client bug, not a business-configuration gap (unlike "no
+    // PointRule for this currency", which ComputePointsAsync handles by falling back to PerVisit) —
+    // there is no sensible default currency to assume for real money.
+    private static void ValidatePurchaseCurrency(decimal? purchaseAmount, Currency? currency)
+    {
+        if (purchaseAmount.HasValue && currency == null)
+        {
+            throw new UserFriendlyException("A currency is required when a purchase amount is given.");
+        }
     }
 
     // Takes the awarded total explicitly rather than reading it off a single PointsTransaction —

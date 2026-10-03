@@ -12,6 +12,7 @@ import { BusinessService } from '../../proxy/controllers/business.service';
 import type { AdminTenantDto } from '../../proxy/businesses/models';
 import type { CategoryDto } from '../../proxy/platform/models';
 import { TenantApprovalStatus } from '../../proxy/business-profiles/tenant-approval-status.enum';
+import { Currency } from '../../proxy/shared/currency.enum';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { SearchInputComponent } from '../../shared/components/search-input/search-input.component';
 import { StatusBadgeComponent, StatusBadgeVariant } from '../../shared/components/status-badge/status-badge.component';
@@ -120,6 +121,7 @@ export class AdminTenantsComponent implements OnInit {
 
   protected readonly createModalOpen = signal(false);
   protected readonly isCreating = signal(false);
+  protected readonly Currency = Currency;
 
   protected readonly createForm = new FormGroup({
     businessName: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(128)] }),
@@ -141,6 +143,9 @@ export class AdminTenantsComponent implements OnInit {
     // backend computes distance from these yet (checked), this form only records the coordinates.
     branchLatitude: new FormControl('', { nonNullable: true, validators: [Validators.min(-90), Validators.max(90)] }),
     branchLongitude: new FormControl('', { nonNullable: true, validators: [Validators.min(-180), Validators.max(180)] }),
+    // Set once here and never changeable afterwards — see TenantSubscription.Currency's own comment
+    // (backend) for why there's no self-service "switch billing currency" operation.
+    currency: new FormControl(Currency.Syp, { nonNullable: true }),
     ownerEmail: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
     ownerPassword: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(6), Validators.maxLength(128)] }),
   });
@@ -220,6 +225,7 @@ export class AdminTenantsComponent implements OnInit {
         branchPhone: value.branchPhone || null,
         branchLatitude: value.branchLatitude === '' ? null : Number(value.branchLatitude),
         branchLongitude: value.branchLongitude === '' ? null : Number(value.branchLongitude),
+        currency: value.currency,
         ownerEmail: value.ownerEmail,
         ownerPassword: value.ownerPassword,
       })

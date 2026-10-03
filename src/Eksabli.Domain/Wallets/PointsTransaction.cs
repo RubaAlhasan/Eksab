@@ -1,6 +1,7 @@
 using System;
 using Volo.Abp.Domain.Entities.Auditing;
 using Volo.Abp.MultiTenancy;
+using Eksabli.Shared;
 
 namespace Eksabli.Wallets;
 
@@ -42,6 +43,14 @@ public class PointsTransaction : AuditedAggregateRoot<Guid>, IMultiTenant
     // /PointsExpirationWorker), which each only ever insert one row per event and need no grouping.
     public Guid? BatchId { get; private set; }
 
+    // The sale amount and its currency — set only on the Source=Purchase row of a batch (never on the
+    // Tier/Campaign bonus rows that share its BatchId, same "only where semantically relevant" treatment
+    // as TierMultiplierSnapshot above). Null for every non-purchase-triggered row (Adjust/Redeem/Expire/
+    // Referral/batch-evaluated campaigns), since no sale amount exists for those.
+    public decimal? Amount { get; private set; }
+
+    public Currency? Currency { get; private set; }
+
     protected PointsTransaction()
     {
         /* Required by the ORM */
@@ -58,7 +67,9 @@ public class PointsTransaction : AuditedAggregateRoot<Guid>, IMultiTenant
         Guid? createdByEmployeeId,
         string? reason,
         decimal? tierMultiplierSnapshot,
-        Guid? batchId)
+        Guid? batchId,
+        decimal? amount,
+        Currency? currency)
         : base(id)
     {
         WalletId = walletId;
@@ -71,6 +82,8 @@ public class PointsTransaction : AuditedAggregateRoot<Guid>, IMultiTenant
         Reason = reason;
         TierMultiplierSnapshot = tierMultiplierSnapshot;
         BatchId = batchId;
+        Amount = amount;
+        Currency = currency;
     }
 
     public static PointsTransaction Create(
@@ -84,8 +97,10 @@ public class PointsTransaction : AuditedAggregateRoot<Guid>, IMultiTenant
         Guid? createdByEmployeeId = null,
         string? reason = null,
         decimal? tierMultiplierSnapshot = null,
-        Guid? batchId = null)
+        Guid? batchId = null,
+        decimal? amount = null,
+        Currency? currency = null)
     {
-        return new PointsTransaction(id, walletId, type, points, source, referenceId, expiresAt, createdByEmployeeId, reason, tierMultiplierSnapshot, batchId);
+        return new PointsTransaction(id, walletId, type, points, source, referenceId, expiresAt, createdByEmployeeId, reason, tierMultiplierSnapshot, batchId, amount, currency);
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using Eksabli.Wallets;
+using Eksabli.Shared;
 
 namespace Eksabli.Reports;
 
@@ -24,4 +25,10 @@ public class TransactionComponentDto
 
     // Adjust only — why a staff member manually changed this customer's balance.
     public string? Reason { get; set; }
+
+    // Source=Purchase only — the sale amount/currency that produced this batch's points. Display-only,
+    // never summed (see PointsTransaction.Amount's own comment for why it's only set on this one row).
+    public decimal? Amount { get; set; }
+
+    public Currency? Currency { get; set; }
 }

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Eksabli.Branches;
 using Eksabli.Features;
 using Eksabli.Notifications;
+using Eksabli.Shared;
 using Microsoft.AspNetCore.Identity;
 using Shouldly;
 using Volo.Abp.Application.Dtos;
@@ -91,11 +92,11 @@ public abstract class BillingAppService_Tests<TStartupModule> : EksabliApplicati
         {
             using (_currentTenant.Change(tenantId))
             {
-                var plan = SubscriptionPlan.Create(Guid.NewGuid(), planName, 49m, $"{{\"{EksabliFeatures.MaxBranches}\":\"{maxBranches}\"}}");
+                var plan = SubscriptionPlan.Create(Guid.NewGuid(), planName, 49m, 5m, $"{{\"{EksabliFeatures.MaxBranches}\":\"{maxBranches}\"}}");
                 await _planRepository.InsertAsync(plan, autoSave: true);
                 planId = plan.Id;
 
-                var subscription = TenantSubscription.Create(Guid.NewGuid(), plan.Id, DateTime.UtcNow, DateTime.UtcNow.AddDays(14), TenantSubscriptionStatus.Trialing);
+                var subscription = TenantSubscription.Create(Guid.NewGuid(), plan.Id, DateTime.UtcNow, DateTime.UtcNow.AddDays(14), TenantSubscriptionStatus.Trialing, Currency.Syp);
                 await _subscriptionRepository.InsertAsync(subscription, autoSave: true);
                 subscriptionId = subscription.Id;
 
@@ -154,7 +155,7 @@ public abstract class BillingAppService_Tests<TStartupModule> : EksabliApplicati
         {
             using (_currentTenant.Change(tenantId))
             {
-                var growthPlan = SubscriptionPlan.Create(Guid.NewGuid(), "Growth", 149m, $"{{\"{EksabliFeatures.MaxBranches}\":\"5\"}}");
+                var growthPlan = SubscriptionPlan.Create(Guid.NewGuid(), "Growth", 149m, 15m, $"{{\"{EksabliFeatures.MaxBranches}\":\"5\"}}");
                 await _planRepository.InsertAsync(growthPlan, autoSave: true);
                 newPlanId = growthPlan.Id;
             }
@@ -188,7 +189,7 @@ public abstract class BillingAppService_Tests<TStartupModule> : EksabliApplicati
         {
             using (_currentTenant.Change(tenantId))
             {
-                var growthPlan = SubscriptionPlan.Create(Guid.NewGuid(), "Growth", 149m, "{}");
+                var growthPlan = SubscriptionPlan.Create(Guid.NewGuid(), "Growth", 149m, 15m, "{}");
                 await _planRepository.InsertAsync(growthPlan, autoSave: true);
                 newPlanId = growthPlan.Id;
             }

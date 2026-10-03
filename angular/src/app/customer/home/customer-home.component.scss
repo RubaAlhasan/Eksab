@@ -1,31 +1,125 @@
-.eks-home-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.25rem;
+// Home-specific styles. The hero band, section headings, tier pill, and activity rows are shared primitives
+// from styles/_customer-kit.scss; this file adds only what is particular to the home dashboard.
+
+// Greeting row, sitting inside the shared `.eks-hero` band.
+.eks-home-hero {
+  &__top {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__text {
+    flex-grow: 1;
+    min-width: 0;
+  }
+
+  &__greeting {
+    font-size: 0.8125rem;
+    color: var(--eks-text-muted);
+    margin: 0;
+  }
+
+  &__name {
+    font-weight: 700;
+    margin: 0;
+  }
+
+  &__balance {
+    margin-top: 1rem;
+  }
+
+  &__balance-label {
+    font-size: 0.8125rem;
+    color: var(--eks-text-muted);
+  }
+
+  &__balance-value {
+    color: var(--eks-primary);
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+
+  // Split bar: one segment per business, widths are each business's share of the total. The legend below
+  // carries the same information as text, so the bar itself is aria-hidden.
+  &__split {
+    display: flex;
+    background: var(--eks-surface-2);
+    gap: 0.1875rem;
+    height: 0.5rem;
+    margin-top: 1.125rem;
+    border-radius: var(--eks-radius-pill);
+    overflow: hidden;
+  }
+
+  &__seg {
+    flex-shrink: 0;
+    height: 100%;
+    border-radius: var(--eks-radius-pill);
+    background: var(--eks-primary-500);
+    transform-origin: left;
+    animation: eks-grow-x 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: var(--eks-rise-delay, 0ms);
+  }
+
+  &__legend {
+    list-style: none;
+    margin: 0.875rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    font-size: 0.8125rem;
+  }
+
+  &__legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  &__legend-dot {
+    flex-shrink: 0;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--eks-primary-500);
+  }
+
+  &__legend-name {
+    flex: 1;
+    min-width: 0;
+    color: var(--eks-text-muted);
+  }
+
+  &__legend-value {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
 }
 
-.eks-home-avatar {
-  flex-shrink: 0;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 50%;
-  background: var(--eks-primary-subtle-bg);
-  color: var(--eks-primary-subtle-fg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.125rem;
-}
+@keyframes eks-grow-x {
+  from {
+    transform: scaleX(0);
+  }
 
-.eks-home-header__text {
-  flex-grow: 1;
-  min-width: 0;
+  to {
+    transform: scaleX(1);
+  }
 }
 
 .eks-home-bell {
   position: relative;
   flex-shrink: 0;
+  color: var(--eks-text-muted);
+
+  &:hover {
+    background: var(--eks-surface-2);
+    color: var(--eks-text);
+  }
 
   &__dot {
     position: absolute;
@@ -35,39 +129,15 @@
     height: 0.5rem;
     border-radius: 50%;
     background: var(--eks-danger);
+    box-shadow: 0 0 0 2px var(--eks-surface);
   }
 }
 
+// Phones: one column, sections stacked. Desktop (below) turns the same sections into a two-column grid.
 .eks-home-sections {
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
-}
-
-.eks-home-section {
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.75rem;
-  }
-
-  &__title {
-    font-size: 0.875rem;
-    font-weight: 700;
-    margin: 0 0 0.75rem;
-  }
-
-  &__header &__title {
-    margin-bottom: 0;
-  }
-
-  &__seeall {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--eks-primary);
-    text-decoration: none;
-  }
 }
 
 .eks-home-carousel {
@@ -75,23 +145,6 @@
   gap: 0.75rem;
   overflow-x: auto;
   padding-bottom: 0.25rem;
-}
-
-.eks-business-logo {
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: var(--eks-radius-md);
-  object-fit: cover;
-  flex-shrink: 0;
-
-  &--fallback {
-    background: var(--eks-primary-subtle-bg);
-    color: var(--eks-primary-subtle-fg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-  }
 }
 
 .eks-wallet-card {
@@ -124,32 +177,13 @@
   }
 }
 
-// Was a flat `badge text-bg-secondary` — the same muted gray Bootstrap gives every badge on every
-// page, regardless of context. A loyalty tier is the one thing on this card a member should feel is
-// worth having, so it gets its own small branded treatment instead of disappearing into the generic
-// gray everything else already uses. Tier names are free text businesses configure themselves
-// (Tier.Name, no fixed Bronze/Silver/Gold/Platinum set anywhere in the backend), so this is
-// deliberately name-agnostic — one consistent premium-looking pill for whatever a business calls its
-// tiers, not a color keyed to specific tier-name strings that would silently stop matching the moment
-// a business renames one.
-.eks-tier-badge {
-  display: inline-block;
-  padding: 0.2rem 0.625rem;
-  border-radius: var(--eks-radius-pill);
-  background: linear-gradient(135deg, var(--eks-primary-500), var(--eks-primary-700));
-  color: #fff;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
 .eks-campaign-banner {
   width: 15rem;
   text-decoration: none;
   color: inherit;
   border: 1px solid var(--eks-border);
   border-radius: var(--eks-radius-md);
-  background: var(--eks-primary-subtle-bg);
+  background: var(--eks-surface);
   transition: box-shadow 0.15s ease-out, transform 0.15s ease-out;
 
   &:hover {
@@ -199,11 +233,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-
-    &--alt {
-      background: var(--eks-success-subtle-bg);
-      color: var(--eks-success-subtle-fg);
-    }
   }
 }
 
@@ -211,6 +240,37 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0.75rem;
+}
+
+.eks-reward-preview {
+  width: 10rem;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-md);
+  transition: box-shadow 0.15s ease-out, transform 0.15s ease-out;
+
+  &:hover {
+    box-shadow: var(--eks-shadow-lg);
+    transform: translateY(-2px);
+  }
+
+  &__icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-bottom: 0.75rem;
+    border-radius: var(--eks-radius-md);
+    background: var(--eks-primary-subtle-bg);
+    color: var(--eks-primary-subtle-fg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__business {
+    font-size: 0.75rem;
+    color: var(--eks-text-muted);
+  }
 }
 
 .eks-discover-card {
@@ -227,5 +287,34 @@
 
   &__logo {
     margin-bottom: 0.75rem;
+  }
+}
+
+// Desktop: the same sections, arranged as a two-column dashboard. `.eks-home-span` takes the full row;
+// everything else (recent activity, quick actions) sits side by side.
+@media (min-width: 992px) {
+  .eks-home-sections {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.75rem 2rem;
+    align-items: start;
+  }
+
+  .eks-home-span {
+    grid-column: 1 / -1;
+  }
+
+  .eks-home-discover-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .eks-home-quickactions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eks-home-hero__seg {
+    animation: none;
   }
 }

@@ -8,8 +8,9 @@ import { SupportTicketsService } from '../../proxy/controllers/support-tickets.s
 import { CategoriesService } from '../../proxy/controllers/categories.service';
 import type { AdminTenantDto } from '../../proxy/businesses/models';
 import type { CategoryDto, SupportTicketDto } from '../../proxy/platform/models';
-import type { MrrTrendPointDto } from '../../proxy/billing/models';
+import type { CurrencyAmountDto, MrrTrendPointDto } from '../../proxy/billing/models';
 import { TenantApprovalStatus } from '../../proxy/business-profiles/tenant-approval-status.enum';
+import { Currency } from '../../proxy/shared/currency.enum';
 import { SupportTicketStatus } from '../../proxy/platform/support-ticket-status.enum';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { StatusBadgeComponent, StatusBadgeVariant } from '../../shared/components/status-badge/status-badge.component';
@@ -103,16 +104,34 @@ export class AdminDashboardComponent implements OnInit {
   private readonly tenantNameById = signal<Map<string, string>>(new Map());
 
   protected readonly mrrLoading = signal(false);
-  protected readonly mrr = signal<number | null>(null);
+  // Never summed across currencies — see CurrencyAmountDto's own comment (backend).
+  protected readonly mrrByCurrency = signal<CurrencyAmountDto[]>([]);
 
+  protected readonly Currency = Currency;
+  // The trend chart renders one currency's series at a time (a toggle, not simultaneous bars) — the
+  // simplest way to keep "never combine SYP and USD" true within this page's plain CSS bar chart,
+  // without inventing a grouped/stacked-bar treatment for just two series.
+  protected readonly mrrTrendCurrency = signal<Currency>(Currency.Syp);
   protected readonly mrrTrendLoading = signal(false);
   private readonly mrrTrendPoints = signal<MrrTrendPointDto[]>([]);
-  protected readonly mrrTrendBars = computed(() =>
-    this.mrrTrendPoints().map((p) => ({
+  // Which currencies actually have any trend data at all — hides the toggle entirely when only one
+  // (or zero) currencies have ever been paid, rather than offering a switch to an always-empty series.
+  protected readonly mrrTrendAvailableCurrencies = computed(() => {
+    const found = new Set<Currency>();
+    for (const point of this.mrrTrendPoints()) {
+      for (const entry of point.amountsByCurrency ?? []) {
+        if (entry.currency != null) found.add(entry.currency);
+      }
+    }
+    return [Currency.Syp, Currency.Usd].filter((c) => found.has(c));
+  });
+  protected readonly mrrTrendBars = computed(() => {
+    const currency = this.mrrTrendCurrency();
+    return this.mrrTrendPoints().map((p) => ({
       label: new Date(p.year, p.month - 1, 1).toLocaleDateString(undefined, { month: 'short' }),
-      value: p.amount,
-    })),
-  );
+      value: p.amountsByCurrency?.find((a) => a.currency === currency)?.amount ?? 0,
+    }));
+  });
   protected readonly mrrTrendMax = computed(() => Math.max(1, ...this.mrrTrendBars().map((b) => b.value)));
   protected readonly mrrTrendGrowthPct = computed(() => {
     const bars = this.mrrTrendBars();
@@ -238,14 +257,22 @@ export class AdminDashboardComponent implements OnInit {
       });
   }
 
+  protected currencyCode(currency: Currency | undefined): string {
+    return currency === Currency.Usd ? 'USD' : 'SYP';
+  }
+
+  protected setMrrTrendCurrency(currency: Currency): void {
+    this.mrrTrendCurrency.set(currency);
+  }
+
   private loadMrr(): void {
     this.mrrLoading.set(true);
     this.subscriptionsService.getStats({ skipHandleError: true }).subscribe({
       next: (stats) => {
-        this.mrr.set(stats.approxMrr);
+        this.mrrByCurrency.set(stats.approxMrrByCurrency ?? []);
         this.mrrLoading.set(false);
       },
-      // Best-effort — the tile just stays hidden (see the template's `mrr(); as value` guard),
+      // Best-effort — the tile row just stays empty (see the template's @for over mrrByCurrency),
       // doesn't block the rest of the dashboard. skipHandleError: true is load-bearing — see
       // business-branches.component.ts's loadUsage() for why.
       error: () => this.mrrLoading.set(false),
@@ -258,6 +285,12 @@ export class AdminDashboardComponent implements OnInit {
       next: (points) => {
         this.mrrTrendPoints.set(points);
         this.mrrTrendLoading.set(false);
+        // Default the toggle to whichever currency actually has data, rather than always starting on
+        // Syp and showing an all-zero chart for a platform whose activity is entirely in Usd so far.
+        const available = this.mrrTrendAvailableCurrencies();
+        if (available.length > 0 && !available.includes(this.mrrTrendCurrency())) {
+          this.mrrTrendCurrency.set(available[0]);
+        }
       },
       // Best-effort — the chart card just stays hidden, doesn't block the rest of the dashboard.
       error: () => this.mrrTrendLoading.set(false),

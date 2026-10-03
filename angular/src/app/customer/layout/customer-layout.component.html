@@ -1,4 +1,9 @@
-<div class="eks-customer-shell" [attr.dir]="direction()">
+<div
+  class="eks-customer-shell"
+  [class.dark]="theme.darkMode()"
+  [class.eks-customer-shell--tabbed]="showBottomNav()"
+  [attr.dir]="direction()"
+>
   @if (showBackButton()) {
     <header class="eks-customer-topbar">
       <button
@@ -19,10 +24,15 @@
     <router-outlet></router-outlet>
   </main>
 
+
   @if (showBottomNav()) {
     <nav class="eks-customer-bottomnav">
+      <a routerLink="/customer/home" class="eks-customer-brand eks-customer-bottomnav__brand">
+        <span class="eks-customer-brand__mark" aria-hidden="true">E</span>
+        <span class="eks-customer-brand__name">Eksabli</span>
+      </a>
       <a routerLink="/customer/home" class="eks-customer-bottomnav__link" [class.active]="activeTab() === 'home'">
-        <i class="fas fa-house"></i>
+        <span class="eks-customer-bottomnav__iconwrap"><i class="fas fa-house"></i></span>
         <span>{{ '::Wallet:Layout:NavHome' | abpLocalization }}</span>
       </a>
       <a
@@ -30,7 +40,7 @@
         class="eks-customer-bottomnav__link"
         [class.active]="activeTab() === 'search'"
       >
-        <i class="fas fa-magnifying-glass"></i>
+        <span class="eks-customer-bottomnav__iconwrap"><i class="fas fa-magnifying-glass"></i></span>
         <span>{{ '::Wallet:Layout:NavSearch' | abpLocalization }}</span>
       </a>
       <a
@@ -38,11 +48,13 @@
         class="eks-customer-bottomnav__link"
         [class.active]="activeTab() === 'alerts'"
       >
-        <span class="eks-customer-bottomnav__icon">
-          <i class="fas fa-bell"></i>
-          @if (hub.hasUnread()) {
-            <span class="eks-customer-bottomnav__badge"></span>
-          }
+        <span class="eks-customer-bottomnav__iconwrap">
+          <span class="eks-customer-bottomnav__icon">
+            <i class="fas fa-bell"></i>
+            @if (hub.hasUnread()) {
+              <span class="eks-customer-bottomnav__badge"></span>
+            }
+          </span>
         </span>
         <span>{{ '::Wallet:Layout:NavAlerts' | abpLocalization }}</span>
       </a>
@@ -51,7 +63,7 @@
         class="eks-customer-bottomnav__link"
         [class.active]="activeTab() === 'profile'"
       >
-        <i class="fas fa-user"></i>
+        <span class="eks-customer-bottomnav__iconwrap"><i class="fas fa-user"></i></span>
         <span>{{ '::Wallet:Layout:NavProfile' | abpLocalization }}</span>
       </a>
     </nav>

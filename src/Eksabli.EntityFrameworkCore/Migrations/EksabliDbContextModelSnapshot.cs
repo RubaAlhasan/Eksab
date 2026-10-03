@@ -47,6 +47,9 @@ namespace Eksabli.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("CreatorId");
 
+                    b.Property<int>("Currency")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("DueDate")
                         .HasColumnType("timestamp without time zone");
 
@@ -197,7 +200,10 @@ namespace Eksabli.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("LastModifierId");
 
-                    b.Property<decimal>("MonthlyPrice")
+                    b.Property<decimal>("MonthlyPriceSyp")
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<decimal>("MonthlyPriceUsd")
                         .HasColumnType("numeric(10,2)");
 
                     b.Property<string>("Name")
@@ -229,6 +235,9 @@ namespace Eksabli.Migrations
                     b.Property<Guid?>("CreatorId")
                         .HasColumnType("uuid")
                         .HasColumnName("CreatorId");
+
+                    b.Property<int>("Currency")
+                        .HasColumnType("integer");
 
                     b.Property<string>("ExtraProperties")
                         .IsRequired()
@@ -1689,6 +1698,9 @@ namespace Eksabli.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("CreatorId");
 
+                    b.Property<int?>("Currency")
+                        .HasColumnType("integer");
+
                     b.Property<string>("ExtraProperties")
                         .IsRequired()
                         .HasColumnType("text")
@@ -1714,7 +1726,7 @@ namespace Eksabli.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId", "RuleType")
+                    b.HasIndex("TenantId", "RuleType", "Currency")
                         .IsUnique();
 
                     b.ToTable("AppPointRules", (string)null);
@@ -1724,6 +1736,9 @@ namespace Eksabli.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Amount")
+                        .HasColumnType("numeric(10,2)");
 
                     b.Property<Guid?>("BatchId")
                         .HasColumnType("uuid");
@@ -1745,6 +1760,9 @@ namespace Eksabli.Migrations
                     b.Property<Guid?>("CreatorId")
                         .HasColumnType("uuid")
                         .HasColumnName("CreatorId");
+
+                    b.Property<int?>("Currency")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("timestamp without time zone");

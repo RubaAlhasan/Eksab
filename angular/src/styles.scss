@@ -1,4 +1,5 @@
 @use './styles/tokens';
+@use './styles/customer-kit';
 
 /* You can add global styles to this file, and also import other style files */
 
@@ -542,6 +543,68 @@ body {
   font-weight: 700;
   background-color: var(--eks-primary-subtle-bg);
   color: var(--eks-primary-subtle-fg);
+}
+
+// Larger siblings of .eks-avatar-sm above — same flat primary-subtle treatment (NOT the gradient
+// .eks-tier-badge uses), so a gradient stays a distinct "this is a premium tier" signal rather than
+// becoming generic avatar chrome. Added for the Customer Portal's own hero/profile-sized avatars,
+// which need bigger initials than the 2rem admin/business usage without inventing a second look.
+.eks-avatar-md {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  background-color: var(--eks-primary-subtle-bg);
+  color: var(--eks-primary-subtle-fg);
+}
+
+.eks-avatar-lg {
+  flex-shrink: 0;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  background-color: var(--eks-primary-subtle-bg);
+  color: var(--eks-primary-subtle-fg);
+}
+
+// Content-shaped loading placeholder (vs. a centered app-loading-spinner) — a shimmering block the
+// size/shape of the content that will replace it reads as "this is already loading in" rather than
+// "the page has stopped to think," which matters most on card/grid-heavy pages. Apply directly to an
+// element sized like the real content (e.g. a fixed-height div matching a card's height).
+.eks-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--eks-surface-2);
+  border-radius: var(--eks-radius-md);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+    animation: eks-shimmer 1.6s infinite;
+  }
+}
+
+.eks-customer-shell.dark .eks-skeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+}
+
+@keyframes eks-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 // Restyles Bootstrap's `.nav-tabs` (boxed/pill look by default) to match the prototype's own

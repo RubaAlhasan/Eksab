@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
 import { CustomerCampaignService } from '../../proxy/controllers/customer-campaign.service';
 import type { CustomerCampaignDto } from '../../proxy/campaigns/models';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { campaignTypeEmoji, campaignTypeLabelKey } from '../../shared/utils/campaign-display.util';
@@ -17,9 +17,8 @@ import { campaignTypeEmoji, campaignTypeLabelKey } from '../../shared/utils/camp
 @Component({
   selector: 'app-customer-campaigns',
   templateUrl: './customer-campaigns.component.html',
-  styleUrls: ['./customer-campaigns.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DatePipe, LocalizationPipe, LoadingSpinnerComponent, EmptyStateComponent, ErrorStateComponent],
+  imports: [RouterLink, DatePipe, LocalizationPipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent],
 })
 export class CustomerCampaignsComponent implements OnInit {
   private readonly customerCampaignService = inject(CustomerCampaignService);

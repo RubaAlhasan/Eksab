@@ -1,5 +1,6 @@
 using System;
 using Eksabli.Wallets;
+using Eksabli.Shared;
 
 namespace Eksabli.Pos;
 
@@ -20,6 +21,10 @@ public class PointsPreviewDto
     public PointRuleType? RuleType { get; set; }
 
     public decimal PointsPerUnit { get; set; }
+
+    // Echoes back which currency's PerCurrencyUnit rate was actually used — null when the award was
+    // PerVisit-only (no purchase amount/currency given at all).
+    public Currency? Currency { get; set; }
 
     public decimal TierMultiplier { get; set; } = 1.0m;
 

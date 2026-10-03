@@ -8,6 +8,7 @@ import type { PointsWalletDto } from '../../proxy/wallets/models';
 import type { ReferralDto } from '../../proxy/engagement/models';
 import { ReferralStatus } from '../../proxy/engagement/referral-status.enum';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { StatusBadgeComponent, StatusBadgeVariant } from '../../shared/components/status-badge/status-badge.component';
 
@@ -25,7 +26,7 @@ import { StatusBadgeComponent, StatusBadgeVariant } from '../../shared/component
   templateUrl: './customer-referral.component.html',
   styleUrls: ['./customer-referral.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, LocalizationPipe, LoadingSpinnerComponent, EmptyStateComponent, StatusBadgeComponent],
+  imports: [DatePipe, LocalizationPipe, LoadingSpinnerComponent, SkeletonListComponent, EmptyStateComponent, StatusBadgeComponent],
 })
 export class CustomerReferralComponent implements OnInit {
   private readonly membershipsService = inject(MembershipsService);

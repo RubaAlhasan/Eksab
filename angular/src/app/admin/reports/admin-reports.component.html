@@ -12,13 +12,16 @@
       <div class="eks-stat-card__label">{{ '::AdminPanel:Reports:StatTotalBusinesses' | abpLocalization }}</div>
     </div>
   </div>
-  @if (canViewMrr() && !mrrLoading() && mrr() !== null) {
-    <div class="card eks-stat-card">
-      <div class="card-body">
-        <div class="eks-stat-card__value">${{ mrr() | number: '1.0-0' }}</div>
-        <div class="eks-stat-card__label">{{ '::AdminPanel:Reports:StatMrr' | abpLocalization }}</div>
+  @if (canViewMrr() && !mrrLoading()) {
+    <!-- One card per currency, never summed together — see CurrencyAmountDto's own comment (backend). -->
+    @for (mrr of mrrByCurrency(); track mrr.currency) {
+      <div class="card eks-stat-card">
+        <div class="card-body">
+          <div class="eks-stat-card__value">{{ mrr.amount | number: '1.0-0' }} {{ currencyCode(mrr.currency) }}</div>
+          <div class="eks-stat-card__label">{{ '::AdminPanel:Reports:StatMrr' | abpLocalization }}</div>
+        </div>
       </div>
-    </div>
+    }
   }
   @if (!ticketsLoading() && ticketMetrics() !== null) {
     <div class="card eks-stat-card">

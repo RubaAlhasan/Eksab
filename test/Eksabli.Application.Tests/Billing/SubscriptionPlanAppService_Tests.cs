@@ -24,7 +24,8 @@ public abstract class SubscriptionPlanAppService_Tests<TStartupModule> : Eksabli
         var created = await WithUnitOfWorkAsync(() => _subscriptionPlanAppService.CreateAsync(new CreateUpdateSubscriptionPlanDto
         {
             Name = "Custom Test Plan",
-            MonthlyPrice = 99m,
+            MonthlyPriceSyp = 99m,
+            MonthlyPriceUsd = 10m,
             FeatureLimitsJson = "{}"
         }));
 
@@ -34,10 +35,12 @@ public abstract class SubscriptionPlanAppService_Tests<TStartupModule> : Eksabli
         var updated = await WithUnitOfWorkAsync(() => _subscriptionPlanAppService.UpdateAsync(created.Id, new CreateUpdateSubscriptionPlanDto
         {
             Name = "Custom Test Plan",
-            MonthlyPrice = 149m,
+            MonthlyPriceSyp = 149m,
+            MonthlyPriceUsd = 15m,
             FeatureLimitsJson = "{}"
         }));
-        updated.MonthlyPrice.ShouldBe(149m);
+        updated.MonthlyPriceSyp.ShouldBe(149m);
+        updated.MonthlyPriceUsd.ShouldBe(15m);
 
         await WithUnitOfWorkAsync(() => _subscriptionPlanAppService.DeleteAsync(created.Id));
         var afterDelete = await WithUnitOfWorkAsync(() => _subscriptionPlanAppService.GetListAsync(new PagedAndSortedResultRequestDto()));
@@ -52,7 +55,8 @@ public abstract class SubscriptionPlanAppService_Tests<TStartupModule> : Eksabli
             await WithUnitOfWorkAsync(() => _subscriptionPlanAppService.CreateAsync(new CreateUpdateSubscriptionPlanDto
             {
                 Name = "",
-                MonthlyPrice = 0m,
+                MonthlyPriceSyp = 0m,
+                MonthlyPriceUsd = 0m,
                 FeatureLimitsJson = "{}"
             }));
         });

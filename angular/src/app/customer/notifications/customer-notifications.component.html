@@ -1,4 +1,4 @@
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
   <div class="eks-chip-row">
     <button type="button" class="eks-chip" [class.active]="filter() === 'all'" (click)="selectFilter('all')">
       {{ '::Wallet:Notifications:All' | abpLocalization }}
@@ -15,28 +15,23 @@
 </div>
 
 @if (isLoading()) {
-  <app-loading-spinner [label]="'::Wallet:Notifications:Loading' | abpLocalization" />
+  <app-skeleton-list [count]="5" [label]="'::Wallet:Notifications:Loading' | abpLocalization" />
 } @else if (loadFailed()) {
   <app-error-state [message]="'::Wallet:Notifications:LoadError' | abpLocalization" (retry)="retry()" />
 } @else if (notifications().length === 0) {
   <app-empty-state icon="fa-bell" [title]="'::Wallet:Notifications:Empty' | abpLocalization" />
 } @else {
-  <div class="list-group mb-3">
+  <div class="eks-list mb-3">
     @for (item of notifications(); track item.id) {
-      <button
-        type="button"
-        class="list-group-item list-group-item-action d-flex align-items-start gap-3"
-        [class.eks-unread]="!item.isRead"
-        (click)="onItemClick(item)"
-      >
-        <i class="fas {{ iconFor(item.type) }} mt-1"></i>
-        <div class="flex-grow-1 text-start">
-          <div class="fw-semibold small">{{ item.title }}</div>
-          <div class="text-muted small">{{ item.message }}</div>
-          <div class="text-muted small">{{ item.creationTime | date: 'medium' }}</div>
-        </div>
+      <button type="button" class="eks-row eks-row--action" (click)="onItemClick(item)">
+        <span class="eks-icon-tile" aria-hidden="true"><i class="fas {{ iconFor(item.type) }}"></i></span>
+        <span class="eks-row__body">
+          <span class="eks-row__title" [class.fw-bold]="!item.isRead">{{ item.title }}</span>
+          <span class="eks-row__meta">{{ item.message }}</span>
+          <span class="eks-row__meta">{{ item.creationTime | date: 'medium' }}</span>
+        </span>
         @if (!item.isRead) {
-          <span class="eks-unread-dot"></span>
+          <span class="eks-unread-dot" aria-hidden="true"></span>
         }
       </button>
     }

@@ -1,37 +1,33 @@
 @if (isLoading()) {
-  <app-loading-spinner [label]="'::Wallet:BirthdayRewards:Loading' | abpLocalization" />
+  <app-skeleton-list variant="panel" [label]="'::Wallet:BirthdayRewards:Loading' | abpLocalization" />
 } @else if (loadFailed()) {
   <app-error-state [message]="'::Wallet:BirthdayRewards:LoadError' | abpLocalization" (retry)="retry()" />
 } @else {
   @if (dateOfBirth(); as dob) {
-    <div class="card eks-birthday-banner mb-4">
-      <div class="card-body text-center">
-        <div class="eks-birthday-banner__emoji">🎂</div>
-        <p class="fw-bold mb-1">
-          {{ '::Wallet:BirthdayRewards:YourBirthdayIs' | abpLocalization }} {{ dob | date: 'MMMM d' }}
-        </p>
-        <p class="small mb-0">{{ '::Wallet:BirthdayRewards:BannerHint' | abpLocalization }}</p>
-      </div>
-    </div>
+    <section class="eks-panel eks-rise text-center mb-4">
+      <span class="eks-icon-tile eks-icon-tile--emoji eks-icon-tile--xl mx-auto mb-3" aria-hidden="true">🎂</span>
+      <p class="fw-bold mb-1">
+        {{ '::Wallet:BirthdayRewards:YourBirthdayIs' | abpLocalization }} {{ dob | date: 'MMMM d' }}
+      </p>
+      <p class="small text-muted mb-0">{{ '::Wallet:BirthdayRewards:BannerHint' | abpLocalization }}</p>
+    </section>
   }
 
   @if (birthdayCampaigns().length === 0) {
     <app-empty-state icon="fa-gift" [title]="'::Wallet:BirthdayRewards:Empty' | abpLocalization" [description]="'::Wallet:BirthdayRewards:EmptyHint' | abpLocalization" />
   } @else {
-    <div class="eks-campaign-list">
+    <div class="eks-list">
       @for (campaign of birthdayCampaigns(); track campaign.id) {
-        <a [routerLink]="['/customer/store', campaign.tenantId]" class="card eks-campaign-card">
-          <div class="card-body d-flex align-items-center gap-3">
-            <div class="eks-campaign-emoji">🎂</div>
-            <div class="flex-grow-1">
-              <div class="text-muted small">{{ campaign.businessName }}</div>
-              <div class="fw-semibold">{{ campaign.nameEn }}</div>
-              <div class="text-muted small">
-                {{ '::Wallet:Campaigns:Until' | abpLocalization }} {{ campaign.endDate | date: 'mediumDate' }}
-              </div>
-            </div>
-            <span class="eks-campaign-gift">🎁</span>
-          </div>
+        <a [routerLink]="['/customer/store', campaign.tenantId]" class="eks-row eks-row--action eks-rise">
+          <span class="eks-icon-tile eks-icon-tile--emoji" aria-hidden="true">🎂</span>
+          <span class="eks-row__body">
+            <span class="eks-row__meta">{{ campaign.businessName }}</span>
+            <span class="eks-row__title">{{ campaign.nameEn }}</span>
+            <span class="eks-row__meta">
+              {{ '::Wallet:Campaigns:Until' | abpLocalization }} {{ campaign.endDate | date: 'mediumDate' }}
+            </span>
+          </span>
+          <span class="eks-row__end"><i class="fas fa-chevron-right"></i></span>
         </a>
       }
     </div>

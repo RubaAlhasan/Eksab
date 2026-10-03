@@ -1,0 +1,104 @@
+.eks-txn-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+// Summary block: type + date on the left, the signed amount as the hero figure on the right.
+.eks-txn-detail__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: var(--eks-radius-md);
+  background: var(--eks-surface-2);
+}
+
+.eks-txn-detail__summary-text {
+  min-width: 0;
+}
+
+.eks-txn-detail__type {
+  font-weight: 700;
+}
+
+.eks-txn-detail__date {
+  font-size: 0.8125rem;
+  color: var(--eks-text-muted);
+}
+
+.eks-txn-detail__amount {
+  flex-shrink: 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--eks-text);
+
+  &--credit {
+    color: var(--eks-success);
+  }
+}
+
+.eks-txn-detail__branch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--eks-text-muted);
+
+  i {
+    color: var(--eks-primary);
+  }
+}
+
+.eks-txn-detail__breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.eks-txn-detail__label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--eks-text-muted);
+}
+
+.eks-txn-detail__component {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-md);
+}
+
+.eks-txn-detail__component-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.eks-txn-detail__component-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.eks-txn-detail__component-meta {
+  font-size: 0.75rem;
+  color: var(--eks-text-muted);
+}
+
+.eks-txn-detail__component-points {
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--eks-text-muted);
+
+  &--credit {
+    color: var(--eks-success);
+  }
+}

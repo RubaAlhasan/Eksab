@@ -9,6 +9,7 @@ import { TiersService } from '../../proxy/controllers/tiers.service';
 import type { AwardPointsResultDto, CustomerLookupResultDto, PointsPreviewDto } from '../../proxy/pos/models';
 import type { PointRuleDto, TierDto } from '../../proxy/wallets/models';
 import { PointRuleType } from '../../proxy/wallets/point-rule-type.enum';
+import { Currency } from '../../proxy/shared/currency.enum';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
@@ -112,6 +113,7 @@ export class BusinessPointsComponent implements OnInit {
   private readonly confirmation = inject(ConfirmationService);
 
   protected readonly RuleType = PointRuleType;
+  protected readonly Currency = Currency;
   protected readonly activeTab = signal<PointsTab>('award');
 
   protected readonly canViewRules = computed(() => this.permissionService.getGrantedPolicy('Eksabli.PointRules'));
@@ -130,6 +132,9 @@ export class BusinessPointsComponent implements OnInit {
   // exact shape PosService.lookupCustomerByPhone/PhoneNumberNormalizer already expect, no DTO change.
   protected readonly phoneNumberValue = signal('');
   protected readonly saleAmount = new FormControl<number | null>(null, { validators: [Validators.min(0)] });
+  // A single business may take both SYP and USD cash at the counter — this is per-sale, not a
+  // tenant-wide preference. Defaults to Syp (the platform's implicit default elsewhere).
+  protected readonly saleCurrency = new FormControl<Currency>(Currency.Syp, { nonNullable: true });
 
   protected readonly isLookingUp = signal(false);
   protected readonly lookupFailed = signal(false);
@@ -156,13 +161,37 @@ export class BusinessPointsComponent implements OnInit {
   protected readonly ruleForm = new FormGroup({
     ruleType: new FormControl(PointRuleType.PerCurrencyUnit, { nonNullable: true, validators: [Validators.required] }),
     pointsPerUnit: new FormControl<number | null>(null, { validators: [Validators.required, Validators.min(0)] }),
+    // Required for PerCurrencyUnit, null/disabled for PerVisit — see onRuleTypeChange and the backend
+    // DTO's own comment.
+    currency: new FormControl<Currency | null>(Currency.Syp),
   });
 
-  // Create-mode options only — a rule of a type that already exists would be rejected server-side
-  // (PointRuleAppService.CreateAsync throws if one exists), so don't offer it in the first place.
+  // Currencies already claimed by an existing PerCurrencyUnit rule — a tenant can have at most one
+  // PerCurrencyUnit rule PER currency now (was "at most one, period"), so only a currency with no rule
+  // yet is offered on create.
+  protected readonly usedPerCurrencyUnitCurrencies = computed(() => {
+    return new Set(
+      this.rules()
+        .filter((r) => r.ruleType === PointRuleType.PerCurrencyUnit && r.currency != null)
+        .map((r) => r.currency),
+    );
+  });
+
+  protected readonly availableCurrenciesForCreate = computed(() => {
+    const used = this.usedPerCurrencyUnitCurrencies();
+    return [Currency.Syp, Currency.Usd].filter((c) => !used.has(c));
+  });
+
+  // Create-mode options only — a rule of a type/currency pair that already exists would be rejected
+  // server-side (PointRuleAppService.CreateAsync throws if one exists), so don't offer it in the first
+  // place. PerVisit stays a flat one-per-tenant type; PerCurrencyUnit is offered as long as at least
+  // one of the two currencies has no rule yet.
   protected readonly availableRuleTypesForCreate = computed(() => {
-    const usedTypes = new Set(this.rules().map((r) => r.ruleType));
-    return [PointRuleType.PerCurrencyUnit, PointRuleType.PerVisit].filter((type) => !usedTypes.has(type));
+    const hasPerVisit = this.rules().some((r) => r.ruleType === PointRuleType.PerVisit);
+    const types: PointRuleType[] = [];
+    if (this.availableCurrenciesForCreate().length > 0) types.push(PointRuleType.PerCurrencyUnit);
+    if (!hasPerVisit) types.push(PointRuleType.PerVisit);
+    return types;
   });
 
   // --- Tiers tab ---
@@ -185,11 +214,14 @@ export class BusinessPointsComponent implements OnInit {
   constructor() {
     // Debounced the same way app-search-input debounces free-text filtering elsewhere in this app
     // (a plain setTimeout, not an rxjs debounceTime operator) — re-preview 300ms after the cashier
-    // stops typing a sale amount, but only once a customer is actually identified (see updatePreview).
-    this.saleAmount.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+    // stops typing a sale amount or switches currency, but only once a customer is actually identified
+    // (see updatePreview).
+    const scheduleUpdatePreview = () => {
       clearTimeout(this.previewDebounceTimer);
       this.previewDebounceTimer = setTimeout(() => this.updatePreview(), 300);
-    });
+    };
+    this.saleAmount.valueChanges.pipe(takeUntilDestroyed()).subscribe(scheduleUpdatePreview);
+    this.saleCurrency.valueChanges.pipe(takeUntilDestroyed()).subscribe(scheduleUpdatePreview);
   }
 
   ngOnInit(): void {
@@ -224,6 +256,11 @@ export class BusinessPointsComponent implements OnInit {
     return type === PointRuleType.PerVisit ? '::BusinessPanel:Points:RuleTypePerVisit' : '::BusinessPanel:Points:RuleTypePerCurrencyUnit';
   }
 
+  protected currencyLabelKey(currency: Currency | null | undefined): string | null {
+    if (currency == null) return null;
+    return currency === Currency.Usd ? '::Currency:Usd' : '::Currency:Syp';
+  }
+
   protected setIdentifyMode(mode: IdentifyMode): void {
     if (this.identifyMode() === mode) return;
     this.identifyMode.set(mode);
@@ -250,7 +287,7 @@ export class BusinessPointsComponent implements OnInit {
       return;
     }
 
-    this.posService.previewPoints(customer.customerId, { purchaseAmount: this.saleAmount.value }).subscribe({
+    this.posService.previewPoints(customer.customerId, { purchaseAmount: this.saleAmount.value, currency: this.saleCurrency.value }).subscribe({
       next: (result) => this.pointsPreview.set(result),
       // A transient failure here just hides the breakdown — Award itself still works and surfaces its
       // own error if the same problem affects it.
@@ -268,7 +305,7 @@ export class BusinessPointsComponent implements OnInit {
 
     this.cameraErrorKey.set(null);
     this.isAwarding.set(true);
-    this.posService.awardPointsByQr({ qrToken, purchaseAmount: this.saleAmount.value }).subscribe({
+    this.posService.awardPointsByQr({ qrToken, purchaseAmount: this.saleAmount.value, currency: this.saleCurrency.value }).subscribe({
       next: (result) => {
         this.isAwarding.set(false);
         this.lastAward.set(result);
@@ -337,7 +374,7 @@ export class BusinessPointsComponent implements OnInit {
 
     this.isAwarding.set(true);
     this.posService
-      .awardPointsByCustomerId(customer.customerId, { purchaseAmount: this.saleAmount.value })
+      .awardPointsByCustomerId(customer.customerId, { purchaseAmount: this.saleAmount.value, currency: this.saleCurrency.value })
       .subscribe({
         next: (result) => {
           this.isAwarding.set(false);
@@ -366,24 +403,46 @@ export class BusinessPointsComponent implements OnInit {
   protected openCreateRuleModal(): void {
     this.editingRuleId = null;
     this.ruleModalTitle.set('::BusinessPanel:Points:NewRuleTitle');
-    this.ruleForm.reset({ ruleType: this.availableRuleTypesForCreate()[0] ?? PointRuleType.PerCurrencyUnit, pointsPerUnit: null });
+    const ruleType = this.availableRuleTypesForCreate()[0] ?? PointRuleType.PerCurrencyUnit;
+    const currency = ruleType === PointRuleType.PerCurrencyUnit ? (this.availableCurrenciesForCreate()[0] ?? Currency.Syp) : null;
+    this.ruleForm.reset({ ruleType, pointsPerUnit: null, currency });
     this.ruleForm.controls.ruleType.enable();
+    this.ruleForm.controls.currency.enable();
     this.ruleModalOpen.set(true);
   }
 
   protected openEditRuleModal(rule: PointRuleDto): void {
     this.editingRuleId = rule.id ?? null;
     this.ruleModalTitle.set('::BusinessPanel:Points:EditRuleTitle');
-    this.ruleForm.reset({ ruleType: rule.ruleType ?? PointRuleType.PerCurrencyUnit, pointsPerUnit: rule.pointsPerUnit ?? null });
-    // RuleType can't actually change on an existing rule — PointRuleAppService.UpdateAsync never reads
-    // it (see this file's own top comment). Disable it here rather than let someone pick a different
-    // type and have the save silently not apply it.
+    this.ruleForm.reset({
+      ruleType: rule.ruleType ?? PointRuleType.PerCurrencyUnit,
+      pointsPerUnit: rule.pointsPerUnit ?? null,
+      currency: rule.currency ?? null,
+    });
+    // Neither RuleType nor Currency can actually change on an existing rule —
+    // PointRuleAppService.UpdateAsync only ever calls SetPointsPerUnit (see this file's own top
+    // comment). Disable both rather than let someone pick a different value and have the save
+    // silently not apply it.
     this.ruleForm.controls.ruleType.disable();
+    this.ruleForm.controls.currency.disable();
     this.ruleModalOpen.set(true);
   }
 
   protected closeRuleModal(): void {
     this.ruleModalOpen.set(false);
+  }
+
+  // Only fires from the create-mode <select> (disabled entirely in edit mode) — re-defaults the
+  // Currency field to the first still-available currency when switching to PerCurrencyUnit, and clears
+  // it for PerVisit (which has none). Bound to (change), not a valueChanges subscription, so it never
+  // fires during the programmatic ruleForm.reset(...) calls above.
+  protected onRuleTypeChange(): void {
+    const ruleType = this.ruleForm.controls.ruleType.value;
+    if (ruleType === PointRuleType.PerCurrencyUnit) {
+      this.ruleForm.controls.currency.setValue(this.availableCurrenciesForCreate()[0] ?? Currency.Syp);
+    } else {
+      this.ruleForm.controls.currency.setValue(null);
+    }
   }
 
   protected submitRuleForm(): void {
@@ -393,7 +452,7 @@ export class BusinessPointsComponent implements OnInit {
     }
 
     const value = this.ruleForm.getRawValue();
-    const payload = { ruleType: value.ruleType, pointsPerUnit: value.pointsPerUnit! };
+    const payload = { ruleType: value.ruleType, pointsPerUnit: value.pointsPerUnit!, currency: value.currency };
 
     this.isSavingRule.set(true);
     const request = this.editingRuleId

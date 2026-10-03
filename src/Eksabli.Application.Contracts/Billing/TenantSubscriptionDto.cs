@@ -1,5 +1,6 @@
 using System;
 using Volo.Abp.Application.Dtos;
+using Eksabli.Shared;
 
 namespace Eksabli.Billing;
 
@@ -10,6 +11,8 @@ public class TenantSubscriptionDto : AuditedEntityDto<Guid>
     public Guid PlanId { get; set; }
 
     public string? PlanName { get; set; }
+
+    public Currency Currency { get; set; }
 
     public DateTime StartDate { get; set; }
 

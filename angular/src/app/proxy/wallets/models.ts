@@ -2,6 +2,7 @@ import type { PointRuleType } from './point-rule-type.enum';
 import type { AuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
 import type { PointsTransactionType } from './points-transaction-type.enum';
 import type { PointsTransactionSource } from './points-transaction-source.enum';
+import type { Currency } from '../shared/currency.enum';
 
 // Hand-added field — see the file comment on WalletService.getMyTransactionHistory in
 // ../controllers/wallet.service.ts for why (GetMyTransactionHistoryAsync grew an optional `type`
@@ -13,6 +14,8 @@ export interface GetMyTransactionHistoryInput extends PagedAndSortedResultReques
 export interface CreateUpdatePointRuleDto {
   ruleType: PointRuleType;
   pointsPerUnit: number;
+  // Required for PerCurrencyUnit, forbidden for PerVisit — see the backend DTO's own comment.
+  currency?: Currency | null;
 }
 
 export interface CreateUpdateTierDto {
@@ -25,6 +28,7 @@ export interface PointRuleDto extends AuditedEntityDto<string> {
   tenantId?: string | null;
   ruleType?: PointRuleType;
   pointsPerUnit?: number;
+  currency?: Currency | null;
 }
 
 export interface PointsWalletDto extends AuditedEntityDto<string> {

@@ -1,28 +1,28 @@
 @if (isLoading()) {
-  <app-loading-spinner [label]="'::Wallet:Profile:Loading' | abpLocalization" />
+  <app-skeleton-list variant="panel" [label]="'::Wallet:Profile:Loading' | abpLocalization" />
 } @else {
-  <form [formGroup]="form" (ngSubmit)="submit()" class="eks-edit-form">
+  <form [formGroup]="form" (ngSubmit)="submit()" class="eks-panel eks-rise eks-edit-form">
     <div class="mb-3">
-      <label class="form-label small text-muted">{{ '::Wallet:Profile:FirstNameLabel' | abpLocalization }}</label>
+      <label class="form-label fw-semibold">{{ '::Wallet:Profile:FirstNameLabel' | abpLocalization }}</label>
       <input type="text" class="form-control" formControlName="firstName" />
     </div>
     <div class="mb-3">
-      <label class="form-label small text-muted">{{ '::Wallet:Profile:LastNameLabel' | abpLocalization }}</label>
+      <label class="form-label fw-semibold">{{ '::Wallet:Profile:LastNameLabel' | abpLocalization }}</label>
       <input type="text" class="form-control" formControlName="lastName" />
     </div>
     <div class="mb-3">
-      <label class="form-label small text-muted">{{ '::Wallet:Profile:DateOfBirthLabel' | abpLocalization }}</label>
+      <label class="form-label fw-semibold">{{ '::Wallet:Profile:DateOfBirthLabel' | abpLocalization }}</label>
       <input type="date" class="form-control" formControlName="dateOfBirth" />
     </div>
     <div class="mb-4">
-      <label class="form-label small text-muted">{{ '::Wallet:Profile:GenderLabel' | abpLocalization }}</label>
+      <label class="form-label fw-semibold">{{ '::Wallet:Profile:GenderLabel' | abpLocalization }}</label>
       <select class="form-select" formControlName="gender">
         <option [ngValue]="Gender.Unspecified">{{ '::Wallet:Profile:GenderUnspecified' | abpLocalization }}</option>
         <option [ngValue]="Gender.Male">{{ '::Wallet:Profile:GenderMale' | abpLocalization }}</option>
         <option [ngValue]="Gender.Female">{{ '::Wallet:Profile:GenderFemale' | abpLocalization }}</option>
       </select>
     </div>
-    <button type="submit" class="btn btn-primary w-100" [disabled]="isSaving()">
+    <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="isSaving()">
       {{ '::Wallet:Profile:SaveButton' | abpLocalization }}
     </button>
   </form>

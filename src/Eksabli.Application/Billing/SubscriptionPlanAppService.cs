@@ -35,7 +35,7 @@ public class SubscriptionPlanAppService : ApplicationService, ISubscriptionPlanA
 
     public async Task<SubscriptionPlanDto> CreateAsync(CreateUpdateSubscriptionPlanDto input)
     {
-        var plan = SubscriptionPlan.Create(GuidGenerator.Create(), input.Name, input.MonthlyPrice, input.FeatureLimitsJson, input.IsTrialDefault);
+        var plan = SubscriptionPlan.Create(GuidGenerator.Create(), input.Name, input.MonthlyPriceSyp, input.MonthlyPriceUsd, input.FeatureLimitsJson, input.IsTrialDefault);
         await _repository.InsertAsync(plan);
         return ObjectMapper.Map<SubscriptionPlan, SubscriptionPlanDto>(plan);
     }
@@ -44,7 +44,8 @@ public class SubscriptionPlanAppService : ApplicationService, ISubscriptionPlanA
     {
         var plan = await _repository.GetAsync(id);
         plan.SetName(input.Name);
-        plan.SetMonthlyPrice(input.MonthlyPrice);
+        plan.SetMonthlyPriceSyp(input.MonthlyPriceSyp);
+        plan.SetMonthlyPriceUsd(input.MonthlyPriceUsd);
         plan.SetFeatureLimitsJson(input.FeatureLimitsJson);
         plan.SetIsTrialDefault(input.IsTrialDefault);
         await _repository.UpdateAsync(plan);

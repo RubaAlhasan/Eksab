@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { RouterLink } from '@angular/router';
 import { AuthService, ConfigStateService, LocalizationPipe } from '@abp/ng.core';
 import { CustomerProfileService } from '../../proxy/controllers/customer-profile.service';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 
 @Component({
@@ -10,7 +10,7 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
   templateUrl: './customer-profile.component.html',
   styleUrls: ['./customer-profile.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LocalizationPipe, LoadingSpinnerComponent, ErrorStateComponent],
+  imports: [RouterLink, LocalizationPipe, SkeletonListComponent, ErrorStateComponent],
 })
 export class CustomerProfileComponent implements OnInit {
   private readonly customerProfileService = inject(CustomerProfileService);

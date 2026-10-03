@@ -9,7 +9,10 @@ public class CreateUpdateSubscriptionPlanDto
     public string Name { get; set; } = string.Empty;
 
     [Range(typeof(decimal), "0", "79228162514264337593543950335")]
-    public decimal MonthlyPrice { get; set; }
+    public decimal MonthlyPriceSyp { get; set; }
+
+    [Range(typeof(decimal), "0", "79228162514264337593543950335")]
+    public decimal MonthlyPriceUsd { get; set; }
 
     [StringLength(SubscriptionPlanConsts.MaxFeatureLimitsJsonLength)]
     public string FeatureLimitsJson { get; set; } = "{}";

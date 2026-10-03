@@ -1,12 +1,16 @@
 import type { PointRuleType } from '../wallets/point-rule-type.enum';
+import type { Currency } from '../shared/currency.enum';
 
 export interface AwardPointsByCustomerIdDto {
   purchaseAmount?: number | null;
+  // Required when purchaseAmount is given — see the backend DTO's own comment.
+  currency?: Currency | null;
 }
 
 export interface AwardPointsByQrDto {
   qrToken: string;
   purchaseAmount?: number | null;
+  currency?: Currency | null;
 }
 
 export interface AwardPointsResultDto {
@@ -49,6 +53,8 @@ export interface PointsPreviewDto {
   basePoints?: number;
   ruleType?: PointRuleType;
   pointsPerUnit?: number;
+  // Echoes back which currency's PerCurrencyUnit rate was used — null for a PerVisit-only award.
+  currency?: Currency | null;
   tierMultiplier?: number;
   tierName?: string | null;
   campaignMultiplier?: number;
@@ -60,6 +66,7 @@ export interface PointsPreviewDto {
 
 export interface PreviewPointsDto {
   purchaseAmount?: number | null;
+  currency?: Currency | null;
 }
 
 export interface RedemptionConfirmationDto {

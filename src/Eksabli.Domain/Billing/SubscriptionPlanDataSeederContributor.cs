@@ -30,7 +30,7 @@ public class SubscriptionPlanDataSeederContributor : IDataSeedContributor, ITran
             return;
         }
 
-        await CreatePlanAsync("Starter", 0m, isTrialDefault: false, new Dictionary<string, string>
+        await CreatePlanAsync("Starter", 0m, 0m, isTrialDefault: false, new Dictionary<string, string>
         {
             [EksabliFeatures.MaxBranches] = "1",
             [EksabliFeatures.MaxActiveMembers] = "500",
@@ -40,7 +40,10 @@ public class SubscriptionPlanDataSeederContributor : IDataSeedContributor, ITran
             [EksabliFeatures.Gamification] = "false"
         });
 
-        await CreatePlanAsync("Growth", 49m, isTrialDefault: true, new Dictionary<string, string>
+        // USD figures are the same kind of illustrative placeholder as the SYP ones above — not a real
+        // conversion (the platform applies none anywhere), just a plausible independent USD price point
+        // for a tenant who opts to bill in USD, pending real target-market validation.
+        await CreatePlanAsync("Growth", 49m, 5m, isTrialDefault: true, new Dictionary<string, string>
         {
             [EksabliFeatures.MaxBranches] = "5",
             [EksabliFeatures.MaxActiveMembers] = "5000",
@@ -50,7 +53,7 @@ public class SubscriptionPlanDataSeederContributor : IDataSeedContributor, ITran
             [EksabliFeatures.Gamification] = "true"
         });
 
-        await CreatePlanAsync("Scale", 199m, isTrialDefault: false, new Dictionary<string, string>
+        await CreatePlanAsync("Scale", 199m, 20m, isTrialDefault: false, new Dictionary<string, string>
         {
             [EksabliFeatures.MaxBranches] = "25",
             [EksabliFeatures.MaxActiveMembers] = "50000",
@@ -60,7 +63,7 @@ public class SubscriptionPlanDataSeederContributor : IDataSeedContributor, ITran
             [EksabliFeatures.Gamification] = "true"
         });
 
-        await CreatePlanAsync("Enterprise", 499m, isTrialDefault: false, new Dictionary<string, string>
+        await CreatePlanAsync("Enterprise", 499m, 50m, isTrialDefault: false, new Dictionary<string, string>
         {
             [EksabliFeatures.MaxBranches] = Unlimited,
             [EksabliFeatures.MaxActiveMembers] = Unlimited,
@@ -71,12 +74,13 @@ public class SubscriptionPlanDataSeederContributor : IDataSeedContributor, ITran
         });
     }
 
-    private async Task CreatePlanAsync(string name, decimal monthlyPrice, bool isTrialDefault, Dictionary<string, string> featureLimits)
+    private async Task CreatePlanAsync(string name, decimal monthlyPriceSyp, decimal monthlyPriceUsd, bool isTrialDefault, Dictionary<string, string> featureLimits)
     {
         var plan = SubscriptionPlan.Create(
             Guid.NewGuid(),
             name,
-            monthlyPrice,
+            monthlyPriceSyp,
+            monthlyPriceUsd,
             JsonSerializer.Serialize(featureLimits),
             isTrialDefault);
 

@@ -19,12 +19,18 @@
         <div class="eks-stat-card__label">{{ '::AdminPanel:Subscriptions:StatTrialingLabel' | abpLocalization }}</div>
       </div>
     </div>
-    <div class="card eks-stat-card" [title]="'::AdminPanel:Subscriptions:StatMrrHint' | abpLocalization">
-      <div class="card-body">
-        <div class="eks-stat-card__value">${{ approxMrr() | number: '1.0-0' }}</div>
-        <div class="eks-stat-card__label">{{ '::AdminPanel:Subscriptions:StatMrrLabel' | abpLocalization }}</div>
+    <!-- One card per currency, never summed together — the platform applies no SYP<->USD conversion
+         anywhere, so a tenant billed in each currency contributes to a separate MRR figure. -->
+    @for (mrr of approxMrrByCurrency(); track mrr.currency) {
+      <div class="card eks-stat-card" [title]="'::AdminPanel:Subscriptions:StatMrrHint' | abpLocalization">
+        <div class="card-body">
+          <div class="eks-stat-card__value">{{ mrr.amount | number: '1.0-0' }} {{ currencyCode(mrr.currency) }}</div>
+          <div class="eks-stat-card__label">
+            {{ '::AdminPanel:Subscriptions:StatMrrLabel' | abpLocalization }}
+          </div>
+        </div>
       </div>
-    </div>
+    }
   </div>
 }
 
@@ -153,7 +159,7 @@
                               [class.eks-clickable-row]="invoice.status === InvStatus.Paid"
                               (click)="invoice.status === InvStatus.Paid ? toggleInvoiceExpand(invoice) : null"
                             >
-                              <td>${{ invoice.amount }}</td>
+                              <td>{{ invoice.amount | number: '1.0-2' }} {{ currencyCode(invoice.currency) }}</td>
                               <td>
                                 <app-status-badge
                                   [label]="invStatusLabelKey(invoice.status) | abpLocalization"

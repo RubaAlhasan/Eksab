@@ -5,7 +5,7 @@ import { LocalizationPipe } from '@abp/ng.core';
 import { CouponsService } from '../../proxy/controllers/coupons.service';
 import type { CouponDto } from '../../proxy/rewards/models';
 import { CouponStatus } from '../../proxy/rewards/coupon-status.enum';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { StatusBadgeComponent, StatusBadgeVariant } from '../../shared/components/status-badge/status-badge.component';
@@ -27,9 +27,8 @@ type CouponFilter = 'all' | 'active' | 'used' | 'expired';
 @Component({
   selector: 'app-customer-my-coupons',
   templateUrl: './customer-my-coupons.component.html',
-  styleUrls: ['./customer-my-coupons.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, LocalizationPipe, LoadingSpinnerComponent, EmptyStateComponent, ErrorStateComponent, StatusBadgeComponent],
+  imports: [DatePipe, LocalizationPipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent, StatusBadgeComponent],
 })
 export class CustomerMyCouponsComponent implements OnInit {
   private readonly router = inject(Router);

@@ -158,7 +158,8 @@ export class AdminPlansComponent implements OnInit {
 
   protected readonly form = new FormGroup({
     name: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(64)] }),
-    monthlyPrice: new FormControl<number | null>(0, { validators: [Validators.required, Validators.min(0)] }),
+    monthlyPriceSyp: new FormControl<number | null>(0, { validators: [Validators.required, Validators.min(0)] }),
+    monthlyPriceUsd: new FormControl<number | null>(0, { validators: [Validators.required, Validators.min(0)] }),
     isTrialDefault: new FormControl(false, { nonNullable: true }),
     maxBranches: new FormControl<number | null>(null, { validators: [Validators.min(0)] }),
     maxActiveMembers: new FormControl<number | null>(null, { validators: [Validators.min(0)] }),
@@ -189,7 +190,8 @@ export class AdminPlansComponent implements OnInit {
     this.modalTitleKey.set('::AdminPanel:Plans:NewTitle');
     this.form.reset({
       name: '',
-      monthlyPrice: 0,
+      monthlyPriceSyp: 0,
+      monthlyPriceUsd: 0,
       isTrialDefault: false,
       maxBranches: null,
       maxActiveMembers: null,
@@ -207,7 +209,8 @@ export class AdminPlansComponent implements OnInit {
     this.modalTitleKey.set('::AdminPanel:Plans:EditTitle');
     this.form.reset({
       name: plan.name ?? '',
-      monthlyPrice: plan.monthlyPrice ?? 0,
+      monthlyPriceSyp: plan.monthlyPriceSyp ?? 0,
+      monthlyPriceUsd: plan.monthlyPriceUsd ?? 0,
       isTrialDefault: plan.isTrialDefault ?? false,
       maxBranches: known.maxBranches,
       maxActiveMembers: known.maxActiveMembers,
@@ -242,7 +245,8 @@ export class AdminPlansComponent implements OnInit {
 
     const payload: CreateUpdateSubscriptionPlanDto = {
       name: value.name,
-      monthlyPrice: value.monthlyPrice ?? 0,
+      monthlyPriceSyp: value.monthlyPriceSyp ?? 0,
+      monthlyPriceUsd: value.monthlyPriceUsd ?? 0,
       featureLimitsJson,
       isTrialDefault: value.isTrialDefault,
     };

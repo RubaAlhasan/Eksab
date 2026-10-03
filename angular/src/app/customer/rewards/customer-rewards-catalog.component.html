@@ -1,46 +1,43 @@
 @if (balance() !== null) {
-  <div class="card eks-balance-banner mb-3">
-    <div class="card-body">
-      <div class="d-flex justify-content-between align-items-center">
-        <span class="text-muted small">{{ '::Wallet:Rewards:YourBalance' | abpLocalization }}</span>
-        <span class="fw-bold">{{ balance() }} {{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
-      </div>
-      @if (reserved() > 0) {
-        <div class="text-muted small mt-1">
-          {{ '::Wallet:Rewards:PointsOnHold' | abpLocalization: reserved().toString() }}
-        </div>
-      }
+  <section class="eks-panel eks-rise mb-3">
+    <div class="eks-balance">
+      <span class="text-muted small">{{ '::Wallet:Rewards:YourBalance' | abpLocalization }}</span>
+      <span>
+        <span class="eks-balance__value">{{ balance() }}</span>
+        <span class="eks-balance__unit">{{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
+      </span>
     </div>
-  </div>
+    @if (reserved() > 0) {
+      <p class="text-muted small mt-2 mb-0">{{ '::Wallet:Rewards:PointsOnHold' | abpLocalization: reserved().toString() }}</p>
+    }
+  </section>
 }
 
 @if (isLoading()) {
-  <app-loading-spinner [label]="'::Wallet:Rewards:Loading' | abpLocalization" />
+  <app-skeleton-list variant="grid" [count]="6" [label]="'::Wallet:Rewards:Loading' | abpLocalization" />
 } @else if (loadFailed()) {
   <app-error-state [message]="'::Wallet:Rewards:LoadError' | abpLocalization" (retry)="retry()" />
 } @else if (rewards().length === 0) {
   <app-empty-state icon="fa-gift" [title]="'::Wallet:Rewards:Empty' | abpLocalization" />
 } @else {
-  <div class="rewards-grid mb-3">
+  <div class="eks-tile-grid mb-3">
     @for (reward of rewards(); track reward.id) {
       <a
         [routerLink]="['/customer/wallet', tenantId, 'rewards', reward.id]"
-        class="card reward-card"
-        [class.reward-card--disabled]="!canAfford(reward) || isOutOfStock(reward)"
+        class="eks-tile eks-rise"
+        [class.eks-tile--disabled]="!canAfford(reward) || isOutOfStock(reward)"
       >
-        <div class="card-body">
-          <div class="reward-card__emoji">{{ rewardTypeEmoji(reward.type) }}</div>
-          <div class="fw-semibold mb-1">{{ reward.nameEn }}</div>
-          <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
-            <app-status-badge [label]="statusLabelKey(status(reward)) | abpLocalization" [variant]="statusVariant(status(reward))" />
-            @if (isOutOfStock(reward)) {
-              <app-status-badge [label]="'::Wallet:Rewards:OutOfStock' | abpLocalization" variant="danger" />
-            } @else if (isLowStock(reward)) {
-              <app-status-badge [label]="'::Wallet:Rewards:LowStock' | abpLocalization" variant="warning" />
-            }
-          </div>
-          <div class="fw-bold">{{ reward.pointsCost }} {{ '::Wallet:PointsSuffix' | abpLocalization }}</div>
-        </div>
+        <span class="eks-icon-tile eks-icon-tile--emoji" aria-hidden="true">{{ rewardTypeEmoji(reward.type) }}</span>
+        <span class="fw-semibold">{{ reward.nameEn }}</span>
+        <span class="d-flex align-items-center gap-2 flex-wrap">
+          <app-status-badge [label]="statusLabelKey(status(reward)) | abpLocalization" [variant]="statusVariant(status(reward))" />
+          @if (isOutOfStock(reward)) {
+            <app-status-badge [label]="'::Wallet:Rewards:OutOfStock' | abpLocalization" variant="danger" />
+          } @else if (isLowStock(reward)) {
+            <app-status-badge [label]="'::Wallet:Rewards:LowStock' | abpLocalization" variant="warning" />
+          }
+        </span>
+        <span class="eks-points-figure">{{ reward.pointsCost }} {{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
       </a>
     }
   </div>

@@ -1,5 +1,6 @@
 using System;
 using Eksabli.Billing;
+using Eksabli.Shared;
 using Shouldly;
 using Xunit;
 
@@ -12,7 +13,7 @@ public class TenantSubscriptionTests
     [Fact]
     public void MarkPastDue_Should_Transition_Status()
     {
-        var subscription = TenantSubscription.Create(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow, DateTime.UtcNow.AddDays(14), TenantSubscriptionStatus.Trialing);
+        var subscription = TenantSubscription.Create(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow, DateTime.UtcNow.AddDays(14), TenantSubscriptionStatus.Trialing, Currency.Syp);
 
         subscription.MarkPastDue();
 
@@ -22,7 +23,7 @@ public class TenantSubscriptionTests
     [Fact]
     public void MarkActive_Should_Transition_Status()
     {
-        var subscription = TenantSubscription.Create(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow, DateTime.UtcNow.AddDays(14), TenantSubscriptionStatus.Trialing);
+        var subscription = TenantSubscription.Create(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow, DateTime.UtcNow.AddDays(14), TenantSubscriptionStatus.Trialing, Currency.Syp);
 
         subscription.MarkActive();
 
@@ -32,7 +33,7 @@ public class TenantSubscriptionTests
     [Fact]
     public void Renew_Should_Update_RenewalDate()
     {
-        var subscription = TenantSubscription.Create(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow, DateTime.UtcNow, TenantSubscriptionStatus.Active);
+        var subscription = TenantSubscription.Create(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow, DateTime.UtcNow, TenantSubscriptionStatus.Active, Currency.Syp);
         var newDate = DateTime.UtcNow.AddMonths(1);
 
         subscription.Renew(newDate);
@@ -43,7 +44,7 @@ public class TenantSubscriptionTests
     [Fact]
     public void Cancel_Should_Transition_Status()
     {
-        var subscription = TenantSubscription.Create(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow, DateTime.UtcNow, TenantSubscriptionStatus.Active);
+        var subscription = TenantSubscription.Create(Guid.NewGuid(), Guid.NewGuid(), DateTime.UtcNow, DateTime.UtcNow, TenantSubscriptionStatus.Active, Currency.Syp);
 
         subscription.Cancel();
 
@@ -56,7 +57,7 @@ public class InvoiceTests
     [Fact]
     public void MarkPaid_Should_Set_Status_And_PaidAt()
     {
-        var invoice = Invoice.Create(Guid.NewGuid(), Guid.NewGuid(), 49m, DateTime.UtcNow);
+        var invoice = Invoice.Create(Guid.NewGuid(), Guid.NewGuid(), 49m, Currency.Syp, DateTime.UtcNow);
         var paidAt = DateTime.UtcNow;
 
         invoice.MarkPaid(paidAt);
@@ -68,7 +69,7 @@ public class InvoiceTests
     [Fact]
     public void MarkOverdue_Should_Transition_Status()
     {
-        var invoice = Invoice.Create(Guid.NewGuid(), Guid.NewGuid(), 49m, DateTime.UtcNow);
+        var invoice = Invoice.Create(Guid.NewGuid(), Guid.NewGuid(), 49m, Currency.Syp, DateTime.UtcNow);
 
         invoice.MarkOverdue();
 
@@ -97,5 +98,29 @@ public class PaymentTests
         payment.MarkFailed();
 
         payment.Status.ShouldBe(PaymentStatus.Failed);
+    }
+}
+
+public class SubscriptionPlanTests
+{
+    [Fact]
+    public void GetMonthlyPrice_Should_Return_The_Price_Matching_The_Given_Currency()
+    {
+        var plan = SubscriptionPlan.Create(Guid.NewGuid(), "Growth", 49m, 5m, "{}", isTrialDefault: true);
+
+        plan.GetMonthlyPrice(Currency.Syp).ShouldBe(49m);
+        plan.GetMonthlyPrice(Currency.Usd).ShouldBe(5m);
+    }
+
+    [Fact]
+    public void SetMonthlyPriceSyp_And_SetMonthlyPriceUsd_Should_Update_Independently()
+    {
+        var plan = SubscriptionPlan.Create(Guid.NewGuid(), "Growth", 49m, 5m, "{}");
+
+        plan.SetMonthlyPriceSyp(59m);
+        plan.SetMonthlyPriceUsd(6m);
+
+        plan.MonthlyPriceSyp.ShouldBe(59m);
+        plan.MonthlyPriceUsd.ShouldBe(6m);
     }
 }

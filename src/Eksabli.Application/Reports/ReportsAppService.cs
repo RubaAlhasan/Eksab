@@ -369,7 +369,9 @@ public class ReportsAppService : ApplicationService, IReportsAppService
                 Type = t.Type,
                 Points = t.Points,
                 Source = t.Source,
-                Reason = t.Reason
+                Reason = t.Reason,
+                Amount = t.Amount,
+                Currency = t.Currency
             };
         });
 

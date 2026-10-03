@@ -108,7 +108,18 @@
       <div class="card p-4 h-100 d-flex flex-column">
         <h2 class="fw-bold small mb-3">{{ '::BusinessPanel:Points:AwardTitle' | abpLocalization }}</h2>
         <label class="form-label" for="saleAmount">{{ '::BusinessPanel:Points:SaleAmount' | abpLocalization }}</label>
-        <input id="saleAmount" type="number" step="0.01" min="0" class="form-control mb-3" [formControl]="saleAmount" placeholder="e.g. 24.50" />
+        <div class="d-flex gap-2 mb-3">
+          <input id="saleAmount" type="number" step="0.01" min="0" class="form-control" [formControl]="saleAmount" placeholder="e.g. 24.50" />
+          <select
+            class="form-select flex-shrink-0"
+            style="width: auto"
+            [formControl]="saleCurrency"
+            [attr.aria-label]="'::Currency' | abpLocalization"
+          >
+            <option [ngValue]="Currency.Syp">{{ '::Currency:Syp' | abpLocalization }}</option>
+            <option [ngValue]="Currency.Usd">{{ '::Currency:Usd' | abpLocalization }}</option>
+          </select>
+        </div>
 
         @if (identifyMode() === 'phone' && pointsPreview(); as preview) {
           <div class="bg-body-tertiary rounded p-3 mb-3 small d-flex flex-column gap-2">
@@ -118,6 +129,9 @@
                   (preview.ruleType === RuleType.PerVisit ? '::BusinessPanel:Points:PreviewBasePerVisit' : '::BusinessPanel:Points:PreviewBasePerCurrencyUnit')
                     | abpLocalization: ('' + preview.pointsPerUnit)
                 }}
+                @if (currencyLabelKey(preview.currency); as currencyKey) {
+                  ({{ currencyKey | abpLocalization }})
+                }
               </span>
               <span>{{ preview.basePoints }}</span>
             </div>
@@ -218,6 +232,7 @@
           <thead>
             <tr>
               <th>{{ '::BusinessPanel:Points:ColumnRuleType' | abpLocalization }}</th>
+              <th>{{ '::Currency' | abpLocalization }}</th>
               <th>{{ '::BusinessPanel:Points:ColumnPointsPerUnit' | abpLocalization }}</th>
               <th class="text-end"><span class="visually-hidden">Actions</span></th>
             </tr>
@@ -226,6 +241,13 @@
             @for (rule of rules(); track rule.id) {
               <tr>
                 <td class="fw-semibold">{{ ruleTypeLabelKey(rule.ruleType) | abpLocalization }}</td>
+                <td class="text-muted">
+                  @if (currencyLabelKey(rule.currency); as currencyKey) {
+                    {{ currencyKey | abpLocalization }}
+                  } @else {
+                    —
+                  }
+                </td>
                 <td class="text-muted">{{ rule.pointsPerUnit }}</td>
                 <td class="text-end">
                   @if (canEditRules()) {
@@ -335,7 +357,7 @@
   <form [formGroup]="ruleForm" (ngSubmit)="submitRuleForm()" class="d-flex flex-column gap-3">
     <div>
       <label class="form-label" for="ruleType">{{ '::BusinessPanel:Points:FieldRuleType' | abpLocalization }}</label>
-      <select id="ruleType" class="form-select" formControlName="ruleType">
+      <select id="ruleType" class="form-select" formControlName="ruleType" (change)="onRuleTypeChange()">
         @for (type of availableRuleTypesForCreate(); track type) {
           <option [ngValue]="type">{{ ruleTypeLabelKey(type) | abpLocalization }}</option>
         }
@@ -347,6 +369,22 @@
         <p class="text-muted small mt-1 mb-0">{{ '::BusinessPanel:Points:RuleTypeLockedHint' | abpLocalization }}</p>
       }
     </div>
+    @if (ruleForm.controls.ruleType.value === RuleType.PerCurrencyUnit) {
+      <div>
+        <label class="form-label" for="ruleCurrency">{{ '::Currency' | abpLocalization }}</label>
+        <select id="ruleCurrency" class="form-select" formControlName="currency">
+          @for (currency of availableCurrenciesForCreate(); track currency) {
+            <option [ngValue]="currency">{{ currencyLabelKey(currency) | abpLocalization }}</option>
+          }
+          @if (ruleForm.controls.currency.disabled) {
+            <option [ngValue]="ruleForm.controls.currency.value">{{ currencyLabelKey(ruleForm.controls.currency.value) | abpLocalization }}</option>
+          }
+        </select>
+        @if (ruleForm.controls.currency.disabled) {
+          <p class="text-muted small mt-1 mb-0">{{ '::BusinessPanel:Points:CurrencyLockedHint' | abpLocalization }}</p>
+        }
+      </div>
+    }
     <div>
       <label class="form-label" for="pointsPerUnit">{{ '::BusinessPanel:Points:FieldPointsPerUnit' | abpLocalization }}</label>
       <input id="pointsPerUnit" type="number" step="0.01" min="0" class="form-control" formControlName="pointsPerUnit" />

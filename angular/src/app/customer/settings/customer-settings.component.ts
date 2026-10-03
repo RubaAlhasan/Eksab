@@ -5,7 +5,7 @@ import { ConfigStateService, LocalizationPipe, RouteBasedCultureUrlService, Sess
 import { DevicesService } from '../../proxy/controllers/devices.service';
 import type { DeviceDto } from '../../proxy/devices/models';
 import { DevicePlatform } from '../../proxy/devices/device-platform.enum';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 
 /**
@@ -22,7 +22,7 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
   templateUrl: './customer-settings.component.html',
   styleUrls: ['./customer-settings.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, LocalizationPipe, LoadingSpinnerComponent, EmptyStateComponent],
+  imports: [DatePipe, LocalizationPipe, SkeletonListComponent, EmptyStateComponent],
 })
 export class CustomerSettingsComponent implements OnInit {
   private readonly configState = inject(ConfigStateService);

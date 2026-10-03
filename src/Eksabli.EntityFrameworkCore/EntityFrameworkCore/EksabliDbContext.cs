@@ -248,6 +248,7 @@ public class EksabliDbContext :
             b.Property(x => x.WalletId).IsRequired();
             b.Property(x => x.Reason).HasMaxLength(PointsTransactionConsts.MaxReasonLength);
             b.Property(x => x.TierMultiplierSnapshot).HasColumnType("numeric(9,4)");
+            b.Property(x => x.Amount).HasColumnType("numeric(10,2)");
             b.HasIndex(x => new { x.WalletId, x.CreationTime });
             b.HasIndex(x => new { x.TenantId, x.ExpiresAt });
             b.HasIndex(x => new { x.TenantId, x.CreationTime });
@@ -268,7 +269,7 @@ public class EksabliDbContext :
             b.ToTable(EksabliConsts.DbTablePrefix + "PointRules", EksabliConsts.DbSchema);
             b.ConfigureByConvention(); //auto configure for the base class props
             b.Property(x => x.PointsPerUnit).HasColumnType("numeric(9,4)");
-            b.HasIndex(x => new { x.TenantId, x.RuleType }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.RuleType, x.Currency }).IsUnique();
         });
 
         builder.Entity<Reward>(b =>
@@ -300,7 +301,8 @@ public class EksabliDbContext :
             b.ToTable(EksabliConsts.DbTablePrefix + "SubscriptionPlans", EksabliConsts.DbSchema);
             b.ConfigureByConvention(); //auto configure for the base class props
             b.Property(x => x.Name).IsRequired().HasMaxLength(SubscriptionPlanConsts.MaxNameLength);
-            b.Property(x => x.MonthlyPrice).HasColumnType("numeric(10,2)");
+            b.Property(x => x.MonthlyPriceSyp).HasColumnType("numeric(10,2)");
+            b.Property(x => x.MonthlyPriceUsd).HasColumnType("numeric(10,2)");
             b.Property(x => x.FeatureLimitsJson).HasMaxLength(SubscriptionPlanConsts.MaxFeatureLimitsJsonLength);
         });
 

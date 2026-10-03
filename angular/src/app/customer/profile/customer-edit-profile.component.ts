@@ -5,7 +5,7 @@ import { LocalizationPipe } from '@abp/ng.core';
 import { ToasterService } from '@abp/ng.theme.shared';
 import { CustomerProfileService } from '../../proxy/controllers/customer-profile.service';
 import { CustomerGender } from '../../proxy/customer-profiles/customer-gender.enum';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
 
 /** No avatar/photo upload — no blob-upload UI pattern exists anywhere in this app yet outside the
  *  Business Portal's logo uploader (a different, staff-only flow), and `UpdateCustomerProfileDto` has no
@@ -15,7 +15,7 @@ import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner
   templateUrl: './customer-edit-profile.component.html',
   styleUrls: ['./customer-edit-profile.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, LocalizationPipe, LoadingSpinnerComponent],
+  imports: [ReactiveFormsModule, LocalizationPipe, SkeletonListComponent],
 })
 export class CustomerEditProfileComponent implements OnInit {
   private readonly customerProfileService = inject(CustomerProfileService);

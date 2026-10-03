@@ -4,7 +4,7 @@ import { LocalizationPipe } from '@abp/ng.core';
 import { CouponsService } from '../../proxy/controllers/coupons.service';
 import { MembershipsService } from '../../proxy/controllers/memberships.service';
 import type { RewardDto } from '../../proxy/rewards/models';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
+import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
@@ -15,12 +15,11 @@ import { CustomerRewardCacheService } from './customer-reward-cache.service';
 @Component({
   selector: 'app-customer-rewards-catalog',
   templateUrl: './customer-rewards-catalog.component.html',
-  styleUrls: ['./customer-rewards-catalog.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterLink,
     LocalizationPipe,
-    LoadingSpinnerComponent,
+    SkeletonListComponent,
     EmptyStateComponent,
     ErrorStateComponent,
     PaginationComponent,

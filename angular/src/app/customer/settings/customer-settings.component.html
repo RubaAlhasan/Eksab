@@ -1,34 +1,36 @@
-<h6 class="mb-2">{{ '::Wallet:Settings:LanguageTitle' | abpLocalization }}</h6>
-<div class="list-group mb-4">
+<h2 class="eks-section-title">{{ '::Wallet:Settings:LanguageTitle' | abpLocalization }}</h2>
+<div class="eks-list mb-4">
   @for (lang of languages(); track lang.cultureName) {
     <button
       type="button"
-      class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+      class="eks-row eks-row--action"
+      [attr.aria-pressed]="lang.cultureName === currentLanguage()"
       (click)="selectLanguage(lang.cultureName)"
     >
-      {{ lang.displayName }}
+      <span class="eks-row__body"><span class="eks-row__title">{{ lang.displayName }}</span></span>
       @if (lang.cultureName === currentLanguage()) {
-        <i class="fas fa-check text-primary"></i>
+        <span class="eks-row__end text-primary"><i class="fas fa-check"></i></span>
       }
     </button>
   }
 </div>
 
-<h6 class="mb-2">{{ '::Wallet:Settings:DevicesTitle' | abpLocalization }}</h6>
+<h2 class="eks-section-title">{{ '::Wallet:Settings:DevicesTitle' | abpLocalization }}</h2>
 @if (isLoading()) {
-  <app-loading-spinner [label]="'::Wallet:Settings:Loading' | abpLocalization" />
+  <app-skeleton-list [count]="2" [label]="'::Wallet:Settings:Loading' | abpLocalization" />
 } @else if (devices().length === 0) {
   <app-empty-state icon="fa-mobile-screen" [title]="'::Wallet:Settings:DevicesEmpty' | abpLocalization" />
 } @else {
-  <div class="list-group">
+  <div class="eks-list">
     @for (device of devices(); track device.id) {
-      <div class="list-group-item d-flex justify-content-between align-items-center">
-        <div>
-          <div class="fw-semibold small">{{ platformLabelKey(device.platform) | abpLocalization }}</div>
+      <div class="eks-row">
+        <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-mobile-screen"></i></span>
+        <span class="eks-row__body">
+          <span class="eks-row__title">{{ platformLabelKey(device.platform) | abpLocalization }}</span>
           @if (device.lastActiveAt) {
-            <div class="text-muted small">{{ '::Wallet:Settings:LastActive' | abpLocalization }}: {{ device.lastActiveAt | date: 'mediumDate' }}</div>
+            <span class="eks-row__meta">{{ '::Wallet:Settings:LastActive' | abpLocalization }}: {{ device.lastActiveAt | date: 'mediumDate' }}</span>
           }
-        </div>
+        </span>
         <button
           type="button"
           class="btn btn-sm btn-outline-danger"
