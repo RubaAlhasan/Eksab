@@ -454,6 +454,24 @@
     font-size: 0.75rem;
     color: var(--eks-text-muted);
     margin: 0;
+    // Long unbroken strings (codes, URLs) wrap instead of stretching the row past the screen.
+    overflow-wrap: anywhere;
+  }
+
+  // Caps a long message at three lines; the row's full text is revealed when it is opened.
+  &__clamp {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  &__more {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--eks-primary);
   }
 
   &__end {
@@ -657,4 +675,76 @@
 
 .eks-skeleton-tile {
   height: 9.5rem;
+}
+
+// Page header: the title a screen opens with, plus one optional action on the same row. Used at the top of
+// screens that have no back button and therefore no shell topbar title.
+.eks-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.eks-page-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+// Segmented control: two or three views of the same list (All / Unread). Sits on a muted track, with the
+// chosen segment lifted onto the surface.
+.eks-segmented {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: var(--eks-radius-pill);
+  background: var(--eks-surface-2);
+
+  &__item {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    border-radius: var(--eks-radius-pill);
+    background: transparent;
+    color: var(--eks-text-muted);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    transition: background-color 0.15s ease-out, color 0.15s ease-out;
+
+    &:hover {
+      color: var(--eks-text);
+    }
+
+    &.active {
+      background: var(--eks-surface);
+      color: var(--eks-text);
+      box-shadow: var(--eks-shadow-sm);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--eks-primary);
+      outline-offset: 2px;
+    }
+  }
+
+  &__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.375rem;
+    border-radius: var(--eks-radius-pill);
+    background: var(--eks-primary);
+    color: var(--eks-primary-fg);
+    font-size: 0.6875rem;
+    font-weight: 700;
+  }
 }

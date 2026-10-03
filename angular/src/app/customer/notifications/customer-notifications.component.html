@@ -1,17 +1,34 @@
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-  <div class="eks-chip-row">
-    <button type="button" class="eks-chip" [class.active]="filter() === 'all'" (click)="selectFilter('all')">
-      {{ '::Wallet:Notifications:All' | abpLocalization }}
-    </button>
-    <button type="button" class="eks-chip" [class.active]="filter() === 'unread'" (click)="selectFilter('unread')">
-      {{ '::Wallet:Notifications:Unread' | abpLocalization }}
-    </button>
-  </div>
+<header class="eks-page-header">
+  <h1 class="eks-page-title">{{ '::Wallet:Notifications:Title' | abpLocalization }}</h1>
   @if (hub.hasUnread()) {
     <button type="button" class="btn btn-sm btn-outline-secondary" (click)="markAllAsRead()">
       {{ '::Wallet:Notifications:MarkAllRead' | abpLocalization }}
     </button>
   }
+</header>
+
+<div class="eks-segmented mb-3" role="group">
+  <button
+    type="button"
+    class="eks-segmented__item"
+    [class.active]="filter() === 'all'"
+    [attr.aria-pressed]="filter() === 'all'"
+    (click)="selectFilter('all')"
+  >
+    {{ '::Wallet:Notifications:All' | abpLocalization }}
+  </button>
+  <button
+    type="button"
+    class="eks-segmented__item"
+    [class.active]="filter() === 'unread'"
+    [attr.aria-pressed]="filter() === 'unread'"
+    (click)="selectFilter('unread')"
+  >
+    {{ '::Wallet:Notifications:Unread' | abpLocalization }}
+    @if (hub.unreadCount() > 0) {
+      <span class="eks-segmented__count">{{ hub.unreadCount() }}</span>
+    }
+  </button>
 </div>
 
 @if (isLoading()) {
@@ -23,11 +40,21 @@
 } @else {
   <div class="eks-list mb-3">
     @for (item of notifications(); track item.id) {
-      <button type="button" class="eks-row eks-row--action" (click)="onItemClick(item)">
+      <button
+        type="button"
+        class="eks-row eks-row--action"
+        [attr.aria-expanded]="isLongMessage(item.message) ? isExpanded(item.id) : null"
+        (click)="onItemClick(item); toggleExpanded(item.id)"
+      >
         <span class="eks-icon-tile" aria-hidden="true"><i class="fas {{ iconFor(item.type) }}"></i></span>
         <span class="eks-row__body">
           <span class="eks-row__title" [class.fw-bold]="!item.isRead">{{ item.title }}</span>
-          <span class="eks-row__meta">{{ item.message }}</span>
+          <span class="eks-row__meta" [class.eks-row__clamp]="!isExpanded(item.id)">{{ item.message }}</span>
+          @if (isLongMessage(item.message)) {
+            <span class="eks-row__more">
+              {{ (isExpanded(item.id) ? '::Wallet:Notifications:ShowLess' : '::Wallet:Notifications:ShowMore') | abpLocalization }}
+            </span>
+          }
           <span class="eks-row__meta">{{ item.creationTime | date: 'medium' }}</span>
         </span>
         @if (!item.isRead) {

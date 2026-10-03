@@ -4,6 +4,8 @@
   <app-error-state [message]="'::Wallet:Store:LoadError' | abpLocalization" (retry)="retry()" />
 } @else if (business(); as business) {
   <section class="eks-panel eks-rise eks-store-header text-center mb-3">
+    <div class="eks-store-header__cover" aria-hidden="true"></div>
+    <div class="eks-store-header__body">
     @if (logoUrl(); as logo) {
       <img [src]="logo" alt="" class="eks-store-logo mx-auto mb-2" (error)="logoFailed.set(true)" />
     } @else {
@@ -54,6 +56,7 @@
         </div>
       </div>
     }
+    </div>
   </section>
 
   <div class="eks-tabs mb-3">
