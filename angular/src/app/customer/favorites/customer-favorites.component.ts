@@ -18,6 +18,7 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 @Component({
   selector: 'app-customer-favorites',
   templateUrl: './customer-favorites.component.html',
+  styleUrls: ['./customer-favorites.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, LocalizationPipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent],
 })

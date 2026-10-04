@@ -1,0 +1,8 @@
+// Shared row, logo and button styles come from customer-kit. This file only keeps a long business name on one line,
+// so it truncates instead of running under the Unfollow button.
+
+.eks-row__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
