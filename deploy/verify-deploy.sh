@@ -69,8 +69,13 @@ fi
 # --- 4. backups are still happening (warn only; a stale backup is not a bad deploy) ------
 echo "== backups =="
 newest=$(find "$DEPLOY_DIR/backups" -name 'eksabli_*.dump' -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1)
-if [ -z "$newest" ]; then
-  note "WARN: no dumps in $DEPLOY_DIR/backups"
+if [ ! -d "$DEPLOY_DIR/backups" ]; then
+  # No backups directory at all means this stack has no backup schedule -- true of staging,
+  # whose database is disposable. A warning that is always present on a healthy stack teaches
+  # people to ignore it, including on production where it is the signal that matters.
+  note "SKIP: no backups/ directory (stack has no backup schedule)"
+elif [ -z "$newest" ]; then
+  note "WARN: backups/ exists but holds no dumps -- has the cron stopped?"
 else
   age_h=$(( ( $(date +%s) - ${newest%%.*} ) / 3600 ))
   if [ "$age_h" -gt "$BACKUP_MAX_AGE_HOURS" ]; then
