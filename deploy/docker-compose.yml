@@ -36,7 +36,9 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.api
-    image: eksabli-api:latest
+    # Tag scoped to the stack: production and staging build from different source trees, so a
+    # shared `eksabli-api:latest` would have each overwrite the other's tag.
+    image: ${STACK_NAME:-eksabli}-api:latest
     restart: unless-stopped
     depends_on:
       postgres:
@@ -106,7 +108,7 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.angular
-    image: eksabli-angular:latest
+    image: ${STACK_NAME:-eksabli}-angular:latest
     restart: unless-stopped
     labels:
       - "traefik.enable=true"

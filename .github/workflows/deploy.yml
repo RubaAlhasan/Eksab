@@ -61,8 +61,14 @@ jobs:
           set -euo pipefail
           cd "$DIR"
           git fetch --prune origin
-          # Hard reset, not merge: the server is a deployment target, never an editing copy.
-          git checkout -B "$BRANCH" "origin/$BRANCH"
+          # -f, and a reset before the checkout: the server is a deployment target, never an
+          # editing copy, so any local modification is discarded rather than allowed to block
+          # the deploy. Without -f a stray `chmod +x` is enough to abort the checkout, and the
+          # build then silently rebuilds the OLD source -- which is exactly how three pending
+          # migrations went unapplied once.
+          # NOT `git clean`: untracked files here include .env and secrets/.
+          git reset --hard HEAD
+          git checkout -f -B "$BRANCH" "origin/$BRANCH"
           git reset --hard "origin/$BRANCH"
           cd deploy
           docker compose up -d --build
