@@ -18,27 +18,26 @@ public static class HealthChecksBuilderExtensions
 
         services.ConfigureHealthCheckEndpoint("/health-status");
 
-        var configuration = services.GetConfiguration();
-        var healthCheckUrl = configuration["App:HealthCheckUrl"];
-
-        if (string.IsNullOrEmpty(healthCheckUrl))
-        {
-            healthCheckUrl = "/health-status";
-        }
-
-        var healthChecksUiBuilder = services.AddHealthChecksUI(settings =>
-        {
-            settings.AddHealthCheckEndpoint("Eksabli Health Status", configuration["App:HealthUiCheckUrl"] ?? healthCheckUrl);
-        });
-
-        // Set your HealthCheck UI Storage here
-        healthChecksUiBuilder.AddInMemoryStorage();
-
-        services.MapHealthChecksUiEndpoints(options =>
-        {
-            options.UIPath = "/health-ui";
-            options.ApiPath = "/health-api";
-        });
+        // The HealthChecks *UI* from the ABP template (AddHealthChecksUI + AddInMemoryStorage +
+        // /health-ui and /health-api) is deliberately not registered. It was:
+        //
+        //   * broken -- it was given the relative path "/health-status", which its background
+        //     collector resolves against Kestrel's bind address. In a container that is
+        //     http://+:8080, i.e. [::]:8080, and an unspecified address is not a valid target:
+        //       "IPv4 address 0.0.0.0 and IPv6 address ::0 ... cannot be used as a target address"
+        //     It therefore reported the app Unhealthy while /health-status itself returned 200.
+        //
+        //   * noisy -- that exception was logged with a full stack trace every few seconds,
+        //     swamping Logs/logs.txt and making `docker compose logs` hard to read.
+        //
+        //   * exposed -- /health-ui and /health-api answered 200 to anonymous callers on the
+        //     public internet, publishing check names and internal addresses.
+        //
+        // Giving it an absolute URL would have fixed the first two and made the third worse, by
+        // turning a broken public dashboard into a working one. Nothing consumes it, so it is
+        // gone. /health-status remains (uptime monitors, deploy/verify-deploy.sh); the
+        // HealthChecks.UI.Client package stays for UIResponseWriter below, which only formats
+        // that endpoint's JSON.
     }
 
     private static IServiceCollection ConfigureHealthCheckEndpoint(this IServiceCollection services, string path)
@@ -55,19 +54,6 @@ public static class HealthChecksBuilderExtensions
                         ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse,
                         AllowCachingResponses = false,
                     });
-            });
-        });
-
-        return services;
-    }
-
-    private static IServiceCollection MapHealthChecksUiEndpoints(this IServiceCollection services, Action<global::HealthChecks.UI.Configuration.Options>? setupOption = null)
-    {
-        services.Configure<AbpEndpointRouterOptions>(routerOptions =>
-        {
-            routerOptions.EndpointConfigureActions.Add(endpointContext =>
-            {
-                endpointContext.Endpoints.MapHealthChecksUI(setupOption);
             });
         });
 
