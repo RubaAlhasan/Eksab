@@ -3,6 +3,7 @@ import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 import type { JoinBusinessDto, MemberDto, MemberFilterDto, MembershipDto, WalletQrTokenResultDto } from '../memberships/models';
 import type { PointsWalletDto } from '../wallets/models';
+import type { SmartDealSaleDto, SmartDealSaleFilterDto } from '../reports/models';
 
 @Injectable({
   providedIn: 'root',
@@ -24,6 +25,14 @@ export class MembershipsService {
     this.restService.request<any, MemberDto>({
       method: 'GET',
       url: `/api/app/memberships/${id}`,
+    },
+    { apiName: this.apiName,...config });
+
+  getSmartDealSales = (id: string, input: SmartDealSaleFilterDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, PagedResultDto<SmartDealSaleDto>>({
+      method: 'GET',
+      url: `/api/app/memberships/${id}/smart-deal-sales`,
+      params: { search: input.search, from: input.from, to: input.to, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
 

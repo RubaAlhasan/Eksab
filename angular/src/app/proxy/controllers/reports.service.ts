@@ -1,7 +1,7 @@
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { BranchComparisonDto, CampaignPerformanceDto, CustomerSegmentReportDto, DashboardHomeDto, MemberGrowthPointDto, NotificationDeliveryRateDto, RedemptionRateReportDto, ReportPeriodDto, TransactionFilterDto, TransactionListItemDto, TierDistributionDto, TopCustomerDto, TransactionsExcelDownloadDto } from '../reports/models';
+import type { BranchComparisonDto, CampaignPerformanceDto, CustomerSegmentReportDto, DashboardHomeDto, MemberGrowthPointDto, NotificationDeliveryRateDto, RedemptionRateReportDto, ReportPeriodDto, SmartDealSaleDto, SmartDealSaleFilterDto, SmartDealSalesExcelDownloadDto, TransactionFilterDto, TransactionListItemDto, TierDistributionDto, TopCustomerDto, TransactionsExcelDownloadDto } from '../reports/models';
 import type { DownloadTokenResultDto } from '../shared/models';
 
 @Injectable({
@@ -112,6 +112,33 @@ export class ReportsService {
       method: 'GET',
       url: '/api/app/report/transactions',
       params: { type: input.type, branchId: input.branchId, staffId: input.staffId, membershipId: input.membershipId, from: input.from, to: input.to, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+    },
+    { apiName: this.apiName,...config });
+
+
+  getSmartDealSalesDownloadToken = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, DownloadTokenResultDto>({
+      method: 'GET',
+      url: '/api/app/report/smart-deal-sales/download-token',
+    },
+    { apiName: this.apiName,...config });
+
+
+  getSmartDealSalesAsExcelFile = (input: SmartDealSalesExcelDownloadDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, Blob>({
+      method: 'GET',
+      responseType: 'blob',
+      url: '/api/app/report/smart-deal-sales/as-excel-file',
+      params: { downloadToken: input.downloadToken, branchId: input.branchId, staffId: input.staffId, from: input.from, to: input.to, search: input.search },
+    },
+    { apiName: this.apiName,...config });
+
+
+  getSmartDealSales = (input: SmartDealSaleFilterDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, PagedResultDto<SmartDealSaleDto>>({
+      method: 'GET',
+      url: '/api/app/report/smart-deal-sales',
+      params: { branchId: input.branchId, staffId: input.staffId, from: input.from, to: input.to, search: input.search, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
 }

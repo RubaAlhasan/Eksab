@@ -11,6 +11,7 @@ using Eksabli.Memberships;
 using Eksabli.Notifications;
 using Eksabli.Rewards;
 using Eksabli.Shared;
+using Eksabli.SmartOffers;
 using Eksabli.Wallets;
 using Microsoft.Extensions.Caching.Distributed;
 using MiniExcelLibs;
@@ -21,6 +22,7 @@ using Volo.Abp.Authorization;
 using Volo.Abp.Caching;
 using Volo.Abp.Content;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
 
 namespace Eksabli.Reports;
@@ -31,6 +33,9 @@ public class ReportsAppService : ApplicationService, IReportsAppService
     // Presentation tuning, not a domain rule — how many units left before a reward shows up on the
     // dashboard home as "running low."
     private const int LowStockThreshold = 10;
+
+    // Same cap as the counter's history: each row resolves a customer, so an unbounded page would fan out.
+    private const int MaxSalesPageSize = 50;
 
     private readonly IRepository<Membership, Guid> _membershipRepository;
     private readonly IRepository<PointsWallet, Guid> _walletRepository;
@@ -47,6 +52,10 @@ public class ReportsAppService : ApplicationService, IReportsAppService
     private readonly ICurrentTenant _currentTenant;
     private readonly IDistributedCache<TransactionsExcelDownloadTokenCacheItem, string> _excelDownloadTokenCache;
     private readonly TransactionListItemBuilder _transactionListItemBuilder;
+    private readonly IRepository<SmartOfferOrder, Guid> _smartOfferOrderRepository;
+    private readonly IRepository<IdentityUser, Guid> _identityUserRepository;
+    private readonly IRepository<SmartOffer, Guid> _smartOfferRepository;
+    private readonly IDistributedCache<SmartDealSalesExcelDownloadTokenCacheItem, string> _smartDealSalesExcelTokenCache;
 
     public ReportsAppService(
         IRepository<Membership, Guid> membershipRepository,
@@ -63,8 +72,14 @@ public class ReportsAppService : ApplicationService, IReportsAppService
         IRepository<CustomerProfile, Guid> customerProfileRepository,
         ICurrentTenant currentTenant,
         IDistributedCache<TransactionsExcelDownloadTokenCacheItem, string> excelDownloadTokenCache,
-        TransactionListItemBuilder transactionListItemBuilder)
+        TransactionListItemBuilder transactionListItemBuilder,
+        IRepository<SmartOfferOrder, Guid> smartOfferOrderRepository,
+        IRepository<IdentityUser, Guid> identityUserRepository,
+        IRepository<SmartOffer, Guid> smartOfferRepository,
+        IDistributedCache<SmartDealSalesExcelDownloadTokenCacheItem, string> smartDealSalesExcelTokenCache)
     {
+        _smartOfferRepository = smartOfferRepository;
+        _smartDealSalesExcelTokenCache = smartDealSalesExcelTokenCache;
         _membershipRepository = membershipRepository;
         _walletRepository = walletRepository;
         _transactionRepository = transactionRepository;
@@ -80,6 +95,8 @@ public class ReportsAppService : ApplicationService, IReportsAppService
         _currentTenant = currentTenant;
         _excelDownloadTokenCache = excelDownloadTokenCache;
         _transactionListItemBuilder = transactionListItemBuilder;
+        _smartOfferOrderRepository = smartOfferOrderRepository;
+        _identityUserRepository = identityUserRepository;
     }
 
     public async Task<DashboardHomeDto> GetDashboardHomeAsync()
@@ -442,5 +459,186 @@ public class ReportsAppService : ApplicationService, IReportsAppService
         var items = await _transactionListItemBuilder.BuildAsync(page);
 
         return new PagedResultDto<TransactionListItemDto>(totalCount, items);
+    }
+
+    // Transactions page > "Smart deal sales" tab. Reads SmartOfferOrder directly, not the points ledger: a completed
+    // Buy Now sale writes no PointsTransaction rows (see SmartOfferOrder.Complete), so the ledger above cannot show it.
+    // Amounts stay in the deal's own currency and points never enter this list. Always newest completed sale first.
+    public async Task<PagedResultDto<SmartDealSaleDto>> GetSmartDealSalesAsync(SmartDealSaleFilterDto input)
+    {
+        var sales = await BuildSmartDealSalesQueryAsync(input.BranchId, input.StaffId, input.From, input.To, input.Search);
+        if (input.MembershipId.HasValue)
+        {
+            sales = sales.Where(o => o.MembershipId == input.MembershipId.Value);
+        }
+
+        var total = await AsyncExecuter.CountAsync(sales);
+        var orders = await AsyncExecuter.ToListAsync(
+            sales
+                .OrderByDescending(o => o.CompletedAt)
+                .Skip(input.SkipCount)
+                .Take(Math.Min(input.MaxResultCount, MaxSalesPageSize)));
+
+        return new PagedResultDto<SmartDealSaleDto>(total, await ToSmartDealSaleDtosAsync(orders));
+    }
+
+    // Excel export for the same "Smart deal sales" tab. Same token gate as the points export: a short-lived token from the
+    // authorized call, then the anonymous file call that redeems it. The file holds every sale the filters match, with no
+    // page limit, so it always agrees with what the table would show across all pages.
+    public async Task<DownloadTokenResultDto> GetSmartDealSalesDownloadTokenAsync()
+    {
+        var token = GuidGenerator.Create().ToString("N");
+
+        await _smartDealSalesExcelTokenCache.SetAsync(
+            token,
+            new SmartDealSalesExcelDownloadTokenCacheItem { Token = token, TenantId = _currentTenant.Id },
+            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30) });
+
+        return new DownloadTokenResultDto { Token = token };
+    }
+
+    public async Task<IRemoteStreamContent> GetSmartDealSalesAsExcelFileAsync(SmartDealSalesExcelDownloadDto input)
+    {
+        var downloadToken = await _smartDealSalesExcelTokenCache.GetAsync(input.DownloadToken);
+        if (downloadToken == null || input.DownloadToken != downloadToken.Token || downloadToken.TenantId != _currentTenant.Id)
+        {
+            throw new AbpAuthorizationException("Invalid download token: " + input.DownloadToken);
+        }
+
+        var sales = await BuildSmartDealSalesQueryAsync(input.BranchId, input.StaffId, input.From, input.To, input.Search);
+        var orders = await AsyncExecuter.ToListAsync(sales.OrderByDescending(o => o.CompletedAt));
+        var sheet = (await ToSmartDealSaleDtosAsync(orders)).Select(sale => new SmartDealSaleExcelDto
+        {
+            CompletedAt = sale.CompletedAt,
+            DealId = sale.SmartOfferId,
+            Code = sale.Code,
+            OfferTitleEn = sale.OfferTitleEn,
+            OfferTitleAr = sale.OfferTitleAr,
+            Quantity = sale.Quantity,
+            UnitPrice = sale.UnitPrice,
+            BasePrice = sale.BasePrice,
+            TotalAmount = sale.TotalAmount,
+            CurrencyCode = sale.Currency == Currency.Usd ? "USD" : "SYP",
+            ServiceDate = sale.ServiceDate.ToDateTime(TimeOnly.MinValue),
+            BranchName = sale.BranchName,
+            StaffEmail = sale.StaffEmail,
+            CustomerName = $"{sale.CustomerFirstName} {sale.CustomerLastName}".Trim(),
+        }).ToList();
+
+        var memoryStream = new MemoryStream();
+        await memoryStream.SaveAsAsync(sheet);
+        memoryStream.Seek(0, SeekOrigin.Begin);
+
+        return new RemoteStreamContent(
+            memoryStream,
+            "SmartDealSales.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+    }
+
+    // The completed-sale filter used by both the table and the export, so the file always matches what the table shows.
+    private async Task<IQueryable<SmartOfferOrder>> BuildSmartDealSalesQueryAsync(Guid? branchId, Guid? staffId, DateTime? from, DateTime? to, string? search)
+    {
+        var sales = (await _smartOfferOrderRepository.GetQueryableAsync())
+            .Where(o => o.Status == SmartOfferOrderStatus.Completed);
+
+        // A GUID is a Deal ID: every sale of that deal. Anything else is a sale code, typed the way the counter accepts it
+        // (case, spaces and hyphens ignored).
+        var term = search?.Trim();
+        if (!string.IsNullOrEmpty(term))
+        {
+            if (Guid.TryParse(term, out var dealId))
+            {
+                sales = sales.Where(o => o.SmartOfferId == dealId);
+            }
+            else
+            {
+                var code = term.Replace(" ", string.Empty).Replace("-", string.Empty).ToUpperInvariant();
+                sales = sales.Where(o => o.Code == code);
+            }
+        }
+
+        if (branchId.HasValue)
+        {
+            sales = sales.Where(o => o.CompletedBranchId == branchId);
+        }
+
+        if (staffId.HasValue)
+        {
+            sales = sales.Where(o => o.CompletedByEmployeeId == staffId);
+        }
+
+        if (from.HasValue)
+        {
+            sales = sales.Where(o => o.CompletedAt >= from);
+        }
+
+        if (to.HasValue)
+        {
+            sales = sales.Where(o => o.CompletedAt <= to);
+        }
+
+        return sales;
+    }
+
+    // Turns a page (or the whole export set) of completed orders into sale rows. Each lookup runs once per table for
+    // exactly these orders' ids, as TransactionListItemBuilder does.
+    private async Task<List<SmartDealSaleDto>> ToSmartDealSaleDtosAsync(List<SmartOfferOrder> orders)
+    {
+        var branchIds = orders.Where(o => o.CompletedBranchId.HasValue).Select(o => o.CompletedBranchId!.Value).Distinct().ToList();
+        var branchNameById = branchIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : (await _branchRepository.GetListAsync(b => branchIds.Contains(b.Id))).ToDictionary(b => b.Id, b => b.Name);
+
+        var staffIds = orders.Where(o => o.CompletedByEmployeeId.HasValue).Select(o => o.CompletedByEmployeeId!.Value).Distinct().ToList();
+        var staffEmailById = staffIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : (await _identityUserRepository.GetListAsync(u => staffIds.Contains(u.Id))).ToDictionary(u => u.Id, u => u.Email);
+
+        var offerIds = orders.Select(o => o.SmartOfferId).Distinct().ToList();
+        var offersById = offerIds.Count == 0
+            ? new Dictionary<Guid, SmartOffer>()
+            : (await _smartOfferRepository.GetListAsync(o => offerIds.Contains(o.Id))).ToDictionary(o => o.Id);
+
+        var membershipIds = orders.Select(o => o.MembershipId).Distinct().ToList();
+        var customerIdByMembership = (await _membershipRepository.GetListAsync(m => membershipIds.Contains(m.Id)))
+            .ToDictionary(m => m.Id, m => m.CustomerId);
+        var customerIds = customerIdByMembership.Values.Distinct().ToList();
+
+        List<CustomerProfile> profiles;
+        using (_currentTenant.Change(null)) // CustomerProfile is Host-realm, as in GetTransactionsListAsync.
+        {
+            profiles = await _customerProfileRepository.GetListAsync(p => customerIds.Contains(p.UserId));
+        }
+
+        return orders.Select(order =>
+        {
+            var dto = ObjectMapper.Map<SmartOfferOrder, SmartDealSaleDto>(order);
+
+            if (offersById.TryGetValue(order.SmartOfferId, out var offer))
+            {
+                dto.OfferDescriptionAr = offer.DescriptionAr;
+                dto.OfferDescriptionEn = offer.DescriptionEn;
+            }
+
+            if (order.CompletedBranchId.HasValue)
+            {
+                dto.BranchName = branchNameById.GetValueOrDefault(order.CompletedBranchId.Value);
+            }
+
+            if (order.CompletedByEmployeeId.HasValue)
+            {
+                dto.StaffEmail = staffEmailById.GetValueOrDefault(order.CompletedByEmployeeId.Value);
+            }
+
+            if (customerIdByMembership.TryGetValue(order.MembershipId, out var customerId))
+            {
+                var profile = profiles.FirstOrDefault(p => p.UserId == customerId);
+                dto.CustomerFirstName = profile?.FirstName;
+                dto.CustomerLastName = profile?.LastName;
+            }
+
+            return dto;
+        }).ToList();
     }
 }

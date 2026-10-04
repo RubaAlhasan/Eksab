@@ -1,0 +1,103 @@
+// Editor layout only. Colours come from --eks-* tokens; the stage rows are a small grid so the controls sit in
+// reach on a phone and spread out on a wide screen.
+
+.eks-editor__heading {
+  font-size: 0.875rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  color: var(--eks-text);
+}
+
+// The four pricing fields share one row. A label that wraps to two lines (the base price label) would push its input
+// below the others, so every pricing label reserves two lines and sits on the bottom of that space.
+.eks-pricing__label {
+  display: flex;
+  align-items: flex-end;
+  min-height: 3em;
+}
+
+.eks-smart-live {
+  border: 1px solid var(--eks-border);
+  background: var(--eks-surface);
+}
+
+.eks-smart-live__price {
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--eks-text);
+}
+
+.eks-smart-live__idle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--eks-text-muted);
+}
+
+.eks-stage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.eks-stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  padding-inline-end: 3rem;
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-md);
+  background: var(--eks-surface-2);
+  transition: border-color 0.2s ease;
+
+  &--invalid {
+    border-color: var(--eks-danger);
+  }
+}
+
+.eks-stage__times,
+.eks-stage__values {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  grid-column: span 1;
+}
+
+.eks-stage__remove {
+  position: absolute;
+  top: 0.75rem;
+  inset-inline-end: 0.75rem;
+}
+
+.eks-stage__error {
+  grid-column: 1 / -1;
+  color: var(--eks-danger);
+  font-weight: 600;
+}
+
+.eks-smart-preview {
+  position: sticky;
+  top: 1rem;
+}
+
+.eks-smart-preview__fixed {
+  font-size: 2rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--eks-text);
+}
+
+@media (max-width: 575.98px) {
+  .eks-stage {
+    grid-template-columns: 1fr;
+    padding-inline-end: 0.75rem;
+  }
+
+  .eks-stage__remove {
+    position: static;
+    justify-self: end;
+  }
+}

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Eksabli.Memberships;
 using Eksabli.Permissions;
+using Eksabli.Reports;
 using Eksabli.Wallets;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,10 +17,12 @@ namespace Eksabli.Controllers;
 public class MembershipsController : EksabliController
 {
     private readonly IMembershipAppService _membershipAppService;
+    private readonly IReportsAppService _reportsAppService;
 
-    public MembershipsController(IMembershipAppService membershipAppService)
+    public MembershipsController(IMembershipAppService membershipAppService, IReportsAppService reportsAppService)
     {
         _membershipAppService = membershipAppService;
+        _reportsAppService = reportsAppService;
     }
 
     [Authorize(EksabliPermissions.Memberships.View)]
@@ -34,6 +37,17 @@ public class MembershipsController : EksabliController
     public Task<MemberDto> GetMemberAsync(Guid id)
     {
         return _membershipAppService.GetMemberAsync(id);
+    }
+
+    // The customer page's "Smart deal sales" tab. Gated by Memberships.View, the permission the page itself needs, not by
+    // Reports.Default: a manager who can open the customer can see that customer's sales, and nothing else. The membership id
+    // comes from the route, so the filter always names one of this business's own customers.
+    [Authorize(EksabliPermissions.Memberships.View)]
+    [HttpGet("{id}/smart-deal-sales")]
+    public Task<PagedResultDto<SmartDealSaleDto>> GetSmartDealSalesAsync(Guid id, [FromQuery] SmartDealSaleFilterDto input)
+    {
+        input.MembershipId = id;
+        return _reportsAppService.GetSmartDealSalesAsync(input);
     }
 
     [Authorize(EksabliPermissions.Memberships.Edit)]

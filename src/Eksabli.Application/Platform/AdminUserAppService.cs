@@ -33,6 +33,7 @@ public class AdminUserAppService : ApplicationService, IAdminUserAppService
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
     private readonly TransactionListItemBuilder _transactionListItemBuilder;
+    private readonly IReportsAppService _reportsAppService;
 
     public AdminUserAppService(
         IRepository<CustomerProfile, Guid> customerProfileRepository,
@@ -45,8 +46,10 @@ public class AdminUserAppService : ApplicationService, IAdminUserAppService
         IRepository<PointsTransaction, Guid> transactionRepository,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
-        TransactionListItemBuilder transactionListItemBuilder)
+        TransactionListItemBuilder transactionListItemBuilder,
+        IReportsAppService reportsAppService)
     {
+        _reportsAppService = reportsAppService;
         _customerProfileRepository = customerProfileRepository;
         _employeeAssignmentRepository = employeeAssignmentRepository;
         _identityUserRepository = identityUserRepository;
@@ -198,6 +201,21 @@ public class AdminUserAppService : ApplicationService, IAdminUserAppService
             // from" breakdown staff do, not a second, poorer copy of this.
             var items = await _transactionListItemBuilder.BuildAsync(transactions);
             return new PagedResultDto<TransactionListItemDto>(totalCount, items);
+        }
+    }
+
+    public async Task<PagedResultDto<SmartDealSaleDto>> GetCustomerSmartDealSalesAsync(Guid membershipId, Guid tenantId, PagedAndSortedResultRequestDto input)
+    {
+        // Switch to the membership's business, then use that business's own sales query, so the admin sees the same rows
+        // and the same filters the business's Smart deal sales tab would show for this customer.
+        using (_currentTenant.Change(tenantId))
+        {
+            return await _reportsAppService.GetSmartDealSalesAsync(new SmartDealSaleFilterDto
+            {
+                MembershipId = membershipId,
+                SkipCount = input.SkipCount,
+                MaxResultCount = input.MaxResultCount,
+            });
         }
     }
 

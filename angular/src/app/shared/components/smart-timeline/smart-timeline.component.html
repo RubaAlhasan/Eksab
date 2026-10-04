@@ -1,0 +1,25 @@
+<div class="eks-timeline" role="img" [attr.aria-label]="'::SmartDeals:Timeline:Aria' | abpLocalization">
+  <div class="eks-timeline__track">
+    @for (segment of positioned(); track $index) {
+      <span
+        class="eks-timeline__segment"
+        [class]="'eks-timeline__segment eks-timeline__segment--' + segment.tone"
+        [style.inset-inline-start.%]="segment.left"
+        [style.width.%]="segment.width"
+        [attr.title]="segment.label"
+      >
+        <span class="eks-timeline__label">{{ segment.label }}</span>
+      </span>
+    }
+    @if (nowPercent() !== null) {
+      <span class="eks-timeline__now" [style.inset-inline-start.%]="nowPercent()"></span>
+    }
+  </div>
+  <div class="eks-timeline__ticks" aria-hidden="true">
+    <span>00</span>
+    <span>06</span>
+    <span>12</span>
+    <span>18</span>
+    <span>24</span>
+  </div>
+</div>

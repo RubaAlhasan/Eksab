@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -9,7 +9,8 @@ import { ReportsService } from '../../proxy/controllers/reports.service';
 import { CouponAuditService } from '../../proxy/controllers/coupon-audit.service';
 import { PosService } from '../../proxy/controllers/pos.service';
 import type { MemberDto } from '../../proxy/memberships/models';
-import type { TransactionListItemDto } from '../../proxy/reports/models';
+import type { SmartDealSaleDto, TransactionListItemDto } from '../../proxy/reports/models';
+import { Currency } from '../../proxy/shared/currency.enum';
 import type { CouponDto } from '../../proxy/rewards/models';
 import { PointsTransactionType } from '../../proxy/wallets/points-transaction-type.enum';
 import { PointsTransactionSource } from '../../proxy/wallets/points-transaction-source.enum';
@@ -22,8 +23,9 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { StatusBadgeComponent, StatusBadgeVariant } from '../../shared/components/status-badge/status-badge.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
+import { SmartSaleDetailsComponent, SmartSaleDetailsView } from '../../shared/components/smart-sale-details/smart-sale-details.component';
 
-type DetailTab = 'transactions' | 'coupons';
+type DetailTab = 'transactions' | 'coupons' | 'smartDeals';
 
 /**
  * Business Portal > Customer Details — the drill-down page `business-customers.component.ts`'s own
@@ -58,6 +60,8 @@ type DetailTab = 'transactions' | 'coupons';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
+    DecimalPipe,
+    SmartSaleDetailsComponent,
     RouterLink,
     ReactiveFormsModule,
     LocalizationPipe,
@@ -112,6 +116,17 @@ export class BusinessCustomerDetailsComponent implements OnInit {
   protected readonly couponsLoading = signal(false);
   protected readonly couponsFailed = signal(false);
   private couponsLoaded = false;
+
+  // Smart deal sales tab: this customer's completed counter sales at this business. Same Memberships.View gate as the page.
+  protected readonly smartSales = signal<SmartDealSaleDto[]>([]);
+  protected readonly smartSalesTotalCount = signal(0);
+  protected readonly smartSalesPageIndex = signal(0);
+  protected readonly smartSalesTotalPages = computed(() => Math.max(1, Math.ceil(this.smartSalesTotalCount() / this.pageSize)));
+  protected readonly smartSalesLoading = signal(false);
+  protected readonly smartSalesFailed = signal(false);
+  private smartSalesLoaded = false;
+  protected readonly selectedSmartSale = signal<SmartSaleDetailsView | null>(null);
+  protected readonly smartSaleDetailsOpen = signal(false);
 
   // --- Manual Point Adjustment modal (real, PosAppService.ManualAdjustAsync — see file comment) ---
   protected readonly adjustModalOpen = signal(false);
@@ -179,6 +194,48 @@ export class BusinessCustomerDetailsComponent implements OnInit {
     this.activeTab.set(tab);
     if (tab === 'transactions' && !this.transactionsLoaded) this.loadTransactions();
     if (tab === 'coupons' && !this.couponsLoaded) this.loadCoupons();
+    if (tab === 'smartDeals' && !this.smartSalesLoaded) this.loadSmartSales();
+  }
+
+  protected goToSmartSalesPage(index: number): void {
+    this.smartSalesPageIndex.set(index);
+    this.loadSmartSales();
+  }
+
+  protected retrySmartSales(): void {
+    this.loadSmartSales();
+  }
+
+  protected openSmartSale(sale: SmartDealSaleDto): void {
+    const name = [sale.customerFirstName, sale.customerLastName].filter(Boolean).join(' ').trim();
+    this.selectedSmartSale.set({
+      smartOfferId: sale.smartOfferId,
+      code: sale.code,
+      offerTitleEn: sale.offerTitleEn,
+      offerTitleAr: sale.offerTitleAr,
+      offerDescriptionEn: sale.offerDescriptionEn,
+      offerDescriptionAr: sale.offerDescriptionAr,
+      quantity: sale.quantity,
+      unitPrice: sale.unitPrice,
+      basePrice: sale.basePrice,
+      totalAmount: sale.totalAmount,
+      currency: sale.currency,
+      serviceDate: sale.serviceDate,
+      placedAt: sale.placedAt,
+      completedAt: sale.completedAt,
+      customerName: name || null,
+      branchName: sale.branchName,
+      staffEmail: sale.staffEmail,
+    });
+    this.smartSaleDetailsOpen.set(true);
+  }
+
+  protected closeSmartSale(): void {
+    this.smartSaleDetailsOpen.set(false);
+  }
+
+  protected currencyCode(currency: Currency | null | undefined): string {
+    return currency === Currency.Usd ? 'USD' : 'SYP';
   }
 
   protected goToTransactionsPage(index: number): void {
@@ -362,6 +419,7 @@ export class BusinessCustomerDetailsComponent implements OnInit {
     this.loadFailed.set(false);
     this.transactionsLoaded = false;
     this.couponsLoaded = false;
+    this.smartSalesLoaded = false;
 
     this.membershipsService.get(id).subscribe({
       next: (result) => {
@@ -402,6 +460,29 @@ export class BusinessCustomerDetailsComponent implements OnInit {
         error: () => {
           this.transactionsLoading.set(false);
           this.transactionsFailed.set(true);
+        },
+      });
+  }
+
+  private loadSmartSales(): void {
+    if (!this.membershipId) return;
+    this.smartSalesLoading.set(true);
+    this.smartSalesFailed.set(false);
+    this.membershipsService
+      .getSmartDealSales(this.membershipId, {
+        skipCount: this.smartSalesPageIndex() * this.pageSize,
+        maxResultCount: this.pageSize,
+      })
+      .subscribe({
+        next: (result) => {
+          this.smartSales.set(result.items ?? []);
+          this.smartSalesTotalCount.set(result.totalCount ?? 0);
+          this.smartSalesLoading.set(false);
+          this.smartSalesLoaded = true;
+        },
+        error: () => {
+          this.smartSalesLoading.set(false);
+          this.smartSalesFailed.set(true);
         },
       });
   }

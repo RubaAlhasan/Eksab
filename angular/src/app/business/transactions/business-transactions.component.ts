@@ -18,23 +18,10 @@ import { PaginationComponent } from '../../shared/components/pagination/paginati
 import { StatusBadgeComponent, StatusBadgeVariant } from '../../shared/components/status-badge/status-badge.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { downloadBlob } from '../../shared/utils/download-blob';
+import { startOfMonth, toDateInputValue } from '../../shared/utils/date-input.util';
+import { BusinessSmartDealSalesComponent } from './business-smart-deal-sales.component';
 
-function startOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-// `date.toISOString()` converts to UTC first — for any timezone AHEAD of UTC, local midnight (what
-// `startOfMonth`/"today" actually mean to the user) rolls back to the previous day once converted,
-// so an `<input type="date">` bound to that string silently shows the wrong default day. A real bug
-// caught live (this session's own browser walkthrough, timezone UTC+something showed "07/31" instead
-// of "08/01" as the month-start default) — use local date PARTS directly, never `.toISOString()`, to
-// build a `yyyy-MM-dd` value from a local `Date`.
-function toDateInputValue(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+type TransactionsTab = 'points' | 'smartDeals';
 
 /**
  * Business Portal > Transactions — mirrors prototype/business/transactions.html's live, filterable
@@ -79,6 +66,7 @@ function toDateInputValue(date: Date): string {
     PaginationComponent,
     StatusBadgeComponent,
     ModalComponent,
+    BusinessSmartDealSalesComponent,
   ],
 })
 export class BusinessTransactionsComponent implements OnInit {
@@ -90,6 +78,9 @@ export class BusinessTransactionsComponent implements OnInit {
 
   protected readonly Type = PointsTransactionType;
   private readonly pageSize = 10;
+
+  // The points ledger and the completed smart-deal sales share this page; only one is rendered at a time.
+  protected readonly activeTab = signal<TransactionsTab>('points');
 
   protected readonly transactions = signal<TransactionListItemDto[]>([]);
   protected readonly totalCount = signal(0);
@@ -124,6 +115,10 @@ export class BusinessTransactionsComponent implements OnInit {
     this.loadBranches();
     this.loadEmployees();
     this.load();
+  }
+
+  protected selectTab(tab: TransactionsTab): void {
+    this.activeTab.set(tab);
   }
 
   protected retry(): void {

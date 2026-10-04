@@ -99,4 +99,27 @@ public class ReportsController : EksabliController
     {
         return _reportsAppService.GetTransactionsListAsync(input);
     }
+
+    // Completed Buy Now sales, shown beside the points ledger on the same Transactions page.
+    [HttpGet("smart-deal-sales")]
+    public Task<PagedResultDto<SmartDealSaleDto>> GetSmartDealSalesAsync([FromQuery] SmartDealSaleFilterDto input)
+    {
+        return _reportsAppService.GetSmartDealSalesAsync(input);
+    }
+
+    [Authorize(EksabliPermissions.Reports.Export)]
+    [HttpGet("smart-deal-sales/download-token")]
+    public Task<DownloadTokenResultDto> GetSmartDealSalesDownloadTokenAsync()
+    {
+        return _reportsAppService.GetSmartDealSalesDownloadTokenAsync();
+    }
+
+    // Anonymous on purpose, as the points export is: a browser download cannot send the auth header. The short-lived
+    // token from the call above is the real check.
+    [AllowAnonymous]
+    [HttpGet("smart-deal-sales/as-excel-file")]
+    public Task<IRemoteStreamContent> GetSmartDealSalesAsExcelFileAsync([FromQuery] SmartDealSalesExcelDownloadDto input)
+    {
+        return _reportsAppService.GetSmartDealSalesAsExcelFileAsync(input);
+    }
 }

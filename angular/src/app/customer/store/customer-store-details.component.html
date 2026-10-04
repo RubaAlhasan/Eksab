@@ -111,6 +111,19 @@
       </div>
     }
   } @else if (activeTab() === 'offers') {
+    @if (smartDeals().length > 0) {
+      <section class="eks-smart-deals mb-4" [attr.aria-label]="'::SmartDeals:Customer:SectionTitle' | abpLocalization">
+        <h3 class="eks-section-title">{{ '::SmartDeals:Customer:SectionTitle' | abpLocalization }}</h3>
+        <div class="d-flex flex-column gap-3">
+          @for (deal of pagedSmartDeals(); track deal.id) {
+            <app-smart-deal-card [offer]="deal" [tenantId]="business.tenantId ?? ''" [canBuy]="isMember()" />
+          }
+        </div>
+        @if (smartDealPages() > 1) {
+          <app-pagination [pageIndex]="smartDealPageIndex()" [totalPages]="smartDealPages()" (pageChange)="goToSmartDealPage($event)" />
+        }
+      </section>
+    }
     @if (offers().length === 0) {
       <p class="text-muted small">{{ '::Wallet:Store:OffersEmpty' | abpLocalization }}</p>
     } @else {

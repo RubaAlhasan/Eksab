@@ -22,11 +22,16 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
 import { AnimatedNumberComponent } from '../../shared/components/animated-number/animated-number.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { campaignTypeEmoji, campaignTypeLabelKey } from '../../shared/utils/campaign-display.util';
+import { DEFAULT_DEAL_FILTERS, filterDeals, sortDeals } from '../../shared/utils/smart-deal-feed.util';
+import { SmartDealTileComponent } from '../../shared/components/smart-deal-tile/smart-deal-tile.component';
+import { CustomerSmartOffersService } from '../../proxy/controllers/customer-smart-offers.service';
+import type { CustomerSmartOfferDto } from '../../proxy/smart-offers/models';
 import { isCredit, transactionSourceLabelKey, transactionTypeLabelKey } from '../../shared/utils/transaction-display.util';
 
 const DISCOVER_CANDIDATE_COUNT = 8;
 const DISCOVER_PREVIEW_COUNT = 4;
 const CAMPAIGN_PREVIEW_COUNT = 6;
+const SMART_DEAL_PREVIEW_COUNT = 6;
 // How many of the customer's joined businesses to pull recent activity from — bounded so a member of
 // many businesses doesn't fan out into dozens of parallel requests just to render a home-page preview.
 const RECENT_ACTIVITY_WALLET_FANOUT = 6;
@@ -69,6 +74,7 @@ interface RecentActivityItem {
     EmptyStateComponent,
     ErrorStateComponent,
     AnimatedNumberComponent,
+    SmartDealTileComponent,
   ],
 })
 export class CustomerHomeComponent implements OnInit {
@@ -78,6 +84,7 @@ export class CustomerHomeComponent implements OnInit {
   private readonly customerBusinessService = inject(CustomerBusinessService);
   private readonly walletService = inject(WalletService);
   private readonly couponsService = inject(CouponsService);
+  private readonly customerSmartOffersService = inject(CustomerSmartOffersService);
   private readonly configState = inject(ConfigStateService);
   protected readonly hub = inject(NotificationHubService);
 
@@ -174,6 +181,17 @@ export class CustomerHomeComponent implements OnInit {
 
   protected readonly campaignPreview = computed(() => this.campaigns().slice(0, CAMPAIGN_PREVIEW_COUNT));
 
+  // Smart deals from every business the customer joined or follows. The strip leads with deals on sale right now, best
+  // saving first; when nothing is on sale it falls back to what is coming, so the section never reads as empty by accident.
+  protected readonly smartDeals = signal<CustomerSmartOfferDto[]>([]);
+  protected readonly smartDealsLoaded = signal(false);
+  protected readonly smartDealsFailed = signal(false);
+  protected readonly smartDealPreview = computed(() => {
+    const all = this.smartDeals();
+    const live = filterDeals(all, { ...DEFAULT_DEAL_FILTERS, availability: 'liveNow' });
+    return sortDeals(live.length > 0 ? live : all, 'biggestSaving').slice(0, SMART_DEAL_PREVIEW_COUNT);
+  });
+
   private readonly joinedTenantIds = computed(
     () => new Set(this.wallets().map(w => w.tenantId).filter((id): id is string => !!id)),
   );
@@ -194,6 +212,7 @@ export class CustomerHomeComponent implements OnInit {
     });
 
     this.loadCampaigns();
+    this.loadSmartDeals();
 
     this.customerBusinessService
       .getList({
@@ -227,6 +246,24 @@ export class CustomerHomeComponent implements OnInit {
 
   protected retryCampaigns(): void {
     this.loadCampaigns();
+  }
+
+  protected retrySmartDeals(): void {
+    this.loadSmartDeals();
+  }
+
+  private loadSmartDeals(): void {
+    this.smartDealsFailed.set(false);
+    this.customerSmartOffersService.getFeed(12).subscribe({
+      next: result => {
+        this.smartDeals.set(result.items ?? []);
+        this.smartDealsLoaded.set(true);
+      },
+      error: () => {
+        this.smartDealsLoaded.set(true);
+        this.smartDealsFailed.set(true);
+      },
+    });
   }
 
   private loadCampaigns(): void {

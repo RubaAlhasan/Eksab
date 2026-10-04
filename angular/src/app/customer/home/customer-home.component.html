@@ -206,6 +206,35 @@
       }
     </section>
 
+    <section class="eks-home-span eks-rise" style="--eks-rise-delay: 280ms">
+      <div class="eks-section-header">
+        <h2 class="eks-section-title">{{ '::SmartDeals:Home:Title' | abpLocalization }}</h2>
+        <a routerLink="/customer/smart-deals" class="eks-section-link">
+          {{ '::Wallet:Points:SeeAll' | abpLocalization }}
+        </a>
+      </div>
+      @if (!smartDealsLoaded()) {
+        <div class="eks-home-carousel" role="status">
+          <span class="visually-hidden">{{ '::SmartDeals:Loading' | abpLocalization }}</span>
+          <div class="eks-skeleton eks-skeleton-card" aria-hidden="true"></div>
+          <div class="eks-skeleton eks-skeleton-card" aria-hidden="true"></div>
+        </div>
+      } @else if (smartDealsFailed()) {
+        <app-error-state [message]="'::SmartDeals:LoadError' | abpLocalization" (retry)="retrySmartDeals()" />
+      } @else if (smartDealPreview().length > 0) {
+        <div class="eks-home-carousel">
+          @for (deal of smartDealPreview(); track deal.id) {
+            <app-smart-deal-tile [deal]="deal" />
+          }
+        </div>
+      } @else {
+        <div class="eks-panel eks-home-empty">
+          <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-bolt"></i></span>
+          <p class="text-muted small mb-0">{{ '::SmartDeals:Home:Empty' | abpLocalization }}</p>
+        </div>
+      }
+    </section>
+
     @if (rewardsPreview().length > 0) {
       <section class="eks-home-span eks-rise" style="--eks-rise-delay: 320ms">
         <div class="eks-section-header">

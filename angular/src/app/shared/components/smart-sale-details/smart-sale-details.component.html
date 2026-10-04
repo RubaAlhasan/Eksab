@@ -1,0 +1,106 @@
+<div class="d-flex flex-column gap-3">
+  <div>
+    <div class="fw-semibold">{{ sale().offerTitleEn }}</div>
+    @if (sale().offerTitleAr) {
+      <div class="small text-muted" dir="rtl">{{ sale().offerTitleAr }}</div>
+    }
+  </div>
+
+  <div class="d-flex flex-column gap-1">
+    <span class="small fw-semibold">{{ '::SmartDeals:Offer:About' | abpLocalization }}</span>
+    @if (description()) {
+      <p class="small mb-0">{{ description() }}</p>
+    } @else {
+      <p class="small mb-0 text-muted fst-italic">{{ '::SmartDeals:Offer:NoDescription' | abpLocalization }}</p>
+    }
+    @if (sale().smartOfferId && canOpenOffer) {
+      <a class="small fw-semibold mt-1" [routerLink]="['/business/smart-offers', sale().smartOfferId, 'view']">
+        {{ '::SmartDeals:SaleDetails:OpenDeal' | abpLocalization }}
+        <i class="fas fa-arrow-right ms-1" aria-hidden="true"></i>
+      </a>
+    }
+  </div>
+
+  <div class="d-flex flex-column gap-2 small">
+    @if (sale().smartOfferId; as dealId) {
+      <div class="d-flex justify-content-between align-items-center gap-3">
+        <span class="text-muted">{{ '::SmartDeals:SaleDetails:DealId' | abpLocalization }}</span>
+        <span class="d-flex align-items-center gap-2 min-w-0">
+          <code class="small text-break">{{ dealId }}</code>
+          <button type="button" class="btn btn-outline-secondary btn-sm flex-shrink-0" (click)="copyDealId(dealId)">
+            <i class="fas fa-copy me-1" aria-hidden="true"></i>{{ '::SmartDeals:SaleDetails:CopyId' | abpLocalization }}
+          </button>
+        </span>
+      </div>
+    }
+    @if (sale().code) {
+      <div class="d-flex justify-content-between gap-3">
+        <span class="text-muted">{{ '::SmartDeals:SaleDetails:Code' | abpLocalization }}</span>
+        <span class="fw-semibold font-monospace">{{ sale().code }}</span>
+      </div>
+    }
+    <div class="d-flex justify-content-between gap-3">
+      <span class="text-muted">{{ '::SmartDeals:Orders:Quantity' | abpLocalization }}</span>
+      <span class="fw-semibold">{{ sale().quantity }}</span>
+    </div>
+    <div class="d-flex justify-content-between gap-3">
+      <span class="text-muted">{{ '::SmartDeals:SaleDetails:UnitPrice' | abpLocalization }}</span>
+      <span class="fw-semibold">{{ money(sale().unitPrice) }}</span>
+    </div>
+    @if (hasSaving()) {
+      <div class="d-flex justify-content-between gap-3">
+        <span class="text-muted">{{ '::SmartDeals:SaleDetails:BasePrice' | abpLocalization }}</span>
+        <span class="text-muted text-decoration-line-through">{{ money(sale().basePrice) }}</span>
+      </div>
+    }
+    <div class="d-flex justify-content-between gap-3">
+      <span class="text-muted">{{ '::SmartDeals:Orders:Total' | abpLocalization }}</span>
+      <span class="fw-bold">{{ money(sale().totalAmount) }}</span>
+    </div>
+    @if (sale().serviceDate) {
+      <div class="d-flex justify-content-between gap-3">
+        <span class="text-muted">{{ '::SmartDeals:SaleDetails:ServiceDate' | abpLocalization }}</span>
+        <span class="fw-semibold">{{ sale().serviceDate | date: 'mediumDate' }}</span>
+      </div>
+    }
+    @if (sale().placedAt) {
+      <div class="d-flex justify-content-between gap-3">
+        <span class="text-muted">{{ '::SmartDeals:Orders:Placed' | abpLocalization }}</span>
+        <span class="fw-semibold">{{ sale().placedAt | date: 'medium' }}</span>
+      </div>
+    }
+    @if (sale().completedAt) {
+      <div class="d-flex justify-content-between gap-3">
+        <span class="text-muted">{{ '::SmartDeals:SaleDetails:CompletedAt' | abpLocalization }}</span>
+        <span class="fw-semibold">{{ sale().completedAt | date: 'medium' }}</span>
+      </div>
+    }
+    @if (sale().rejectionReason) {
+      <div class="d-flex justify-content-between gap-3">
+        <span class="text-muted">{{ '::SmartDeals:SaleDetails:RejectionReason' | abpLocalization }}</span>
+        <span class="fw-semibold text-end">{{ sale().rejectionReason }}</span>
+      </div>
+    }
+    <div class="d-flex justify-content-between gap-3">
+      <span class="text-muted">{{ '::SmartDeals:Counter:Customer' | abpLocalization }}</span>
+      <span class="text-end">
+        <span class="fw-semibold d-block">{{ sale().customerName || ('::SmartDeals:Counter:UnnamedCustomer' | abpLocalization) }}</span>
+        @if (sale().customerPhone) {
+          <span class="text-muted d-block">{{ sale().customerPhone }}</span>
+        }
+      </span>
+    </div>
+    @if (sale().branchName) {
+      <div class="d-flex justify-content-between gap-3">
+        <span class="text-muted">{{ '::BusinessPanel:Transactions:ColumnBranch' | abpLocalization }}</span>
+        <span class="fw-semibold">{{ sale().branchName }}</span>
+      </div>
+    }
+    @if (sale().staffEmail) {
+      <div class="d-flex justify-content-between gap-3">
+        <span class="text-muted">{{ '::BusinessPanel:Transactions:ColumnStaff' | abpLocalization }}</span>
+        <span class="fw-semibold">{{ sale().staffEmail }}</span>
+      </div>
+    }
+  </div>
+</div>

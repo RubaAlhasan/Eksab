@@ -1,0 +1,110 @@
+<div class="eks-deals-browse">
+  <div class="eks-deals-browse__summary">
+    @if (!isLoading() && !loadFailed()) {
+      <p class="eks-deals-browse__count mb-0">
+        {{ '::SmartDeals:Browse:Summary' | abpLocalization: feed().length.toString() : liveCount().toString() }}
+      </p>
+    }
+    <a routerLink="/customer/smart-deals/orders" class="eks-section-link">
+      <i class="fas fa-receipt me-1" aria-hidden="true"></i>{{ '::SmartDeals:Browse:MyOrders' | abpLocalization }}
+    </a>
+  </div>
+
+  <div class="eks-deals-browse__filters">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <div class="eks-filter-search">
+        <app-search-input
+          [placeholder]="'::SmartDeals:Browse:SearchPlaceholder' | abpLocalization"
+          (valueChange)="setQuery($event)"
+        ></app-search-input>
+      </div>
+      <select
+        class="form-select eks-filter-select"
+        [attr.aria-label]="'::SmartDeals:Browse:SortLabel' | abpLocalization"
+        (change)="setSort($any($event.target).value)"
+      >
+        <option value="endingSoon" [selected]="filters().sort === 'endingSoon'">{{ '::SmartDeals:Browse:SortEndingSoon' | abpLocalization }}</option>
+        <option value="biggestSaving" [selected]="filters().sort === 'biggestSaving'">{{ '::SmartDeals:Browse:SortBiggestSaving' | abpLocalization }}</option>
+        <option value="lowestPrice" [selected]="filters().sort === 'lowestPrice'">{{ '::SmartDeals:Browse:SortLowestPrice' | abpLocalization }}</option>
+      </select>
+      <select
+        class="form-select eks-filter-select"
+        [attr.aria-label]="'::SmartDeals:Browse:CurrencyLabel' | abpLocalization"
+        (change)="setCurrency($any($event.target).value)"
+      >
+        <option value="" [selected]="filters().currency === null">{{ '::SmartDeals:Browse:AnyCurrency' | abpLocalization }}</option>
+        <option [value]="Currency.Usd" [selected]="filters().currency === Currency.Usd">USD</option>
+        <option [value]="Currency.Syp" [selected]="filters().currency === Currency.Syp">SYP</option>
+      </select>
+    </div>
+
+    <div class="eks-chip-row" role="group" [attr.aria-label]="'::SmartDeals:Browse:AvailabilityLabel' | abpLocalization">
+      <button type="button" class="eks-chip" [class.active]="filters().availability === 'all'" (click)="setAvailability('all')">
+        {{ '::SmartDeals:Browse:FilterAll' | abpLocalization }}
+      </button>
+      <button type="button" class="eks-chip" [class.active]="filters().availability === 'liveNow'" (click)="setAvailability('liveNow')">
+        <span class="eks-deals-browse__dot" aria-hidden="true"></span>{{ '::SmartDeals:Browse:FilterLiveNow' | abpLocalization }}
+      </button>
+      <button type="button" class="eks-chip" [class.active]="filters().availability === 'comingUp'" (click)="setAvailability('comingUp')">
+        {{ '::SmartDeals:Browse:FilterComingUp' | abpLocalization }}
+      </button>
+    </div>
+
+    <div class="eks-chip-row" role="group" [attr.aria-label]="'::SmartDeals:Browse:SavingLabel' | abpLocalization">
+      @for (step of discountSteps; track step) {
+        <button type="button" class="eks-chip" [class.active]="filters().minDiscount === step" (click)="setMinDiscount(step)">
+          {{ step === 0 ? ('::SmartDeals:Browse:FilterAnySaving' | abpLocalization) : (step + '%+') }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <app-skeleton-list variant="grid" [count]="4" [label]="'::SmartDeals:Loading' | abpLocalization" />
+  } @else if (loadFailed()) {
+    <app-error-state [message]="'::SmartDeals:LoadError' | abpLocalization" (retry)="retry()" />
+  } @else if (feed().length === 0) {
+    <app-empty-state
+      icon="fa-bolt"
+      [title]="'::SmartDeals:Browse:EmptyTitle' | abpLocalization"
+      [description]="'::SmartDeals:Browse:EmptyDescription' | abpLocalization"
+    />
+  } @else if (filtered().length === 0) {
+    <app-empty-state
+      icon="fa-filter"
+      [title]="'::SmartDeals:Browse:NoMatchTitle' | abpLocalization"
+      [description]="'::SmartDeals:Browse:NoMatchDescription' | abpLocalization"
+    />
+    <div class="text-center mt-3">
+      <button type="button" class="btn btn-outline-primary btn-sm" (click)="clearFilters()">
+        {{ '::SmartDeals:Browse:ClearFilters' | abpLocalization }}
+      </button>
+    </div>
+  } @else if (isGrouped()) {
+    @for (section of sections(); track section.key) {
+      <section class="eks-deals-browse__section" [attr.aria-labelledby]="'deals-' + section.key">
+        <header class="eks-deals-browse__section-head">
+          <h2 class="eks-section-title mb-0" [id]="'deals-' + section.key">
+            <i class="fas {{ section.icon }} me-1" aria-hidden="true"></i>{{ section.titleKey | abpLocalization }}
+          </h2>
+          <span class="eks-deals-browse__section-count">{{ section.deals.length }}</span>
+        </header>
+        <div class="eks-deal-grid">
+          @for (deal of section.deals; track deal.id) {
+            <app-smart-deal-card [offer]="deal" [tenantId]="deal.tenantId ?? ''" [canBuy]="deal.isMember === true" [showBusiness]="true" />
+          }
+        </div>
+      </section>
+    }
+  } @else {
+    <div class="eks-deal-grid">
+      @for (deal of flatList(); track deal.id) {
+        <app-smart-deal-card [offer]="deal" [tenantId]="deal.tenantId ?? ''" [canBuy]="deal.isMember === true" [showBusiness]="true" />
+      }
+    </div>
+  }
+
+  @if (!isLoading() && !loadFailed() && filtered().length > 0 && totalPages() > 1) {
+    <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)" />
+  }
+</div>

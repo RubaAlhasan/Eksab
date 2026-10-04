@@ -1,0 +1,37 @@
+<div class="eks-offer">
+  <a class="eks-offer__back" routerLink="/customer/smart-deals/orders">
+    <i class="fas fa-arrow-left me-1" aria-hidden="true"></i>{{ '::SmartDeals:Offer:Back' | abpLocalization }}
+  </a>
+
+  @if (isLoading()) {
+    <app-skeleton-list variant="list" [count]="1" [label]="'::SmartDeals:Loading' | abpLocalization" />
+  } @else if (loadFailed()) {
+    <app-error-state [message]="'::SmartDeals:Offer:NotFound' | abpLocalization" (retry)="retry()" />
+  } @else if (offer(); as deal) {
+    <article class="eks-offer__card">
+      <header class="eks-offer__head">
+        <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-bolt"></i></span>
+        <span class="eks-offer__body">
+          <h1 class="eks-offer__title">{{ title(deal) }}</h1>
+          <span class="eks-offer__business">{{ deal.businessName }}</span>
+        </span>
+      </header>
+
+      <h2 class="eks-offer__section">{{ '::SmartDeals:Offer:About' | abpLocalization }}</h2>
+      @if (description(deal)) {
+        <p class="eks-offer__description">{{ description(deal) }}</p>
+      } @else {
+        <p class="eks-offer__description eks-offer__description--empty">
+          {{ '::SmartDeals:Offer:NoDescription' | abpLocalization }}
+        </p>
+      }
+
+      <dl class="eks-offer__facts">
+        <div>
+          <dt>{{ '::SmartDeals:SaleDetails:BasePrice' | abpLocalization }}</dt>
+          <dd>{{ basePrice(deal) }}</dd>
+        </div>
+      </dl>
+    </article>
+  }
+</div>
