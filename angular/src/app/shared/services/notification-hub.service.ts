@@ -1,7 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { AuthService } from '@abp/ng.core';
+import { AuthService, EnvironmentService } from '@abp/ng.core';
 import * as signalR from '@microsoft/signalr';
-import { environment } from '../../../environments/environment';
 import { UserNotificationsService } from '../../proxy/controllers/user-notifications.service';
 import type { UserNotificationDto } from '../../proxy/user-notifications/models';
 import { UserNotificationType } from '../../proxy/user-notifications/user-notification-type.enum';
@@ -44,6 +43,11 @@ const MAX_KEPT_ITEMS = 30;
 @Injectable({ providedIn: 'root' })
 export class NotificationHubService {
   private readonly authService = inject(AuthService);
+  // Runtime environment, NOT the compile-time `environment` import: environment.prod.ts is built
+  // with localhost URLs and the real ones arrive at startup via remoteEnv /getEnvConfig, which
+  // updates this store and leaves the imported constant untouched. Reading the import here made the
+  // hub dial localhost:44330 in every deployed environment.
+  private readonly environmentService = inject(EnvironmentService);
   private readonly userNotificationsService = inject(UserNotificationsService);
 
   private hubConnection: signalR.HubConnection | null = null;
@@ -66,7 +70,7 @@ export class NotificationHubService {
 
     this.loadInitialFeed();
 
-    const hubUrl = `${environment.apis.default.url}${HUB_ROUTE}`;
+    const hubUrl = `${this.environmentService.getApiUrl('default')}${HUB_ROUTE}`;
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, { accessTokenFactory: () => this.authService.getAccessToken() })
       .withAutomaticReconnect()

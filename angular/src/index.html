@@ -27,8 +27,93 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="assets/images/eksabli-mark.svg" />
+    <style>
+      /* Pre-bootstrap splash.
+       *
+       * Lives INSIDE <app-root>, which Angular clears when it renders AppComponent -- so it
+       * needs no JavaScript to tear down and cannot outlive the app. It stays visible through
+       * ABP's APP_INITIALIZER, which is where the /getEnvConfig fetch and the
+       * application-configuration call happen; those run before the root component renders,
+       * which is exactly the blank-screen window this covers.
+       *
+       * Everything here is inline: an external stylesheet or <img> would be one more
+       * round-trip during the very gap we are trying to hide.
+       *
+       * Colours are literals, not var(--eks-*), because tokens.scss arrives with the
+       * (lazy, hashed) app stylesheet that has not loaded yet. They mirror
+       * --eks-neutral-50/900 (ground), --eks-neutral-500/400 (label) and --eks-primary-600.
+       * Dark mode keys off prefers-color-scheme: the portals' own `.dark` class is set by the
+       * shell components, which do not exist yet.
+       */
+      .eks-boot {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        background: #faf9f8;
+        color: #726f6d;
+        font: 500 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        /* Held at opacity 0 for 200ms: a warm load finishes inside that window, so the
+         * splash never flashes on fast navigations -- it only appears if there is a real wait. */
+        animation: eks-boot-in 0.2s ease-out 0.2s both;
+      }
+      @media (prefers-color-scheme: dark) {
+        .eks-boot { background: #191817; color: #a4a19e; }
+      }
+      .eks-boot__art { position: relative; width: 64px; height: 64px; }
+      .eks-boot__mark { position: absolute; top: 8px; left: 8px; width: 48px; height: 48px; }
+      .eks-boot__ring {
+        position: absolute;
+        inset: 0;
+        width: 64px;
+        height: 64px;
+        animation: eks-boot-spin 1s linear infinite;
+      }
+      /* r=29 -> circumference ~182; a 46-unit dash draws a quarter arc. */
+      .eks-boot__ring circle {
+        fill: none;
+        stroke: #6248e3;
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-dasharray: 46 136;
+      }
+      .eks-boot__label { margin: 0; }
+      @keyframes eks-boot-spin { to { transform: rotate(360deg); } }
+      @keyframes eks-boot-in { from { opacity: 0; } to { opacity: 1; } }
+      @media (prefers-reduced-motion: reduce) {
+        .eks-boot { animation: none; }
+        .eks-boot__ring { animation-duration: 3s; }
+      }
+    </style>
   </head>
   <body>
-    <app-root></app-root>
+    <app-root>
+      <div class="eks-boot" role="status" aria-live="polite">
+        <div class="eks-boot__art">
+          <svg class="eks-boot__ring" viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="32" r="29" />
+          </svg>
+          <!-- Same artwork as assets/images/eksabli-mark.svg, inlined to avoid a request.
+               Gradient id is suffixed to avoid colliding with the asset when both are on a page. -->
+          <svg class="eks-boot__mark" viewBox="0 0 48 48" aria-hidden="true">
+            <defs>
+              <linearGradient id="eksMarkBoot" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#7c6af0" />
+                <stop offset="1" stop-color="#4f37c4" />
+              </linearGradient>
+            </defs>
+            <rect width="48" height="48" rx="13" fill="url(#eksMarkBoot)" />
+            <rect x="15" y="14" width="19" height="5" rx="2.5" fill="#fff" />
+            <rect x="15" y="21.5" width="12" height="5" rx="2.5" fill="#fff" fill-opacity=".72" />
+            <rect x="15" y="29" width="19" height="5" rx="2.5" fill="#fff" />
+          </svg>
+        </div>
+        <p class="eks-boot__label">Loading Eksabli…</p>
+      </div>
+    </app-root>
   </body>
 </html>
