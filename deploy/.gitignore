@@ -1,0 +1,6 @@
+# Real configuration and secrets never belong in the repo.
+.env
+secrets/*
+!secrets/.gitkeep
+backups/
+dynamic-env.json

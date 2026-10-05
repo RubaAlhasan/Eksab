@@ -1,0 +1,43 @@
+# nginx config for the Angular SPA container.
+#
+# Processed by the nginx image's envsubst at container start; NGINX_ENVSUBST_FILTER is set to
+# ^API_ORIGIN$ in docker-compose.yml so only that placeholder is replaced and nginx's own
+# $uri / $host runtime variables are left alone.
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name _;
+
+    location / {
+        root /usr/share/nginx/html;
+        index index.html index.htm;
+        try_files $uri $uri/ /index.html =404;
+
+        # Opens the TCP+TLS connection to the API origin while the HTML is still being parsed,
+        # instead of when the JS bundle finally calls it. ABP's APP_INITIALIZER blocks the app
+        # on /api/abp/application-configuration, and on a high-latency link the handshake alone
+        # (measured at 2.4-3.2s from the author's connection) is a large share of the startup
+        # wait. The request itself is 33KB gzipped and the server answers in ~60ms, so
+        # connection setup -- not the payload or the backend -- is what is worth removing.
+        #
+        # Injected here rather than written into index.html because the API origin differs per
+        # environment, and the built image has to stay environment-agnostic (same reason
+        # dynamic-env.json is mounted rather than baked in).
+        sub_filter '</head>' '<link rel="preconnect" href="${API_ORIGIN}" crossorigin><link rel="dns-prefetch" href="${API_ORIGIN}"></head>';
+        sub_filter_once on;
+        sub_filter_types text/html;
+    }
+
+    location /getEnvConfig {
+        default_type 'application/json';
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Content-Type' 'application/json';
+        try_files $uri /dynamic-env.json;
+    }
+
+    error_page 500 502 503 504 /50x.html;
+    location = /50x.html {
+        root /usr/share/nginx/html;
+    }
+}

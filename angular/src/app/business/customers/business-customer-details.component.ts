@@ -1,6 +1,6 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LocalizationPipe, PermissionService } from '@abp/ng.core';
 import { ToasterService } from '@abp/ng.theme.shared';
@@ -62,7 +62,6 @@ type DetailTab = 'transactions' | 'coupons' | 'smartDeals';
     DatePipe,
     DecimalPipe,
     SmartSaleDetailsComponent,
-    RouterLink,
     ReactiveFormsModule,
     LocalizationPipe,
     PageHeaderComponent,
