@@ -118,9 +118,11 @@ public class SmartOfferOrderAppService : SmartOfferServiceBase, ISmartOfferOrder
     {
         await CheckStaffRoleAsync(_employeeAssignmentRepository, EmployeeRole.Owner, EmployeeRole.BranchManager, EmployeeRole.Cashier);
 
-        // Only settled orders: a Pending one is still on the counter, so it is shown by lookup, not as a sale.
+        // Settled orders, plus holds that have already lapsed. A lapsed hold is shown as Expired here (the lookup does the
+        // same), even before the expiry worker has written it, so the counter never shows a hold in one list and not the other.
+        var lapsedBefore = NowUtc;
         var settled = (await OrderRepository.GetQueryableAsync())
-            .Where(o => o.Status != SmartOfferOrderStatus.Pending);
+            .Where(o => o.Status != SmartOfferOrderStatus.Pending || o.ReservationExpiresAt <= lapsedBefore);
 
         var total = await AsyncExecuter.CountAsync(settled);
         var orders = await AsyncExecuter.ToListAsync(
