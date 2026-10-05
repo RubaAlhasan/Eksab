@@ -633,6 +633,45 @@ public abstract class SmartOfferAppService_Tests<TStartupModule> : EksabliApplic
         elsewhere.TotalCount.ShouldBe(0);
     }
 
+    [Fact]
+    public async Task A_suspended_business_takes_no_new_deal_orders_and_its_deals_are_not_listed()
+    {
+        var tenantId = await CreateTenantAsync();
+        await ApproveBusinessAsync(tenantId, "Suspended Soon");
+        var member = Guid.NewGuid();
+        await JoinAsync(tenantId, member);
+        var offer = await CreateOfferAsync(tenantId, AlwaysOnDeal(quantity: 10));
+        await PlaceAsync(member, tenantId, offer.Id);
+
+        await SuspendBusinessAsync(tenantId);
+
+        // Already a member, but the business is suspended: no new hold, and the deal is no longer offered.
+        var newBuyer = Guid.NewGuid();
+        await JoinAsync(tenantId, newBuyer);
+        await Should.ThrowAsync<UserFriendlyException>(() => PlaceAsync(newBuyer, tenantId, offer.Id));
+        await Should.ThrowAsync<UserFriendlyException>(() => PlaceAsync(member, tenantId, offer.Id, quantity: 2));
+
+        using (LoginAs(member))
+        {
+            var listed = await WithUnitOfWorkAsync(() => _customerService.GetOffersAsync(tenantId));
+            listed.Items.ShouldBeEmpty();
+        }
+    }
+
+    private async Task SuspendBusinessAsync(Guid tenantId)
+    {
+        var profiles = GetRequiredService<IRepository<BusinessProfile, Guid>>();
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var profile = await profiles.FirstAsync();
+                profile.Suspend();
+                await profiles.UpdateAsync(profile, autoSave: true);
+            }
+        });
+    }
+
     private async Task CompleteOrderAsync(Guid tenantId, Guid cashierId, string code)
     {
         using (_currentTenant.Change(tenantId))
