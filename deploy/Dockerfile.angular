@@ -21,6 +21,10 @@ COPY angular/ ./
 
 # Angular 21 production builds are memory-hungry; the default heap is too small on a 2-vCPU box.
 ENV NODE_OPTIONS=--max-old-space-size=4096
+# Public SPA origin, baked into index.html and sitemap.xml by scripts/generate-seo.mjs. Compose
+# passes it from APP_URL in the stack's .env. It is declared here, after the install layer, so
+# changing it does not invalidate the dependency cache.
+ARG APP_BASE_URL
 RUN yarn build:prod
 
 FROM nginx:alpine
