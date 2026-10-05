@@ -17,6 +17,9 @@ public interface IPointsExpiryPolicy
 
 public class PointsExpiryPolicy : IPointsExpiryPolicy, ITransientDependency
 {
+    // How far ahead the customer app warns about points about to expire.
+    public static readonly TimeSpan ExpiringSoonWindow = TimeSpan.FromDays(30);
+
     private readonly IRepository<BusinessProfile, Guid> _businessProfileRepository;
     private readonly IClock _clock;
 

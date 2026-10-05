@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
+import { LocalizedNamePipe } from '../../shared/pipes/localized-name.pipe';
 import { environment } from '../../../environments/environment';
 import { CustomerBusinessService } from '../../proxy/controllers/customer-business.service';
 import { FollowsService } from '../../proxy/controllers/follows.service';
@@ -51,6 +52,7 @@ const SMART_DEALS_PAGE_SIZE = 6;
     DatePipe,
     DecimalPipe,
     LocalizationPipe,
+    LocalizedNamePipe,
     SkeletonListComponent,
     ErrorStateComponent,
     PaginationComponent,

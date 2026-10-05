@@ -28,7 +28,7 @@
         [class.eks-tile--disabled]="!canAfford(reward) || isOutOfStock(reward)"
       >
         <span class="eks-icon-tile eks-icon-tile--emoji" aria-hidden="true">{{ rewardTypeEmoji(reward.type) }}</span>
-        <span class="fw-semibold">{{ reward.nameEn }}</span>
+        <span class="fw-semibold">{{ reward.nameEn | localizedName: reward.nameAr }}</span>
         <span class="d-flex align-items-center gap-2 flex-wrap">
           <app-status-badge [label]="statusLabelKey(status(reward)) | abpLocalization" [variant]="statusVariant(status(reward))" />
           @if (isOutOfStock(reward)) {

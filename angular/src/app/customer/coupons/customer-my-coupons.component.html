@@ -35,8 +35,11 @@
         >
           <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-ticket"></i></span>
           <span class="eks-row__body">
-            <span class="eks-row__title">{{ coupon.rewardNameEn }}</span>
+            <span class="eks-row__title">{{ coupon.rewardNameEn | localizedName: coupon.rewardNameAr }}</span>
             <span class="eks-row__meta">
+              @if (businessNameFor(coupon); as businessName) {
+                {{ businessName }} ·
+              }
               {{ coupon.pointsCost }} {{ '::Wallet:PointsSuffix' | abpLocalization }} · {{ coupon.issuedAt | date: 'mediumDate' }}
             </span>
           </span>

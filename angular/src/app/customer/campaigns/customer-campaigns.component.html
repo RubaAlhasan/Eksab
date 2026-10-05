@@ -11,7 +11,7 @@
         <span class="eks-icon-tile eks-icon-tile--emoji" aria-hidden="true">{{ campaignTypeEmoji(campaign.type) }}</span>
         <span class="eks-row__body">
           <span class="eks-row__meta">{{ campaign.businessName }}</span>
-          <span class="eks-row__title">{{ campaign.nameEn }}</span>
+          <span class="eks-row__title">{{ campaign.nameEn | localizedName: campaign.nameAr }}</span>
           <span class="eks-row__meta">
             {{ campaignTypeLabelKey(campaign.type) | abpLocalization }}
             · {{ '::Wallet:Campaigns:Until' | abpLocalization }} {{ campaign.endDate | date: 'mediumDate' }}

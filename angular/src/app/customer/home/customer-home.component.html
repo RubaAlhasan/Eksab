@@ -60,6 +60,12 @@
         <span class="eks-hero__stat-label">{{ '::Wallet:Home:StatActiveRewards' | abpLocalization }}</span>
       </div>
     </div>
+
+    @if (expiringPoints() > 0 && expiringOn(); as expiresOn) {
+      <p class="eks-home-hero__expiry small mt-2 mb-0">
+        {{ '::Wallet:Home:ExpiringNotice' | abpLocalization: expiringPoints().toString() : (expiresOn | date: 'mediumDate') }}
+      </p>
+    }
   }
 </section>
 
@@ -189,7 +195,7 @@
             <a [routerLink]="['/customer/store', campaign.tenantId]" class="card eks-campaign-banner flex-shrink-0">
               <div class="card-body">
                 <p class="eks-campaign-banner__business text-truncate mb-1">{{ campaign.businessName }}</p>
-                <p class="fw-bold text-truncate mb-1">{{ campaignTypeEmoji(campaign.type) }} {{ campaign.nameEn }}</p>
+                <p class="fw-bold text-truncate mb-1">{{ campaignTypeEmoji(campaign.type) }} {{ campaign.nameEn | localizedName: campaign.nameAr }}</p>
                 <p class="eks-campaign-banner__meta mb-0">
                   {{ campaignTypeLabelKey(campaign.type) | abpLocalization }}
                   · {{ '::Wallet:Campaigns:Until' | abpLocalization }} {{ campaign.endDate | date: 'mediumDate' }}
@@ -248,7 +254,7 @@
             <a routerLink="/customer/coupons" class="card eks-reward-preview flex-shrink-0">
               <div class="card-body">
                 <div class="eks-reward-preview__icon"><i class="fas fa-gift"></i></div>
-                <p class="fw-bold text-truncate mb-1">{{ coupon.rewardNameEn }}</p>
+                <p class="fw-bold text-truncate mb-1">{{ coupon.rewardNameEn | localizedName: coupon.rewardNameAr }}</p>
                 @if (rewardBusinessName(coupon); as businessName) {
                   <p class="eks-reward-preview__business text-truncate mb-0">{{ businessName }}</p>
                 }
@@ -285,7 +291,7 @@
                 }
                 <p class="fw-semibold text-truncate mb-1">{{ business.name }}</p>
                 <p class="text-muted small mb-0 text-truncate">
-                  {{ business.categoryNameEn ?? ('::Wallet:Discover:Uncategorized' | abpLocalization) }}
+                  {{ business.categoryNameEn || business.categoryNameAr ? (business.categoryNameEn | localizedName: business.categoryNameAr) : ('::Wallet:Discover:Uncategorized' | abpLocalization) }}
                   @if (business.distanceKm !== null && business.distanceKm !== undefined) {
                     · {{ business.distanceKm | number: '1.1-1' }} {{ '::Wallet:Discover:KmAway' | abpLocalization }}
                   }

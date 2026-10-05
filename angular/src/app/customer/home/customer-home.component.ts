@@ -19,6 +19,7 @@ import type { CouponDto } from '../../proxy/rewards/models';
 import { CouponStatus } from '../../proxy/rewards/coupon-status.enum';
 import type { TransactionListItemDto } from '../../proxy/reports/models';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { LocalizedNamePipe } from '../../shared/pipes/localized-name.pipe';
 import { AnimatedNumberComponent } from '../../shared/components/animated-number/animated-number.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { campaignTypeEmoji, campaignTypeLabelKey } from '../../shared/utils/campaign-display.util';
@@ -71,6 +72,7 @@ interface RecentActivityItem {
     DecimalPipe,
     DatePipe,
     LocalizationPipe,
+    LocalizedNamePipe,
     EmptyStateComponent,
     ErrorStateComponent,
     AnimatedNumberComponent,
@@ -119,6 +121,16 @@ export class CustomerHomeComponent implements OnInit {
   protected readonly totalPoints = computed(() => this.wallets().reduce((sum, w) => sum + (w.balance ?? 0), 0));
   protected readonly businessCount = computed(() => this.wallets().length);
   protected readonly activeCouponsCount = computed(() => this.activeCoupons().length);
+
+  // Points about to expire across every business, and the earliest date among them, from the wallets already loaded.
+  protected readonly expiringPoints = computed(() => this.wallets().reduce((sum, w) => sum + (w.expiringPoints ?? 0), 0));
+  protected readonly expiringOn = computed<string | null>(() => {
+    const dates = this.wallets()
+      .filter(w => (w.expiringPoints ?? 0) > 0 && !!w.expiringOn)
+      .map(w => w.expiringOn as string);
+    if (dates.length === 0) return null;
+    return dates.reduce((earliest, date) => (Date.parse(date) < Date.parse(earliest) ? date : earliest));
+  });
 
   protected readonly rewardsPreview = computed(() => this.activeCoupons().slice(0, REWARDS_PREVIEW_COUNT));
 

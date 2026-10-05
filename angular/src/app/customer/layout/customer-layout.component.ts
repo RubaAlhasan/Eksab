@@ -7,7 +7,7 @@ import { LocalizationPipe, SessionStateService, getLocaleDirection } from '@abp/
 import { NotificationHubService } from '../../shared/services/notification-hub.service';
 import { CustomerThemeService } from '../../shared/services/customer-theme.service';
 
-type CustomerTab = 'home' | 'search' | 'alerts' | 'profile' | null;
+type CustomerTab = 'home' | 'deals' | 'search' | 'alerts' | 'profile' | null;
 
 /**
  * Customer app shell — mounted at `/customer`, gated only by `authGuard` (same as the bare `/home`
@@ -21,7 +21,7 @@ type CustomerTab = 'home' | 'search' | 'alerts' | 'profile' | null;
  * only because they host non-signal stock-ABP descendants like Identity/Setting Management) since this
  * subtree hosts only our own signal-based pages.
  *
- * Bottom nav has four tabs (Home/Search/Alerts/Profile) — a standalone Wallet tab is deliberately not
+ * Bottom nav has five tabs (Home/Deals/Search/Alerts/Profile) — a standalone Wallet tab is deliberately not
  * here yet: Home already covers "which businesses have I joined" (the wallet grid), so a separate Wallet
  * tab would just be a duplicate list; this app's own convention (see `business-layout.component.ts`'s
  * `NAV` comment) is "only real, already-built pages — no placeholder/disabled entries," which cuts the
@@ -87,6 +87,7 @@ export class CustomerLayoutComponent {
   // them: the nav is hidden there entirely (see showBottomNav below), matching the one prototype screen
   // (redeem-reward.html) that ships genuinely nav-less rather than just JS-hidden.
   private static readonly HOME_PREFIXES = ['/customer/home', '/customer/wallet', '/customer/qr', '/customer/campaigns'];
+  private static readonly DEALS_PREFIXES = ['/customer/smart-deals'];
   private static readonly SEARCH_PREFIXES = ['/customer/search', '/customer/store'];
   private static readonly ALERTS_PREFIXES = ['/customer/alerts'];
   private static readonly PROFILE_PREFIXES = [
@@ -102,6 +103,7 @@ export class CustomerLayoutComponent {
     const url = this.currentUrl();
     const matches = (prefixes: string[]) => prefixes.some(p => url === p || url.startsWith(p + '/'));
     if (matches(CustomerLayoutComponent.HOME_PREFIXES)) return 'home';
+    if (matches(CustomerLayoutComponent.DEALS_PREFIXES)) return 'deals';
     if (matches(CustomerLayoutComponent.SEARCH_PREFIXES)) return 'search';
     if (matches(CustomerLayoutComponent.ALERTS_PREFIXES)) return 'alerts';
     if (matches(CustomerLayoutComponent.PROFILE_PREFIXES)) return 'profile';
@@ -111,7 +113,13 @@ export class CustomerLayoutComponent {
   protected readonly showBottomNav = computed(() => !this.currentUrl().startsWith('/customer/redeem'));
 
   // A root tab page (Home/Search/Alerts/Profile) has no back button; every drill-in does.
-  private static readonly ROOT_TAB_URLS = ['/customer/home', '/customer/search', '/customer/alerts', '/customer/profile'];
+  private static readonly ROOT_TAB_URLS = [
+    '/customer/home',
+    '/customer/smart-deals',
+    '/customer/search',
+    '/customer/alerts',
+    '/customer/profile',
+  ];
   protected readonly showBackButton = computed(
     () => !CustomerLayoutComponent.ROOT_TAB_URLS.includes(this.currentUrl()),
   );

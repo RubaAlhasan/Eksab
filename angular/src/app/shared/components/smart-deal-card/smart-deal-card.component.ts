@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { LocalizationPipe, SessionStateService } from '@abp/ng.core';
 import { ToasterService } from '@abp/ng.theme.shared';
 import { interval } from 'rxjs';
@@ -26,7 +27,7 @@ const ORDER_POLL_SECONDS = 15;
   templateUrl: './smart-deal-card.component.html',
   styleUrls: ['./smart-deal-card.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LocalizationPipe, DatePipe],
+  imports: [LocalizationPipe, DatePipe, RouterLink],
 })
 export class SmartDealCardComponent {
   readonly offer = input.required<CustomerSmartOfferDto>();

@@ -35,6 +35,10 @@
         <span class="eks-customer-bottomnav__iconwrap"><i class="fas fa-house"></i></span>
         <span>{{ '::Wallet:Layout:NavHome' | abpLocalization }}</span>
       </a>
+      <a routerLink="/customer/smart-deals" class="eks-customer-bottomnav__link" [class.active]="activeTab() === 'deals'">
+        <span class="eks-customer-bottomnav__iconwrap"><i class="fas fa-bolt"></i></span>
+        <span>{{ '::SmartDeals:Home:Title' | abpLocalization }}</span>
+      </a>
       <a
         routerLink="/customer/search"
         class="eks-customer-bottomnav__link"

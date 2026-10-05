@@ -3,6 +3,8 @@ import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
 import { CouponsService } from '../../proxy/controllers/coupons.service';
+import { MembershipsService } from '../../proxy/controllers/memberships.service';
+import { LocalizedNamePipe } from '../../shared/pipes/localized-name.pipe';
 import type { CouponDto } from '../../proxy/rewards/models';
 import { CouponStatus } from '../../proxy/rewards/coupon-status.enum';
 import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
@@ -28,16 +30,19 @@ type CouponFilter = 'all' | 'active' | 'used' | 'expired';
   selector: 'app-customer-my-coupons',
   templateUrl: './customer-my-coupons.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, LocalizationPipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent, StatusBadgeComponent],
+  imports: [DatePipe, LocalizationPipe, LocalizedNamePipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent, StatusBadgeComponent],
 })
 export class CustomerMyCouponsComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly couponsService = inject(CouponsService);
+  private readonly membershipsService = inject(MembershipsService);
 
   protected readonly Status = CouponStatus;
   protected readonly coupons = signal<CouponDto[]>([]);
   protected readonly isLoading = signal(true);
   protected readonly loadFailed = signal(false);
+  // Coupons carry only a tenantId, so the business name comes from the customer's wallets, the same lookup Home uses.
+  protected readonly businessNames = signal(new Map<string, string>());
 
   protected readonly filter = signal<CouponFilter>('all');
 
@@ -57,6 +62,24 @@ export class CustomerMyCouponsComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
+    this.loadBusinessNames();
+  }
+
+  protected businessNameFor(coupon: CouponDto): string | null {
+    return coupon.tenantId ? (this.businessNames().get(coupon.tenantId) ?? null) : null;
+  }
+
+  private loadBusinessNames(): void {
+    this.membershipsService.getMyWallets().subscribe({
+      next: wallets => {
+        const names = new Map<string, string>();
+        for (const wallet of wallets) {
+          if (wallet.tenantId && wallet.businessName) names.set(wallet.tenantId, wallet.businessName);
+        }
+        this.businessNames.set(names);
+      },
+      error: () => undefined,
+    });
   }
 
   protected retry(): void {

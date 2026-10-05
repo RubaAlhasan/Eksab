@@ -19,7 +19,7 @@
   </header>
 
   @if (showBusiness() && offer().businessName) {
-    <p class="eks-smart-deal__business text-truncate">{{ offer().businessName }}</p>
+    <a class="eks-smart-deal__business text-truncate" [routerLink]="['/customer/store', tenantId()]">{{ offer().businessName }}</a>
   }
   <h3 class="eks-smart-deal__title">{{ title() }}</h3>
   @if (description(); as text) {
@@ -140,7 +140,7 @@
         </button>
       </div>
     } @else {
-      <p class="eks-smart-deal__join">{{ '::SmartDeals:Customer:JoinToBuy' | abpLocalization }}</p>
+      <a class="eks-smart-deal__join" [routerLink]="['/customer/store', tenantId()]">{{ '::SmartDeals:Customer:JoinToBuy' | abpLocalization }}</a>
     }
   }
 </article>

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
+import { LocalizedNamePipe } from '../../shared/pipes/localized-name.pipe';
 import { environment } from '../../../environments/environment';
 import { CategoriesService } from '../../proxy/controllers/categories.service';
 import { CustomerBusinessService } from '../../proxy/controllers/customer-business.service';
@@ -31,7 +32,7 @@ const SEARCH_DEBOUNCE_MS = 350;
   templateUrl: './customer-discover.component.html',
   styleUrls: ['./customer-discover.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DecimalPipe, LocalizationPipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent, PaginationComponent],
+  imports: [RouterLink, DecimalPipe, LocalizationPipe, LocalizedNamePipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent, PaginationComponent],
 })
 export class CustomerDiscoverComponent implements OnInit {
   private readonly categoriesService = inject(CategoriesService);
@@ -124,10 +125,6 @@ export class CustomerDiscoverComponent implements OnInit {
 
   protected markLogoFailed(tenantId: string): void {
     this.logoFailedIds.update(ids => new Set(ids).add(tenantId));
-  }
-
-  protected categoryName(business: CustomerBusinessDto): string | null {
-    return business.categoryNameEn ?? null;
   }
 
   private load(): void {

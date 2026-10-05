@@ -44,6 +44,13 @@ export interface PointsWalletDto extends AuditedEntityDto<string> {
   currentTierId?: string | null;
   currentTierName?: string | null;
   businessName?: string | null;
+  currentTierMinLifetimePoints?: number | null;
+  nextTierName?: string | null;
+  nextTierMinLifetimePoints?: number | null;
+  // Unspent points expiring within the next 30 days, capped at what is spendable. Zero when the business does not expire points.
+  expiringPoints?: number;
+  // Earliest of those expiry dates (ISO string), null when nothing is expiring soon.
+  expiringOn?: string | null;
 }
 
 export interface TierDto extends AuditedEntityDto<string> {

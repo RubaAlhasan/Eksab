@@ -69,4 +69,25 @@ public static class PointsLotReplay
 
         return lots;
     }
+
+    /// <summary>
+    /// The points that expire in (fromUtc, toUtc], capped at <paramref name="spendableCap"/> — the same cap the
+    /// expiry sweep applies, so what a customer is warned about is what will actually leave their balance — and the
+    /// earliest of those expiry dates. Zero points means no expiry date.
+    /// </summary>
+    public static (int Points, DateTime? EarliestExpiry) ExpiringBetween(
+        IEnumerable<PointsTransaction> ledger, DateTime fromUtc, DateTime toUtc, int spendableCap)
+    {
+        var expiring = Replay(ledger)
+            .Where(lot => lot.ExpiresAt is { } expiresAt && expiresAt > fromUtc && expiresAt <= toUtc && lot.Remaining > 0)
+            .ToList();
+
+        var points = Math.Min(expiring.Sum(lot => lot.Remaining), Math.Max(0, spendableCap));
+        if (points == 0)
+        {
+            return (0, null);
+        }
+
+        return (points, expiring.Min(lot => lot.ExpiresAt));
+    }
 }
