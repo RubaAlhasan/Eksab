@@ -3,6 +3,10 @@ import { DatePipe } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ConfigStateService, LocalizationPipe, RouteBasedCultureUrlService, SessionStateService } from '@abp/ng.core';
 import { DevicesService } from '../../proxy/controllers/devices.service';
+import {
+  CustomerNotificationPreferencesService,
+  NotificationPreferencesDto,
+} from '../../proxy/controllers/customer-notification-preferences.service';
 import type { DeviceDto } from '../../proxy/devices/models';
 import { DevicePlatform } from '../../proxy/devices/device-platform.enum';
 import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
@@ -31,6 +35,10 @@ export class CustomerSettingsComponent implements OnInit {
   private readonly cultureUrlService = inject(RouteBasedCultureUrlService);
   private readonly devicesService = inject(DevicesService);
   protected readonly theme = inject(CustomerThemeService);
+  private readonly notificationPreferences = inject(CustomerNotificationPreferencesService);
+
+  // The three switches. Null until loaded; a switch shows nothing rather than a guess while the answer is pending.
+  protected readonly preferences = signal<NotificationPreferencesDto | null>(null);
 
   protected readonly Platform = DevicePlatform;
   protected readonly languages = computed(() => {
@@ -45,7 +53,25 @@ export class CustomerSettingsComponent implements OnInit {
   protected readonly isLoading = signal(true);
   protected readonly removingIds = signal<Set<string>>(new Set());
 
+  // Each switch saves on change. The new value shows at once and is put back if the server refuses it.
+  protected setPreference(group: keyof NotificationPreferencesDto, enabled: boolean): void {
+    const current = this.preferences();
+    if (!current) return;
+
+    const next = { ...current, [group]: enabled };
+    this.preferences.set(next);
+    this.notificationPreferences.updateMine(next).subscribe({
+      next: saved => this.preferences.set(saved),
+      error: () => this.preferences.set(current),
+    });
+  }
+
   ngOnInit(): void {
+    this.notificationPreferences.getMine().subscribe({
+      next: prefs => this.preferences.set(prefs),
+      error: () => undefined,
+    });
+
     this.devicesService.getList().subscribe({
       next: devices => {
         this.devices.set(devices);

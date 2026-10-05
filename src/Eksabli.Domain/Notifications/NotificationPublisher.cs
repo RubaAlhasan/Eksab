@@ -30,6 +30,7 @@ public class NotificationPublisher : INotificationPublisher, ITransientDependenc
     private readonly IPushNotificationSender _pushSender;
     private readonly IRealTimeNotifier _realTimeNotifier;
     private readonly ICurrentTenant _currentTenant;
+    private readonly IRepository<NotificationGroupOptOut, Guid> _optOutRepository;
 
     public ILogger<NotificationPublisher> Logger { get; set; } = NullLogger<NotificationPublisher>.Instance;
 
@@ -42,8 +43,10 @@ public class NotificationPublisher : INotificationPublisher, ITransientDependenc
         IRepository<Device, Guid> deviceRepository,
         IPushNotificationSender pushSender,
         IRealTimeNotifier realTimeNotifier,
-        ICurrentTenant currentTenant)
+        ICurrentTenant currentTenant,
+        IRepository<NotificationGroupOptOut, Guid> optOutRepository)
     {
+        _optOutRepository = optOutRepository;
         _guidGenerator = guidGenerator;
         _messageRepository = messageRepository;
         _userNotificationRepository = userNotificationRepository;
@@ -59,6 +62,12 @@ public class NotificationPublisher : INotificationPublisher, ITransientDependenc
         Guid userId, Guid? tenantId, UserNotificationType type, string title, string message,
         string? category = null, object? data = null, CancellationToken cancellationToken = default)
     {
+        // A customer who switched this group off hears nothing from it: no inbox row, no message log, no device push.
+        if (await IsOptedOutAsync(userId, category, cancellationToken))
+        {
+            return;
+        }
+
         var notificationMessage = await CreateMessageAsync(
             NotificationTargetType.User, tenantId, type, title, message, category, data, cancellationToken);
 
@@ -72,6 +81,17 @@ public class NotificationPublisher : INotificationPublisher, ITransientDependenc
         var payload = ToPayload(recipientRow.Id, notificationMessage);
         await TryAsync(() => _realTimeNotifier.NotifyUserAsync(userId, payload, cancellationToken), "real-time push to user");
         await TryPushToDevicesAsync(userId, notificationMessage);
+    }
+
+    private async Task<bool> IsOptedOutAsync(Guid userId, string? category, CancellationToken cancellationToken)
+    {
+        var group = NotificationGroups.Of(category);
+        if (group == null)
+        {
+            return false;
+        }
+
+        return await _optOutRepository.AnyAsync(o => o.UserId == userId && o.Group == group.Value, cancellationToken: cancellationToken);
     }
 
     public async Task PublishToTenantAsync(

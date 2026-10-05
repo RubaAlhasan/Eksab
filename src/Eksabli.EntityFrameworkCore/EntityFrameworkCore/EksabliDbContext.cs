@@ -65,6 +65,8 @@ public class EksabliDbContext :
 
     public DbSet<SmartOfferWatch> SmartOfferWatches { get; set; }
 
+    public DbSet<NotificationGroupOptOut> NotificationGroupOptOuts { get; set; }
+
     public DbSet<Reward> Rewards { get; set; }
 
     public DbSet<Coupon> Coupons { get; set; }
@@ -274,6 +276,14 @@ public class EksabliDbContext :
             b.Property(x => x.Name).IsRequired().HasMaxLength(TierConsts.MaxNameLength);
             b.Property(x => x.Multiplier).HasColumnType("numeric(5,2)");
             b.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+        });
+
+        builder.Entity<NotificationGroupOptOut>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "NotificationGroupOptOuts", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            // One switched-off group per customer: switching it off again is a no-op.
+            b.HasIndex(x => new { x.UserId, x.Group }).IsUnique();
         });
 
         builder.Entity<SmartOfferWatch>(b =>

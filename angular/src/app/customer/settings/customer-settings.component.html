@@ -1,3 +1,33 @@
+<h2 class="eks-section-title">{{ '::Wallet:Settings:NotificationsTitle' | abpLocalization }}</h2>
+@if (preferences(); as prefs) {
+  <div class="eks-list mb-4">
+    <div class="eks-row">
+      <span class="eks-row__body"><span class="eks-row__title">{{ '::Wallet:Settings:NotifyRewards' | abpLocalization }}</span></span>
+      <div class="form-check form-switch m-0">
+        <input class="form-check-input" type="checkbox" role="switch" [checked]="prefs.rewards"
+          [attr.aria-label]="'::Wallet:Settings:NotifyRewards' | abpLocalization"
+          (change)="setPreference('rewards', $any($event.target).checked)" />
+      </div>
+    </div>
+    <div class="eks-row">
+      <span class="eks-row__body"><span class="eks-row__title">{{ '::Wallet:Settings:NotifyDeals' | abpLocalization }}</span></span>
+      <div class="form-check form-switch m-0">
+        <input class="form-check-input" type="checkbox" role="switch" [checked]="prefs.deals"
+          [attr.aria-label]="'::Wallet:Settings:NotifyDeals' | abpLocalization"
+          (change)="setPreference('deals', $any($event.target).checked)" />
+      </div>
+    </div>
+    <div class="eks-row">
+      <span class="eks-row__body"><span class="eks-row__title">{{ '::Wallet:Settings:NotifyOffers' | abpLocalization }}</span></span>
+      <div class="form-check form-switch m-0">
+        <input class="form-check-input" type="checkbox" role="switch" [checked]="prefs.offers"
+          [attr.aria-label]="'::Wallet:Settings:NotifyOffers' | abpLocalization"
+          (change)="setPreference('offers', $any($event.target).checked)" />
+      </div>
+    </div>
+  </div>
+}
+
 <h2 class="eks-section-title">{{ '::Wallet:Settings:AppearanceTitle' | abpLocalization }}</h2>
 <div class="eks-list mb-4">
   <button type="button" class="eks-row eks-row--action" [attr.aria-pressed]="theme.darkMode()" (click)="theme.toggle()">
