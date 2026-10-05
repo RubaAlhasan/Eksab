@@ -108,6 +108,10 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.angular
+      args:
+        # The SPA's public origin (canonical URLs, sitemap). Same value as APP_URL, which is
+        # already per-environment in .env, so the build needs no separate setting.
+        APP_BASE_URL: ${APP_URL}
     image: ${STACK_NAME:-eksabli}-angular:latest
     restart: unless-stopped
     labels:

@@ -72,8 +72,12 @@ jobs:
         with:
           node-version: '20'
 
+      # This build only proves the Angular app compiles; its output is never deployed from here.
+      # The VPS rebuilds the image with the real public origin (APP_URL in each stack's .env).
       - name: Build Angular
         working-directory: angular
+        env:
+          APP_BASE_URL: https://example.com
         run: |
           yarn install --frozen-lockfile
           yarn build:prod
