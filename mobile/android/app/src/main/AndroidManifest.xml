@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Debug/profile manifests add this on their own; release builds need it here. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="eksabli_mobile"
         android:name="${applicationName}"
