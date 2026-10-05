@@ -128,6 +128,7 @@
       <section class="eks-rise" style="--eks-rise-delay: 140ms">
         <div class="eks-section-header">
           <h2 class="eks-section-title">{{ '::Wallet:Home:RecentActivity' | abpLocalization }}</h2>
+          <a routerLink="/customer/activity" class="eks-section-link">{{ '::Wallet:Points:SeeAll' | abpLocalization }}</a>
         </div>
         <div class="eks-activity-list">
           @for (item of recentActivity(); track item.transaction.id) {

@@ -113,15 +113,30 @@
       </ul>
     }
 
-    @if (branchesWithPhone().length > 0) {
-      <h2 class="eks-section-title">{{ '::Wallet:Store:PhoneNumbers' | abpLocalization }}</h2>
-      <div class="eks-list">
-        @for (branch of branchesWithPhone(); track branch.id) {
-          <a [href]="'tel:' + branch.phone" class="eks-row eks-row--action">
-            <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-phone"></i></span>
-            <span class="eks-row__body"><span class="eks-row__title">{{ branch.name }}</span></span>
-            <span class="eks-row__end small" dir="ltr">{{ branch.phone }}</span>
-          </a>
+    @if (branches().length > 0) {
+      <h2 class="eks-section-title">{{ '::Wallet:Store:Branches' | abpLocalization }}</h2>
+      <div class="eks-list mb-4">
+        @for (branch of branches(); track branch.id) {
+          <div class="eks-row">
+            <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-location-dot"></i></span>
+            <span class="eks-row__body">
+              <span class="eks-row__title">{{ branch.name }}</span>
+              @if (branch.address) {
+                <span class="eks-row__meta">{{ branch.address }}</span>
+              }
+              @if (branch.openingHours) {
+                <span class="eks-row__meta" style="white-space: pre-line">{{ branch.openingHours }}</span>
+              }
+              <span class="d-flex flex-wrap gap-3 small mt-1">
+                @if (mapLink(branch); as link) {
+                  <a [href]="link" target="_blank" rel="noopener">{{ '::Wallet:Store:OpenInMaps' | abpLocalization }}</a>
+                }
+                @if (branch.phone) {
+                  <a [href]="'tel:' + branch.phone" dir="ltr">{{ branch.phone }}</a>
+                }
+              </span>
+            </span>
+          </div>
         }
       </div>
     }

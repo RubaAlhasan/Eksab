@@ -86,7 +86,13 @@ export class CustomerLayoutComponent {
   // covers the account hub, My Coupons, Favorites, Refer a Friend, Birthday Rewards, and Settings. Redeem hangs off none of
   // them: the nav is hidden there entirely (see showBottomNav below), matching the one prototype screen
   // (redeem-reward.html) that ships genuinely nav-less rather than just JS-hidden.
-  private static readonly HOME_PREFIXES = ['/customer/home', '/customer/wallet', '/customer/qr', '/customer/campaigns'];
+  private static readonly HOME_PREFIXES = [
+    '/customer/home',
+    '/customer/wallet',
+    '/customer/qr',
+    '/customer/campaigns',
+    '/customer/activity',
+  ];
   private static readonly DEALS_PREFIXES = ['/customer/smart-deals'];
   private static readonly SEARCH_PREFIXES = ['/customer/search', '/customer/store'];
   private static readonly ALERTS_PREFIXES = ['/customer/alerts'];
@@ -97,6 +103,7 @@ export class CustomerLayoutComponent {
     '/customer/referral',
     '/customer/birthday-rewards',
     '/customer/settings',
+    '/customer/support',
   ];
 
   protected readonly activeTab = computed<CustomerTab>(() => {

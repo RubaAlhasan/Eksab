@@ -43,6 +43,10 @@ export interface CustomerBusinessBranchDto {
   id: string;
   name: string;
   phone?: string | null;
+  address?: string | null;
+  openingHours?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface CustomerBusinessDto {

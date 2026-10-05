@@ -10,7 +10,7 @@ import { MembershipsService } from '../../proxy/controllers/memberships.service'
 import { CouponsService } from '../../proxy/controllers/coupons.service';
 import { CustomerSmartOffersService } from '../../proxy/controllers/customer-smart-offers.service';
 import { CustomerCampaignService } from '../../proxy/controllers/customer-campaign.service';
-import type { CustomerBusinessDto, CustomerEarnRuleDto } from '../../proxy/businesses/models';
+import type { CustomerBusinessBranchDto, CustomerBusinessDto, CustomerEarnRuleDto } from '../../proxy/businesses/models';
 import { PointRuleType } from '../../proxy/wallets/point-rule-type.enum';
 import { Currency } from '../../proxy/shared/currency.enum';
 import type { RewardDto } from '../../proxy/rewards/models';
@@ -118,11 +118,15 @@ export class CustomerStoreDetailsComponent implements OnInit {
     return `${environment.apis.default.url}/api/app/business/${business.businessProfileId}/logo?v=${business.logoBlobName ?? ''}`;
   });
 
-  // Only branches that actually have a phone set — a business with some unlisted branches shouldn't
-  // show empty/placeholder rows in what's specifically a "Phone Numbers" list.
-  protected readonly branchesWithPhone = computed(
-    () => this.business()?.branches?.filter(b => !!b.phone) ?? [],
-  );
+  // Every branch the business lists, with whatever it has entered for each one. A branch with no address, hours or
+  // phone still shows its name, so a customer can see the business has more than one place.
+  protected readonly branches = computed(() => this.business()?.branches ?? []);
+
+  // Opens the branch in the device's maps app. Null when the business has not placed the branch on a map.
+  protected mapLink(branch: CustomerBusinessBranchDto): string | null {
+    if (branch.latitude == null || branch.longitude == null) return null;
+    return `https://www.google.com/maps/search/?api=1&query=${branch.latitude},${branch.longitude}`;
+  }
 
   ngOnInit(): void {
     this.route.paramMap.subscribe(params => {

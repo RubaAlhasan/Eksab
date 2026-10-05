@@ -205,7 +205,16 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
                     BranchCount = tenantBranches.Count,
                     DistanceKm = NearestBranchDistanceKm(tenantBranches, latitude, longitude),
                     Branches = tenantBranches
-                        .Select(b => new CustomerBusinessBranchDto { Id = b.Id, Name = b.Name, Phone = b.Phone })
+                                                .Select(b => new CustomerBusinessBranchDto
+                        {
+                            Id = b.Id,
+                            Name = b.Name,
+                            Phone = b.Phone,
+                            Address = b.Address,
+                            OpeningHours = b.OpeningHoursJson,
+                            Latitude = b.Latitude,
+                            Longitude = b.Longitude,
+                        })
                         .ToList(),
                 };
             }).ToList();

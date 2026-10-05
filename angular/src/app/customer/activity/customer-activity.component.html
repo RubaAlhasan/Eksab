@@ -1,0 +1,61 @@
+<div class="eks-chip-row mb-3" role="group" [attr.aria-label]="'::Wallet:Activity:Title' | abpLocalization">
+  @for (option of filters; track option.labelKey) {
+    <button
+      type="button"
+      class="eks-chip"
+      [class.active]="filter() === option.type"
+      [attr.aria-pressed]="filter() === option.type"
+      (click)="selectFilter(option.type)"
+    >
+      {{ option.labelKey | abpLocalization }}
+    </button>
+  }
+</div>
+
+@if (isLoading()) {
+  <app-skeleton-list variant="list" [count]="5" [label]="'::Wallet:Activity:Loading' | abpLocalization" />
+} @else if (loadFailed()) {
+  <app-error-state [message]="'::Wallet:Activity:LoadError' | abpLocalization" (retry)="retry()" />
+} @else if (isEmpty()) {
+  <app-empty-state icon="fa-clock-rotate-left" [title]="'::Wallet:Activity:Empty' | abpLocalization" [description]="'::Wallet:Activity:EmptyHint' | abpLocalization">
+    @if (hasWallets()) {
+      <p class="text-muted small mb-0">{{ '::Wallet:Activity:EmptyFilterHint' | abpLocalization }}</p>
+    } @else {
+      <a routerLink="/customer/search" class="btn btn-sm btn-outline-primary">{{ '::Wallet:Favorites:Discover' | abpLocalization }}</a>
+    }
+  </app-empty-state>
+} @else {
+  <div class="eks-activity-list mb-3">
+    @for (row of rows(); track row.transaction.id; let i = $index) {
+      <button
+        type="button"
+        class="eks-activity-row eks-activity-row--action eks-rise"
+        [style.--eks-rise-delay]="i * 30 + 'ms'"
+        (click)="openDetails(row.transaction)"
+      >
+        <span
+          class="eks-activity-row__icon"
+          [class.eks-activity-row__icon--credit]="isCredit(row.transaction.points)"
+          [class.eks-activity-row__icon--debit]="!isCredit(row.transaction.points)"
+        >
+          <i class="fas" [class.fa-arrow-up]="isCredit(row.transaction.points)" [class.fa-arrow-down]="!isCredit(row.transaction.points)"></i>
+        </span>
+        <span class="eks-activity-row__text">
+          <span class="eks-activity-row__title text-truncate">{{ row.businessName }}</span>
+          <span class="eks-activity-row__meta text-truncate">
+            {{ typeLabelKey(row.transaction.type) | abpLocalization }} · {{ row.transaction.creationTime | date: 'mediumDate' }}
+          </span>
+        </span>
+        <span class="eks-activity-row__points" [class.eks-activity-row__points--credit]="isCredit(row.transaction.points)">
+          {{ (row.transaction.points ?? 0) > 0 ? '+' : '' }}{{ row.transaction.points }}
+        </span>
+      </button>
+    }
+  </div>
+}
+
+<app-transaction-detail-modal
+  [open]="detailsOpen()"
+  [transaction]="selectedTransaction()"
+  (closed)="detailsOpen.set(false)"
+/>
