@@ -43,6 +43,7 @@ public class PosAppService : ApplicationService, IPosAppService
     private readonly ICampaignRulesEngine _campaignRulesEngine;
     private readonly IReferralCompletionService _referralCompletionService;
     private readonly ITierRecomputeService _tierRecomputeService;
+    private readonly IPointsExpiryPolicy _pointsExpiryPolicy;
 
     public PosAppService(
         IRepository<Membership, Guid> membershipRepository,
@@ -59,7 +60,8 @@ public class PosAppService : ApplicationService, IPosAppService
         IDistributedCache qrCache,
         ICampaignRulesEngine campaignRulesEngine,
         IReferralCompletionService referralCompletionService,
-        ITierRecomputeService tierRecomputeService)
+        ITierRecomputeService tierRecomputeService,
+        IPointsExpiryPolicy pointsExpiryPolicy)
     {
         _membershipRepository = membershipRepository;
         _walletRepository = walletRepository;
@@ -76,6 +78,7 @@ public class PosAppService : ApplicationService, IPosAppService
         _campaignRulesEngine = campaignRulesEngine;
         _referralCompletionService = referralCompletionService;
         _tierRecomputeService = tierRecomputeService;
+        _pointsExpiryPolicy = pointsExpiryPolicy;
     }
 
     public async Task<CustomerLookupResultDto> LookupCustomerByPhoneAsync(PhoneLookupDto input)
@@ -239,12 +242,16 @@ public class PosAppService : ApplicationService, IPosAppService
         // ReportsAppService.GetTransactionsListAsync). Generated even when only one row ends up produced.
         var batchId = GuidGenerator.Create();
 
+        // Every earn row in this checkout expires on the same schedule, taken from the business's own setting at award time.
+        var expiresAt = await _pointsExpiryPolicy.GetExpiresAtForEarnAsync();
+
         var transaction = PointsTransaction.Create(
             GuidGenerator.Create(),
             wallet.Id,
             PointsTransactionType.Earn,
             purchasePoints,
             PointsTransactionSource.Purchase,
+            expiresAt: expiresAt,
             batchId: batchId,
             amount: purchaseAmount,
             currency: currency);
@@ -261,6 +268,7 @@ public class PosAppService : ApplicationService, IPosAppService
                 PointsTransactionSource.Tier,
                 referenceId: tierId.Value,
                 tierMultiplierSnapshot: tierMultiplier,
+                expiresAt: expiresAt,
                 batchId: batchId);
             await _transactionRepository.InsertAsync(tierTransaction);
             wallet.ApplyTransaction(PointsTransactionType.Earn, preview.TierExtraPoints);
@@ -275,6 +283,7 @@ public class PosAppService : ApplicationService, IPosAppService
                 preview.CampaignMultiplierExtraPoints,
                 PointsTransactionSource.Campaign,
                 referenceId: preview.CampaignId.Value,
+                expiresAt: expiresAt,
                 batchId: batchId);
             await _transactionRepository.InsertAsync(multiplierTransaction);
             wallet.ApplyTransaction(PointsTransactionType.Earn, preview.CampaignMultiplierExtraPoints);
@@ -289,6 +298,7 @@ public class PosAppService : ApplicationService, IPosAppService
                 preview.CampaignBonusPoints,
                 PointsTransactionSource.Campaign,
                 referenceId: preview.BonusCampaignId.Value,
+                expiresAt: expiresAt,
                 batchId: batchId);
             await _transactionRepository.InsertAsync(bonusTransaction);
             wallet.ApplyTransaction(PointsTransactionType.Earn, preview.CampaignBonusPoints);

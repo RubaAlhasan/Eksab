@@ -3,6 +3,8 @@
   "texts": {
     "BusinessPanel:Settings:FieldTimeZone": "المنطقة الزمنية",
     "BusinessPanel:Settings:TimeZoneHint": "يومك ومبيعات اليوم وساعات الذروة تُحسب بهذه المنطقة.",
+    "BusinessPanel:Settings:FieldPointsExpiry": "تنتهي صلاحية النقاط بعد (شهور)",
+    "BusinessPanel:Settings:PointsExpiryHint": "اتركه فارغاً فلا تنتهي صلاحية النقاط أبداً. تنتهي كل مكافأة بعد هذا العدد من الأشهر من تاريخ كسبها، وتحتفظ النقاط الممنوحة سابقاً بتاريخها الأصلي.",
     "Dashboard360:Range:Week": "7 أيام",
     "Dashboard360:Range:Month": "30 يومًا",
     "Dashboard360:Range:Quarter": "90 يومًا",

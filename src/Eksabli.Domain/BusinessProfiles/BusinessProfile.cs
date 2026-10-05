@@ -37,6 +37,11 @@ public class BusinessProfile : AuditedAggregateRoot<Guid>, IMultiTenant
     // dashboard are computed here, never in the server's zone, so a business never sees yesterday's sales as today's.
     public string TimeZoneId { get; private set; } = BusinessProfileConsts.DefaultTimeZoneId;
 
+    // Per-business points expiry. Every positive earn row stores its own ExpiresAt, computed from this value at
+    // the moment it is earned, so changing the setting never moves the expiry of points already awarded.
+    // Null means this business's points never expire.
+    public int? PointsExpiryMonths { get; private set; }
+
     // Manual approval queue until self-serve moderation tooling exists — see
     // docs/eksabli-loyalty-platform/features/08-admin-panel/README.md#business-rules. Every new
     // registration starts Pending; MembershipAppService.JoinAsync blocks joining anything other than
@@ -114,6 +119,22 @@ public class BusinessProfile : AuditedAggregateRoot<Guid>, IMultiTenant
     }
 
     public TimeZoneInfo ResolveTimeZone() => SmartOfferTiming.ResolveTimeZone(TimeZoneId);
+
+    // Validated here, not only in the DTO: an out-of-range value would silently create points that expire at once
+    // or never. Null switches expiry off for this business.
+    public void SetPointsExpiryMonths(int? months)
+    {
+        if (months is int value)
+        {
+            Check.Range(value, nameof(months), BusinessProfileConsts.MinPointsExpiryMonths, BusinessProfileConsts.MaxPointsExpiryMonths);
+        }
+
+        PointsExpiryMonths = months;
+    }
+
+    // The ExpiresAt an earn row gets when it is awarded at utcNow. Null when the business has no expiry configured.
+    public DateTime? ComputeExpiresAt(DateTime utcNow) =>
+        PointsExpiryMonths is int months ? utcNow.AddMonths(months) : null;
 
     public void SetLogo(string? logoBlobName, string? logoContentType)
     {

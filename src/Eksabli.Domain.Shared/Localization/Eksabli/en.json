@@ -3,6 +3,8 @@
   "Texts": {
     "BusinessPanel:Settings:FieldTimeZone": "Time zone",
     "BusinessPanel:Settings:TimeZoneHint": "Your sales day, today's figures and peak hours follow this zone.",
+    "BusinessPanel:Settings:FieldPointsExpiry": "Points expire after (months)",
+    "BusinessPanel:Settings:PointsExpiryHint": "Leave empty so points never expire. Each award expires this many months after it is earned; points already awarded keep their original date.",
     "Dashboard360:Range:Week": "7 days",
     "Dashboard360:Range:Month": "30 days",
     "Dashboard360:Range:Quarter": "90 days",

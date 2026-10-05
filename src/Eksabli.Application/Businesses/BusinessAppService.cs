@@ -298,6 +298,8 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
         {
             profile.SetTimeZone(input.TimeZoneId);
         }
+        // Not "keep if null" like the zone: null here means "never expire", and that is a real choice a business can make.
+        profile.SetPointsExpiryMonths(input.PointsExpiryMonths);
 
         await _businessProfileRepository.UpdateAsync(profile);
         return ObjectMapper.Map<BusinessProfile, BusinessProfileDto>(profile);

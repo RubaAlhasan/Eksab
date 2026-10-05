@@ -23,6 +23,7 @@ public class ReferralCompletionService : IReferralCompletionService, ITransientD
     private readonly ITierRecomputeService _tierRecomputeService;
     private readonly INotificationPublisher _notificationPublisher;
     private readonly ICurrentTenant _currentTenant;
+    private readonly IPointsExpiryPolicy _pointsExpiryPolicy;
 
     public ReferralCompletionService(
         IReferralRepository referralRepository,
@@ -34,8 +35,10 @@ public class ReferralCompletionService : IReferralCompletionService, ITransientD
         IGuidGenerator guidGenerator,
         ITierRecomputeService tierRecomputeService,
         INotificationPublisher notificationPublisher,
-        ICurrentTenant currentTenant)
+        ICurrentTenant currentTenant,
+        IPointsExpiryPolicy pointsExpiryPolicy)
     {
+        _pointsExpiryPolicy = pointsExpiryPolicy;
         _referralRepository = referralRepository;
         _membershipRepository = membershipRepository;
         _walletRepository = walletRepository;
@@ -83,7 +86,8 @@ public class ReferralCompletionService : IReferralCompletionService, ITransientD
             PointsTransactionType.Earn,
             ReferralConsts.BonusPoints,
             PointsTransactionSource.Referral,
-            referenceId: referralId);
+            referenceId: referralId,
+            expiresAt: await _pointsExpiryPolicy.GetExpiresAtForEarnAsync());
         await _transactionRepository.InsertAsync(transaction);
 
         wallet.ApplyTransaction(PointsTransactionType.Earn, ReferralConsts.BonusPoints);
