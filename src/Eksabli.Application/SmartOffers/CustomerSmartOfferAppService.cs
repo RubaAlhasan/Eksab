@@ -55,6 +55,12 @@ public class CustomerSmartOfferAppService : SmartOfferServiceBase, ICustomerSmar
             // Only what a customer can act on or is about to: paused and expired deals are hidden, not greyed out.
             // Every enabled deal of this business, then the status filter in memory. A row cap taken before that filter
             // could drop a live deal once enough ended deals were newer than it, so there is no cap here.
+            // A suspended business's deals are not offered to anyone, the same as in the feed.
+            if (!await IsAcceptingOrdersAsync())
+            {
+                return new CustomerSmartOfferListDto();
+            }
+
             var offers = await _offerRepository.GetEnabledForTenantsAsync(new[] { tenantId });
             var visible = offers
                 .Where(o => IsShownToCustomers(o.GetStatus(nowUtc)))
@@ -248,6 +254,12 @@ public class CustomerSmartOfferAppService : SmartOfferServiceBase, ICustomerSmar
                         m => m.CustomerId == customerId && m.Status == MembershipStatus.Active)
                     ?? throw new UserFriendlyException("You haven't joined this business yet.");
 
+                // A suspended business keeps its members but takes no new orders, the same rule the join flow applies.
+                if (!await IsAcceptingOrdersAsync())
+                {
+                    throw new UserFriendlyException("This business isn't taking deal orders right now.");
+                }
+
                 var offer = await _offerRepository.FindWithStagesAsync(input.SmartOfferId)
                     ?? throw new UserFriendlyException("This deal is no longer available.");
 
@@ -328,6 +340,14 @@ public class CustomerSmartOfferAppService : SmartOfferServiceBase, ICustomerSmar
                 return ToOrderDto(order, nowUtc);
             });
         }
+    }
+
+    // Must be called inside the business's own tenant scope. Missing profile fails open, as the join flow does, so a
+    // tenant that was never fully registered does not block every order.
+    private async Task<bool> IsAcceptingOrdersAsync()
+    {
+        var profile = await _businessProfileRepository.FirstOrDefaultAsync();
+        return profile == null || profile.ApprovalStatus == TenantApprovalStatus.Approved;
     }
 
     // Loads an order only if it belongs to the caller. Ownership goes through Membership rather than trusting the id: the

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Volo.Abp.BackgroundWorkers;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
@@ -32,17 +33,28 @@ public class SmartOfferOrderExpirationWorker : AsyncPeriodicBackgroundWorkerBase
         var currentTenant = workerContext.ServiceProvider.GetRequiredService<ICurrentTenant>();
         var unitOfWorkManager = workerContext.ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
 
+        var logger = workerContext.ServiceProvider.GetRequiredService<ILogger<SmartOfferOrderExpirationWorker>>();
+
         var tenants = await tenantRepository.GetListAsync();
 
         foreach (var tenant in tenants)
         {
-            using var uow = unitOfWorkManager.Begin(requiresNew: true, isTransactional: true);
-            using (currentTenant.Change(tenant.Id))
+            // One business failing (a stale row, a stock count that disagrees) must not stop every later business from
+            // getting its stock back this run. Its own unit of work rolls back, and the next run tries it again.
+            try
             {
-                await ExpireLapsedOrdersAsync(workerContext.ServiceProvider);
-            }
+                using var uow = unitOfWorkManager.Begin(requiresNew: true, isTransactional: true);
+                using (currentTenant.Change(tenant.Id))
+                {
+                    await ExpireLapsedOrdersAsync(workerContext.ServiceProvider);
+                }
 
-            await uow.CompleteAsync();
+                await uow.CompleteAsync();
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "Smart deal hold expiry failed for tenant {TenantId}; continuing with the others.", tenant.Id);
+            }
         }
     }
 
