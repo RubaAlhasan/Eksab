@@ -1,3 +1,11 @@
+<h2 class="eks-section-title">{{ '::Wallet:Settings:AppearanceTitle' | abpLocalization }}</h2>
+<div class="eks-list mb-4">
+  <button type="button" class="eks-row eks-row--action" [attr.aria-pressed]="theme.darkMode()" (click)="theme.toggle()">
+    <span class="eks-row__body"><span class="eks-row__title">{{ '::Wallet:Settings:DarkMode' | abpLocalization }}</span></span>
+    <span class="eks-row__end"><i class="fas" [class.fa-moon]="!theme.darkMode()" [class.fa-sun]="theme.darkMode()" aria-hidden="true"></i></span>
+  </button>
+</div>
+
 <h2 class="eks-section-title">{{ '::Wallet:Settings:LanguageTitle' | abpLocalization }}</h2>
 <div class="eks-list mb-4">
   @for (lang of languages(); track lang.cultureName) {

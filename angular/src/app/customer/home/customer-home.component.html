@@ -251,7 +251,7 @@
         </div>
         <div class="eks-home-carousel">
           @for (coupon of rewardsPreview(); track coupon.id) {
-            <a routerLink="/customer/coupons" class="card eks-reward-preview flex-shrink-0">
+            <a [routerLink]="['/customer/redeem', coupon.tenantId ?? '', coupon.id]" class="card eks-reward-preview flex-shrink-0">
               <div class="card-body">
                 <div class="eks-reward-preview__icon"><i class="fas fa-gift"></i></div>
                 <p class="fw-bold text-truncate mb-1">{{ coupon.rewardNameEn | localizedName: coupon.rewardNameAr }}</p>

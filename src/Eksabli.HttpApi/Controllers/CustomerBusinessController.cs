@@ -40,6 +40,13 @@ public class CustomerBusinessController : EksabliController
         return _customerBusinessAppService.GetAsync(tenantId);
     }
 
+    // How a business awards points, so a customer knows what a purchase is worth before making one.
+    [HttpGet("{tenantId}/earn-rules")]
+    public Task<List<CustomerEarnRuleDto>> GetEarnRulesAsync(Guid tenantId)
+    {
+        return _customerBusinessAppService.GetEarnRulesAsync(tenantId);
+    }
+
     // Batch resolution — POST rather than GET so a long id list can't hit URL limits.
     [HttpPost("lookup")]
     public Task<List<CustomerBusinessDto>> GetManyAsync(CustomerBusinessLookupDto input)

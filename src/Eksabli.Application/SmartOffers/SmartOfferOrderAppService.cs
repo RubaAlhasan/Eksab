@@ -20,6 +20,7 @@ public class SmartOfferOrderAppService : SmartOfferServiceBase, ISmartOfferOrder
 {
     private readonly IRepository<EmployeeAssignment, Guid> _employeeAssignmentRepository;
     private readonly IRepository<Membership, Guid> _membershipRepository;
+    private readonly ISmartDealPointsAwarder _smartDealPointsAwarder;
     private readonly IRepository<CustomerProfile, Guid> _customerProfileRepository;
     private readonly IRepository<IdentityUser, Guid> _identityUserRepository;
     private readonly IRepository<SmartOffer, Guid> _offerRepository;
@@ -33,9 +34,11 @@ public class SmartOfferOrderAppService : SmartOfferServiceBase, ISmartOfferOrder
         IRepository<Membership, Guid> membershipRepository,
         IRepository<CustomerProfile, Guid> customerProfileRepository,
         IRepository<IdentityUser, Guid> identityUserRepository,
-        IRepository<SmartOffer, Guid> offerRepository)
+        IRepository<SmartOffer, Guid> offerRepository,
+        ISmartDealPointsAwarder smartDealPointsAwarder)
         : base(orderRepository, inventoryRepository)
     {
+        _smartDealPointsAwarder = smartDealPointsAwarder;
         _employeeAssignmentRepository = employeeAssignmentRepository;
         _membershipRepository = membershipRepository;
         _customerProfileRepository = customerProfileRepository;
@@ -79,6 +82,9 @@ public class SmartOfferOrderAppService : SmartOfferServiceBase, ISmartOfferOrder
                 inventory.Confirm(order.Quantity);
                 await InventoryRepository.UpdateAsync(inventory, autoSave: true);
             }
+
+            // A collected deal is a purchase: it earns the business's points rule, in the same unit of work as the collection.
+            await _smartDealPointsAwarder.AwardForCollectedOrderAsync(order);
 
             return await ToStaffDtoAsync(order);
         });

@@ -10,7 +10,9 @@ import { MembershipsService } from '../../proxy/controllers/memberships.service'
 import { CouponsService } from '../../proxy/controllers/coupons.service';
 import { CustomerSmartOffersService } from '../../proxy/controllers/customer-smart-offers.service';
 import { CustomerCampaignService } from '../../proxy/controllers/customer-campaign.service';
-import type { CustomerBusinessDto } from '../../proxy/businesses/models';
+import type { CustomerBusinessDto, CustomerEarnRuleDto } from '../../proxy/businesses/models';
+import { PointRuleType } from '../../proxy/wallets/point-rule-type.enum';
+import { Currency } from '../../proxy/shared/currency.enum';
 import type { RewardDto } from '../../proxy/rewards/models';
 import type { CustomerSmartOfferDto } from '../../proxy/smart-offers/models';
 import type { CustomerCampaignDto } from '../../proxy/campaigns/models';
@@ -85,6 +87,13 @@ export class CustomerStoreDetailsComponent implements OnInit {
   protected readonly activeTab = signal<StoreTab>('about');
   protected readonly previewRewards = signal<RewardDto[]>([]);
   protected readonly offers = signal<CustomerCampaignDto[]>([]);
+  // How the business awards points. Empty when it has none, and the section is then left out.
+  protected readonly earnRules = signal<CustomerEarnRuleDto[]>([]);
+  protected readonly PointRuleType = PointRuleType;
+
+  protected currencyCode(currency: Currency | null | undefined): string {
+    return currency === Currency.Syp ? 'SYP' : 'USD';
+  }
   protected readonly offersLoaded = signal(false);
   protected readonly smartDeals = signal<CustomerSmartOfferDto[]>([]);
   protected readonly smartDealsLoaded = signal(false);
@@ -228,6 +237,11 @@ export class CustomerStoreDetailsComponent implements OnInit {
         this.isLoading.set(false);
         this.loadFailed.set(true);
       },
+    });
+
+    this.customerBusinessService.getEarnRules(tenantId).subscribe({
+      next: rules => this.earnRules.set(rules),
+      error: () => this.earnRules.set([]),
     });
 
     this.membershipsService.getMyWallets().subscribe({

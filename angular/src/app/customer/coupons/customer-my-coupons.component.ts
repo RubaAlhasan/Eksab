@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
 import { CouponsService } from '../../proxy/controllers/coupons.service';
 import { MembershipsService } from '../../proxy/controllers/memberships.service';
@@ -30,7 +30,7 @@ type CouponFilter = 'all' | 'active' | 'used' | 'expired';
   selector: 'app-customer-my-coupons',
   templateUrl: './customer-my-coupons.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, LocalizationPipe, LocalizedNamePipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent, StatusBadgeComponent],
+  imports: [DatePipe, RouterLink, LocalizationPipe, LocalizedNamePipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent, StatusBadgeComponent],
 })
 export class CustomerMyCouponsComponent implements OnInit {
   private readonly router = inject(Router);

@@ -3,7 +3,9 @@
 } @else if (loadFailed()) {
   <app-error-state [message]="'::Wallet:Campaigns:LoadError' | abpLocalization" (retry)="retry()" />
 } @else if (campaigns().length === 0) {
-  <app-empty-state icon="fa-bullhorn" [title]="'::Wallet:Campaigns:Empty' | abpLocalization" />
+  <app-empty-state icon="fa-bullhorn" [title]="'::Wallet:Campaigns:Empty' | abpLocalization">
+    <a routerLink="/customer/search" class="btn btn-sm btn-outline-primary">{{ '::Wallet:Favorites:Discover' | abpLocalization }}</a>
+  </app-empty-state>
 } @else {
   <div class="eks-list">
     @for (campaign of campaigns(); track campaign.id) {

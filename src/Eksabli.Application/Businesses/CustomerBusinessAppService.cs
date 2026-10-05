@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Eksabli.Branches;
 using Eksabli.BusinessProfiles;
 using Eksabli.Platform;
+using Eksabli.Wallets;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -33,6 +34,7 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
     private readonly IRepository<Tenant, Guid> _tenantRepository;
     private readonly IRepository<Category, Guid> _categoryRepository;
     private readonly IRepository<Branch, Guid> _branchRepository;
+    private readonly IRepository<PointRule, Guid> _pointRuleRepository;
     private readonly IDataFilter _dataFilter;
 
     public CustomerBusinessAppService(
@@ -40,12 +42,14 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
         IRepository<Tenant, Guid> tenantRepository,
         IRepository<Category, Guid> categoryRepository,
         IRepository<Branch, Guid> branchRepository,
+        IRepository<PointRule, Guid> pointRuleRepository,
         IDataFilter dataFilter)
     {
         _businessProfileRepository = businessProfileRepository;
         _tenantRepository = tenantRepository;
         _categoryRepository = categoryRepository;
         _branchRepository = branchRepository;
+        _pointRuleRepository = pointRuleRepository;
         _dataFilter = dataFilter;
     }
 
@@ -86,6 +90,20 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
         // given business exists but is unapproved isn't a customer's concern.
         return results.SingleOrDefault()
             ?? throw new EntityNotFoundException(typeof(BusinessProfile), tenantId);
+    }
+
+    public async Task<List<CustomerEarnRuleDto>> GetEarnRulesAsync(Guid tenantId)
+    {
+        // Same visibility as the store page: a business that is not approved has no public earn rules either.
+        await GetAsync(tenantId);
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var rules = await _pointRuleRepository.GetListAsync(r => r.TenantId == tenantId);
+            return rules
+                .Select(r => new CustomerEarnRuleDto { RuleType = r.RuleType, PointsPerUnit = r.PointsPerUnit, Currency = r.Currency })
+                .ToList();
+        }
     }
 
     public async Task<List<CustomerBusinessDto>> GetManyAsync(CustomerBusinessLookupDto input)

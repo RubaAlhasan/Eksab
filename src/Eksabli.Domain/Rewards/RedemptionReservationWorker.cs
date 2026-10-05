@@ -7,6 +7,8 @@ using Volo.Abp.BackgroundWorkers;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.TenantManagement;
+using Eksabli.Memberships;
+using Eksabli.Notifications;
 using Volo.Abp.Threading;
 using Volo.Abp.Timing;
 using Volo.Abp.Uow;
@@ -56,6 +58,9 @@ public class RedemptionReservationWorker : AsyncPeriodicBackgroundWorkerBase
     {
         var couponRepository = serviceProvider.GetRequiredService<ICouponRepository>();
         var walletRepository = serviceProvider.GetRequiredService<IRepository<PointsWallet, Guid>>();
+        var membershipRepository = serviceProvider.GetRequiredService<IRepository<Membership, Guid>>();
+        var notificationPublisher = serviceProvider.GetRequiredService<INotificationPublisher>();
+        var currentTenant = serviceProvider.GetRequiredService<ICurrentTenant>();
         var rewardRepository = serviceProvider.GetRequiredService<IRewardRepository>();
         var clock = serviceProvider.GetRequiredService<IClock>();
 
@@ -78,6 +83,9 @@ public class RedemptionReservationWorker : AsyncPeriodicBackgroundWorkerBase
         var wallets = (await walletRepository.GetListAsync(w => membershipIds.Contains(w.MembershipId)))
             .ToDictionary(w => w.MembershipId);
 
+        // The customer is the membership's own user; the notice needs that id, not the membership id.
+        var memberships = (await membershipRepository.GetListAsync(m => membershipIds.Contains(m.Id))).ToDictionary(m => m.Id);
+
         var touchedWallets = new System.Collections.Generic.HashSet<Guid>();
 
         foreach (var coupon in lapsed)
@@ -89,6 +97,18 @@ public class RedemptionReservationWorker : AsyncPeriodicBackgroundWorkerBase
             {
                 wallet.ReleaseReservation(coupon.PointsCost);
                 touchedWallets.Add(wallet.Id);
+            }
+
+            if (memberships.TryGetValue(coupon.MembershipId, out var lapsedMembership))
+            {
+                await notificationPublisher.PublishToUserAsync(
+                    lapsedMembership.CustomerId,
+                    currentTenant.Id,
+                    UserNotificationType.Info,
+                    "Reward reservation expired",
+                    "The points held for your reward were released. Pick the reward again to get a new code.",
+                    category: "reward.expired",
+                    data: new { tenantId = currentTenant.Id });
             }
 
             // Stock was decremented when the reservation was taken, so an abandoned redemption has to

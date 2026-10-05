@@ -13,6 +13,14 @@
     </section>
   }
 
+  @if (!dateOfBirth()) {
+    <section class="eks-panel eks-rise text-center mb-4">
+      <p class="fw-semibold mb-1">{{ '::Wallet:BirthdayRewards:AddBirthdayTitle' | abpLocalization }}</p>
+      <p class="small text-muted mb-3">{{ '::Wallet:BirthdayRewards:AddBirthdayHint' | abpLocalization }}</p>
+      <a routerLink="/customer/profile/edit" class="btn btn-sm btn-outline-primary">{{ '::Wallet:BirthdayRewards:AddBirthdayButton' | abpLocalization }}</a>
+    </section>
+  }
+
   @if (birthdayCampaigns().length === 0) {
     <app-empty-state icon="fa-gift" [title]="'::Wallet:BirthdayRewards:Empty' | abpLocalization" [description]="'::Wallet:BirthdayRewards:EmptyHint' | abpLocalization" />
   } @else {

@@ -6,6 +6,7 @@ import { DevicesService } from '../../proxy/controllers/devices.service';
 import type { DeviceDto } from '../../proxy/devices/models';
 import { DevicePlatform } from '../../proxy/devices/device-platform.enum';
 import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
+import { CustomerThemeService } from '../../shared/services/customer-theme.service';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 
 /**
@@ -29,6 +30,7 @@ export class CustomerSettingsComponent implements OnInit {
   private readonly sessionState = inject(SessionStateService);
   private readonly cultureUrlService = inject(RouteBasedCultureUrlService);
   private readonly devicesService = inject(DevicesService);
+  protected readonly theme = inject(CustomerThemeService);
 
   protected readonly Platform = DevicePlatform;
   protected readonly languages = computed(() => {

@@ -20,4 +20,6 @@ public interface ICustomerBusinessAppService : IApplicationService
     Task<CustomerBusinessDto> GetAsync(Guid tenantId);
 
     Task<List<CustomerBusinessDto>> GetManyAsync(CustomerBusinessLookupDto input);
+
+    Task<List<CustomerEarnRuleDto>> GetEarnRulesAsync(Guid tenantId);
 }

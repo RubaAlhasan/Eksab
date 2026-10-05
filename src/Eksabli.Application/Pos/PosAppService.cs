@@ -7,6 +7,7 @@ using Eksabli.CustomerProfiles;
 using Eksabli.EmployeeAssignments;
 using Eksabli.Engagement;
 using Eksabli.Memberships;
+using Eksabli.Notifications;
 using Eksabli.Rewards;
 using Eksabli.Shared;
 using Eksabli.Wallets;
@@ -44,6 +45,7 @@ public class PosAppService : ApplicationService, IPosAppService
     private readonly IReferralCompletionService _referralCompletionService;
     private readonly ITierRecomputeService _tierRecomputeService;
     private readonly IPointsExpiryPolicy _pointsExpiryPolicy;
+    private readonly INotificationPublisher _notificationPublisher;
 
     public PosAppService(
         IRepository<Membership, Guid> membershipRepository,
@@ -61,8 +63,10 @@ public class PosAppService : ApplicationService, IPosAppService
         ICampaignRulesEngine campaignRulesEngine,
         IReferralCompletionService referralCompletionService,
         ITierRecomputeService tierRecomputeService,
-        IPointsExpiryPolicy pointsExpiryPolicy)
+        IPointsExpiryPolicy pointsExpiryPolicy,
+        INotificationPublisher notificationPublisher)
     {
+        _notificationPublisher = notificationPublisher;
         _membershipRepository = membershipRepository;
         _walletRepository = walletRepository;
         _transactionRepository = transactionRepository;
@@ -311,6 +315,15 @@ public class PosAppService : ApplicationService, IPosAppService
         // signup. See docs/eksabli-loyalty-platform/features/06-engagement-gamification/README.md.
         await _referralCompletionService.TryCompleteAsync(membership, wallet, isFirstEarn);
 
+        await _notificationPublisher.PublishToUserAsync(
+            customerId,
+            _currentTenant.Id,
+            UserNotificationType.Success,
+            "Points added",
+            $"{preview.TotalPoints} points were added to your balance.",
+            category: "points.earned",
+            data: new { tenantId = _currentTenant.Id });
+
         return await BuildResultAsync(transaction.Id, preview.TotalPoints, wallet);
     }
 
@@ -531,6 +544,17 @@ public class PosAppService : ApplicationService, IPosAppService
 
         var membership = await _membershipRepository.GetAsync(coupon.MembershipId);
         var (name, _) = await ResolveCustomerIdentityAsync(membership.CustomerId);
+
+        await _notificationPublisher.PublishToUserAsync(
+            membership.CustomerId,
+            _currentTenant.Id,
+            UserNotificationType.Success,
+            "Reward redeemed",
+            pointsDebited > 0
+                ? $"{reward.NameEn} was redeemed. {pointsDebited} points were used."
+                : $"{reward.NameEn} is ready to use.",
+            category: "reward.redeemed",
+            data: new { tenantId = _currentTenant.Id });
 
         return new RedemptionConfirmationDto
         {

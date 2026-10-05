@@ -48,6 +48,26 @@ export class CustomerPointsComponent implements OnInit {
   protected readonly walletNotFound = computed(() => !this.isLoading() && !this.loadFailed() && !this.wallet());
   protected readonly reservedPoints = computed(() => this.wallet()?.reserved ?? 0);
 
+  // Progress from where the current tier starts to where the next one begins, measured on lifetime points, the same
+  // number the tiers are awarded on. The bar starts at the current tier's floor, not zero, so a customer who has just
+  // reached a tier does not look nearly done. Null when this business has no next tier to show.
+  protected readonly tierProgress = computed(() => {
+    const wallet = this.wallet();
+    if (!wallet?.nextTierName || wallet.nextTierMinLifetimePoints == null) return null;
+
+    const lifetime = wallet.lifetimeEarned ?? 0;
+    const floor = wallet.currentTierMinLifetimePoints ?? 0;
+    const target = wallet.nextTierMinLifetimePoints;
+    const span = Math.max(1, target - floor);
+    const progressed = Math.min(span, Math.max(0, lifetime - floor));
+
+    return {
+      percent: Math.round((progressed / span) * 100),
+      remaining: Math.max(0, target - lifetime),
+      nextName: wallet.nextTierName,
+    };
+  });
+
   protected readonly typeLabelKey = transactionTypeLabelKey;
   protected readonly sourceLabelKey = transactionSourceLabelKey;
   protected readonly isCredit = isCredit;

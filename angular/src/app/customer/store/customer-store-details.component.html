@@ -98,6 +98,21 @@
       }
     </section>
 
+    @if (earnRules().length > 0) {
+      <h2 class="eks-section-title">{{ '::Wallet:Store:EarnTitle' | abpLocalization }}</h2>
+      <ul class="list-unstyled eks-earn-rules mb-4">
+        @for (rule of earnRules(); track $index) {
+          <li class="mb-1">
+            @if (rule.ruleType === PointRuleType.PerVisit) {
+              {{ '::Wallet:Store:EarnPerVisit' | abpLocalization: (rule.pointsPerUnit | number: '1.0-2') }}
+            } @else {
+              {{ '::Wallet:Store:EarnPerCurrency' | abpLocalization: (rule.pointsPerUnit | number: '1.0-2') : currencyCode(rule.currency) }}
+            }
+          </li>
+        }
+      </ul>
+    }
+
     @if (branchesWithPhone().length > 0) {
       <h2 class="eks-section-title">{{ '::Wallet:Store:PhoneNumbers' | abpLocalization }}</h2>
       <div class="eks-list">

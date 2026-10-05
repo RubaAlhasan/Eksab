@@ -31,18 +31,18 @@
         <span class="eks-customer-brand__mark" aria-hidden="true">E</span>
         <span class="eks-customer-brand__name">Eksabli</span>
       </a>
-      <a routerLink="/customer/home" class="eks-customer-bottomnav__link" [class.active]="activeTab() === 'home'">
+      <a routerLink="/customer/home" class="eks-customer-bottomnav__link" [class.active]="activeTab() === 'home'" [attr.aria-current]="activeTab() === 'home' ? 'page' : null">
         <span class="eks-customer-bottomnav__iconwrap"><i class="fas fa-house"></i></span>
         <span>{{ '::Wallet:Layout:NavHome' | abpLocalization }}</span>
       </a>
-      <a routerLink="/customer/smart-deals" class="eks-customer-bottomnav__link" [class.active]="activeTab() === 'deals'">
+      <a routerLink="/customer/smart-deals" class="eks-customer-bottomnav__link" [class.active]="activeTab() === 'deals'" [attr.aria-current]="activeTab() === 'deals' ? 'page' : null">
         <span class="eks-customer-bottomnav__iconwrap"><i class="fas fa-bolt"></i></span>
         <span>{{ '::SmartDeals:Home:Title' | abpLocalization }}</span>
       </a>
       <a
         routerLink="/customer/search"
         class="eks-customer-bottomnav__link"
-        [class.active]="activeTab() === 'search'"
+        [class.active]="activeTab() === 'search'" [attr.aria-current]="activeTab() === 'search' ? 'page' : null"
       >
         <span class="eks-customer-bottomnav__iconwrap"><i class="fas fa-magnifying-glass"></i></span>
         <span>{{ '::Wallet:Layout:NavSearch' | abpLocalization }}</span>
@@ -50,7 +50,7 @@
       <a
         routerLink="/customer/alerts"
         class="eks-customer-bottomnav__link"
-        [class.active]="activeTab() === 'alerts'"
+        [class.active]="activeTab() === 'alerts'" [attr.aria-current]="activeTab() === 'alerts' ? 'page' : null"
       >
         <span class="eks-customer-bottomnav__iconwrap">
           <span class="eks-customer-bottomnav__icon">
@@ -65,7 +65,7 @@
       <a
         routerLink="/customer/profile"
         class="eks-customer-bottomnav__link"
-        [class.active]="activeTab() === 'profile'"
+        [class.active]="activeTab() === 'profile'" [attr.aria-current]="activeTab() === 'profile' ? 'page' : null"
       >
         <span class="eks-customer-bottomnav__iconwrap"><i class="fas fa-user"></i></span>
         <span>{{ '::Wallet:Layout:NavProfile' | abpLocalization }}</span>
