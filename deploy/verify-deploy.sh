@@ -24,12 +24,38 @@ REPO_DIR="$(dirname "$DEPLOY_DIR")"
 HEALTH_URL="${1:-}"
 MIGRATIONS_DIR="$REPO_DIR/src/Eksabli.EntityFrameworkCore/Migrations"
 BACKUP_MAX_AGE_HOURS="${BACKUP_MAX_AGE_HOURS:-48}"
+READY_ATTEMPTS="${READY_ATTEMPTS:-30}"   # 30 x 6s = 3 minutes
+READY_INTERVAL="${READY_INTERVAL:-6}"
 
 set -a; . "$DEPLOY_DIR/.env"; set +a
 compose() { docker compose -f "$DEPLOY_DIR/docker-compose.yml" "$@"; }
 
 fail=0
 note() { printf '  %s\n' "$*"; }
+
+# --- 0. wait for the app to be ready ------------------------------------------------------
+# `docker compose up -d` returns when containers START, not when the app is READY: this one
+# runs migrations and seeding first and needs ~20-30s before /health-status answers. Probing
+# once here failed a deploy that had in fact succeeded, so wait rather than guess.
+# Readiness also gates everything below -- the migration check is only meaningful once the
+# startup task that applies migrations has finished.
+if [ -n "$HEALTH_URL" ]; then
+  echo "== readiness =="
+  ready=0
+  for i in $(seq 1 "$READY_ATTEMPTS"); do
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$HEALTH_URL" || true)
+    if [ "$code" = "200" ]; then
+      note "OK: healthy after $(( (i - 1) * READY_INTERVAL ))s"
+      ready=1
+      break
+    fi
+    sleep "$READY_INTERVAL"
+  done
+  if [ "$ready" -ne 1 ]; then
+    note "FAIL: $HEALTH_URL never returned 200 within $(( READY_ATTEMPTS * READY_INTERVAL ))s (last: $code)"
+    fail=1
+  fi
+fi
 
 # --- 1. every migration in the working tree is applied in the database -------------------
 echo "== migrations =="
@@ -57,13 +83,6 @@ if compose logs --since 10m api 2>/dev/null | grep -q 'migration/seed failed'; t
   fail=1
 else
   note "OK: no migration/seed failure logged"
-fi
-
-# --- 3. health ---------------------------------------------------------------------------
-if [ -n "$HEALTH_URL" ]; then
-  echo "== health =="
-  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$HEALTH_URL" || true)
-  if [ "$code" = "200" ]; then note "OK: $HEALTH_URL -> 200"; else note "FAIL: $HEALTH_URL -> $code"; fail=1; fi
 fi
 
 # --- 4. backups are still happening (warn only; a stale backup is not a bad deploy) ------
