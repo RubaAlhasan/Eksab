@@ -5,203 +5,202 @@
 >
 </app-page-header>
 
-<div class="d-flex flex-wrap gap-3 mb-4">
-  <div class="card eks-stat-card">
-    <div class="card-body">
-      <div class="eks-stat-card__icon bg-primary-subtle text-primary-emphasis"><i class="fas fa-store"></i></div>
-      <div class="eks-stat-card__value">{{ businessesLoading() ? '—' : (totalBusinesses() ?? 0) }}</div>
-      <div class="eks-stat-card__label">{{ '::AdminPanel:Dashboard:StatTotalBusinesses' | abpLocalization }}</div>
-    </div>
-  </div>
-  <div class="card eks-stat-card">
-    <div class="card-body">
-      <div class="eks-stat-card__icon bg-warning-subtle text-warning-emphasis"><i class="fas fa-hourglass-half"></i></div>
-      <div class="eks-stat-card__value">{{ businessesLoading() ? '—' : (pendingCount() ?? 0) }}</div>
-      <div class="eks-stat-card__label">{{ '::AdminPanel:Dashboard:StatPendingApprovals' | abpLocalization }}</div>
-    </div>
-  </div>
-  @if (canViewMrr() && !mrrLoading()) {
-    <!-- One card per currency, never summed together — see CurrencyAmountDto's own comment (backend). -->
-    @for (mrr of mrrByCurrency(); track mrr.currency) {
-      <div class="card eks-stat-card">
-        <div class="card-body">
-          <div class="eks-stat-card__icon bg-success-subtle text-success-emphasis"><i class="fas fa-money-bill-wave"></i></div>
-          <div class="eks-stat-card__value">{{ mrr.amount | number: '1.0-0' }} {{ currencyCode(mrr.currency) }}</div>
-          <div class="eks-stat-card__label">{{ '::AdminPanel:Dashboard:StatMrr' | abpLocalization }}</div>
-        </div>
-      </div>
-    }
-  }
-  @if (canViewTickets() && openTicketsCount() !== null) {
-    <div class="card eks-stat-card">
-      <div class="card-body">
-        <div class="eks-stat-card__icon bg-info-subtle text-info-emphasis"><i class="fas fa-headset"></i></div>
-        <div class="eks-stat-card__value">{{ openTicketsCount() }}</div>
-        <div class="eks-stat-card__label">{{ '::AdminPanel:Dashboard:StatOpenTickets' | abpLocalization }}</div>
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::AdminPanel:Dashboard:Loading' | abpLocalization"></app-loading-spinner>
+} @else if (loadFailed()) {
+  <app-error-state
+    [message]="'::AdminPanel:Dashboard:LoadErrorMessage' | abpLocalization"
+    [retryLabel]="'::AdminPanel:Dashboard:TryAgain' | abpLocalization"
+    (retry)="retry()"
+  >
+  </app-error-state>
+} @else if (summary(); as s) {
+  <div class="eks-dash" [class.is-refreshing]="isRefreshing()" [attr.aria-busy]="isRefreshing()">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+      <p class="small text-muted mb-0">{{ '::AdminPanel:Dashboard360:UtcNote' | abpLocalization }}</p>
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        @if (canViewRevenue()) {
+          <app-segmented-control
+            [options]="currencyOptions"
+            [selected]="currency()"
+            [ariaLabel]="'::Dashboard360:Currency:GroupLabel' | abpLocalization"
+            (selectionChange)="setCurrency($event)"
+          />
+        }
+        <app-segmented-control
+          [options]="rangeOptions"
+          [selected]="rangeDays()"
+          [ariaLabel]="'::Dashboard360:Range:GroupLabel' | abpLocalization"
+          (selectionChange)="setRange($event)"
+        />
       </div>
     </div>
-  }
-</div>
 
-<div class="row g-4 mb-4">
-  @if (canViewMrr()) {
-    <div class="col-12 col-lg-8">
-      <div class="card p-4 h-100">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-          <div>
-            <h2 class="fw-bold small mb-0">{{ '::AdminPanel:Dashboard:StatMrr' | abpLocalization }}</h2>
-            <p class="text-muted small mb-0">{{ '::AdminPanel:Dashboard:MrrTrendSubtitle' | abpLocalization }}</p>
+    @if (alertChips().length > 0) {
+      <section class="mb-4" [attr.aria-label]="'::AdminPanel:Dashboard360:Alerts:Heading' | abpLocalization">
+        <div class="d-flex flex-wrap gap-2">
+          @for (chip of alertChips(); track chip.key) {
+            <a [routerLink]="chip.link" class="eks-dash-alert" [class.is-danger]="chip.tone === 'danger'" [class.is-info]="chip.tone === 'info'">
+              <span class="eks-dash-alert__count">{{ countText(chip.count) }}</span>
+              <span>{{ chip.key | abpLocalization }}</span>
+            </a>
+          }
+        </div>
+      </section>
+    }
+
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-xl-3">
+        <app-kpi-tile
+          [label]="'::AdminPanel:Dashboard360:Kpi:Businesses' | abpLocalization"
+          [value]="s.activeBusinesses ?? 0"
+          icon="fa-store"
+          tone="primary"
+          [caption]="businessesCaption()"
+        />
+      </div>
+      <div class="col-6 col-xl-3">
+        <app-kpi-tile
+          [label]="'::AdminPanel:Dashboard360:Kpi:Customers' | abpLocalization"
+          [value]="s.totalCustomers ?? 0"
+          icon="fa-users"
+          tone="success"
+          [caption]="customersCaption()"
+        />
+      </div>
+      <div class="col-6 col-xl-3">
+        <app-kpi-tile
+          [label]="'::AdminPanel:Dashboard360:Kpi:Points' | abpLocalization"
+          [value]="s.pointsIssued ?? 0"
+          icon="fa-coins"
+          tone="warning"
+          [caption]="pointsCaption()"
+        />
+      </div>
+      @if (canViewRevenue()) {
+        <div class="col-6 col-xl-3">
+          <app-kpi-tile
+            [label]="'::AdminPanel:Dashboard360:Kpi:Sales' | abpLocalization"
+            [value]="salesTotal()"
+            icon="fa-sack-dollar"
+            tone="info"
+            [suffix]="currencyLabel()"
+            [caption]="salesCaption()"
+          />
+        </div>
+      }
+    </div>
+
+    <section class="card p-4 mb-4">
+      <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+        <div>
+          <h2 class="h6 fw-bold mb-1">{{ '::AdminPanel:Dashboard360:Trend:Title' | abpLocalization }}</h2>
+          <p class="small text-muted mb-0">{{ '::AdminPanel:Dashboard360:Trend:Subtitle' | abpLocalization }}</p>
+        </div>
+        <app-segmented-control
+          [options]="visibleMetricOptions()"
+          [selected]="metric()"
+          [ariaLabel]="'::Dashboard360:Trend:MetricLabel' | abpLocalization"
+          (selectionChange)="setMetric($event)"
+        />
+      </div>
+      <div class="d-flex align-items-baseline flex-wrap gap-2 mb-3">
+        <span class="fs-4 fw-bold">
+          {{ metric() === 'sales' ? formatMoney(trendTotal()) : countText(trendTotal()) }}
+        </span>
+        <span class="small text-muted">{{ metric() === 'sales' ? currencyLabel() : ('::AdminPanel:Dashboard360:Trend:TotalLabel' | abpLocalization) }}</span>
+      </div>
+      @if (trendBars().length > 0) {
+        <app-bar-trend [bars]="trendBars()" [ariaLabel]="'::AdminPanel:Dashboard360:Trend:ChartLabel' | abpLocalization" />
+      } @else {
+        <p class="small text-muted mb-0">{{ '::AdminPanel:Dashboard360:Trend:Empty' | abpLocalization }}</p>
+      }
+    </section>
+
+    <div class="row g-4 mb-4">
+      <div class="col-12 col-xl-6">
+        <section class="card p-4 h-100">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div>
+              <h2 class="h6 fw-bold mb-1">{{ '::AdminPanel:Dashboard360:TopBusinesses:Title' | abpLocalization }}</h2>
+              <p class="small text-muted mb-0">{{ '::AdminPanel:Dashboard360:TopBusinesses:Subtitle' | abpLocalization }}</p>
+            </div>
           </div>
-          <div class="d-flex align-items-center gap-2">
-            @if (mrrTrendGrowthPct(); as pct) {
-              <span class="badge" [class.bg-success-subtle]="pct >= 0" [class.text-success-emphasis]="pct >= 0" [class.bg-danger-subtle]="pct < 0" [class.text-danger-emphasis]="pct < 0">
-                {{ pct >= 0 ? '+' : '' }}{{ pct }}% {{ '::AdminPanel:Dashboard:MrrTrendGrowthSuffix' | abpLocalization }}
-              </span>
-            }
-            <!-- Only shown when more than one currency actually has trend data — a single-currency
-                 platform never sees a toggle with nothing to toggle to. -->
-            @if (mrrTrendAvailableCurrencies().length > 1) {
-              <div class="btn-group btn-group-sm" role="group">
-                @for (currency of mrrTrendAvailableCurrencies(); track currency) {
-                  <button
-                    type="button"
-                    class="btn"
-                    [class.btn-primary]="mrrTrendCurrency() === currency"
-                    [class.btn-outline-secondary]="mrrTrendCurrency() !== currency"
-                    (click)="setMrrTrendCurrency(currency)"
-                  >
-                    {{ currencyCode(currency) }}
-                  </button>
+          @if (topBusinesses().length > 0) {
+            <ol class="list-unstyled mb-0 d-flex flex-column gap-3">
+              @for (business of topBusinesses(); track business.tenantId; let rank = $index) {
+                <li>
+                  <a [routerLink]="['/admin/businesses', business.tenantId]" class="eks-dash-rank text-decoration-none">
+                    <span class="eks-dash-rank__pos">{{ rank + 1 }}</span>
+                    <span class="flex-grow-1 min-w-0">
+                      <span class="d-flex justify-content-between gap-2">
+                        <span class="fw-semibold text-truncate">{{ business.name }}</span>
+                        <span class="small text-muted text-nowrap">{{ countText(business.pointsIssued) }}</span>
+                      </span>
+                      <span class="eks-dash-meter eks-dash-meter--wide d-block mt-1" aria-hidden="true">
+                        <span [style.width.%]="shareOfTop(business.pointsIssued)"></span>
+                      </span>
+                    </span>
+                  </a>
+                </li>
+              }
+            </ol>
+          } @else {
+            <p class="small text-muted mb-0">{{ '::AdminPanel:Dashboard360:TopBusinesses:Empty' | abpLocalization }}</p>
+          }
+        </section>
+      </div>
+
+      <div class="col-12 col-xl-6">
+        <section class="card p-4 h-100">
+          <div class="mb-3">
+            <h2 class="h6 fw-bold mb-1">{{ '::AdminPanel:Dashboard360:TopOffers:Title' | abpLocalization }}</h2>
+            <p class="small text-muted mb-0">{{ '::AdminPanel:Dashboard360:TopOffers:Subtitle' | abpLocalization }}</p>
+          </div>
+          @if (topOffers().length > 0) {
+            <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
+              @for (offer of topOffers(); track offer.offerId) {
+                <li class="eks-dash-row">
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="fw-semibold text-truncate">{{ offerTitle(offer) }}</div>
+                    <div class="small text-muted text-truncate">{{ offer.tenantName }}</div>
+                  </div>
+                  <div class="text-end small">
+                    <div class="fw-semibold">{{ countText(offer.completed) }} {{ '::AdminPanel:Dashboard360:TopOffers:Completed' | abpLocalization }}</div>
+                    @if (canViewRevenue()) {
+                      <div class="text-muted">{{ formatOfferValue(offer) }}</div>
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="small text-muted mb-0">{{ '::AdminPanel:Dashboard360:TopOffers:Empty' | abpLocalization }}</p>
+          }
+        </section>
+      </div>
+    </div>
+
+    <section class="card p-4">
+      <h2 class="h6 fw-bold mb-3">{{ '::AdminPanel:Dashboard360:Activity:Title' | abpLocalization }}</h2>
+      @if (activity().length > 0) {
+        <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
+          @for (item of activity(); track $index) {
+            <li class="eks-dash-row">
+              <span class="eks-dash-row__icon"><i [class]="'fas ' + activityIcon(item)"></i></span>
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold">{{ activityKey(item) | abpLocalization }}</div>
+                @if (item.subject) {
+                  <div class="small text-muted text-truncate">{{ item.subject }}</div>
                 }
               </div>
-            }
-          </div>
-        </div>
-        @if (mrrTrendLoading()) {
-          <app-loading-spinner [label]="'::AdminPanel:Dashboard:Loading' | abpLocalization"></app-loading-spinner>
-        } @else if (mrrTrendBars().length === 0) {
-          <p class="text-muted small mb-0">{{ '::AdminPanel:Dashboard:NoMrrTrendData' | abpLocalization }}</p>
-        } @else {
-          <div class="eks-growth-chart">
-            @for (bar of mrrTrendBars(); track bar.label) {
-              <div class="eks-growth-chart__col" [title]="bar.label + ': ' + (bar.value | number: '1.0-0') + ' ' + currencyCode(mrrTrendCurrency())">
-                <div class="eks-growth-chart__bar" [style.height.%]="(bar.value / mrrTrendMax()) * 100"></div>
-                <span class="eks-growth-chart__label">{{ bar.label }}</span>
-              </div>
-            }
-          </div>
-        }
-      </div>
-    </div>
-  }
-
-  <div class="col-12" [class.col-lg-4]="canViewMrr()">
-    <div class="card p-4 h-100">
-      <h2 class="fw-bold small mb-3">{{ '::AdminPanel:Dashboard:CategoryMixTitle' | abpLocalization }}</h2>
-      @if (categoriesLoading()) {
-        <app-loading-spinner [label]="'::AdminPanel:Dashboard:Loading' | abpLocalization"></app-loading-spinner>
-      } @else if (topCategories().length === 0) {
-        <p class="text-muted small mb-0">{{ '::AdminPanel:Dashboard:NoCategories' | abpLocalization }}</p>
-      } @else {
-        <div class="d-flex flex-column gap-3">
-          @for (category of topCategories(); track category.id) {
-            <div>
-              <div class="d-flex align-items-center justify-content-between small mb-1">
-                <span class="fw-semibold">{{ category.nameEn }}</span>
-                <span class="text-muted">{{ category.businessCount }}</span>
-              </div>
-              <div class="progress" style="height: 6px">
-                <div
-                  class="progress-bar"
-                  role="progressbar"
-                  [style.width.%]="(category.businessCount / categoryMixMax()) * 100"
-                ></div>
-              </div>
-            </div>
+              <span class="small text-muted text-nowrap">{{ item.occurredAt | date: 'short' }}</span>
+            </li>
           }
-        </div>
-      }
-    </div>
-  </div>
-</div>
-
-<div class="row g-4">
-  <div class="col-12 col-lg-6">
-    <div class="card p-4">
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <h2 class="fw-bold small mb-0">{{ '::AdminPanel:Dashboard:PendingApprovalsTitle' | abpLocalization }}</h2>
-        <a routerLink="/admin/businesses" class="small fw-semibold">{{ '::AdminPanel:Dashboard:ViewAll' | abpLocalization }}</a>
-      </div>
-      @if (businessesLoading()) {
-        <app-loading-spinner [label]="'::AdminPanel:Dashboard:Loading' | abpLocalization"></app-loading-spinner>
-      } @else if (businessesFailed()) {
-        <app-error-state
-          [message]="'::AdminPanel:Dashboard:LoadErrorMessage' | abpLocalization"
-          [retryLabel]="'::AdminPanel:Dashboard:TryAgain' | abpLocalization"
-          (retry)="retryBusinesses()"
-        >
-        </app-error-state>
-      } @else if (pendingApprovals().length === 0) {
-        <p class="text-muted small text-center py-4 mb-0">{{ '::AdminPanel:Dashboard:NoPendingApprovals' | abpLocalization }}</p>
+        </ul>
       } @else {
-        <div class="d-flex flex-column gap-2">
-          @for (tenant of pendingApprovals(); track tenant.tenantId) {
-            <div class="d-flex align-items-center gap-3 p-2 rounded-3 eks-dashboard-row">
-              <span class="eks-avatar-sm">{{ initials(tenant.tenantName) }}</span>
-              <div class="flex-grow-1">
-                <p class="small fw-semibold mb-0 text-truncate">{{ tenant.tenantName }}</p>
-                <p class="text-muted small mb-0">{{ categoryName(tenant.categoryId) }}</p>
-              </div>
-              <app-status-badge
-                [label]="statusLabelKey(tenant.approvalStatus) | abpLocalization"
-                [variant]="statusVariant(tenant.approvalStatus)"
-              >
-              </app-status-badge>
-            </div>
-          }
-        </div>
+        <p class="small text-muted mb-0">{{ '::AdminPanel:Dashboard360:Activity:Empty' | abpLocalization }}</p>
       }
-    </div>
+    </section>
   </div>
-
-  @if (canViewTickets()) {
-    <div class="col-12 col-lg-6">
-      <div class="card p-4">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-          <h2 class="fw-bold small mb-0">{{ '::AdminPanel:Dashboard:RecentTicketsTitle' | abpLocalization }}</h2>
-          <a routerLink="/admin/support-tickets" class="small fw-semibold">{{ '::AdminPanel:Dashboard:ViewAll' | abpLocalization }}</a>
-        </div>
-        @if (ticketsLoading()) {
-          <app-loading-spinner [label]="'::AdminPanel:Dashboard:Loading' | abpLocalization"></app-loading-spinner>
-        } @else if (ticketsFailed()) {
-          <app-error-state
-            [message]="'::AdminPanel:Dashboard:LoadErrorMessage' | abpLocalization"
-            [retryLabel]="'::AdminPanel:Dashboard:TryAgain' | abpLocalization"
-            (retry)="retryTickets()"
-          >
-          </app-error-state>
-        } @else if (recentTickets().length === 0) {
-          <p class="text-muted small text-center py-4 mb-0">{{ '::AdminPanel:Dashboard:NoRecentTickets' | abpLocalization }}</p>
-        } @else {
-          <div class="d-flex flex-column gap-2">
-            @for (ticket of recentTickets(); track ticket.id) {
-              <div class="d-flex align-items-center gap-3 p-2 rounded-3 eks-dashboard-row">
-                <div class="flex-grow-1">
-                  <p class="small fw-semibold mb-0 text-truncate">{{ ticket.subject }}</p>
-                  <p class="text-muted small mb-0">
-                    {{ ticketFrom(ticket) || ('::AdminPanel:SupportTickets:FromCustomer' | abpLocalization) }}
-                  </p>
-                </div>
-                <app-status-badge
-                  [label]="ticketStatusLabelKey(ticket.status) | abpLocalization"
-                  [variant]="ticketStatusVariant(ticket.status)"
-                >
-                </app-status-badge>
-              </div>
-            }
-          </div>
-        }
-      </div>
-    </div>
-  }
-</div>
+}

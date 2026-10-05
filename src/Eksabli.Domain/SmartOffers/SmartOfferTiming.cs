@@ -5,7 +5,7 @@ namespace Eksabli.SmartOffers;
 
 // All pricing rules are evaluated in the offer's own IANA time zone (a restaurant's local clock), never in
 // the server's. Instants are UTC DateTimes; a "local date + minute of day" is what a stage is defined in.
-internal static class SmartOfferTiming
+public static class SmartOfferTiming
 {
     public static TimeZoneInfo ResolveTimeZone(string timeZoneId)
     {

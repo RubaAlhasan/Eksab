@@ -21,4 +21,7 @@ public class UpdateBusinessProfileDto
 
     [StringLength(BusinessProfileConsts.MaxSocialLinksJsonLength)]
     public string? SocialLinksJson { get; set; }
+
+    [StringLength(BusinessProfileConsts.MaxTimeZoneIdLength)]
+    public string? TimeZoneId { get; set; }
 }

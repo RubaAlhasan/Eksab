@@ -416,6 +416,13 @@ namespace Eksabli.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("TenantId");
 
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasDefaultValue("Asia/Damascus");
+
                     b.Property<string>("Website")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -1888,7 +1895,11 @@ namespace Eksabli.Migrations
                     b.HasIndex("Code")
                         .IsUnique();
 
+                    b.HasIndex("Status", "CompletedAt");
+
                     b.HasIndex("Status", "ReservationExpiresAt");
+
+                    b.HasIndex("TenantId", "PlacedAt");
 
                     b.HasIndex("TenantId", "Status");
 
@@ -2115,6 +2126,8 @@ namespace Eksabli.Migrations
                     b.HasIndex("TenantId", "CreationTime");
 
                     b.HasIndex("TenantId", "ExpiresAt");
+
+                    b.HasIndex("Type", "CreationTime");
 
                     b.HasIndex("WalletId", "CreationTime");
 

@@ -8,6 +8,11 @@ public static class BusinessProfileConsts
     public const int MaxLogoBlobNameLength = 256;
     public const int MaxLogoContentTypeLength = 100;
     public const int MaxSocialLinksJsonLength = 2000;
+    public const int MaxTimeZoneIdLength = 64;
+
+    // The zone a business runs on when none has been chosen. Drives "today", day boundaries and peak hours on
+    // the Business dashboard. Editable from Business Settings.
+    public const string DefaultTimeZoneId = "Asia/Damascus";
 
     public const int MaxLogoFileSizeBytes = 2 * 1024 * 1024; // 2 MB
 

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Eksabli.Branches;
 using Eksabli.Campaigns;
 using Eksabli.CustomerProfiles;
+using Eksabli.Dashboards;
 using Eksabli.EmployeeAssignments;
 using Eksabli.Memberships;
 using Eksabli.Notifications;
@@ -32,7 +33,7 @@ public class ReportsAppService : ApplicationService, IReportsAppService
 {
     // Presentation tuning, not a domain rule — how many units left before a reward shows up on the
     // dashboard home as "running low."
-    private const int LowStockThreshold = 10;
+    private const int LowStockThreshold = DashboardDefinitions.LowStockThreshold;
 
     // Same cap as the counter's history: each row resolves a customer, so an unbounded page would fan out.
     private const int MaxSalesPageSize = 50;
