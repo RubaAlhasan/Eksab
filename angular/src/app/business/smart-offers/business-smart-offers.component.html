@@ -1,0 +1,103 @@
+<app-page-header
+  [title]="'::SmartDeals:Title' | abpLocalization"
+  [subtitle]="'::SmartDeals:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::SmartDeals:Title' | abpLocalization) }]"
+>
+  @if (canCreate()) {
+    <a class="btn btn-primary btn-sm" routerLink="/business/smart-offers/new">
+      <i class="fas fa-plus me-1"></i>{{ '::SmartDeals:NewDeal' | abpLocalization }}
+    </a>
+  }
+</app-page-header>
+
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::SmartDeals:Loading' | abpLocalization"></app-loading-spinner>
+} @else if (loadFailed()) {
+  <app-error-state
+    [message]="'::SmartDeals:LoadError' | abpLocalization"
+    [retryLabel]="'::SmartDeals:TryAgain' | abpLocalization"
+    (retry)="retry()"
+  ></app-error-state>
+} @else if (offers().length === 0) {
+  <app-empty-state
+    icon="fa-bolt"
+    [title]="'::SmartDeals:EmptyTitle' | abpLocalization"
+    [description]="'::SmartDeals:EmptyDescription' | abpLocalization"
+  ></app-empty-state>
+} @else {
+  <div class="row row-cols-1 row-cols-lg-2 g-4">
+    @for (offer of offers(); track offer.id) {
+      <div class="col">
+        <article class="card eks-smart-card eks-rise h-100 p-4 d-flex flex-column gap-3" [class.eks-smart-card--paused]="!offer.isEnabled">
+          <header class="d-flex align-items-start justify-content-between gap-3">
+            <div class="min-w-0">
+              <h2 class="eks-smart-card__title h6 mb-1 text-truncate">{{ offer.titleEn }}</h2>
+              <app-status-badge [label]="statusLabelKey(offer.status) | abpLocalization" [variant]="statusVariant(offer.status)" />
+            </div>
+            <div class="form-check form-switch m-0 flex-shrink-0">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                role="switch"
+                [id]="'smart-enabled-' + offer.id"
+                [checked]="offer.isEnabled"
+                [disabled]="!canEdit() || busyOfferId() === offer.id"
+                [attr.aria-label]="'::SmartDeals:EnableLabel' | abpLocalization"
+                (change)="toggleEnabled(offer, $event)"
+              />
+            </div>
+          </header>
+
+          <section class="eks-smart-card__price" aria-live="polite">
+            @if (offer.currentPrice !== null && offer.currentPrice !== undefined) {
+              <span class="eks-smart-card__now">{{ money(offer.currentPrice, offer.currency) }}</span>
+              @if (offer.basePrice && offer.basePrice !== offer.currentPrice) {
+                <span class="eks-smart-card__base text-decoration-line-through">{{ money(offer.basePrice, offer.currency) }}</span>
+              }
+              @if (discountPercent(offer); as pct) {
+                <span class="eks-smart-card__chip">−{{ pct }}%</span>
+              }
+              <span class="eks-smart-card__caption">{{ '::SmartDeals:Owner:PriceRightNow' | abpLocalization }}</span>
+            } @else {
+              <span class="eks-smart-card__idle">{{ '::SmartDeals:NotOnSaleNow' | abpLocalization }}</span>
+            }
+          </section>
+
+          <div class="d-flex flex-wrap gap-3 small text-muted">
+            @if (offer.remainingNow !== null && offer.remainingNow !== undefined) {
+              <span><i class="fas fa-box-open me-1"></i>{{ '::SmartDeals:Owner:RemainingNow' | abpLocalization: offer.remainingNow.toString() }}</span>
+            } @else if (offer.currentPrice !== null && offer.currentPrice !== undefined) {
+              <span><i class="fas fa-infinity me-1"></i>{{ '::SmartDeals:Unlimited' | abpLocalization }}</span>
+            }
+            @if (offer.nextChangeAtUtc) {
+              <span>
+                <i class="fas fa-clock me-1"></i>
+                @if (offer.nextPrice !== null && offer.nextPrice !== undefined) {
+                  {{ '::SmartDeals:Owner:NextPriceAt' | abpLocalization: money(offer.nextPrice, offer.currency) : nextChangeLocal(offer) }}
+                } @else {
+                  {{ '::SmartDeals:Owner:OffSaleAt' | abpLocalization: nextChangeLocal(offer) }}
+                }
+              </span>
+            }
+          </div>
+
+          @if (isTimeBased(offer)) {
+            <app-smart-timeline [segments]="segments(offer)" [nowMinute]="nowMinute(offer)" />
+          }
+
+          <footer class="d-flex justify-content-end mt-auto">
+            @if (canEdit()) {
+              <a class="btn btn-outline-secondary btn-sm" [routerLink]="['/business/smart-offers', offer.id]">
+                <i class="fas fa-pen me-1"></i>{{ '::SmartDeals:Edit' | abpLocalization }}
+              </a>
+            }
+          </footer>
+        </article>
+      </div>
+    }
+  </div>
+
+  @if (totalPages() > 1) {
+    <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)" />
+  }
+}

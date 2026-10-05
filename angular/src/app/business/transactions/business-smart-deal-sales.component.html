@@ -1,0 +1,146 @@
+<div class="card mb-4">
+  <div class="card-body d-flex flex-wrap gap-3 align-items-center" [formGroup]="form">
+    <input
+      type="search"
+      class="form-control eks-filter-select"
+      autocomplete="off"
+      spellcheck="false"
+      [placeholder]="'::BusinessPanel:Transactions:SalesSearchPlaceholder' | abpLocalization"
+      [attr.aria-label]="'::BusinessPanel:Transactions:SalesSearchLabel' | abpLocalization"
+      (input)="onSearchInput($event)"
+    />
+    @if (branches().length > 0) {
+      <select class="form-select eks-filter-select" (change)="onBranchFilterChange($event)">
+        <option value="">{{ '::BusinessPanel:Transactions:AllBranches' | abpLocalization }}</option>
+        @for (branch of branches(); track branch.id) {
+          <option [value]="branch.id">{{ branch.name }}</option>
+        }
+      </select>
+    }
+    @if (employees().length > 0) {
+      <select class="form-select eks-filter-select" (change)="onStaffFilterChange($event)">
+        <option value="">{{ '::BusinessPanel:Transactions:AllStaff' | abpLocalization }}</option>
+        @for (employee of employees(); track employee.userId) {
+          <option [value]="employee.userId">{{ employee.userEmail }}</option>
+        }
+      </select>
+    }
+    <input
+      type="date"
+      class="form-control eks-filter-select"
+      formControlName="from"
+      [attr.aria-label]="'::BusinessPanel:Transactions:FieldFrom' | abpLocalization"
+      (change)="onDateRangeChange()"
+    />
+    <input
+      type="date"
+      class="form-control eks-filter-select"
+      formControlName="to"
+      [attr.aria-label]="'::BusinessPanel:Transactions:FieldTo' | abpLocalization"
+      (change)="onDateRangeChange()"
+    />
+    @if (canExport()) {
+      <button type="button" class="btn btn-secondary ms-auto" [disabled]="isExporting()" (click)="exportExcel()">
+        @if (isExporting()) {
+          <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+        } @else {
+          <i class="fas fa-file-arrow-down me-1"></i>
+        }
+        {{ '::BusinessPanel:Transactions:Export' | abpLocalization }}
+      </button>
+    }
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{{ '::BusinessPanel:Transactions:SalesColumnCompleted' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Transactions:SalesColumnCode' | abpLocalization }}</th>
+          <th>{{ '::SmartDeals:SaleDetails:DealId' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Transactions:SalesColumnDeal' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Transactions:SalesColumnQuantity' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Transactions:SalesColumnAmount' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Transactions:ColumnCustomer' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Transactions:ColumnBranch' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Transactions:ColumnStaff' | abpLocalization }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (isLoading()) {
+          <tr>
+            <td colspan="9">
+              <app-loading-spinner [label]="'::BusinessPanel:Transactions:Loading' | abpLocalization"></app-loading-spinner>
+            </td>
+          </tr>
+        } @else if (loadFailed()) {
+          <tr>
+            <td colspan="9">
+              <app-error-state
+                [message]="'::BusinessPanel:Transactions:LoadErrorMessage' | abpLocalization"
+                [retryLabel]="'::BusinessPanel:Transactions:TryAgain' | abpLocalization"
+                (retry)="retry()"
+              >
+              </app-error-state>
+            </td>
+          </tr>
+        } @else if (sales().length === 0) {
+          <tr>
+            <td colspan="9">
+              <app-empty-state
+                icon="fa-bolt"
+                [title]="'::BusinessPanel:Transactions:SalesEmptyTitle' | abpLocalization"
+                [description]="'::BusinessPanel:Transactions:SalesEmptyDescription' | abpLocalization"
+              >
+              </app-empty-state>
+            </td>
+          </tr>
+        } @else {
+          @for (sale of sales(); track sale.id) {
+            <tr
+              class="eks-sales__row"
+              role="button"
+              tabindex="0"
+              [attr.aria-label]="('::SmartDeals:SaleDetails:Open' | abpLocalization) + ': ' + sale.offerTitleEn"
+              (click)="openSale(sale)"
+              (keydown.enter)="openSale(sale)"
+            >
+              <td class="text-muted">{{ sale.completedAt | date: 'medium' }}</td>
+              <td class="fw-semibold font-monospace">{{ sale.code }}</td>
+              <td class="font-monospace small text-muted" [title]="sale.smartOfferId ?? ''">{{ sale.smartOfferId?.slice(0, 8) }}</td>
+              <td>{{ sale.offerTitleEn }}</td>
+              <td>{{ sale.quantity }}</td>
+              <td class="fw-semibold">{{ sale.totalAmount | number: '1.0-2' }} {{ currencyCode(sale.currency) }}</td>
+              <td class="fw-semibold">{{ customerName(sale) }}</td>
+              <td class="text-muted">{{ sale.branchName ?? '—' }}</td>
+              <td class="text-muted">{{ sale.staffEmail ?? '—' }}</td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (!isLoading() && !loadFailed()) {
+    <div class="card-footer">
+      <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)"></app-pagination>
+    </div>
+  }
+</div>
+
+<app-modal
+  [open]="selectedSale() !== null"
+  [title]="'::SmartDeals:SaleDetails:Title' | abpLocalization"
+  (closed)="closeSale()"
+>
+  @if (selectedSale(); as sale) {
+    <app-smart-sale-details [sale]="sale" />
+  }
+
+  <div slot="footer" class="d-flex justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeSale()">
+      {{ '::SmartDeals:SaleDetails:Close' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

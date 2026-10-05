@@ -3,7 +3,7 @@
   [subtitle]="'::BusinessPanel:Transactions:Subtitle' | abpLocalization"
   [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::BusinessPanel:Transactions:Title' | abpLocalization) }]"
 >
-  @if (canExport()) {
+  @if (canExport() && activeTab() === 'points') {
     <button type="button" class="btn btn-secondary btn-sm" [disabled]="isExporting()" (click)="exportExcel()">
       @if (isExporting()) {
         <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
@@ -15,6 +15,34 @@
   }
 </app-page-header>
 
+<ul class="nav nav-tabs mb-4" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button
+      type="button"
+      class="nav-link"
+      role="tab"
+      [class.active]="activeTab() === 'points'"
+      [attr.aria-selected]="activeTab() === 'points'"
+      (click)="selectTab('points')"
+    >
+      {{ '::BusinessPanel:Transactions:TabPoints' | abpLocalization }}
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button
+      type="button"
+      class="nav-link"
+      role="tab"
+      [class.active]="activeTab() === 'smartDeals'"
+      [attr.aria-selected]="activeTab() === 'smartDeals'"
+      (click)="selectTab('smartDeals')"
+    >
+      {{ '::BusinessPanel:Transactions:TabSmartDeals' | abpLocalization }}
+    </button>
+  </li>
+</ul>
+
+@if (activeTab() === 'points') {
 <div class="card mb-4">
   <div class="card-body d-flex flex-wrap gap-3 align-items-center" [formGroup]="form">
     <select class="form-select eks-filter-select" (change)="onTypeFilterChange($event)">
@@ -188,7 +216,7 @@
               @if (component.tierMultiplier) {
                 <span class="d-block text-muted small">{{ '::BusinessPanel:Transactions:DetailsMultiplier' | abpLocalization }} &times;{{ component.tierMultiplier }}</span>
               }
-              @if (component.amount != null) {
+              @if (component.amount !== null && component.amount !== undefined) {
                 <span class="d-block text-muted small">
                   {{ '::BusinessPanel:Transactions:DetailsSaleAmount' | abpLocalization }}
                   {{ component.amount | number: '1.0-2' }} {{ currencyCode(component.currency) }}
@@ -213,3 +241,6 @@
     </button>
   </div>
 </app-modal>
+} @else {
+  <app-business-smart-deal-sales></app-business-smart-deal-sales>
+}

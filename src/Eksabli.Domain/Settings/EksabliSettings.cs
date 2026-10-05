@@ -17,6 +17,14 @@ public static class EksabliSettings
     // via the Setting Management admin UI, which is not where secrets should live.
     public const string MaintenanceMode = Prefix + ".MaintenanceMode";
 
+    public static class SmartOffers
+    {
+        // Per-tenant marker, set to "true" once SmartOfferPermissionBackfillDataSeederContributor has
+        // granted this tenant's pre-existing Owner/tier roles the Smart Offers permissions. Stops the
+        // backfill from re-granting anything the Owner has since removed on a later DbMigrator run.
+        public const string PermissionsBackfilled = Prefix + ".SmartOffers.PermissionsBackfilled";
+    }
+
     public static class Sms
     {
         // Names which ISmsSender implementation is considered "active" for display/ops purposes

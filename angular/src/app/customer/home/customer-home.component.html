@@ -22,7 +22,7 @@
   @if (!isLoading() && !loadFailed() && wallets().length > 0) {
     <div class="eks-home-hero__balance">
       <p class="eks-home-hero__balance-label mb-0">{{ '::Wallet:Home:StatTotalPoints' | abpLocalization }}</p>
-      <p class="eks-home-hero__balance-value mb-0">{{ totalPoints() | number }}</p>
+      <p class="eks-home-hero__balance-value mb-0"><app-animated-number [value]="totalPoints()" /></p>
     </div>
 
     @if (balanceSegments().length > 1) {
@@ -90,24 +90,28 @@
     } @else {
       <section class="eks-home-span eks-rise" style="--eks-rise-delay: 80ms">
         <h2 class="eks-section-title">{{ '::Wallet:Home:MyBusinesses' | abpLocalization }}</h2>
-        <div class="eks-home-carousel">
+        <div class="eks-home-carousel" [class.eks-home-carousel--fit]="wallets().length <= 2">
           @for (wallet of wallets(); track wallet.id) {
-            <a [routerLink]="['/customer/wallet', wallet.tenantId]" class="card eks-wallet-card flex-shrink-0">
-              <div class="card-body">
-                <div class="eks-business-logo eks-business-logo--fallback eks-wallet-card__logo">
+            <a [routerLink]="['/customer/wallet', wallet.tenantId]" class="eks-wallet-card">
+              <span class="eks-wallet-card__top">
+                <span class="eks-business-logo eks-business-logo--fallback" aria-hidden="true">
                   {{ (wallet.businessName ?? '?').charAt(0).toUpperCase() }}
-                </div>
-                <p class="fw-bold text-truncate mb-1">
-                  {{ wallet.businessName ?? ('::Wallet:UnknownBusiness' | abpLocalization) }}
-                </p>
+                </span>
                 @if (wallet.currentTierName) {
-                  <span class="eks-tier-badge mb-2">{{ wallet.currentTierName }}</span>
+                  <span class="eks-tier-badge">{{ wallet.currentTierName }}</span>
                 }
-                <div class="eks-wallet-card__balance">
-                  <span class="eks-wallet-card__balance-value">{{ wallet.balance | number }}</span>
-                  <span class="text-muted small">{{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
-                </div>
-              </div>
+              </span>
+              <span
+                class="eks-wallet-card__name"
+                [class.eks-wallet-card__name--single]="isUnbrokenLongName(wallet.businessName)"
+                [attr.title]="wallet.businessName"
+              >
+                {{ wallet.businessName ?? ('::Wallet:UnknownBusiness' | abpLocalization) }}
+              </span>
+              <span class="eks-wallet-card__balance">
+                <span class="eks-wallet-card__value">{{ wallet.balance | number }}</span>
+                <span class="eks-wallet-card__unit">{{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
+              </span>
             </a>
           }
         </div>
@@ -164,14 +168,22 @@
       </a>
     </section>
 
-    @if (campaignPreview().length > 0) {
-      <section class="eks-home-span eks-rise" style="--eks-rise-delay: 260ms">
-        <div class="eks-section-header">
-          <h2 class="eks-section-title">{{ '::Wallet:Home:ActiveCampaigns' | abpLocalization }}</h2>
-          <a routerLink="/customer/campaigns" class="eks-section-link">
-            {{ '::Wallet:Points:SeeAll' | abpLocalization }}
-          </a>
+    <section class="eks-home-span eks-rise" style="--eks-rise-delay: 260ms">
+      <div class="eks-section-header">
+        <h2 class="eks-section-title">{{ '::Wallet:Home:ActiveCampaigns' | abpLocalization }}</h2>
+        <a routerLink="/customer/campaigns" class="eks-section-link">
+          {{ '::Wallet:Points:SeeAll' | abpLocalization }}
+        </a>
+      </div>
+      @if (!campaignsLoaded()) {
+        <div class="eks-home-carousel" role="status">
+          <span class="visually-hidden">{{ '::Wallet:Campaigns:Loading' | abpLocalization }}</span>
+          <div class="eks-skeleton eks-skeleton-card" aria-hidden="true"></div>
+          <div class="eks-skeleton eks-skeleton-card" aria-hidden="true"></div>
         </div>
+      } @else if (campaignsFailed()) {
+        <app-error-state [message]="'::Wallet:Campaigns:LoadError' | abpLocalization" (retry)="retryCampaigns()" />
+      } @else if (campaignPreview().length > 0) {
         <div class="eks-home-carousel">
           @for (campaign of campaignPreview(); track campaign.id) {
             <a [routerLink]="['/customer/store', campaign.tenantId]" class="card eks-campaign-banner flex-shrink-0">
@@ -186,8 +198,42 @@
             </a>
           }
         </div>
-      </section>
-    }
+      } @else {
+        <div class="eks-panel eks-home-empty">
+          <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-bullhorn"></i></span>
+          <p class="text-muted small mb-0">{{ '::Wallet:Campaigns:Empty' | abpLocalization }}</p>
+        </div>
+      }
+    </section>
+
+    <section class="eks-home-span eks-rise" style="--eks-rise-delay: 280ms">
+      <div class="eks-section-header">
+        <h2 class="eks-section-title">{{ '::SmartDeals:Home:Title' | abpLocalization }}</h2>
+        <a routerLink="/customer/smart-deals" class="eks-section-link">
+          {{ '::Wallet:Points:SeeAll' | abpLocalization }}
+        </a>
+      </div>
+      @if (!smartDealsLoaded()) {
+        <div class="eks-home-carousel" role="status">
+          <span class="visually-hidden">{{ '::SmartDeals:Loading' | abpLocalization }}</span>
+          <div class="eks-skeleton eks-skeleton-card" aria-hidden="true"></div>
+          <div class="eks-skeleton eks-skeleton-card" aria-hidden="true"></div>
+        </div>
+      } @else if (smartDealsFailed()) {
+        <app-error-state [message]="'::SmartDeals:LoadError' | abpLocalization" (retry)="retrySmartDeals()" />
+      } @else if (smartDealPreview().length > 0) {
+        <div class="eks-home-carousel">
+          @for (deal of smartDealPreview(); track deal.id) {
+            <app-smart-deal-tile [deal]="deal" />
+          }
+        </div>
+      } @else {
+        <div class="eks-panel eks-home-empty">
+          <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-bolt"></i></span>
+          <p class="text-muted small mb-0">{{ '::SmartDeals:Home:Empty' | abpLocalization }}</p>
+        </div>
+      }
+    </section>
 
     @if (rewardsPreview().length > 0) {
       <section class="eks-home-span eks-rise" style="--eks-rise-delay: 320ms">

@@ -33,6 +33,14 @@ public class AdminUsersController : EksabliController
         return _adminUserAppService.GetCustomerDetailAsync(customerId);
     }
 
+    // The admin customer page's per-business "Smart deal sales" view. Same Users.View gate as the transactions beside it.
+    [HttpGet("memberships/{membershipId:guid}/smart-deal-sales")]
+    public Task<PagedResultDto<SmartDealSaleDto>> GetCustomerSmartDealSalesAsync(
+        Guid membershipId, [FromQuery] Guid tenantId, [FromQuery] PagedAndSortedResultRequestDto input)
+    {
+        return _adminUserAppService.GetCustomerSmartDealSalesAsync(membershipId, tenantId, input);
+    }
+
     [HttpGet("memberships/{membershipId:guid}/transactions")]
     public Task<PagedResultDto<TransactionListItemDto>> GetCustomerTransactionsAsync(
         Guid membershipId, [FromQuery] Guid tenantId, [FromQuery] PagedAndSortedResultRequestDto input)

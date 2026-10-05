@@ -1,0 +1,4 @@
+// Each sale opens its details, so the whole row is the click target.
+.eks-sales__row {
+  cursor: pointer;
+}

@@ -21,14 +21,16 @@
             <span class="eks-row__meta">{{ business.categoryNameEn ?? ('::Wallet:Discover:Uncategorized' | abpLocalization) }}</span>
           </span>
         </a>
-        <button
-          type="button"
-          class="btn btn-sm btn-outline-danger"
-          [disabled]="unfollowingIds().has(business.tenantId)"
-          (click)="unfollow(business.tenantId)"
-        >
-          {{ '::Wallet:Favorites:Unfollow' | abpLocalization }}
-        </button>
+        <span class="eks-row__end">
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-danger text-nowrap"
+            [disabled]="unfollowingIds().has(business.tenantId)"
+            (click)="unfollow(business.tenantId)"
+          >
+            {{ '::Wallet:Favorites:Unfollow' | abpLocalization }}
+          </button>
+        </span>
       </div>
     }
   </div>

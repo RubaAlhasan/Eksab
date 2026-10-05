@@ -1,0 +1,86 @@
+// Browse layout only. The filter controls are the portal's own kit (eks-filter-search, eks-filter-select, eks-chip-row,
+// eks-chip); this file adds the summary line, the filter panel, the section headings and the card grid. Colours come
+// from --eks-* tokens, so light and dark mode follow the shell.
+
+.eks-deals-browse {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-bottom: 1.5rem;
+}
+
+.eks-deals-browse__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.eks-deals-browse__count {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--eks-text-muted);
+}
+
+.eks-deals-browse__filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-lg);
+  background: var(--eks-surface);
+}
+
+.eks-deals-browse__dot {
+  display: inline-block;
+  width: 0.4375rem;
+  height: 0.4375rem;
+  margin-inline-end: 0.375rem;
+  border-radius: 50%;
+  background: var(--eks-success);
+  vertical-align: middle;
+}
+
+.eks-deals-browse__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.eks-deals-browse__section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.eks-deals-browse__section-count {
+  min-width: 1.75rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--eks-radius-pill);
+  background: var(--eks-surface-2);
+  border: 1px solid var(--eks-border);
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--eks-text-muted);
+}
+
+// One column on a phone; two side by side from tablet width. Cards keep their natural height, so a short card never
+// stretches to match a tall neighbour.
+.eks-deal-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.875rem;
+  align-items: start;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (min-width: 1200px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

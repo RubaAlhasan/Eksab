@@ -3,6 +3,11 @@
   position: relative;
 }
 
+// Long values (an email address, a long phone number) wrap inside the card rather than running past its edge.
+.eks-profile__detail {
+  overflow-wrap: anywhere;
+}
+
 .eks-edit-link {
   position: absolute;
   top: 0.75rem;

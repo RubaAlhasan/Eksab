@@ -78,6 +78,8 @@ export class BusinessLayoutComponent {
     // Empty permission for the same reason as NavPoints directly above — PosController has no ABP
     // permission, so a Cashier would never see this entry if it required one.
     { labelKey: '::BusinessPanel:Layout:NavRedemption', icon: 'fa-circle-check', link: '/business/redemption', permission: '' },
+    { labelKey: '::BusinessPanel:Layout:NavSmartOrders', icon: 'fa-receipt', link: '/business/smart-orders', permission: '' },
+    { labelKey: '::BusinessPanel:Layout:NavSmartDeals', icon: 'fa-bolt', link: '/business/smart-offers', permission: 'Eksabli.SmartOffers' },
     { labelKey: '::BusinessPanel:Layout:NavRewards', icon: 'fa-gift', link: '/business/rewards', permission: 'Eksabli.Rewards' },
     { labelKey: '::BusinessPanel:Layout:NavCoupons', icon: 'fa-ticket', link: '/business/coupons', permission: 'Eksabli.Rewards' },
     { labelKey: '::BusinessPanel:Layout:NavCampaigns', icon: 'fa-bullhorn', link: '/business/campaigns', permission: 'Eksabli.Campaigns' },

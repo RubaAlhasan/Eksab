@@ -1,0 +1,272 @@
+<app-page-header
+  [title]="titleKey() | abpLocalization"
+  [subtitle]="'::SmartDeals:EditorSubtitle' | abpLocalization"
+  [breadcrumbs]="[
+    { label: 'Business Portal', link: '/business/dashboard' },
+    { label: ('::SmartDeals:Title' | abpLocalization), link: '/business/smart-offers' },
+    { label: titleKey() | abpLocalization }
+  ]"
+>
+  <a class="btn btn-outline-secondary btn-sm" routerLink="/business/smart-offers">{{ '::SmartDeals:Back' | abpLocalization }}</a>
+</app-page-header>
+
+@if (isLoading()) {
+  <app-loading-spinner [label]="'::SmartDeals:Loading' | abpLocalization"></app-loading-spinner>
+} @else if (loadFailed()) {
+  <app-error-state
+    [message]="'::SmartDeals:LoadError' | abpLocalization"
+    [retryLabel]="'::SmartDeals:TryAgain' | abpLocalization"
+    (retry)="retry()"
+  ></app-error-state>
+} @else {
+  @if (isReadOnly()) {
+    <div class="alert alert-info" role="status">{{ '::SmartDeals:ViewOnlyNotice' | abpLocalization }}</div>
+  }
+  <div class="row g-4">
+    <div class="col-12 col-xl-7">
+      @if (liveOffer(); as live) {
+        <section class="card eks-smart-live p-4 mb-4" aria-live="polite">
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <app-status-badge [label]="statusLabelKey(live.status) | abpLocalization" [variant]="statusVariant(live.status)" />
+            <span class="small text-muted">{{ '::SmartDeals:Editor:LiveRightNow' | abpLocalization }}</span>
+          </div>
+          @if (live.currentPrice !== null && live.currentPrice !== undefined) {
+            <div class="eks-smart-live__price">{{ money(live.currentPrice, live.currency ?? Currency.Usd) }}</div>
+          } @else {
+            <div class="eks-smart-live__idle">{{ '::SmartDeals:NotOnSaleNow' | abpLocalization }}</div>
+          }
+          @if (live.nextChangeAtUtc) {
+            <div class="small text-muted mt-1">
+              @if (live.nextPrice !== null && live.nextPrice !== undefined) {
+                {{ '::SmartDeals:Owner:NextPriceAtShort' | abpLocalization: money(live.nextPrice, live.currency ?? Currency.Usd) }}
+              } @else {
+                {{ '::SmartDeals:Owner:OffSaleAtShort' | abpLocalization }}
+              }
+            </div>
+          }
+        </section>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+        <section class="card p-4 mb-4">
+          <h2 class="eks-editor__heading">{{ '::SmartDeals:Editor:Basics' | abpLocalization }}</h2>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="smart-title-en">{{ '::SmartDeals:Editor:TitleEn' | abpLocalization }}</label>
+              <input id="smart-title-en" class="form-control" formControlName="titleEn" maxlength="128" autocomplete="off" />
+              @if (form.controls.titleEn.touched && form.controls.titleEn.invalid) {
+                <div class="invalid-feedback d-block">{{ '::SmartDeals:Validation:TitleRequired' | abpLocalization }}</div>
+              }
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="smart-title-ar">{{ '::SmartDeals:Editor:TitleAr' | abpLocalization }}</label>
+              <input id="smart-title-ar" class="form-control" formControlName="titleAr" maxlength="128" dir="rtl" autocomplete="off" />
+              @if (form.controls.titleAr.touched && form.controls.titleAr.invalid) {
+                <div class="invalid-feedback d-block">{{ '::SmartDeals:Validation:TitleRequired' | abpLocalization }}</div>
+              }
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="smart-description-en">{{ '::SmartDeals:Editor:DescriptionEn' | abpLocalization }}</label>
+              <textarea id="smart-description-en" class="form-control" rows="2" formControlName="descriptionEn"></textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="card p-4 mb-4">
+          <h2 class="eks-editor__heading">{{ '::SmartDeals:Editor:Pricing' | abpLocalization }}</h2>
+
+          <div class="eks-segmented mb-3" role="radiogroup" [attr.aria-label]="'::SmartDeals:Editor:Pricing' | abpLocalization">
+            <button
+              type="button"
+              class="eks-segmented__item"
+              role="radio"
+              [attr.aria-checked]="isTimeBased()"
+              [class.active]="isTimeBased()"
+              [disabled]="isReadOnly()"
+              (click)="setStrategy(Strategy.TimeBased)"
+            >
+              <i class="fas fa-clock me-1"></i>{{ '::SmartDeals:Editor:ModeTimeBased' | abpLocalization }}
+            </button>
+            <button
+              type="button"
+              class="eks-segmented__item"
+              role="radio"
+              [attr.aria-checked]="!isTimeBased()"
+              [class.active]="!isTimeBased()"
+              [disabled]="isReadOnly()"
+              (click)="setStrategy(Strategy.Fixed)"
+            >
+              <i class="fas fa-tag me-1"></i>{{ '::SmartDeals:Editor:ModeFixed' | abpLocalization }}
+            </button>
+          </div>
+          <p class="small text-muted mb-3">
+            {{ (isTimeBased() ? '::SmartDeals:Editor:ModeTimeBasedHint' : '::SmartDeals:Editor:ModeFixedHint') | abpLocalization }}
+          </p>
+
+          <div class="row g-3">
+            <div class="col-6 col-md-3">
+              <label class="form-label eks-pricing__label" for="smart-currency">{{ '::SmartDeals:Editor:Currency' | abpLocalization }}</label>
+              <select id="smart-currency" class="form-select" formControlName="currency">
+                <option [ngValue]="Currency.Usd">USD</option>
+                <option [ngValue]="Currency.Syp">SYP</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label eks-pricing__label" for="smart-base-price">
+                {{ (isTimeBased() ? '::SmartDeals:Editor:BasePrice' : '::SmartDeals:Editor:Price') | abpLocalization }}
+              </label>
+              <input id="smart-base-price" class="form-control" type="number" min="0" step="0.01" inputmode="decimal" formControlName="basePrice" />
+            </div>
+            @if (isTimeBased()) {
+              <div class="col-6 col-md-3">
+                <label class="form-label eks-pricing__label" for="smart-minimum-price">{{ '::SmartDeals:Editor:MinimumPrice' | abpLocalization }}</label>
+                <input id="smart-minimum-price" class="form-control" type="number" min="0" step="0.01" inputmode="decimal" formControlName="minimumPrice" />
+              </div>
+            } @else {
+              <div class="col-6 col-md-3">
+                <label class="form-label eks-pricing__label" for="smart-daily-quantity">{{ '::SmartDeals:Editor:DailyQuantity' | abpLocalization }}</label>
+                <input id="smart-daily-quantity" class="form-control" type="number" min="1" step="1" inputmode="numeric" formControlName="dailyQuantity" />
+                <div class="form-text">{{ '::SmartDeals:Editor:DailyQuantityHint' | abpLocalization }}</div>
+              </div>
+            }
+          </div>
+        </section>
+
+        @if (isTimeBased()) {
+          <section class="card p-4 mb-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <h2 class="eks-editor__heading mb-0">{{ '::SmartDeals:Editor:Stages' | abpLocalization }}</h2>
+              <button type="button" class="btn btn-outline-primary btn-sm" [disabled]="isReadOnly() || stages.length >= maxStages" (click)="addStage()">
+                <i class="fas fa-plus me-1"></i>{{ '::SmartDeals:Editor:AddStage' | abpLocalization }}
+              </button>
+            </div>
+
+            <div class="eks-stage-list">
+              @for (stage of stages.controls; track $index; let i = $index) {
+                <div class="eks-stage" [formGroup]="stage" [class.eks-stage--invalid]="stageError(i)">
+                  <div class="eks-stage__times">
+                    <div>
+                      <label class="form-label small mb-1" [attr.for]="'stage-start-' + i">{{ '::SmartDeals:Editor:From' | abpLocalization }}</label>
+                      <input
+                        [id]="'stage-start-' + i"
+                        class="form-control form-control-sm"
+                        formControlName="startTime"
+                        placeholder="HH:mm"
+                        inputmode="numeric"
+                        maxlength="5"
+                      />
+                    </div>
+                    <div>
+                      <label class="form-label small mb-1" [attr.for]="'stage-end-' + i">{{ '::SmartDeals:Editor:Until' | abpLocalization }}</label>
+                      <input
+                        [id]="'stage-end-' + i"
+                        class="form-control form-control-sm"
+                        formControlName="endTime"
+                        placeholder="HH:mm"
+                        inputmode="numeric"
+                        maxlength="5"
+                      />
+                    </div>
+                  </div>
+                  <div class="eks-stage__values">
+                    <div>
+                      <label class="form-label small mb-1" [attr.for]="'stage-price-' + i">{{ '::SmartDeals:Editor:StagePrice' | abpLocalization }}</label>
+                      <input
+                        [id]="'stage-price-' + i"
+                        class="form-control form-control-sm"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        inputmode="decimal"
+                        formControlName="price"
+                      />
+                    </div>
+                    <div>
+                      <label class="form-label small mb-1" [attr.for]="'stage-qty-' + i">{{ '::SmartDeals:Editor:StageQuantity' | abpLocalization }}</label>
+                      <input
+                        [id]="'stage-qty-' + i"
+                        class="form-control form-control-sm"
+                        type="number"
+                        min="1"
+                        step="1"
+                        inputmode="numeric"
+                        formControlName="quantityLimit"
+                        [placeholder]="'::SmartDeals:Editor:Unlimited' | abpLocalization"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger btn-sm eks-stage__remove"
+                    [disabled]="isReadOnly()"
+                    [attr.aria-label]="'::SmartDeals:Editor:RemoveStage' | abpLocalization"
+                    (click)="removeStage(i)"
+                  >
+                    <i class="fas fa-trash-can"></i>
+                  </button>
+                  @if (stageError(i); as error) {
+                    <div class="eks-stage__error small">{{ error | abpLocalization }}</div>
+                  }
+                </div>
+              }
+            </div>
+
+            @if (issues().overall; as overall) {
+              <div class="alert alert-warning mt-3 mb-0 small" role="alert">{{ overall | abpLocalization }}</div>
+            }
+          </section>
+        }
+
+        <section class="card p-4 mb-4">
+          <h2 class="eks-editor__heading">{{ '::SmartDeals:Editor:Schedule' | abpLocalization }}</h2>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="smart-timezone">{{ '::SmartDeals:Editor:TimeZone' | abpLocalization }}</label>
+              <input id="smart-timezone" class="form-control" formControlName="timeZoneId" autocomplete="off" />
+              <div class="form-text">{{ '::SmartDeals:Editor:TimeZoneHint' | abpLocalization }}</div>
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label" for="smart-valid-from">{{ '::SmartDeals:Editor:StartsOn' | abpLocalization }}</label>
+              <input id="smart-valid-from" class="form-control" type="date" formControlName="validFrom" />
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label" for="smart-valid-to">{{ '::SmartDeals:Editor:EndsOn' | abpLocalization }}</label>
+              <input id="smart-valid-to" class="form-control" type="date" formControlName="validTo" />
+            </div>
+          </div>
+          <div class="form-check form-switch mt-3">
+            <input id="smart-enabled" class="form-check-input" type="checkbox" role="switch" formControlName="isEnabled" />
+            <label class="form-check-label" for="smart-enabled">{{ '::SmartDeals:Editor:ShowToCustomers' | abpLocalization }}</label>
+          </div>
+        </section>
+
+        @if (!isReadOnly()) {
+        <div class="d-flex justify-content-end gap-2 mb-5">
+          <a class="btn btn-outline-secondary" routerLink="/business/smart-offers">{{ '::SmartDeals:Cancel' | abpLocalization }}</a>
+          <button type="submit" class="btn btn-primary" [disabled]="!canSave() || isSaving()">
+            @if (isSaving()) {
+              <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            }
+            {{ '::SmartDeals:Save' | abpLocalization }}
+          </button>
+        </div>
+        }
+      </form>
+    </div>
+
+    <aside class="col-12 col-xl-5">
+      <div class="card p-4 eks-smart-preview">
+        <h2 class="eks-editor__heading">{{ '::SmartDeals:Editor:PreviewTitle' | abpLocalization }}</h2>
+        @if (isTimeBased()) {
+          <app-smart-timeline [segments]="previewSegments()" />
+          <p class="small text-muted mt-3 mb-0">{{ '::SmartDeals:Editor:PreviewHint' | abpLocalization }}</p>
+        } @else {
+          <p class="eks-smart-preview__fixed mb-0">
+            {{ money(form.controls.basePrice.value, form.controls.currency.value) }}
+          </p>
+          <p class="small text-muted mt-2 mb-0">{{ '::SmartDeals:Editor:FixedPreviewHint' | abpLocalization }}</p>
+        }
+      </div>
+    </aside>
+  </div>
+}

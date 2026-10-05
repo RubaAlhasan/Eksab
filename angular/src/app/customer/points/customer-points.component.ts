@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
 import { MembershipsService } from '../../proxy/controllers/memberships.service';
@@ -8,6 +8,7 @@ import type { PointsWalletDto } from '../../proxy/wallets/models';
 import type { TransactionListItemDto } from '../../proxy/reports/models';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
+import { AnimatedNumberComponent } from '../../shared/components/animated-number/animated-number.component';
 import { TransactionDetailModalComponent } from '../../shared/components/transaction-detail-modal/transaction-detail-modal.component';
 import { isCredit, transactionSourceLabelKey, transactionTypeLabelKey } from '../../shared/utils/transaction-display.util';
 
@@ -25,7 +26,7 @@ import { isCredit, transactionSourceLabelKey, transactionTypeLabelKey } from '..
   templateUrl: './customer-points.component.html',
   styleUrls: ['./customer-points.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DatePipe, LocalizationPipe, EmptyStateComponent, ErrorStateComponent, TransactionDetailModalComponent],
+  imports: [RouterLink, DatePipe, DecimalPipe, LocalizationPipe, EmptyStateComponent, ErrorStateComponent, TransactionDetailModalComponent, AnimatedNumberComponent],
 })
 export class CustomerPointsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);

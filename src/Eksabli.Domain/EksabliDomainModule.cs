@@ -162,5 +162,6 @@ public class EksabliDomainModule : AbpModule
         await context.AddBackgroundWorkerAsync<Billing.SubscriptionRenewalWorker>();
         await context.AddBackgroundWorkerAsync<Campaigns.CampaignSweepWorker>();
         await context.AddBackgroundWorkerAsync<Rewards.RedemptionReservationWorker>();
+        await context.AddBackgroundWorkerAsync<SmartOffers.SmartOfferOrderExpirationWorker>();
     }
 }

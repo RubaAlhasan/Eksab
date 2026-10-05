@@ -90,6 +90,15 @@ public static class EksabliPermissions
         public const string Delete = Default + ".Delete";
     }
 
+    // Time-based / fixed-price Buy Now deals (SmartOffers). Separate from Offers: those are unpriced banners.
+    public static class SmartOffers
+    {
+        public const string Default = GroupName + ".SmartOffers";
+        public const string Create = Default + ".Create";
+        public const string Edit = Default + ".Edit";
+        public const string Delete = Default + ".Delete";
+    }
+
     public static class Notifications
     {
         public const string Default = GroupName + ".Notifications";

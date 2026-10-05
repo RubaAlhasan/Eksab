@@ -1,0 +1,93 @@
+.eks-offer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.eks-offer__back {
+  align-self: flex-start;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--eks-primary);
+  text-decoration: none;
+}
+
+.eks-offer__back:hover,
+.eks-offer__back:focus-visible {
+  text-decoration: underline;
+}
+
+.eks-offer__card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-lg);
+  background: var(--eks-surface);
+}
+
+.eks-offer__head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.eks-offer__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.eks-offer__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--eks-text);
+}
+
+.eks-offer__business {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--eks-text-muted);
+}
+
+.eks-offer__section {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--eks-text);
+}
+
+// Business-written text is kept as typed, line breaks included.
+.eks-offer__description {
+  margin: 0;
+  white-space: pre-line;
+  color: var(--eks-text);
+}
+
+.eks-offer__description--empty {
+  font-style: italic;
+  color: var(--eks-text-muted);
+}
+
+.eks-offer__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0;
+
+  dt {
+    font-size: 0.8125rem;
+    color: var(--eks-text-muted);
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--eks-text);
+  }
+}

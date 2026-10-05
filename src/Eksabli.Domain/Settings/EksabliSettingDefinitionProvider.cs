@@ -19,6 +19,9 @@ public class EksabliSettingDefinitionProvider : SettingDefinitionProvider
             new SettingDefinition(
                 EksabliSettings.Sms.ActiveProvider,
                 defaultValue: "Null",
-                isVisibleToClients: true));
+                isVisibleToClients: true),
+            new SettingDefinition(
+                EksabliSettings.SmartOffers.PermissionsBackfilled,
+                isVisibleToClients: false));
     }
 }

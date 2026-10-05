@@ -17,5 +17,6 @@ import * as Pos from './pos';
 import * as Reports from './reports';
 import * as Rewards from './rewards';
 import * as Shared from './shared';
+import * as SmartOffers from './smart-offers';
 import * as Wallets from './wallets';
-export { Billing, Branches, BusinessProfiles, Businesses, Campaigns, Controllers, CustomerProfiles, Devices, EmployeeAssignments, Engagement, Memberships, Notifications, Offers, Otp, Platform, Pos, Reports, Rewards, Shared, Wallets };
+export { Billing, Branches, BusinessProfiles, Businesses, Campaigns, Controllers, CustomerProfiles, Devices, EmployeeAssignments, Engagement, Memberships, Notifications, Offers, Otp, Platform, Pos, Reports, Rewards, Shared, SmartOffers, Wallets };

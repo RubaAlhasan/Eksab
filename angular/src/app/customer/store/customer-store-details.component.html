@@ -4,6 +4,8 @@
   <app-error-state [message]="'::Wallet:Store:LoadError' | abpLocalization" (retry)="retry()" />
 } @else if (business(); as business) {
   <section class="eks-panel eks-rise eks-store-header text-center mb-3">
+    <div class="eks-store-header__cover" aria-hidden="true"></div>
+    <div class="eks-store-header__body">
     @if (logoUrl(); as logo) {
       <img [src]="logo" alt="" class="eks-store-logo mx-auto mb-2" (error)="logoFailed.set(true)" />
     } @else {
@@ -12,7 +14,7 @@
     <h1 class="h4 fw-bold mb-1">{{ business.name }}</h1>
     <p class="text-muted small mb-3">
       {{ business.categoryNameEn ?? ('::Wallet:Discover:Uncategorized' | abpLocalization) }}
-      · {{ business.branchCount }} {{ '::Wallet:Discover:Branches' | abpLocalization }}
+      · {{ business.branchCount }} {{ (business.branchCount === 1 ? '::Wallet:Discover:Branch' : '::Wallet:Discover:Branches') | abpLocalization }}
       @if (business.distanceKm !== null && business.distanceKm !== undefined) {
         · {{ business.distanceKm | number: '1.1-1' }} {{ '::Wallet:Discover:KmAway' | abpLocalization }}
       }
@@ -54,6 +56,7 @@
         </div>
       </div>
     }
+    </div>
   </section>
 
   <div class="eks-tabs mb-3">
@@ -71,8 +74,27 @@
   @if (activeTab() === 'about') {
     <section class="eks-panel mb-3">
       <p class="mb-2">{{ business.descriptionEn ?? ('::Wallet:Store:NoDescription' | abpLocalization) }}</p>
-      @if (business.website) {
-        <a [href]="business.website" target="_blank" rel="noopener" class="small">{{ business.website }}</a>
+      @if (business.website || business.instagram || business.facebook) {
+        <div class="eks-social-links mt-3">
+          @if (business.website; as website) {
+            <a [href]="toExternalHref(website)" target="_blank" rel="noopener" class="eks-social-link">
+              <i class="fas fa-globe" aria-hidden="true"></i>
+              <span dir="ltr">{{ displayUrl(website) }}</span>
+            </a>
+          }
+          @if (business.instagram; as instagram) {
+            <a [href]="toExternalHref(instagram)" target="_blank" rel="noopener" class="eks-social-link">
+              <i class="fa-brands fa-instagram" aria-hidden="true"></i>
+              <span>Instagram</span>
+            </a>
+          }
+          @if (business.facebook; as facebook) {
+            <a [href]="toExternalHref(facebook)" target="_blank" rel="noopener" class="eks-social-link">
+              <i class="fa-brands fa-facebook-f" aria-hidden="true"></i>
+              <span>Facebook</span>
+            </a>
+          }
+        </div>
       }
     </section>
 
@@ -89,6 +111,19 @@
       </div>
     }
   } @else if (activeTab() === 'offers') {
+    @if (smartDeals().length > 0) {
+      <section class="eks-smart-deals mb-4" [attr.aria-label]="'::SmartDeals:Customer:SectionTitle' | abpLocalization">
+        <h3 class="eks-section-title">{{ '::SmartDeals:Customer:SectionTitle' | abpLocalization }}</h3>
+        <div class="d-flex flex-column gap-3">
+          @for (deal of pagedSmartDeals(); track deal.id) {
+            <app-smart-deal-card [offer]="deal" [tenantId]="business.tenantId ?? ''" [canBuy]="isMember()" />
+          }
+        </div>
+        @if (smartDealPages() > 1) {
+          <app-pagination [pageIndex]="smartDealPageIndex()" [totalPages]="smartDealPages()" (pageChange)="goToSmartDealPage($event)" />
+        }
+      </section>
+    }
     @if (offers().length === 0) {
       <p class="text-muted small">{{ '::Wallet:Store:OffersEmpty' | abpLocalization }}</p>
     } @else {

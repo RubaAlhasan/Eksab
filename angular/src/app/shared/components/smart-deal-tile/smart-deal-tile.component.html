@@ -1,0 +1,34 @@
+<a
+  class="card eks-smart-tile flex-shrink-0"
+  [routerLink]="['/customer/store', deal().tenantId]"
+  [class.eks-smart-tile--off]="!deal().isAvailableNow"
+>
+  <span class="eks-smart-tile__top">
+    <span class="eks-smart-tile__badge"><span aria-hidden="true">🔥</span>{{ '::SmartDeals:Customer:SmartDeal' | abpLocalization }}</span>
+    @if (deal().discountPercent; as pct) {
+      <span class="eks-smart-tile__save">−{{ pct }}%</span>
+    }
+  </span>
+
+  <span class="eks-smart-tile__business text-truncate">{{ deal().businessName }}</span>
+  <span class="eks-smart-tile__title text-truncate">{{ title() }}</span>
+
+  <span class="eks-smart-tile__price">
+    @if (deal().isAvailableNow && deal().currentPrice !== null && deal().currentPrice !== undefined) {
+      @if (deal().basePrice && deal().basePrice! > deal().currentPrice!) {
+        <s class="eks-smart-tile__base">{{ money(deal().basePrice) }}</s>
+      }
+      <span class="eks-smart-tile__now">{{ money(deal().currentPrice) }}</span>
+    } @else {
+      <span class="eks-smart-tile__idle">{{ '::SmartDeals:NotOnSaleNow' | abpLocalization }}</span>
+    }
+  </span>
+
+  <span class="eks-smart-tile__meta">
+    @if (deal().isAvailableNow && deal().currentStageEndTime) {
+      {{ '::SmartDeals:Customer:UntilTime' | abpLocalization: deal().currentStageEndTime! }}
+    } @else if (deal().nextChangeLocalTime) {
+      {{ '::SmartDeals:Customer:OnSaleAt' | abpLocalization: deal().nextChangeLocalTime! }}
+    }
+  </span>
+</a>

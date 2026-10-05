@@ -4,6 +4,7 @@ import { AuthService, ConfigStateService, LocalizationPipe } from '@abp/ng.core'
 import { CustomerProfileService } from '../../proxy/controllers/customer-profile.service';
 import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
+import { isPlaceholderEmail } from '../../shared/utils/contact-display.util';
 
 @Component({
   selector: 'app-customer-profile',
@@ -25,7 +26,11 @@ export class CustomerProfileComponent implements OnInit {
     () => this.configState.getOne('currentUser') as { phoneNumber?: string; email?: string } | undefined,
   );
   protected readonly phoneNumber = computed(() => this.currentUser()?.phoneNumber ?? null);
-  protected readonly email = computed(() => this.currentUser()?.email ?? null);
+  // Hide the system placeholder so an OTP member sees "Not set" rather than an internal address.
+  protected readonly email = computed(() => {
+    const email = this.currentUser()?.email;
+    return email && !isPlaceholderEmail(email) ? email : null;
+  });
 
   ngOnInit(): void {
     this.load();

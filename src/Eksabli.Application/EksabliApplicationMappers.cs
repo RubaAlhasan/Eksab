@@ -15,6 +15,7 @@ using Eksabli.Notifications;
 using Eksabli.Engagement;
 using Eksabli.Platform;
 using Eksabli.Sms;
+using Eksabli.SmartOffers;
 
 namespace Eksabli;
 
@@ -273,4 +274,86 @@ public partial class EksabliSupportTicketMessageToSupportTicketMessageDtoMapper 
     public override partial SupportTicketMessageDto Map(SupportTicketMessage source);
 
     public override partial void Map(SupportTicketMessage source, SupportTicketMessageDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliSmartOfferToSmartOfferDtoMapper : MapperBase<SmartOffer, SmartOfferDto>
+{
+    // Stages, the live quote and the next change are computed in SmartOfferAppService, not copied across.
+    [MapperIgnoreTarget(nameof(SmartOfferDto.Stages))]
+    [MapperIgnoreTarget(nameof(SmartOfferDto.Status))]
+    [MapperIgnoreTarget(nameof(SmartOfferDto.CurrentPrice))]
+    [MapperIgnoreTarget(nameof(SmartOfferDto.RemainingNow))]
+    [MapperIgnoreTarget(nameof(SmartOfferDto.ServerNowUtc))]
+    [MapperIgnoreTarget(nameof(SmartOfferDto.NextChangeAtUtc))]
+    [MapperIgnoreTarget(nameof(SmartOfferDto.NextPrice))]
+    public override partial SmartOfferDto Map(SmartOffer source);
+
+    [MapperIgnoreTarget(nameof(SmartOfferDto.Stages))]
+    [MapperIgnoreTarget(nameof(SmartOfferDto.Status))]
+    [MapperIgnoreTarget(nameof(SmartOfferDto.CurrentPrice))]
+    [MapperIgnoreTarget(nameof(SmartOfferDto.RemainingNow))]
+    [MapperIgnoreTarget(nameof(SmartOfferDto.ServerNowUtc))]
+    [MapperIgnoreTarget(nameof(SmartOfferDto.NextChangeAtUtc))]
+    [MapperIgnoreTarget(nameof(SmartOfferDto.NextPrice))]
+    public override partial void Map(SmartOffer source, SmartOfferDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliSmartOfferOrderToSmartDealSaleDtoMapper : MapperBase<SmartOfferOrder, Eksabli.Reports.SmartDealSaleDto>
+{
+    // Branch, staff and customer display names are resolved in ReportsAppService.GetSmartDealSalesAsync, not copied across.
+    [MapperIgnoreTarget(nameof(Eksabli.Reports.SmartDealSaleDto.BranchName))]
+    [MapperIgnoreTarget(nameof(Eksabli.Reports.SmartDealSaleDto.StaffEmail))]
+    [MapperIgnoreTarget(nameof(Eksabli.Reports.SmartDealSaleDto.CustomerFirstName))]
+    [MapperIgnoreTarget(nameof(Eksabli.Reports.SmartDealSaleDto.CustomerLastName))]
+    [MapperIgnoreTarget(nameof(Eksabli.Reports.SmartDealSaleDto.OfferDescriptionAr))]
+    [MapperIgnoreTarget(nameof(Eksabli.Reports.SmartDealSaleDto.OfferDescriptionEn))]
+    public override partial Eksabli.Reports.SmartDealSaleDto Map(SmartOfferOrder source);
+
+    [MapperIgnoreTarget(nameof(Eksabli.Reports.SmartDealSaleDto.BranchName))]
+    [MapperIgnoreTarget(nameof(Eksabli.Reports.SmartDealSaleDto.StaffEmail))]
+    [MapperIgnoreTarget(nameof(Eksabli.Reports.SmartDealSaleDto.CustomerFirstName))]
+    [MapperIgnoreTarget(nameof(Eksabli.Reports.SmartDealSaleDto.CustomerLastName))]
+    [MapperIgnoreTarget(nameof(Eksabli.Reports.SmartDealSaleDto.OfferDescriptionAr))]
+    [MapperIgnoreTarget(nameof(Eksabli.Reports.SmartDealSaleDto.OfferDescriptionEn))]
+    public override partial void Map(SmartOfferOrder source, Eksabli.Reports.SmartDealSaleDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliSmartOfferOrderToSmartOfferOrderDtoMapper : MapperBase<SmartOfferOrder, SmartOfferOrderDto>
+{
+    // Set by the application layer from the server clock at the moment of the response.
+    [MapperIgnoreTarget(nameof(SmartOfferOrderDto.ServerNowUtc))]
+    public override partial SmartOfferOrderDto Map(SmartOfferOrder source);
+
+    [MapperIgnoreTarget(nameof(SmartOfferOrderDto.ServerNowUtc))]
+    public override partial void Map(SmartOfferOrder source, SmartOfferOrderDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliSmartOfferOrderToCustomerSmartOfferOrderDtoMapper : MapperBase<SmartOfferOrder, CustomerSmartOfferOrderDto>
+{
+    // Set by the application layer: the server clock at the response, and the business name looked up for the page.
+    [MapperIgnoreTarget(nameof(CustomerSmartOfferOrderDto.ServerNowUtc))]
+    [MapperIgnoreTarget(nameof(CustomerSmartOfferOrderDto.BusinessName))]
+    public override partial CustomerSmartOfferOrderDto Map(SmartOfferOrder source);
+
+    [MapperIgnoreTarget(nameof(CustomerSmartOfferOrderDto.ServerNowUtc))]
+    [MapperIgnoreTarget(nameof(CustomerSmartOfferOrderDto.BusinessName))]
+    public override partial void Map(SmartOfferOrder source, CustomerSmartOfferOrderDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliSmartOfferOrderToSmartOfferOrderStaffDtoMapper : MapperBase<SmartOfferOrder, SmartOfferOrderStaffDto>
+{
+    [MapperIgnoreTarget(nameof(SmartOfferOrderStaffDto.ServerNowUtc))]
+    [MapperIgnoreTarget(nameof(SmartOfferOrderStaffDto.CustomerName))]
+    [MapperIgnoreTarget(nameof(SmartOfferOrderStaffDto.CustomerPhone))]
+    public override partial SmartOfferOrderStaffDto Map(SmartOfferOrder source);
+
+    [MapperIgnoreTarget(nameof(SmartOfferOrderStaffDto.ServerNowUtc))]
+    [MapperIgnoreTarget(nameof(SmartOfferOrderStaffDto.CustomerName))]
+    [MapperIgnoreTarget(nameof(SmartOfferOrderStaffDto.CustomerPhone))]
+    public override partial void Map(SmartOfferOrder source, SmartOfferOrderStaffDto destination);
 }

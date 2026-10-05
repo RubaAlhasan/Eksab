@@ -11,6 +11,8 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 
 const PAGE_SIZE = 15;
+// Messages longer than this get a three-line preview and a "Show more" hint. Shorter ones are shown whole.
+const LONG_MESSAGE_LENGTH = 140;
 type FilterTab = 'all' | 'unread';
 
 /**
@@ -32,6 +34,8 @@ export class CustomerNotificationsComponent implements OnInit {
   protected readonly hub = inject(NotificationHubService);
 
   protected readonly Type = UserNotificationType;
+  // Ids of the long notifications the member has opened to read in full.
+  protected readonly expandedIds = signal<ReadonlySet<string>>(new Set());
   protected readonly filter = signal<FilterTab>('all');
   protected readonly notifications = signal<UserNotificationDto[]>([]);
   protected readonly totalCount = signal(0);
@@ -68,6 +72,24 @@ export class CustomerNotificationsComponent implements OnInit {
     this.notifications.update(list =>
       list.map(n => (n.id === item.id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n)),
     );
+  }
+
+  protected isLongMessage(message: string | null | undefined): boolean {
+    return (message?.length ?? 0) > LONG_MESSAGE_LENGTH;
+  }
+
+  protected isExpanded(id: string | null | undefined): boolean {
+    return !!id && this.expandedIds().has(id);
+  }
+
+  protected toggleExpanded(id: string | null | undefined): void {
+    if (!id) return;
+    this.expandedIds.update(ids => {
+      const next = new Set(ids);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   protected markAllAsRead(): void {
