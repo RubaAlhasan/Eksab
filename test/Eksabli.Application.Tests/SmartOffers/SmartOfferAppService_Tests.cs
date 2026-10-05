@@ -266,6 +266,42 @@ public abstract class SmartOfferAppService_Tests<TStartupModule> : EksabliApplic
     }
 
     [Fact]
+    public async Task A_customer_can_watch_a_deals_price_once_and_stop_watching()
+    {
+        var tenantId = await CreateTenantAsync();
+        var customerId = Guid.NewGuid();
+        await JoinAsync(tenantId, customerId);
+        var offer = await CreateOfferAsync(tenantId, AlwaysOnDeal(price: 6m, quantity: 2));
+
+        using (LoginAs(customerId))
+        {
+            await WithUnitOfWorkAsync(() => _customerService.WatchPriceAsync(tenantId, offer.Id));
+            await WithUnitOfWorkAsync(() => _customerService.WatchPriceAsync(tenantId, offer.Id)); // watching again changes nothing
+
+            var watched = await WithUnitOfWorkAsync(() => _customerService.GetMyPriceWatchesAsync());
+            watched.Count.ShouldBe(1);
+            watched.Single().SmartOfferId.ShouldBe(offer.Id);
+            watched.Single().TenantId.ShouldBe(tenantId);
+
+            await WithUnitOfWorkAsync(() => _customerService.UnwatchPriceAsync(tenantId, offer.Id));
+            (await WithUnitOfWorkAsync(() => _customerService.GetMyPriceWatchesAsync())).ShouldBeEmpty();
+        }
+    }
+
+    [Fact]
+    public async Task A_customer_who_has_not_joined_the_business_cannot_watch_its_deals()
+    {
+        var tenantId = await CreateTenantAsync();
+        var stranger = Guid.NewGuid();
+        var offer = await CreateOfferAsync(tenantId, AlwaysOnDeal(price: 6m, quantity: 2));
+
+        using (LoginAs(stranger))
+        {
+            await Should.ThrowAsync<Volo.Abp.UserFriendlyException>(() => WithUnitOfWorkAsync(() => _customerService.WatchPriceAsync(tenantId, offer.Id)));
+        }
+    }
+
+    [Fact]
     public async Task A_collected_deal_earns_the_business_points_rule_on_the_amount_paid()
     {
         var tenantId = await CreateTenantAsync();

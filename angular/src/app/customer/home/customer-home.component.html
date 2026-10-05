@@ -124,6 +124,27 @@
       </section>
     }
 
+    @if (affordableRewards().length > 0) {
+      <section class="eks-home-span eks-rise" style="--eks-rise-delay: 120ms">
+        <div class="eks-section-header">
+          <h2 class="eks-section-title">{{ '::Wallet:Home:AffordableRewards' | abpLocalization }}</h2>
+        </div>
+        <div class="eks-home-carousel">
+          @for (item of affordableRewards(); track item.reward.id) {
+            <a [routerLink]="['/customer/wallet', item.tenantId, 'rewards']" class="card eks-reward-preview flex-shrink-0">
+              <div class="card-body">
+                <div class="eks-reward-preview__icon"><i class="fas fa-gift"></i></div>
+                <p class="fw-bold text-truncate mb-1">{{ item.reward.nameEn | localizedName: item.reward.nameAr }}</p>
+                <p class="eks-reward-preview__business text-truncate mb-0">
+                  {{ item.businessName }} · {{ item.reward.pointsCost | number }} {{ '::Wallet:PointsSuffix' | abpLocalization }}
+                </p>
+              </div>
+            </a>
+          }
+        </div>
+      </section>
+    }
+
     @if (!recentActivityLoading() && recentActivity().length > 0) {
       <section class="eks-rise" style="--eks-rise-delay: 140ms">
         <div class="eks-section-header">

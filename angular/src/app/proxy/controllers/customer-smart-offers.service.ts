@@ -8,6 +8,7 @@ import type {
   GetMySmartOfferOrdersInput,
   PlaceSmartOfferOrderDto,
   SmartOfferOrderDto,
+  SmartOfferWatchDto,
 } from '../smart-offers/models';
 
 @Injectable({
@@ -66,6 +67,28 @@ export class CustomerSmartOffersService {
     this.restService.request<any, SmartOfferOrderDto>({
       method: 'POST',
       url: `/api/app/customer-smart-offer/orders/${tenantId}/${orderId}/cancel`,
+    },
+    { apiName: this.apiName,...config });
+
+  // "Tell me when this price drops" — PUT/DELETE, so repeating either call is harmless.
+  watchPrice = (tenantId: string, offerId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'PUT',
+      url: `/api/app/customer-smart-offer/tenant/${tenantId}/offers/${offerId}/price-watch`,
+    },
+    { apiName: this.apiName,...config });
+
+  unwatchPrice = (tenantId: string, offerId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/customer-smart-offer/tenant/${tenantId}/offers/${offerId}/price-watch`,
+    },
+    { apiName: this.apiName,...config });
+
+  getMyPriceWatches = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, SmartOfferWatchDto[]>({
+      method: 'GET',
+      url: '/api/app/customer-smart-offer/price-watches/mine',
     },
     { apiName: this.apiName,...config });
 }

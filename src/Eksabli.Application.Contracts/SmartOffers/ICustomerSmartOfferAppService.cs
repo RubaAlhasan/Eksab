@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -29,4 +30,12 @@ public interface ICustomerSmartOfferAppService : IApplicationService
     // One deal, opened from the customer's own order. Allowed only when the caller has ordered that deal at this
     // business, and not limited to the sale window, so the details stay readable after it has ended.
     Task<CustomerSmartOfferDetailsDto> GetOfferDetailsAsync(Guid tenantId, Guid offerId);
+
+    // "Tell me when this price drops." Idempotent. Refused for a deal at a business the customer does not belong to.
+    Task WatchPriceAsync(Guid tenantId, Guid offerId);
+
+    Task UnwatchPriceAsync(Guid tenantId, Guid offerId);
+
+    // The customer's watches across every business, for the app to show which deals are already being watched.
+    Task<List<SmartOfferWatchDto>> GetMyPriceWatchesAsync();
 }

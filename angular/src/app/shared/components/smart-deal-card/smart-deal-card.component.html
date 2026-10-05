@@ -91,6 +91,22 @@
     </div>
   }
 
+  @if (canWatchPrice()) {
+    <div class="d-flex justify-content-end mb-2">
+      <button
+        type="button"
+        class="btn btn-sm"
+        [class.btn-outline-secondary]="!watched()"
+        [class.btn-secondary]="watched()"
+        [attr.aria-pressed]="watched()"
+        (click)="toggleWatch()"
+      >
+        <i class="fas me-1" [class.fa-bell]="!watched()" [class.fa-bell-slash]="watched()" aria-hidden="true"></i>
+        {{ (watched() ? '::SmartDeals:Customer:StopWatching' : '::SmartDeals:Customer:WatchPrice') | abpLocalization }}
+      </button>
+    </div>
+  }
+
   @if (pendingOrder(); as order) {
     <section class="eks-smart-voucher" [class.eks-smart-voucher--done]="order.status === OrderStatus.Completed">
       @if (order.status === OrderStatus.Completed) {

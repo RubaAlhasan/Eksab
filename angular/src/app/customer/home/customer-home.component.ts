@@ -15,7 +15,8 @@ import { NotificationHubService } from '../../shared/services/notification-hub.s
 import type { PointsWalletDto } from '../../proxy/wallets/models';
 import type { CustomerCampaignDto } from '../../proxy/campaigns/models';
 import type { CustomerBusinessDto } from '../../proxy/businesses/models';
-import type { CouponDto } from '../../proxy/rewards/models';
+import type { CouponDto, RewardDto } from '../../proxy/rewards/models';
+import { isOutOfStock, rewardStatus } from '../../shared/utils/reward-display.util';
 import { CouponStatus } from '../../proxy/rewards/coupon-status.enum';
 import type { TransactionListItemDto } from '../../proxy/reports/models';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
@@ -39,6 +40,17 @@ const RECENT_ACTIVITY_WALLET_FANOUT = 6;
 const RECENT_ACTIVITY_PER_WALLET = 3;
 const RECENT_ACTIVITY_PREVIEW_COUNT = 5;
 const REWARDS_PREVIEW_COUNT = 3;
+// Rewards the customer can afford right now, across the businesses they hold points with. Same bounded fan-out as
+// recent activity, so a member of many businesses does not issue a request per business on every home visit.
+const AFFORDABLE_WALLET_FANOUT = 6;
+const AFFORDABLE_CATALOG_SIZE = 20;
+const AFFORDABLE_PREVIEW_COUNT = 6;
+
+interface AffordableReward {
+  reward: RewardDto;
+  tenantId: string;
+  businessName: string;
+}
 
 // One row of the Home page's own cross-business "Recent Activity" feed — TransactionListItemDto itself
 // has no business name (it's the same shape WalletService returns for a single, already-known tenant
@@ -109,6 +121,7 @@ export class CustomerHomeComponent implements OnInit {
   protected readonly recentActivityLoading = signal(true);
   protected readonly recentActivity = signal<RecentActivityItem[]>([]);
   protected readonly activeCoupons = signal<CouponDto[]>([]);
+  protected readonly affordableRewards = signal<AffordableReward[]>([]);
 
   protected readonly campaignTypeEmoji = campaignTypeEmoji;
   protected readonly campaignTypeLabelKey = campaignTypeLabelKey;
@@ -314,11 +327,48 @@ export class CustomerHomeComponent implements OnInit {
         this.wallets.set(wallets);
         this.isLoading.set(false);
         this.loadRecentActivity(wallets);
+        this.loadAffordableRewards(wallets);
       },
       error: () => {
         this.isLoading.set(false);
         this.loadFailed.set(true);
       },
+    });
+  }
+
+  // Rewards that are active, in stock and within the customer's spendable balance at that business. Only businesses where
+  // the customer has something to spend are asked, and each reward is judged against that business's own balance.
+  private loadAffordableRewards(wallets: PointsWalletDto[]): void {
+    const candidates = wallets
+      .filter((w): w is PointsWalletDto & { tenantId: string } => !!w.tenantId && (w.availableBalance ?? 0) > 0)
+      .slice(0, AFFORDABLE_WALLET_FANOUT);
+
+    if (candidates.length === 0) {
+      this.affordableRewards.set([]);
+      return;
+    }
+
+    const requests = candidates.map(wallet => {
+      const spendable = wallet.availableBalance ?? 0;
+      return this.couponsService
+        .getCatalog(wallet.tenantId, { sorting: 'creationTime desc', skipCount: 0, maxResultCount: AFFORDABLE_CATALOG_SIZE })
+        .pipe(
+          map(result =>
+            (result.items ?? [])
+              .filter(reward => rewardStatus(reward) === 'active' && !isOutOfStock(reward) && (reward.pointsCost ?? Infinity) <= spendable)
+              .map((reward): AffordableReward => ({ reward, tenantId: wallet.tenantId, businessName: wallet.businessName ?? '' })),
+          ),
+          catchError(() => of<AffordableReward[]>([])),
+        );
+    });
+
+    forkJoin(requests).subscribe(perWallet => {
+      // Most valuable first: the rewards that take the most of what the customer has are the ones worth showing.
+      const merged = perWallet
+        .flat()
+        .sort((a, b) => (b.reward.pointsCost ?? 0) - (a.reward.pointsCost ?? 0))
+        .slice(0, AFFORDABLE_PREVIEW_COUNT);
+      this.affordableRewards.set(merged);
     });
   }
 

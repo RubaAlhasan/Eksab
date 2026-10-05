@@ -12,6 +12,7 @@ import { SmartOfferStatus } from '../../../proxy/smart-offers/smart-offer-status
 import { Currency } from '../../../proxy/shared/currency.enum';
 import { formatCountdown, formatSmartPrice } from '../../utils/smart-offer-display.util';
 import { ENDING_SOON_MINUTES } from '../../utils/smart-deal-feed.util';
+import { SmartOfferWatchService } from '../../services/smart-offer-watch.service';
 
 // How often the order is re-read while a reservation is open. The countdown itself ticks every second, so this only
 // decides how quickly a counter-side completion or rejection shows up on the customer's phone.
@@ -51,6 +52,15 @@ export class SmartDealCardComponent {
   protected readonly language = toSignal(this.sessionState.getLanguage$(), {
     initialValue: this.sessionState.getLanguage(),
   });
+
+  protected readonly watchService = inject(SmartOfferWatchService);
+
+  // Watching is offered for a deal whose next change is a drop or a return to sale, to members only: a non-member
+  // cannot watch a business's prices (the server refuses it), so the button is not shown to them.
+  protected readonly canWatchPrice = computed(
+    () => this.canBuy() && !this.pendingOrder() && (this.nextChangeKind() === 'drops' || this.nextChangeKind() === 'backOnSale'),
+  );
+  protected readonly watched = computed(() => this.watchService.isWatched(this.tenantId(), this.offer().id ?? ''));
 
   protected readonly quantity = signal(1);
   protected readonly isBusy = signal(false);
@@ -128,6 +138,8 @@ export class SmartDealCardComponent {
   private pollTick = 0;
 
   constructor() {
+    this.watchService.ensureLoaded();
+
     // A single one-second heartbeat drives every countdown, and also re-reads an open order every so often.
     interval(1000)
       .pipe(takeUntilDestroyed())
@@ -158,6 +170,10 @@ export class SmartDealCardComponent {
       }
       this.previousPrice = price;
     });
+  }
+
+  protected toggleWatch(): void {
+    this.watchService.toggle(this.tenantId(), this.offer().id ?? '');
   }
 
   protected money(amount: number | null | undefined, currency: Currency | undefined): string {

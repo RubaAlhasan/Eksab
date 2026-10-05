@@ -23,6 +23,8 @@ function destinationFor(item: UserNotificationDto): string | null {
       return '/customer/coupons';
     case 'smartdeal.collected':
       return '/customer/smart-deals/orders';
+    case 'smartdeal.price_drop':
+      return '/customer/smart-deals';
     default:
       return null;
   }
