@@ -83,6 +83,21 @@ function serializeSocialLinks(instagram: string, facebook: string, rest: Record<
  *   UX nicety, not the actual enforcement. `logoBlobName` doubles as a cache-busting query param since
  *   the image URL itself never changes across uploads (it's keyed by business id, not blob name).
  */
+// Zones a business is likely to run on. A business whose zone isn't listed keeps its current one, shown here
+// as-is, so an unusual zone set elsewhere is never silently overwritten by the picker.
+const TIME_ZONE_OPTIONS = [
+  'Asia/Damascus',
+  'Asia/Beirut',
+  'Asia/Amman',
+  'Asia/Riyadh',
+  'Asia/Dubai',
+  'Europe/Istanbul',
+  'Africa/Cairo',
+  'Europe/London',
+  'America/New_York',
+  'UTC',
+];
+
 @Component({
   selector: 'app-business-settings',
   templateUrl: './business-settings.component.html',
@@ -133,12 +148,15 @@ export class BusinessSettingsComponent implements OnInit {
     return `${this.environmentService.getApiUrl('default')}/api/app/business/${p.id}/logo?v=${encodeURIComponent(p.logoBlobName)}`;
   });
 
+  protected readonly timeZoneOptions = TIME_ZONE_OPTIONS;
+
   protected readonly form = new FormGroup({
     displayName: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(128)] }),
     categoryId: new FormControl<string | null>(null),
     descriptionEn: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(2000)] }),
     descriptionAr: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(2000)] }),
     website: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(256)] }),
+    timeZoneId: new FormControl('', { nonNullable: true }),
     instagram: new FormControl('', { nonNullable: true }),
     facebook: new FormControl('', { nonNullable: true }),
   });
@@ -167,6 +185,7 @@ export class BusinessSettingsComponent implements OnInit {
         descriptionEn: value.descriptionEn || null,
         descriptionAr: value.descriptionAr || null,
         website: value.website || null,
+        timeZoneId: value.timeZoneId || null,
         socialLinksJson: serializeSocialLinks(value.instagram, value.facebook, this.socialLinksRest),
       })
       .subscribe({
@@ -243,6 +262,7 @@ export class BusinessSettingsComponent implements OnInit {
           descriptionEn: profile.descriptionEn ?? '',
           descriptionAr: profile.descriptionAr ?? '',
           website: profile.website ?? '',
+          timeZoneId: profile.timeZoneId ?? '',
           instagram,
           facebook,
         });

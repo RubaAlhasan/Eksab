@@ -195,6 +195,7 @@ public class EksabliDbContext :
             b.Property(x => x.DescriptionEn).HasMaxLength(BusinessProfileConsts.MaxDescriptionLength);
             b.Property(x => x.Website).HasMaxLength(BusinessProfileConsts.MaxWebsiteLength);
             b.Property(x => x.SocialLinksJson).HasMaxLength(BusinessProfileConsts.MaxSocialLinksJsonLength);
+            b.Property(x => x.TimeZoneId).IsRequired().HasMaxLength(BusinessProfileConsts.MaxTimeZoneIdLength).HasDefaultValue(BusinessProfileConsts.DefaultTimeZoneId);
             b.HasIndex(x => x.TenantId).IsUnique();
         });
 
@@ -259,6 +260,8 @@ public class EksabliDbContext :
             b.HasIndex(x => new { x.WalletId, x.CreationTime });
             b.HasIndex(x => new { x.TenantId, x.ExpiresAt });
             b.HasIndex(x => new { x.TenantId, x.CreationTime });
+            // Platform-wide (Host) date-range aggregations span every tenant, so they can't use the TenantId-leading index above.
+            b.HasIndex(x => new { x.Type, x.CreationTime });
             b.HasIndex(x => x.BatchId);
         });
 
@@ -353,6 +356,9 @@ public class EksabliDbContext :
             b.HasIndex(x => new { x.MembershipId, x.SmartOfferId, x.Status });
             b.HasIndex(x => new { x.Status, x.ReservationExpiresAt });
             b.HasIndex(x => new { x.TenantId, x.Status });
+            // Business dashboard order counts by placement date, and platform sales by completion date.
+            b.HasIndex(x => new { x.TenantId, x.PlacedAt });
+            b.HasIndex(x => new { x.Status, x.CompletedAt });
         });
 
         builder.Entity<SubscriptionPlan>(b =>

@@ -21,5 +21,7 @@ public class BusinessProfileDto : AuditedEntityDto<Guid>
 
     public string? SocialLinksJson { get; set; }
 
+    public string TimeZoneId { get; set; } = string.Empty;
+
     public TenantApprovalStatus ApprovalStatus { get; set; }
 }

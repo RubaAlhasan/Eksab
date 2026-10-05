@@ -1,75 +1,62 @@
-import { DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LocalizationPipe, PermissionService } from '@abp/ng.core';
-import { AdminTenantsService } from '../../proxy/controllers/admin-tenants.service';
-import { AdminSubscriptionsService } from '../../proxy/controllers/admin-subscriptions.service';
-import { SupportTicketsService } from '../../proxy/controllers/support-tickets.service';
-import { CategoriesService } from '../../proxy/controllers/categories.service';
-import type { AdminTenantDto } from '../../proxy/businesses/models';
-import type { CategoryDto, SupportTicketDto } from '../../proxy/platform/models';
-import type { CurrencyAmountDto, MrrTrendPointDto } from '../../proxy/billing/models';
-import { TenantApprovalStatus } from '../../proxy/business-profiles/tenant-approval-status.enum';
+import { forkJoin } from 'rxjs';
+import { LocalizationPipe, LocalizationService, SessionStateService } from '@abp/ng.core';
+import { AdminDashboardService } from '../../proxy/controllers/admin-dashboard.service';
+import type {
+  AdminActivityItemDto,
+  AdminAlertsDto,
+  AdminDashboardSummaryDto,
+  AdminDashboardTrendPointDto,
+  DashboardRangeDto,
+  TopBusinessDto,
+  TopOfferDto,
+} from '../../proxy/dashboards/models';
+import { AdminActivityKind } from '../../proxy/dashboards/admin-activity-kind.enum';
 import { Currency } from '../../proxy/shared/currency.enum';
-import { SupportTicketStatus } from '../../proxy/platform/support-ticket-status.enum';
+import { BarTrendComponent, TrendBar } from '../../shared/components/dashboard/bar-trend.component';
+import { KpiTileComponent } from '../../shared/components/dashboard/kpi-tile.component';
+import { SegmentedControlComponent, SegmentedOption } from '../../shared/components/dashboard/segmented-control.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
-import { StatusBadgeComponent, StatusBadgeVariant } from '../../shared/components/status-badge/status-badge.component';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
+import {
+  addDays,
+  amountIn,
+  formatAmount,
+  formatCount,
+  formatIsoDate,
+  pickLocalized,
+} from '../../shared/utils/dashboard-format.util';
+
+type AdminTrendMetric = 'points' | 'customers' | 'businesses' | 'sales';
+
+const RANGE_OPTIONS: SegmentedOption[] = [
+  { value: 7, labelKey: '::Dashboard360:Range:Week' },
+  { value: 30, labelKey: '::Dashboard360:Range:Month' },
+  { value: 90, labelKey: '::Dashboard360:Range:Quarter' },
+];
+
+const DEFAULT_RANGE_DAYS = 30;
+
+const CURRENCY_OPTIONS: SegmentedOption[] = [
+  { value: Currency.Syp, labelKey: '::Dashboard360:Currency:Syp' },
+  { value: Currency.Usd, labelKey: '::Dashboard360:Currency:Usd' },
+];
+
+const METRIC_OPTIONS: SegmentedOption[] = [
+  { value: 'points', labelKey: '::AdminPanel:Dashboard360:Metric:Points' },
+  { value: 'customers', labelKey: '::AdminPanel:Dashboard360:Metric:Customers' },
+  { value: 'businesses', labelKey: '::AdminPanel:Dashboard360:Metric:Businesses' },
+  { value: 'sales', labelKey: '::AdminPanel:Dashboard360:Metric:Sales' },
+];
 
 /**
- * Admin Portal > Dashboard — the last Admin Portal MVP page, deliberately built last (composes widgets
- * from pages that all already exist: Businesses, Categories, Subscriptions, Support Tickets). Mirrors
- * prototype/admin/dashboard.html's layout, but every widget is checked against a real endpoint first —
- * one of the prototype's four stat tiles is `[MISSING BACKEND CAPABILITY]` and deliberately NOT built:
- * - **Daily Active Users** — no login/session tracking exists anywhere in this codebase (same gap
- *   already documented for Members' "Last Active" column, which falls back to wallet activity
- *   instead). No real number to show; omitted entirely, not faked.
- *
- * What IS real and shown:
- * - **Total Businesses** / **Pending Approvals** (count + list) — `AdminTenantsService.getList` (one
- *   call, `approvalStatus: null, maxResultCount: 500, sorting: 'creationTime desc'` — same "acceptable
- *   at this scale" bounded-batch assumption `admin-tenants.component.ts` already uses for its own bulk
- *   Category/Plan lookups). `totalCount` from that response is the exact, DB-computed grand total
- *   regardless of the 500 cap; Pending Approvals count/list are computed client-side from the same
- *   batch — accurate as long as total businesses stays under ~500, the same assumption already made
- *   elsewhere in this app. Serves THREE needs from one request (total count, pending list, tenant-name
- *   lookup for the Recent Tickets widget below) specifically to avoid re-introducing the "several
- *   concurrent requests to the same list endpoint" issue fixed earlier this session on the Subscriptions
- *   page — see admin-subscriptions.component.ts's own history.
- * - **Platform MRR** — `AdminSubscriptionsService.getStats()`, gated on `Eksabli.Billing.ManagePlatform`
- *   (tile hidden entirely, call skipped, for a viewer without it — same pattern as the Businesses page's
- *   Plan column).
- * - **Platform MRR trend chart** — `AdminSubscriptionsService.getMrrTrend()` (new
- *   `AdminSubscriptionAppService.GetMrrTrendAsync`, added this session), 7 real monthly bars grouped
- *   server-side from **paid `Invoice` rows** (`Invoice.Amount` summed by `Invoice.PaidAt`'s month,
- *   Host-scoped `Disable<IMultiTenant>()`), zero-filled for months with no paid invoices rather than
- *   omitted. This is collected-revenue-per-month, not a true point-in-time MRR snapshot (no
- *   subscription-status history table exists to compute that) — same "real but approximate" spirit as
- *   `ApproxMrr` itself, not the prototype's fabricated demo trend. The "+X% (7mo)" badge is real too,
- *   comparing this window's first and last bar, and only shown when computable (first bar > 0) —
- *   hidden otherwise rather than showing a misleading 0%/∞, same rule
- *   `business-dashboard.component.ts`'s own MoM badge already follows. Same permission gate as the
- *   stat tile.
- * - **Open Support Tickets** (count) / **Recent Support Tickets** (list) — `SupportTicketsService
- *   .getList`, twice (once `status: Open, maxResultCount: 1` for the accurate count — reads
- *   `totalCount`, ignores the single item; `1` is the lowest value ABP's own `LimitedResultRequestDto
- *   .MaxResultCount` accepts, `[Range(1, ...)]` rejects `0` with a 400 — caught live and fixed here and
- *   in admin-business-details.component.ts, which had the same bug — once unfiltered
- *   `sorting: lastModificationTime desc, maxResultCount: 4` for the preview list) — same two-calls-one-
- *   endpoint shape `admin-business-details.component.ts`'s Overview tab already established as fine
- *   (the earlier Subscriptions issue was about redundant/overlapping fetches for client-side math, not
- *   merely "more than one call to an endpoint"). Both gated on `Eksabli.SupportTickets.Manage` — that
- *   controller has no lesser read, whole widget area hidden without it.
- * - **Category Mix** — `CategoriesService.getList` ([AllowAnonymous], already used elsewhere), top 5 by
- *   the real `CategoryDto.BusinessCount` field (added earlier this session), bars scaled relative to
- *   the largest visible category — not the prototype's own arbitrary "× 3 of the total" fudge factor.
- * - Stat tile icons: added to match the prototype's own icon-in-colored-box treatment
- *   (`stat-icon-wrap bg-{color}-50 ... text-{color}-600`), translated to this app's Bootstrap
- *   `-subtle`/`-emphasis` convention, same as `business-dashboard.component.ts` already established —
- *   icon/color choice adapted to this page's own 4 tiles (store/primary, hourglass/warning,
- *   money-bill-wave/success, headset/info), since the prototype's own 4 tiles don't line up 1:1
- *   (it has Daily Active Users where this page has Pending Approvals).
+ * Admin Portal > Dashboard, rebuilt as Dashboard 360. The platform view leads with health and growth: who is approved,
+ * who is waiting, what is moving, and what needs a human. Money is shown one currency at a time, and only when the
+ * caller holds the billing permission. Every section degrades on its own, so a missing permission removes one tile or
+ * one alert, not the page.
  */
 @Component({
   selector: 'app-admin-dashboard',
@@ -77,275 +64,253 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
   styleUrls: ['./admin-dashboard.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DecimalPipe,
+    DatePipe,
     RouterLink,
     LocalizationPipe,
     PageHeaderComponent,
-    StatusBadgeComponent,
     LoadingSpinnerComponent,
     ErrorStateComponent,
+    KpiTileComponent,
+    BarTrendComponent,
+    SegmentedControlComponent,
   ],
 })
 export class AdminDashboardComponent implements OnInit {
-  private readonly tenantsService = inject(AdminTenantsService);
-  private readonly subscriptionsService = inject(AdminSubscriptionsService);
-  private readonly ticketsService = inject(SupportTicketsService);
-  private readonly categoriesService = inject(CategoriesService);
-  private readonly permissionService = inject(PermissionService);
+  private readonly dashboardService = inject(AdminDashboardService);
+  private readonly localization = inject(LocalizationService);
+  private readonly session = inject(SessionStateService);
 
-  protected readonly canViewMrr = computed(() => this.permissionService.getGrantedPolicy('Eksabli.Billing.ManagePlatform'));
-  protected readonly canViewTickets = computed(() => this.permissionService.getGrantedPolicy('Eksabli.SupportTickets.Manage'));
+  protected readonly rangeOptions = RANGE_OPTIONS;
+  protected readonly currencyOptions = CURRENCY_OPTIONS;
+  protected readonly metricOptions = METRIC_OPTIONS;
+  protected readonly AdminActivityKind = AdminActivityKind;
 
-  protected readonly businessesLoading = signal(true);
-  protected readonly businessesFailed = signal(false);
-  protected readonly totalBusinesses = signal<number | null>(null);
-  protected readonly pendingApprovals = signal<AdminTenantDto[]>([]);
-  protected readonly pendingCount = signal<number | null>(null);
-  private readonly tenantNameById = signal<Map<string, string>>(new Map());
+  protected readonly isLoading = signal(true);
+  protected readonly isRefreshing = signal(false);
+  protected readonly loadFailed = signal(false);
 
-  protected readonly mrrLoading = signal(false);
-  // Never summed across currencies — see CurrencyAmountDto's own comment (backend).
-  protected readonly mrrByCurrency = signal<CurrencyAmountDto[]>([]);
+  protected readonly rangeDays = signal(DEFAULT_RANGE_DAYS);
+  protected readonly currency = signal<Currency>(Currency.Syp);
+  protected readonly metric = signal<AdminTrendMetric>('points');
 
-  protected readonly Currency = Currency;
-  // The trend chart renders one currency's series at a time (a toggle, not simultaneous bars) — the
-  // simplest way to keep "never combine SYP and USD" true within this page's plain CSS bar chart,
-  // without inventing a grouped/stacked-bar treatment for just two series.
-  protected readonly mrrTrendCurrency = signal<Currency>(Currency.Syp);
-  protected readonly mrrTrendLoading = signal(false);
-  private readonly mrrTrendPoints = signal<MrrTrendPointDto[]>([]);
-  // Which currencies actually have any trend data at all — hides the toggle entirely when only one
-  // (or zero) currencies have ever been paid, rather than offering a switch to an always-empty series.
-  protected readonly mrrTrendAvailableCurrencies = computed(() => {
-    const found = new Set<Currency>();
-    for (const point of this.mrrTrendPoints()) {
-      for (const entry of point.amountsByCurrency ?? []) {
-        if (entry.currency != null) found.add(entry.currency);
-      }
-    }
-    return [Currency.Syp, Currency.Usd].filter((c) => found.has(c));
-  });
-  protected readonly mrrTrendBars = computed(() => {
-    const currency = this.mrrTrendCurrency();
-    return this.mrrTrendPoints().map((p) => ({
-      label: new Date(p.year, p.month - 1, 1).toLocaleDateString(undefined, { month: 'short' }),
-      value: p.amountsByCurrency?.find((a) => a.currency === currency)?.amount ?? 0,
-    }));
-  });
-  protected readonly mrrTrendMax = computed(() => Math.max(1, ...this.mrrTrendBars().map((b) => b.value)));
-  protected readonly mrrTrendGrowthPct = computed(() => {
-    const bars = this.mrrTrendBars();
-    if (bars.length < 2) return null;
-    const first = bars[0].value;
-    const last = bars[bars.length - 1].value;
-    return first > 0 ? Math.round(((last - first) / first) * 100) : null;
+  protected readonly summary = signal<AdminDashboardSummaryDto | null>(null);
+  protected readonly trends = signal<AdminDashboardTrendPointDto[]>([]);
+  protected readonly topBusinesses = signal<TopBusinessDto[]>([]);
+  protected readonly topOffers = signal<TopOfferDto[]>([]);
+  protected readonly alerts = signal<AdminAlertsDto | null>(null);
+  protected readonly activity = signal<AdminActivityItemDto[]>([]);
+
+  // The window's dates are UTC for the platform. The server's own "today" anchors the range, so the browser's clock
+  // never shifts a day.
+  private readonly platformToday = computed(() => {
+    const trendDates = this.trends();
+    return trendDates.length > 0 ? trendDates[trendDates.length - 1].date ?? null : null;
   });
 
-  protected readonly ticketsLoading = signal(false);
-  protected readonly ticketsFailed = signal(false);
-  protected readonly openTicketsCount = signal<number | null>(null);
-  protected readonly recentTickets = signal<SupportTicketDto[]>([]);
+  // The money tiles and the sales metric are only present when the server returned them (the caller holds billing).
+  protected readonly canViewRevenue = computed(() => this.summary()?.recordedValue != null);
 
-  protected readonly categoriesLoading = signal(true);
-  private readonly categories = signal<CategoryDto[]>([]);
-  private readonly categoryNameById = signal<Map<string, string>>(new Map());
-  protected readonly topCategories = computed(() =>
-    [...this.categories()].sort((a, b) => b.businessCount - a.businessCount).slice(0, 5),
+  protected readonly currencyLabel = computed(() =>
+    this.localization.instant(this.currency() === Currency.Syp ? '::Dashboard360:Currency:Syp' : '::Dashboard360:Currency:Usd'),
   );
-  protected readonly categoryMixMax = computed(() => Math.max(1, ...this.topCategories().map((c) => c.businessCount)));
+
+  protected readonly salesTotal = computed(() => amountIn(this.summary()?.recordedValue, this.currency()));
+
+  protected readonly businessesCaption = computed(() => {
+    const s = this.summary();
+    return this.localization.instant(
+      '::AdminPanel:Dashboard360:Caption:BusinessesFormat',
+      formatCount(s?.businessesApproved ?? 0),
+      formatCount(s?.businessesPending ?? 0),
+    );
+  });
+
+  protected readonly customersCaption = computed(() =>
+    this.localization.instant('::AdminPanel:Dashboard360:Caption:NewCustomersFormat', formatCount(this.summary()?.newCustomers ?? 0)),
+  );
+
+  protected readonly pointsCaption = computed(() =>
+    this.localization.instant(
+      '::AdminPanel:Dashboard360:Caption:PointsFormat',
+      formatCount(this.summary()?.pointsRedeemed ?? 0),
+      formatCount(this.summary()?.transactions ?? 0),
+    ),
+  );
+
+  protected readonly salesCaption = computed(() =>
+    this.localization.instant('::AdminPanel:Dashboard360:Caption:BuyNowFormat', formatCount(this.summary()?.buyNowSales ?? 0)),
+  );
+
+  protected readonly trendBars = computed<TrendBar[]>(() => {
+    const points = this.trends();
+    const metric = this.metric();
+    const currency = this.currency();
+    const labelEvery = Math.max(1, Math.ceil(points.length / 7));
+
+    return points.map((point, index) => {
+      const date = point.date ?? '';
+      const day = formatIsoDate(date, { day: 'numeric', month: 'short' });
+      const label = index % labelEvery === 0 ? day : '';
+      const value = this.metricValue(point, metric, currency);
+      const shown = metric === 'sales' ? `${formatAmount(value, currency)} ${this.currencyLabel()}` : formatCount(value);
+      return { label, value, tooltip: `${day}: ${shown}` };
+    });
+  });
+
+  protected readonly trendTotal = computed(() => {
+    const metric = this.metric();
+    const currency = this.currency();
+    return this.trends().reduce((sum, point) => sum + this.metricValue(point, metric, currency), 0);
+  });
+
+  // "Sales" is money, so the option only exists for a caller who can see revenue.
+  protected readonly visibleMetricOptions = computed(() =>
+    METRIC_OPTIONS.filter((option) => option.value !== 'sales' || this.canViewRevenue()),
+  );
+
+  protected readonly alertChips = computed(() => {
+    const a = this.alerts();
+    if (!a) return [];
+    const chips: { key: string; count: number; link: string; tone: 'warning' | 'danger' | 'info' }[] = [
+      { key: '::AdminPanel:Dashboard360:Alert:Pending', count: a.pendingApprovals ?? 0, link: '/admin/businesses', tone: 'warning' },
+      { key: '::AdminPanel:Dashboard360:Alert:Suspended', count: a.suspendedBusinesses ?? 0, link: '/admin/businesses', tone: 'danger' },
+      { key: '::AdminPanel:Dashboard360:Alert:LowStock', count: a.lowStockRewards ?? 0, link: '/admin/businesses', tone: 'warning' },
+    ];
+    if (a.pastDueSubscriptions != null) {
+      chips.push({ key: '::AdminPanel:Dashboard360:Alert:PastDue', count: a.pastDueSubscriptions, link: '/admin/subscriptions', tone: 'danger' });
+    }
+    if (a.openSupportTickets != null) {
+      chips.push({ key: '::AdminPanel:Dashboard360:Alert:Tickets', count: a.openSupportTickets, link: '/admin/support-tickets', tone: 'info' });
+    }
+    return chips;
+  });
+
+  protected readonly maxTopPoints = computed(() => Math.max(1, ...this.topBusinesses().map((b) => b.pointsIssued ?? 0)));
 
   ngOnInit(): void {
-    this.loadBusinesses();
-    this.loadCategories();
-    if (this.canViewMrr()) {
-      this.loadMrr();
-      this.loadMrrTrend();
+    this.load();
+  }
+
+  protected setRange(days: string | number): void {
+    this.rangeDays.set(Number(days));
+    this.isRefreshing.set(true);
+    this.load();
+  }
+
+  protected setCurrency(value: string | number): void {
+    this.currency.set(Number(value) as Currency);
+  }
+
+  protected setMetric(value: string | number): void {
+    this.metric.set(value as AdminTrendMetric);
+  }
+
+  protected retry(): void {
+    this.isLoading.set(true);
+    this.load();
+  }
+
+  protected countText(value: number | null | undefined): string {
+    return formatCount(value ?? 0);
+  }
+
+  protected formatMoney(amount: number): string {
+    return formatAmount(amount, this.currency());
+  }
+
+  protected shareOfTop(points: number | undefined): number {
+    return Math.round(((points ?? 0) / this.maxTopPoints()) * 100);
+  }
+
+  protected formatOfferValue(offer: TopOfferDto): string {
+    const amounts = offer.completedValue ?? [];
+    if (amounts.length === 0) {
+      return '—';
     }
-    if (this.canViewTickets()) this.loadTickets();
+    return amounts.map((a) => `${formatAmount(a.amount ?? 0, a.currency ?? Currency.Syp)} ${this.currencyCode(a.currency)}`).join(' · ');
   }
 
-  protected initials(name: string | undefined): string {
-    if (!name) return '?';
-    return name
-      .split(' ')
-      .filter(Boolean)
-      .map((word) => word[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
+  protected offerTitle(offer: TopOfferDto): string {
+    return pickLocalized(offer.titleAr, offer.titleEn, this.session.getLanguage());
   }
 
-  protected categoryName(categoryId: string | null | undefined): string {
-    if (!categoryId) return '—';
-    return this.categoryNameById().get(categoryId) ?? '—';
-  }
-
-  protected statusLabelKey(status: TenantApprovalStatus | undefined): string {
-    return status === TenantApprovalStatus.Suspended
-      ? '::AdminPanel:Businesses:StatusSuspended'
-      : '::AdminPanel:Businesses:StatusPending';
-  }
-
-  protected statusVariant(status: TenantApprovalStatus | undefined): StatusBadgeVariant {
-    return status === TenantApprovalStatus.Suspended ? 'danger' : 'warning';
-  }
-
-  protected ticketFrom(ticket: SupportTicketDto): string {
-    if (ticket.tenantId) return this.tenantNameById().get(ticket.tenantId) ?? ticket.tenantId;
-    return '';
-  }
-
-  protected ticketStatusLabelKey(status: SupportTicketStatus | undefined): string {
-    switch (status) {
-      case SupportTicketStatus.Open:
-        return '::AdminPanel:SupportTickets:StatusOpen';
-      case SupportTicketStatus.InProgress:
-        return '::AdminPanel:SupportTickets:StatusInProgress';
-      case SupportTicketStatus.Resolved:
-        return '::AdminPanel:SupportTickets:StatusResolved';
+  protected activityKey(item: AdminActivityItemDto): string {
+    switch (item.kind) {
+      case AdminActivityKind.BusinessRegistered:
+        return '::AdminPanel:Dashboard360:Activity:BusinessRegistered';
+      case AdminActivityKind.CustomerJoined:
+        return '::AdminPanel:Dashboard360:Activity:CustomerJoined';
       default:
-        return '::AdminPanel:SupportTickets:StatusClosed';
+        return '::AdminPanel:Dashboard360:Activity:TicketOpened';
     }
   }
 
-  protected ticketStatusVariant(status: SupportTicketStatus | undefined): StatusBadgeVariant {
-    switch (status) {
-      case SupportTicketStatus.Open:
-        return 'danger';
-      case SupportTicketStatus.InProgress:
-        return 'warning';
-      case SupportTicketStatus.Resolved:
-        return 'success';
+  protected activityIcon(item: AdminActivityItemDto): string {
+    switch (item.kind) {
+      case AdminActivityKind.BusinessRegistered:
+        return 'fa-store';
+      case AdminActivityKind.CustomerJoined:
+        return 'fa-user-plus';
       default:
-        return 'neutral';
+        return 'fa-headset';
     }
   }
 
-  protected retryBusinesses(): void {
-    this.loadBusinesses();
+  private metricValue(point: AdminDashboardTrendPointDto, metric: AdminTrendMetric, currency: Currency): number {
+    switch (metric) {
+      case 'customers':
+        return point.newCustomers ?? 0;
+      case 'businesses':
+        return point.newBusinesses ?? 0;
+      case 'sales':
+        return amountIn(point.recordedValue, currency);
+      default:
+        return point.pointsIssued ?? 0;
+    }
   }
 
-  protected retryTickets(): void {
-    this.loadTickets();
+  private currencyCode(currency: Currency | undefined): string {
+    return this.localization.instant(
+      currency === Currency.Usd ? '::Dashboard360:Currency:Usd' : '::Dashboard360:Currency:Syp',
+    );
   }
 
-  private loadBusinesses(): void {
-    this.businessesLoading.set(true);
-    this.businessesFailed.set(false);
-    this.tenantsService
-      .getList({ filterText: null, approvalStatus: null, sorting: 'creationTime desc', skipCount: 0, maxResultCount: 500 })
-      .subscribe({
-        next: (result) => {
-          const items = result.items ?? [];
-          const pending = items.filter((t) => t.approvalStatus === TenantApprovalStatus.Pending);
-          this.totalBusinesses.set(result.totalCount ?? items.length);
-          this.pendingCount.set(pending.length);
-          this.pendingApprovals.set(pending.slice(0, 5));
-
-          const nameMap = new Map<string, string>();
-          for (const tenant of items) {
-            if (tenant.tenantId) nameMap.set(tenant.tenantId, tenant.tenantName ?? tenant.tenantId);
-          }
-          this.tenantNameById.set(nameMap);
-
-          this.businessesLoading.set(false);
-        },
-        error: () => {
-          this.businessesLoading.set(false);
-          this.businessesFailed.set(true);
-        },
-      });
+  // Before the first response there is no server "today" yet, so the first call takes the server's default window.
+  private requestRange(): DashboardRangeDto {
+    const today = this.platformToday();
+    if (!today) {
+      return { from: undefined, to: undefined };
+    }
+    return { from: addDays(today, 1 - this.rangeDays()), to: today };
   }
 
-  protected currencyCode(currency: Currency | undefined): string {
-    return currency === Currency.Usd ? 'USD' : 'SYP';
-  }
+  private load(): void {
+    this.loadFailed.set(false);
+    const range = this.requestRange();
 
-  protected setMrrTrendCurrency(currency: Currency): void {
-    this.mrrTrendCurrency.set(currency);
-  }
-
-  private loadMrr(): void {
-    this.mrrLoading.set(true);
-    this.subscriptionsService.getStats({ skipHandleError: true }).subscribe({
-      next: (stats) => {
-        this.mrrByCurrency.set(stats.approxMrrByCurrency ?? []);
-        this.mrrLoading.set(false);
-      },
-      // Best-effort — the tile row just stays empty (see the template's @for over mrrByCurrency),
-      // doesn't block the rest of the dashboard. skipHandleError: true is load-bearing — see
-      // business-branches.component.ts's loadUsage() for why.
-      error: () => this.mrrLoading.set(false),
-    });
-  }
-
-  private loadMrrTrend(): void {
-    this.mrrTrendLoading.set(true);
-    this.subscriptionsService.getMrrTrend({ skipHandleError: true }).subscribe({
-      next: (points) => {
-        this.mrrTrendPoints.set(points);
-        this.mrrTrendLoading.set(false);
-        // Default the toggle to whichever currency actually has data, rather than always starting on
-        // Syp and showing an all-zero chart for a platform whose activity is entirely in Usd so far.
-        const available = this.mrrTrendAvailableCurrencies();
-        if (available.length > 0 && !available.includes(this.mrrTrendCurrency())) {
-          this.mrrTrendCurrency.set(available[0]);
-        }
-      },
-      // Best-effort — the chart card just stays hidden, doesn't block the rest of the dashboard.
-      error: () => this.mrrTrendLoading.set(false),
-    });
-  }
-
-  private loadTickets(): void {
-    this.ticketsLoading.set(true);
-    this.ticketsFailed.set(false);
-
-    this.ticketsService
-      .getList(
-        { status: SupportTicketStatus.Open, priority: null, tenantId: null, sorting: undefined, skipCount: 0, maxResultCount: 1 },
-        { skipHandleError: true },
-      )
-      .subscribe({
-        next: (result) => this.openTicketsCount.set(result.totalCount ?? 0),
-        error: () => undefined,
-      });
-
-    this.ticketsService
-      .getList(
-        { status: null, priority: null, tenantId: null, sorting: 'lastModificationTime desc', skipCount: 0, maxResultCount: 4 },
-        { skipHandleError: true },
-      )
-      .subscribe({
-        next: (result) => {
-          this.recentTickets.set(result.items ?? []);
-          this.ticketsLoading.set(false);
-        },
-        error: () => {
-          this.ticketsLoading.set(false);
-          this.ticketsFailed.set(true);
-        },
-      });
-  }
-
-  private loadCategories(): void {
-    this.categoriesLoading.set(true);
-    this.categoriesService.getList(
-      { parentCategoryId: null, filterText: null, skipCount: 0, maxResultCount: 500 },
-      { skipHandleError: true },
-    ).subscribe({
+    forkJoin({
+      summary: this.dashboardService.getSummary(range),
+      trends: this.dashboardService.getTrends(range),
+      topBusinesses: this.dashboardService.getTopBusinesses(range),
+      topOffers: this.dashboardService.getTopOffers(range),
+      alerts: this.dashboardService.getAlerts(),
+      activity: this.dashboardService.getActivity(),
+    }).subscribe({
       next: (result) => {
-        const items = result.items ?? [];
-        this.categories.set(items);
-        const nameMap = new Map<string, string>();
-        for (const category of items) {
-          if (category.id) nameMap.set(category.id, category.nameEn ?? category.id);
-        }
-        this.categoryNameById.set(nameMap);
-        this.categoriesLoading.set(false);
+        this.summary.set(result.summary);
+        this.trends.set(result.trends);
+        this.topBusinesses.set(result.topBusinesses);
+        this.topOffers.set(result.topOffers);
+        this.alerts.set(result.alerts);
+        this.activity.set(result.activity);
+        this.isLoading.set(false);
+        this.isRefreshing.set(false);
       },
-      // Best-effort — Category Mix card just stays empty, doesn't block the rest of the dashboard.
-      error: () => this.categoriesLoading.set(false),
+      error: () => {
+        this.isLoading.set(false);
+        this.isRefreshing.set(false);
+        this.loadFailed.set(true);
+      },
     });
   }
 }
