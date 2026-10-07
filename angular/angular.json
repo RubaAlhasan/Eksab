@@ -43,6 +43,11 @@
                 "glob": "dynamic-env.json",
                 "input": ".",
                 "output": "."
+              },
+              {
+                "glob": "manifest.webmanifest",
+                "input": ".",
+                "output": "."
               }
             ],
             "styles": [
