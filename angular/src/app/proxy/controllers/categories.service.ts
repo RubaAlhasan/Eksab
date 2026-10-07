@@ -52,4 +52,27 @@ export class CategoriesService {
       body: input,
     },
     { apiName: this.apiName,...config });
+
+
+  // multipart/form-data, not a raw Blob body — matches [Consumes("multipart/form-data")] +
+  // [FromForm] IRemoteStreamContent file on CategoriesController.UploadIconAsync; the field name
+  // "file" must match the parameter name.
+  uploadIcon = (id: string, file: Blob, config?: Partial<Rest.Config>) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.restService.request<any, CategoryDto>({
+      method: 'PUT',
+      url: `/api/app/category/${id}/icon`,
+      body: formData,
+    },
+    { apiName: this.apiName,...config });
+  };
+
+
+  removeIcon = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, CategoryDto>({
+      method: 'DELETE',
+      url: `/api/app/category/${id}/icon`,
+    },
+    { apiName: this.apiName,...config });
 }

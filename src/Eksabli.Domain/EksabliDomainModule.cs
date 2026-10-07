@@ -127,14 +127,18 @@ public class EksabliDomainModule : AbpModule
         });
     }
 
-    // Only consumer of BlobStoringDatabaseDomainModule so far — that dependency (and the DatabaseBlob/
-    // DatabaseBlobContainer tables it already migrated) has existed since the very first migration, but
-    // nothing in this codebase actually used IBlobContainer<T> until the business logo upload feature.
+    // First consumer of BlobStoringDatabaseDomainModule was the business logo upload feature; category
+    // icons are the second, same DatabaseBlob/DatabaseBlobContainer tables, a second named container.
     private void ConfigureBlobStoring()
     {
         Configure<AbpBlobStoringOptions>(options =>
         {
             options.Containers.Configure<BusinessLogoContainer>(container =>
+            {
+                container.UseDatabase();
+            });
+
+            options.Containers.Configure<Platform.CategoryIconContainer>(container =>
             {
                 container.UseDatabase();
             });

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { LocalizationPipe, PermissionService } from '@abp/ng.core';
+import { EnvironmentService, LocalizationPipe, PermissionService } from '@abp/ng.core';
 import { Confirmation, ConfirmationService, ToasterService } from '@abp/ng.theme.shared';
 import { CategoriesService } from '../../proxy/controllers/categories.service';
 import type { CategoryDto } from '../../proxy/platform/models';
@@ -15,9 +15,13 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
 interface CategoryFormValue {
   nameAr: string;
   nameEn: string;
-  iconBlobName: string;
   parentCategoryId: string;
 }
+
+// Mirrors BusinessProfileConsts/CategoryConsts server-side: a category icon is a small glyph, not a
+// photo, so it gets a lower cap than a business logo's.
+const ALLOWED_ICON_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const MAX_ICON_BYTES = 512 * 1024;
 
 /**
  * Admin Portal > Categories — business taxonomy CRUD, first complete Admin feature built after the
@@ -55,6 +59,7 @@ export class AdminCategoriesComponent implements OnInit {
   private readonly confirmation = inject(ConfirmationService);
   private readonly toaster = inject(ToasterService);
   private readonly permissionService = inject(PermissionService);
+  private readonly environmentService = inject(EnvironmentService);
 
   private readonly pageSize = 10;
 
@@ -73,12 +78,29 @@ export class AdminCategoriesComponent implements OnInit {
   protected readonly modalOpen = signal(false);
   protected readonly modalTitle = signal('');
   protected readonly isSaving = signal(false);
-  private editingCategoryId: string | null = null;
+  protected readonly isUploadingIcon = signal(false);
+  protected editingCategoryId: string | null = null;
+
+  // Tracks the icon of whatever category the modal is currently editing, independent of the paged
+  // `categories()` list — upload/remove responses update this directly so the preview reflects the
+  // save without needing a full list reload.
+  protected readonly editingCategoryIcon = signal<string | null>(null);
+
+  protected readonly iconUrl = computed(() => {
+    const blobName = this.editingCategoryIcon();
+    if (!this.editingCategoryId || !blobName) return null;
+    return `${this.environmentService.getApiUrl('default')}/api/app/category/${this.editingCategoryId}/icon?v=${encodeURIComponent(blobName)}`;
+  });
+
+  // The row thumbnail reads straight off the paged list, not `editingCategoryIcon` (that's modal-only state).
+  protected iconUrlFor(category: CategoryDto): string | null {
+    if (!category.id || !category.iconBlobName) return null;
+    return `${this.environmentService.getApiUrl('default')}/api/app/category/${category.id}/icon?v=${encodeURIComponent(category.iconBlobName)}`;
+  }
 
   protected readonly form = new FormGroup({
     nameAr: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(128)] }),
     nameEn: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(128)] }),
-    iconBlobName: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(256)] }),
     parentCategoryId: new FormControl('', { nonNullable: true }),
   });
 
@@ -120,18 +142,19 @@ export class AdminCategoriesComponent implements OnInit {
 
   protected openCreateModal(): void {
     this.editingCategoryId = null;
+    this.editingCategoryIcon.set(null);
     this.modalTitle.set('::AdminPanel:Categories:NewTitle');
-    this.form.reset({ nameAr: '', nameEn: '', iconBlobName: '', parentCategoryId: '' });
+    this.form.reset({ nameAr: '', nameEn: '', parentCategoryId: '' });
     this.modalOpen.set(true);
   }
 
   protected openEditModal(category: CategoryDto): void {
     this.editingCategoryId = category.id ?? null;
+    this.editingCategoryIcon.set(category.iconBlobName ?? null);
     this.modalTitle.set('::AdminPanel:Categories:EditTitle');
     this.form.reset({
       nameAr: category.nameAr ?? '',
       nameEn: category.nameEn ?? '',
-      iconBlobName: category.iconBlobName ?? '',
       parentCategoryId: category.parentCategoryId ?? '',
     });
     this.modalOpen.set(true);
@@ -151,7 +174,6 @@ export class AdminCategoriesComponent implements OnInit {
     const payload = {
       nameAr: value.nameAr,
       nameEn: value.nameEn,
-      iconBlobName: value.iconBlobName || null,
       parentCategoryId: value.parentCategoryId || null,
     };
 
@@ -161,15 +183,73 @@ export class AdminCategoriesComponent implements OnInit {
       : this.categoriesService.create(payload);
 
     request.subscribe({
-      next: () => {
+      next: (result) => {
         this.isSaving.set(false);
-        this.modalOpen.set(false);
         this.toaster.success('::AdminPanel:Categories:SavedMessage');
         this.load();
+
+        if (this.editingCategoryId) {
+          this.modalOpen.set(false);
+        } else {
+          // Stay open and switch into edit mode so a freshly-created category can get an icon
+          // right away — uploading one requires an id, which doesn't exist until this save.
+          this.editingCategoryId = result.id ?? null;
+          this.editingCategoryIcon.set(result.iconBlobName ?? null);
+          this.modalTitle.set('::AdminPanel:Categories:EditTitle');
+        }
       },
       error: () => {
         this.isSaving.set(false);
         this.toaster.error('::AdminPanel:Categories:SaveErrorMessage');
+      },
+    });
+  }
+
+  protected onIconFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    input.value = ''; // reset so re-selecting the same file still fires a change event
+
+    if (!file || !this.editingCategoryId) return;
+
+    if (!ALLOWED_ICON_TYPES.includes(file.type)) {
+      this.toaster.error('::AdminPanel:Categories:InvalidIconTypeMessage');
+      return;
+    }
+    if (file.size > MAX_ICON_BYTES) {
+      this.toaster.error('::AdminPanel:Categories:IconTooLargeMessage');
+      return;
+    }
+
+    this.isUploadingIcon.set(true);
+    this.categoriesService.uploadIcon(this.editingCategoryId, file).subscribe({
+      next: (category) => {
+        this.isUploadingIcon.set(false);
+        this.editingCategoryIcon.set(category.iconBlobName ?? null);
+        this.toaster.success('::AdminPanel:Categories:IconUploadedMessage');
+        this.load();
+      },
+      error: () => {
+        this.isUploadingIcon.set(false);
+        this.toaster.error('::AdminPanel:Categories:IconUploadErrorMessage');
+      },
+    });
+  }
+
+  protected removeIcon(): void {
+    if (!this.editingCategoryId) return;
+
+    this.isUploadingIcon.set(true);
+    this.categoriesService.removeIcon(this.editingCategoryId).subscribe({
+      next: (category) => {
+        this.isUploadingIcon.set(false);
+        this.editingCategoryIcon.set(category.iconBlobName ?? null);
+        this.toaster.success('::AdminPanel:Categories:IconRemovedMessage');
+        this.load();
+      },
+      error: () => {
+        this.isUploadingIcon.set(false);
+        this.toaster.error('::AdminPanel:Categories:IconRemoveErrorMessage');
       },
     });
   }

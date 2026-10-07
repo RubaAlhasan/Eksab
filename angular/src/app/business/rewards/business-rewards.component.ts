@@ -44,9 +44,9 @@ type RewardStatus = 'active' | 'scheduled' | 'expired';
  *   hardcoded fake data with no real per-reward redemption-rate computation anywhere in this codebase
  *   (`CouponAuditService` exists but wasn't found to expose a per-reward rate) — dropped entirely.
  * - **No reward image** — the prototype uses a random emoji per reward, not a real image. No blob
- *   upload UI/pattern exists anywhere in this app yet (unlike Categories' `iconBlobName`, which is
- *   captured but has no upload widget either — same established gap). A deterministic per-*type*
- *   emoji (`typeEmoji`) stands in instead of pretending a per-item image exists.
+ *   upload UI/pattern exists for rewards yet (Business Logo and Admin Categories now have one each —
+ *   see `business-settings.component.ts`/`admin-categories.component.ts` — but rewards don't). A
+ *   deterministic per-*type* emoji (`typeEmoji`) stands in instead of pretending a per-item image exists.
  * - No delete action exposed — `DeleteAsync` exists server-side (`Eksabli.Rewards.Delete`) but the
  *   prototype itself has no delete button either; matches prototype scope.
  */

@@ -13,8 +13,7 @@ public class CreateUpdateCategoryDto
     [StringLength(CategoryConsts.MaxNameLength)]
     public string NameEn { get; set; } = string.Empty;
 
-    [StringLength(CategoryConsts.MaxIconBlobNameLength)]
-    public string? IconBlobName { get; set; }
-
+    // The icon is managed only through ICategoryAppService's own Upload/RemoveIconAsync — not settable here,
+    // the same way UpdateBusinessProfileDto never carries BusinessProfile's LogoBlobName.
     public Guid? ParentCategoryId { get; set; }
 }
