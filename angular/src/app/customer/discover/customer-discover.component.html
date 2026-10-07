@@ -20,7 +20,7 @@
     [class.active]="nearMeEnabled()"
     (click)="toggleNearMe()"
   >
-    <i class="fas fa-location-dot"></i>
+    <i class="fas fa-location-dot" aria-hidden="true"></i>
     {{ '::Wallet:Discover:NearMe' | abpLocalization }}
   </button>
   <button
@@ -29,6 +29,7 @@
     [class.active]="selectedCategoryId() === null"
     (click)="selectCategory(null)"
   >
+    <i class="fas fa-layer-group" aria-hidden="true"></i>
     {{ '::Wallet:Discover:AllCategories' | abpLocalization }}
   </button>
   @for (category of categories(); track category.id) {
@@ -38,6 +39,7 @@
       [class.active]="selectedCategoryId() === category.id"
       (click)="selectCategory(category.id ?? null)"
     >
+      <i class="fas {{ categoryIcon(category.nameEn) }}" aria-hidden="true"></i>
       {{ category.nameEn | localizedName: category.nameAr }}
     </button>
   }

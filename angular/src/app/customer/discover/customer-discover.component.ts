@@ -12,6 +12,7 @@ import { SkeletonListComponent } from '../../shared/components/skeleton-list/ske
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
+import { categoryIcon } from '../../shared/utils/category-display.util';
 
 const PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -39,6 +40,7 @@ export class CustomerDiscoverComponent implements OnInit {
   private readonly customerBusinessService = inject(CustomerBusinessService);
 
   protected readonly categories = signal<CategoryDto[]>([]);
+  protected readonly categoryIcon = categoryIcon;
   protected readonly selectedCategoryId = signal<string | null>(null);
   protected readonly searchText = signal('');
   protected readonly nearMeEnabled = signal(false);
