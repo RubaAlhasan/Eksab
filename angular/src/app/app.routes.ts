@@ -571,6 +571,16 @@ export const APP_ROUTES: Routes = [
         data: { requiredPolicy: 'Eksabli.Campaigns' },
       },
       {
+        // Reads are public (ReviewsController.GetListAsync is [AllowAnonymous]) — gated on the lesser
+        // Eksabli.Reviews permission to show the page at all, same "route on the lesser permission,
+        // tighter control inside" shape BusinessProfile/Transactions use; the Delete button itself is
+        // hidden without Eksabli.Reviews.Moderate (see the component's canModerate()).
+        path: 'reviews',
+        loadComponent: () => import('./business/reviews/business-reviews.component').then(c => c.BusinessReviewsComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.Reviews' },
+      },
+      {
         // NotificationsController's whole class is gated on Eksabli.Notifications.Send — there is no
         // separate "view" permission to fall back to (confirmed by reading the controller), same shape
         // as Subscriptions/Support Tickets in the Admin Portal.

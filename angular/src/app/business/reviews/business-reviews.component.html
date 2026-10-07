@@ -1,0 +1,89 @@
+<app-page-header
+  [title]="'::BusinessPanel:Reviews:Title' | abpLocalization"
+  [subtitle]="'::BusinessPanel:Reviews:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::BusinessPanel:Reviews:Title' | abpLocalization) }]"
+>
+</app-page-header>
+
+@if (!isLoading() && !loadFailed() && totalCount() > 0) {
+  <div class="card mb-4">
+    <div class="card-body d-flex align-items-center gap-2">
+      <app-star-rating [rating]="averageRating()" />
+      <span class="fw-semibold">{{ averageRating() | number: '1.1-1' }}</span>
+      <span class="text-muted">
+        {{ '::BusinessPanel:Reviews:ReviewCount' | abpLocalization: totalCount().toString() }}
+      </span>
+    </div>
+  </div>
+}
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{{ '::BusinessPanel:Reviews:ColumnRating' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Reviews:ColumnReviewer' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Reviews:ColumnComment' | abpLocalization }}</th>
+          <th>{{ '::BusinessPanel:Reviews:ColumnDate' | abpLocalization }}</th>
+          @if (canModerate()) {
+            <th class="text-end"><span class="visually-hidden">Actions</span></th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @if (isLoading()) {
+          <tr>
+            <td colspan="5">
+              <app-loading-spinner [label]="'::BusinessPanel:Reviews:Loading' | abpLocalization"></app-loading-spinner>
+            </td>
+          </tr>
+        } @else if (loadFailed()) {
+          <tr>
+            <td colspan="5">
+              <app-error-state
+                [message]="'::BusinessPanel:Reviews:LoadErrorMessage' | abpLocalization"
+                [retryLabel]="'::BusinessPanel:Reviews:TryAgain' | abpLocalization"
+                (retry)="retry()"
+              >
+              </app-error-state>
+            </td>
+          </tr>
+        } @else if (reviews().length === 0) {
+          <tr>
+            <td colspan="5">
+              <app-empty-state icon="fa-star" [title]="'::BusinessPanel:Reviews:EmptyTitle' | abpLocalization"></app-empty-state>
+            </td>
+          </tr>
+        } @else {
+          @for (review of reviews(); track review.id) {
+            <tr>
+              <td><app-star-rating [rating]="review.rating" /></td>
+              <td>{{ review.reviewerName || ('::BusinessPanel:Reviews:AnonymousReviewer' | abpLocalization) }}</td>
+              <td class="text-muted">{{ review.comment || '—' }}</td>
+              <td class="text-muted">{{ review.creationTime | date: 'mediumDate' }}</td>
+              @if (canModerate()) {
+                <td class="text-end">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    [disabled]="busyReviewIds().has(review.id ?? '')"
+                    [attr.aria-label]="'::BusinessPanel:Reviews:Delete' | abpLocalization"
+                    (click)="deleteReview(review)"
+                  >
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </td>
+              }
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (!isLoading() && !loadFailed()) {
+    <div class="card-footer">
+      <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)"></app-pagination>
+    </div>
+  }
+</div>
