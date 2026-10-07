@@ -75,6 +75,13 @@ public class CustomerBusinessDto
 
     public int BranchCount { get; set; }
 
+    // Cross-aggregate (Review rows across every tenant, see ReviewsController/CustomerReviewAppService)
+    // computed by CustomerBusinessAppService after mapping, same pattern as CategoryDto.BusinessCount.
+    // 0 when the business has no reviews yet — the client shows "no reviews" rather than a 0-star badge.
+    public double AverageRating { get; set; }
+
+    public int ReviewCount { get; set; }
+
     // Straight-line distance to the nearest branch, populated only when the caller
     // supplies coordinates. Null when unknown — the client must not render "0 km".
     public double? DistanceKm { get; set; }

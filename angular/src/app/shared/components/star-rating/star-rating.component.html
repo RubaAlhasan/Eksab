@@ -1,0 +1,5 @@
+<span class="eks-star-rating" [attr.aria-label]="rating() + ' / 5'">
+  @for (filled of stars(); track $index) {
+    <i class="fas fa-star" [class.eks-star-rating__star--filled]="filled" aria-hidden="true"></i>
+  }
+</span>

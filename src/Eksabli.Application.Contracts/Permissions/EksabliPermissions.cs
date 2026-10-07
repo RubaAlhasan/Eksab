@@ -191,6 +191,16 @@ public static class EksabliPermissions
         public const string Manage = Default + ".Manage";
     }
 
+    public static class Reviews
+    {
+        public const string Default = GroupName + ".Reviews";
+        // A customer's own create/update/delete of their own review needs no permission beyond
+        // authenticated + active membership (checked in the app service, same shape as
+        // CustomerSmartOfferAppService.WatchPriceAsync) — this gates only a business's ability to
+        // remove someone else's review from its own page (abuse/moderation), tenant-side.
+        public const string Moderate = Default + ".Moderate";
+    }
+
     // Platform-wide request audit trail (ABP's own IAuditLogRepository, already recording every
     // request via the OSS Volo.Abp.AuditLogging.Domain/EntityFrameworkCore modules — only the
     // browsable UI layer was missing; that's a paid ABP Commercial feature, so this is a small

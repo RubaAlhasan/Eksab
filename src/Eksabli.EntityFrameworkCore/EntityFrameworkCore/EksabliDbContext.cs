@@ -15,6 +15,7 @@ using Eksabli.Offers;
 using Eksabli.Notifications;
 using Eksabli.Engagement;
 using Eksabli.Platform;
+using Eksabli.Reviews;
 using Eksabli.Sms;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;
@@ -108,6 +109,8 @@ public class EksabliDbContext :
     public DbSet<SupportTicket> SupportTickets { get; set; }
 
     public DbSet<SmsLog> SmsLogs { get; set; }
+
+    public DbSet<Review> Reviews { get; set; }
 
     #region Entities from the modules
 
@@ -542,6 +545,15 @@ public class EksabliDbContext :
             b.ConfigureByConvention(); //auto configure for the base class props
             b.Property(x => x.Body).IsRequired().HasMaxLength(SupportTicketMessageConsts.MaxBodyLength);
             b.HasIndex(x => new { x.TicketId, x.CreatedAt });
+        });
+
+        builder.Entity<Review>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "Reviews", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.Comment).HasMaxLength(ReviewConsts.MaxCommentLength);
+            // One review per customer per business — a second write edits this row instead of adding another.
+            b.HasIndex(x => new { x.TenantId, x.CustomerId }).IsUnique();
         });
 
         builder.Entity<SmsLog>(b =>

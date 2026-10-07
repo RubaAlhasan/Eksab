@@ -20,6 +20,15 @@
       }
     </p>
 
+    <p class="d-flex align-items-center justify-content-center gap-2 small mb-3">
+      @if (business.reviewCount > 0) {
+        <app-star-rating [rating]="business.averageRating" />
+        <span class="text-muted">{{ business.averageRating | number: '1.1-1' }} · {{ business.reviewCount }} {{ (business.reviewCount === 1 ? '::Wallet:Store:ReviewSingular' : '::Wallet:Store:ReviewPlural') | abpLocalization }}</span>
+      } @else {
+        <span class="text-muted">{{ '::Wallet:Store:NoReviewsYet' | abpLocalization }}</span>
+      }
+    </p>
+
     <div class="d-flex gap-2 justify-content-center flex-wrap">
       <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="isFollowBusy()" (click)="toggleFollow()">
         <i class="fas" [class.fa-heart]="isFollowing()" [class.fa-regular]="!isFollowing()"></i>
@@ -68,6 +77,9 @@
     </button>
     <button type="button" class="eks-tab" [class.active]="activeTab() === 'rewards'" (click)="selectTab('rewards')">
       {{ '::Wallet:Store:RewardsTab' | abpLocalization }}
+    </button>
+    <button type="button" class="eks-tab" [class.active]="activeTab() === 'reviews'" (click)="selectTab('reviews')">
+      {{ '::Wallet:Store:ReviewsTab' | abpLocalization }}
     </button>
   </div>
 
@@ -172,7 +184,7 @@
         }
       </div>
     }
-  } @else {
+  } @else if (activeTab() === 'rewards') {
     @if (previewRewards().length === 0) {
       <p class="text-muted small">{{ '::Wallet:Store:RewardsEmpty' | abpLocalization }}</p>
     } @else {
@@ -188,6 +200,73 @@
       <a [routerLink]="['/customer/wallet', business.tenantId, 'rewards']" class="eks-section-link">
         {{ '::Wallet:Store:SeeAllRewards' | abpLocalization }}
       </a>
+    }
+  } @else {
+    @if (isMember()) {
+      <section class="eks-panel mb-3">
+        <h2 class="eks-section-title mt-0">{{ (myReview() ? '::Wallet:Store:YourReviewTitle' : '::Wallet:Store:WriteReviewTitle') | abpLocalization }}</h2>
+        <div class="eks-star-picker mb-2" role="radiogroup" [attr.aria-label]="'::Wallet:Store:RatingLabel' | abpLocalization">
+          @for (star of [1, 2, 3, 4, 5]; track star) {
+            <button
+              type="button"
+              class="eks-star-picker__star"
+              [class.eks-star-picker__star--filled]="star <= myReviewRating()"
+              [attr.aria-label]="star"
+              [attr.aria-pressed]="star <= myReviewRating()"
+              (click)="setMyReviewRating(star)"
+            >
+              <i class="fas fa-star" aria-hidden="true"></i>
+            </button>
+          }
+        </div>
+        <textarea
+          class="form-control form-control-sm mb-2"
+          rows="2"
+          maxlength="1000"
+          [placeholder]="'::Wallet:Store:ReviewCommentPlaceholder' | abpLocalization"
+          [value]="myReviewComment()"
+          (input)="onReviewCommentInput($event)"
+        ></textarea>
+        <div class="d-flex gap-2">
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            [disabled]="isSavingReview() || myReviewRating() < 1"
+            (click)="submitMyReview()"
+          >
+            {{ (myReview() ? '::Wallet:Store:UpdateReviewButton' : '::Wallet:Store:SubmitReviewButton') | abpLocalization }}
+          </button>
+          @if (myReview()) {
+            <button type="button" class="btn btn-outline-danger btn-sm" [disabled]="isSavingReview()" (click)="deleteMyReview()">
+              {{ '::Wallet:Store:DeleteReviewButton' | abpLocalization }}
+            </button>
+          }
+        </div>
+      </section>
+    }
+
+    @if (reviews().length === 0) {
+      <p class="text-muted small">{{ '::Wallet:Store:ReviewsEmpty' | abpLocalization }}</p>
+    } @else {
+      <div class="eks-list mb-3">
+        @for (review of reviews(); track review.id) {
+          <div class="eks-row">
+            <span class="eks-row__body">
+              <span class="d-flex align-items-center gap-2">
+                <app-star-rating [rating]="review.rating" />
+                <span class="eks-row__title">{{ review.reviewerName || ('::Wallet:Store:AnonymousReviewer' | abpLocalization) }}</span>
+              </span>
+              @if (review.comment) {
+                <span class="eks-row__meta">{{ review.comment }}</span>
+              }
+              <span class="eks-row__meta">{{ review.creationTime | date: 'mediumDate' }}</span>
+            </span>
+          </div>
+        }
+      </div>
+      @if (reviewsPages() > 1) {
+        <app-pagination [pageIndex]="reviewsPageIndex()" [totalPages]="reviewsPages()" (pageChange)="goToReviewsPage($event)" />
+      }
     }
   }
 }

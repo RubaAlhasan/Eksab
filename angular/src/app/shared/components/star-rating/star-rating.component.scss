@@ -1,0 +1,10 @@
+.eks-star-rating {
+  display: inline-flex;
+  gap: 0.0625rem;
+  font-size: 0.8125rem;
+  color: var(--eks-border);
+}
+
+.eks-star-rating__star--filled {
+  color: var(--eks-warning);
+}

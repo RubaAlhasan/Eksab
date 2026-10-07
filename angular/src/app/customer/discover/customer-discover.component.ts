@@ -12,6 +12,7 @@ import { SkeletonListComponent } from '../../shared/components/skeleton-list/ske
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
+import { StarRatingComponent } from '../../shared/components/star-rating/star-rating.component';
 import { categoryIcon } from '../../shared/utils/category-display.util';
 
 const PAGE_SIZE = 10;
@@ -33,7 +34,17 @@ const SEARCH_DEBOUNCE_MS = 350;
   templateUrl: './customer-discover.component.html',
   styleUrls: ['./customer-discover.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DecimalPipe, LocalizationPipe, LocalizedNamePipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent, PaginationComponent],
+  imports: [
+    RouterLink,
+    DecimalPipe,
+    LocalizationPipe,
+    LocalizedNamePipe,
+    SkeletonListComponent,
+    EmptyStateComponent,
+    ErrorStateComponent,
+    PaginationComponent,
+    StarRatingComponent,
+  ],
 })
 export class CustomerDiscoverComponent implements OnInit {
   private readonly categoriesService = inject(CategoriesService);
