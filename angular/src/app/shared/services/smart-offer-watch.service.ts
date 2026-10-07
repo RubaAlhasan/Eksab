@@ -14,16 +14,20 @@ export class SmartOfferWatchService {
   private readonly customerSmartOffersService = inject(CustomerSmartOffersService);
 
   private readonly watched = signal<ReadonlySet<string>>(new Set());
+  private readonly loadedSignal = signal(false);
   private loading = false;
-  private loaded = false;
+
+  // Exposed so a page listing the watched deals (not just a single card) can tell "no watches yet" apart from
+  // "haven't heard back yet" and avoid flashing an empty state before the first response arrives.
+  readonly loaded = this.loadedSignal.asReadonly();
 
   ensureLoaded(): void {
-    if (this.loaded || this.loading) return;
+    if (this.loadedSignal() || this.loading) return;
     this.loading = true;
     this.customerSmartOffersService.getMyPriceWatches().subscribe({
       next: watches => {
         this.watched.set(new Set(watches.map(w => watchKey(w.tenantId, w.smartOfferId))));
-        this.loaded = true;
+        this.loadedSignal.set(true);
         this.loading = false;
       },
       // Visitors without a customer session, or a failed request: nothing to show, and the next card will try again.

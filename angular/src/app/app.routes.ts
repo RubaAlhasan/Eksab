@@ -110,6 +110,12 @@ export const APP_ROUTES: Routes = [
         data: { titleKey: '::SmartDeals:Orders:Title' },
       },
       {
+        path: 'smart-deals/watches',
+        loadComponent: () =>
+          import('./customer/smart-deals/watches/customer-watched-deals.component').then(c => c.CustomerWatchedDealsComponent),
+        data: { titleKey: '::SmartDeals:Watches:Title' },
+      },
+      {
         // A deal opened from one of the customer's orders. Readable after the deal's sale window has ended.
         path: 'smart-deals/offer/:tenantId/:offerId',
         loadComponent: () => import('./customer/smart-deals/offer/customer-deal-offer.component').then(c => c.CustomerDealOfferComponent),
