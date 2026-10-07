@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.Sqlite;
+﻿using System;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -60,7 +61,16 @@ public class EksabliEntityFrameworkCoreTestModule : AbpModule
 
     public override void OnApplicationShutdown(ApplicationShutdownContext context)
     {
-        _sqliteConnection?.Dispose();
+        // The in-memory database lives only as long as this connection. The test host can reach shutdown while the
+        // connection is already being closed, and SqliteConnection.Close then throws a NullReferenceException. That only
+        // means the database is already gone, so it must not fail a test that passed (seen intermittently across full runs).
+        try
+        {
+            _sqliteConnection?.Dispose();
+        }
+        catch (NullReferenceException)
+        {
+        }
     }
 
     private static SqliteConnection CreateDatabaseAndGetConnection()

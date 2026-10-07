@@ -18,7 +18,7 @@
           }
           <span class="eks-row__body">
             <span class="eks-row__title">{{ business.name }}</span>
-            <span class="eks-row__meta">{{ business.categoryNameEn ?? ('::Wallet:Discover:Uncategorized' | abpLocalization) }}</span>
+            <span class="eks-row__meta">{{ business.categoryNameEn || business.categoryNameAr ? (business.categoryNameEn | localizedName: business.categoryNameAr) : ('::Wallet:Discover:Uncategorized' | abpLocalization) }}</span>
           </span>
         </a>
         <span class="eks-row__end">

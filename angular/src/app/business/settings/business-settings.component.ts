@@ -157,6 +157,8 @@ export class BusinessSettingsComponent implements OnInit {
     descriptionAr: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(2000)] }),
     website: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(256)] }),
     timeZoneId: new FormControl('', { nonNullable: true }),
+    // Empty means "never expire": the number input reports null for an empty box, which is what the API expects.
+    pointsExpiryMonths: new FormControl<number | null>(null, { validators: [Validators.min(1), Validators.max(120)] }),
     instagram: new FormControl('', { nonNullable: true }),
     facebook: new FormControl('', { nonNullable: true }),
   });
@@ -186,6 +188,7 @@ export class BusinessSettingsComponent implements OnInit {
         descriptionAr: value.descriptionAr || null,
         website: value.website || null,
         timeZoneId: value.timeZoneId || null,
+        pointsExpiryMonths: value.pointsExpiryMonths ?? null,
         socialLinksJson: serializeSocialLinks(value.instagram, value.facebook, this.socialLinksRest),
       })
       .subscribe({
@@ -263,6 +266,7 @@ export class BusinessSettingsComponent implements OnInit {
           descriptionAr: profile.descriptionAr ?? '',
           website: profile.website ?? '',
           timeZoneId: profile.timeZoneId ?? '',
+          pointsExpiryMonths: profile.pointsExpiryMonths ?? null,
           instagram,
           facebook,
         });

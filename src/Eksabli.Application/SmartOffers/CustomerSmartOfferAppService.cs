@@ -28,6 +28,7 @@ public class CustomerSmartOfferAppService : SmartOfferServiceBase, ICustomerSmar
     private readonly IRepository<Membership, Guid> _membershipRepository;
     private readonly IRepository<Follow, Guid> _followRepository;
     private readonly IRepository<BusinessProfile, Guid> _businessProfileRepository;
+    private readonly IRepository<SmartOfferWatch, Guid> _watchRepository;
 
     public CustomerSmartOfferAppService(
         ISmartOfferRepository offerRepository,
@@ -35,9 +36,11 @@ public class CustomerSmartOfferAppService : SmartOfferServiceBase, ICustomerSmar
         IRepository<Follow, Guid> followRepository,
         IRepository<BusinessProfile, Guid> businessProfileRepository,
         IRepository<SmartOfferOrder, Guid> orderRepository,
-        IRepository<SmartOfferInventory, Guid> inventoryRepository)
+        IRepository<SmartOfferInventory, Guid> inventoryRepository,
+        IRepository<SmartOfferWatch, Guid> watchRepository)
         : base(orderRepository, inventoryRepository)
     {
+        _watchRepository = watchRepository;
         _offerRepository = offerRepository;
         _membershipRepository = membershipRepository;
         _followRepository = followRepository;
@@ -199,6 +202,57 @@ public class CustomerSmartOfferAppService : SmartOfferServiceBase, ICustomerSmar
             }).ToList();
 
             return new PagedResultDto<CustomerSmartOfferOrderDto>(total, items);
+        }
+    }
+
+    public async Task WatchPriceAsync(Guid tenantId, Guid offerId)
+    {
+        var customerId = CurrentUser.GetId();
+
+        using (CurrentTenant.Change(tenantId))
+        {
+            // Watching is a request to be told about a business's prices, so it is limited to businesses the customer belongs to.
+            var isMember = await _membershipRepository.AnyAsync(m => m.CustomerId == customerId && m.Status == MembershipStatus.Active);
+            if (!isMember)
+            {
+                throw new UserFriendlyException("Join this business to watch its deals.");
+            }
+
+            var offer = await _offerRepository.FindAsync(offerId)
+                ?? throw new EntityNotFoundException(typeof(SmartOffer), offerId);
+
+            // Watching twice is the same as watching once.
+            if (await _watchRepository.AnyAsync(w => w.CustomerId == customerId && w.SmartOfferId == offer.Id))
+            {
+                return;
+            }
+
+            await _watchRepository.InsertAsync(SmartOfferWatch.Create(GuidGenerator.Create(), customerId, offer.Id), autoSave: true);
+        }
+    }
+
+    public async Task UnwatchPriceAsync(Guid tenantId, Guid offerId)
+    {
+        var customerId = CurrentUser.GetId();
+
+        using (CurrentTenant.Change(tenantId))
+        {
+            await _watchRepository.DeleteAsync(w => w.CustomerId == customerId && w.SmartOfferId == offerId, autoSave: true);
+        }
+    }
+
+    public async Task<List<SmartOfferWatchDto>> GetMyPriceWatchesAsync()
+    {
+        var customerId = CurrentUser.GetId();
+
+        // Watches are per business, and the customer reads them across every business they belong to.
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var watches = await _watchRepository.GetListAsync(w => w.CustomerId == customerId);
+            return watches
+                .Where(w => w.TenantId.HasValue)
+                .Select(w => new SmartOfferWatchDto { TenantId = w.TenantId!.Value, SmartOfferId = w.SmartOfferId })
+                .ToList();
         }
     }
 

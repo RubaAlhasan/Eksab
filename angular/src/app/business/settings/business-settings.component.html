@@ -89,6 +89,12 @@
       </div>
 
       <div>
+        <label class="form-label" for="settingsPointsExpiry">{{ '::BusinessPanel:Settings:FieldPointsExpiry' | abpLocalization }}</label>
+        <input id="settingsPointsExpiry" type="number" class="form-control" min="1" max="120" step="1" formControlName="pointsExpiryMonths" />
+        <div class="form-text">{{ '::BusinessPanel:Settings:PointsExpiryHint' | abpLocalization }}</div>
+      </div>
+
+      <div>
         <label class="form-label" for="settingsDescriptionEn">{{ '::BusinessPanel:Settings:FieldDescriptionEn' | abpLocalization }}</label>
         <textarea id="settingsDescriptionEn" class="form-control" formControlName="descriptionEn" rows="3"></textarea>
       </div>

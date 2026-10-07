@@ -12,9 +12,12 @@ using Volo.Abp.Uow;
 
 namespace Eksabli.Wallets;
 
-// First AsyncPeriodicBackgroundWorkerBase in this repo. Daily sweep that turns any PointsTransaction
-// past its ExpiresAt into a matching Expire ledger row — expiration is itself a ledger entry, never
-// a silent balance edit (per docs/eksabli-loyalty-platform/07-loyalty-engine.md#8-points-system).
+// First AsyncPeriodicBackgroundWorkerBase in this repo. Daily sweep that expires the points of every award whose
+// ExpiresAt has passed, as an Expire ledger row — expiration is itself a ledger entry, never a silent balance edit
+// (per docs/eksabli-loyalty-platform/07-loyalty-engine.md#8-points-system).
+//
+// Only the points an award still holds are expired. A customer who already spent part of an award keeps nothing of it
+// past its expiry, and never drops below the points held for a pending reward (see ExpireOverdueTransactionsAsync).
 public class PointsExpirationWorker : AsyncPeriodicBackgroundWorkerBase
 {
     public PointsExpirationWorker(AbpAsyncTimer timer, IServiceScopeFactory serviceScopeFactory)
@@ -54,37 +57,51 @@ public class PointsExpirationWorker : AsyncPeriodicBackgroundWorkerBase
     {
         var now = clock.Now;
 
-        var candidates = await transactionRepository.GetListAsync(t =>
-            t.ExpiresAt != null && t.ExpiresAt <= now && t.Type != PointsTransactionType.Expire);
+        // Only wallets holding an award past its ExpiresAt are replayed. Awards already fully spent or expired are
+        // still listed here, so this runs against every such wallet each day; the replay makes that harmless.
+        var walletIds = (await transactionRepository.GetListAsync(t =>
+                t.ExpiresAt != null && t.ExpiresAt <= now && t.Points > 0))
+            .Select(t => t.WalletId)
+            .Distinct()
+            .ToList();
 
-        if (candidates.Count == 0)
+        foreach (var walletId in walletIds)
         {
-            return;
-        }
+            var wallet = await walletRepository.GetAsync(walletId);
+            var ledger = await transactionRepository.GetListAsync(t => t.WalletId == walletId);
 
-        // Ledger rows are immutable — "already processed" can't be flagged on the original row, so
-        // idempotency is a lookup against already-emitted Expire rows' ReferenceId.
-        var alreadyExpiredSourceIds = (await transactionRepository.GetListAsync(t => t.Type == PointsTransactionType.Expire))
-            .Where(t => t.ReferenceId.HasValue)
-            .Select(t => t.ReferenceId!.Value)
-            .ToHashSet();
+            // Points held against a pending redemption are not spendable, so expiry may take at most what is available.
+            // The reserved points stay on the ledger and are settled by the redemption itself.
+            var budget = wallet.AvailableBalance;
+            var overdueLots = PointsLotReplay.Replay(ledger)
+                .Where(lot => lot.ExpiresAt is { } expiresAt && expiresAt <= now && lot.Remaining > 0)
+                .OrderBy(lot => lot.CreationTime);
 
-        foreach (var source in candidates.Where(t => !alreadyExpiredSourceIds.Contains(t.Id)))
-        {
-            var wallet = await walletRepository.GetAsync(source.WalletId);
+            var expiredAny = false;
+            foreach (var lot in overdueLots)
+            {
+                if (budget <= 0) break;
 
-            var expireTransaction = PointsTransaction.Create(
-                guidGenerator.Create(),
-                source.WalletId,
-                PointsTransactionType.Expire,
-                -source.Points,
-                source.Source,
-                referenceId: source.Id);
+                var expired = Math.Min(lot.Remaining, budget);
+                budget -= expired;
 
-            await transactionRepository.InsertAsync(expireTransaction);
+                var expireTransaction = PointsTransaction.Create(
+                    guidGenerator.Create(),
+                    walletId,
+                    PointsTransactionType.Expire,
+                    -expired,
+                    lot.Source,
+                    referenceId: lot.Id);
 
-            wallet.ApplyTransaction(PointsTransactionType.Expire, -source.Points);
-            await walletRepository.UpdateAsync(wallet);
+                await transactionRepository.InsertAsync(expireTransaction);
+                wallet.ApplyTransaction(PointsTransactionType.Expire, -expired);
+                expiredAny = true;
+            }
+
+            if (expiredAny)
+            {
+                await walletRepository.UpdateAsync(wallet);
+            }
         }
     }
 }

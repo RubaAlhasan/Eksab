@@ -166,6 +166,29 @@ export const APP_ROUTES: Routes = [
         loadComponent: () => import('./customer/profile/customer-edit-profile.component').then(c => c.CustomerEditProfileComponent),
         data: { titleKey: '::Wallet:Profile:EditTitle' },
       },
+      {
+        path: 'activity',
+        loadComponent: () => import('./customer/activity/customer-activity.component').then(c => c.CustomerActivityComponent),
+        data: { titleKey: '::Wallet:Activity:Title' },
+      },
+      {
+        path: 'support',
+        loadComponent: () => import('./customer/support/customer-support.component').then(c => c.CustomerSupportComponent),
+        data: { titleKey: '::Wallet:Support:Title' },
+      },
+      {
+        // Declared before ':ticketId' so that "new" is read as the request form, not as a ticket id.
+        path: 'support/new',
+        loadComponent: () =>
+          import('./customer/support/customer-support-ticket.component').then(c => c.CustomerSupportTicketComponent),
+        data: { titleKey: '::Wallet:Support:NewTitle' },
+      },
+      {
+        path: 'support/:ticketId',
+        loadComponent: () =>
+          import('./customer/support/customer-support-ticket.component').then(c => c.CustomerSupportTicketComponent),
+        data: { titleKey: '::Wallet:Support:Title' },
+      },
     ],
   },
   {

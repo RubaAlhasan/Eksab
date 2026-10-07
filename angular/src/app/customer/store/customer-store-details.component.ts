@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
+import { LocalizedNamePipe } from '../../shared/pipes/localized-name.pipe';
 import { environment } from '../../../environments/environment';
 import { CustomerBusinessService } from '../../proxy/controllers/customer-business.service';
 import { FollowsService } from '../../proxy/controllers/follows.service';
@@ -9,7 +10,9 @@ import { MembershipsService } from '../../proxy/controllers/memberships.service'
 import { CouponsService } from '../../proxy/controllers/coupons.service';
 import { CustomerSmartOffersService } from '../../proxy/controllers/customer-smart-offers.service';
 import { CustomerCampaignService } from '../../proxy/controllers/customer-campaign.service';
-import type { CustomerBusinessDto } from '../../proxy/businesses/models';
+import type { CustomerBusinessBranchDto, CustomerBusinessDto, CustomerEarnRuleDto } from '../../proxy/businesses/models';
+import { PointRuleType } from '../../proxy/wallets/point-rule-type.enum';
+import { Currency } from '../../proxy/shared/currency.enum';
 import type { RewardDto } from '../../proxy/rewards/models';
 import type { CustomerSmartOfferDto } from '../../proxy/smart-offers/models';
 import type { CustomerCampaignDto } from '../../proxy/campaigns/models';
@@ -35,11 +38,9 @@ const SMART_DEALS_PAGE_SIZE = 6;
  * this same form with extra navigation.
  *
  * No star rating anywhere — `CustomerBusinessDto` has no such field (confirmed by reading it); the
- * prototype's rating is fake data, not translated here. Still no per-branch address list or a dedicated
- * "Branches" tab (with pins/addresses) — `BranchCount` stays an aggregate stat — but each branch's own
- * phone number (already a real per-branch field, `Branch.Phone`) is now surfaced under About as a
- * "Phone Numbers" list, since a business's phone numbers already are exactly its branches' phones; no
- * new phone-list concept was added, this just makes existing data customer-visible.
+ * prototype's rating is fake data, not translated here. `BranchCount` stays the header's own aggregate
+ * stat, but About now also lists each branch by name with its address, opening hours (as the business
+ * wrote them — free text, not structured), a maps link when it has been placed on a map, and its phone.
  */
 @Component({
   selector: 'app-customer-store-details',
@@ -51,6 +52,7 @@ const SMART_DEALS_PAGE_SIZE = 6;
     DatePipe,
     DecimalPipe,
     LocalizationPipe,
+    LocalizedNamePipe,
     SkeletonListComponent,
     ErrorStateComponent,
     PaginationComponent,
@@ -83,6 +85,13 @@ export class CustomerStoreDetailsComponent implements OnInit {
   protected readonly activeTab = signal<StoreTab>('about');
   protected readonly previewRewards = signal<RewardDto[]>([]);
   protected readonly offers = signal<CustomerCampaignDto[]>([]);
+  // How the business awards points. Empty when it has none, and the section is then left out.
+  protected readonly earnRules = signal<CustomerEarnRuleDto[]>([]);
+  protected readonly PointRuleType = PointRuleType;
+
+  protected currencyCode(currency: Currency | null | undefined): string {
+    return currency === Currency.Syp ? 'SYP' : 'USD';
+  }
   protected readonly offersLoaded = signal(false);
   protected readonly smartDeals = signal<CustomerSmartOfferDto[]>([]);
   protected readonly smartDealsLoaded = signal(false);
@@ -107,11 +116,15 @@ export class CustomerStoreDetailsComponent implements OnInit {
     return `${environment.apis.default.url}/api/app/business/${business.businessProfileId}/logo?v=${business.logoBlobName ?? ''}`;
   });
 
-  // Only branches that actually have a phone set — a business with some unlisted branches shouldn't
-  // show empty/placeholder rows in what's specifically a "Phone Numbers" list.
-  protected readonly branchesWithPhone = computed(
-    () => this.business()?.branches?.filter(b => !!b.phone) ?? [],
-  );
+  // Every branch the business lists, with whatever it has entered for each one. A branch with no address, hours or
+  // phone still shows its name, so a customer can see the business has more than one place.
+  protected readonly branches = computed(() => this.business()?.branches ?? []);
+
+  // Opens the branch in the device's maps app. Null when the business has not placed the branch on a map.
+  protected mapLink(branch: CustomerBusinessBranchDto): string | null {
+    if (branch.latitude == null || branch.longitude == null) return null;
+    return `https://www.google.com/maps/search/?api=1&query=${branch.latitude},${branch.longitude}`;
+  }
 
   ngOnInit(): void {
     this.route.paramMap.subscribe(params => {
@@ -216,6 +229,13 @@ export class CustomerStoreDetailsComponent implements OnInit {
     this.offersLoaded.set(false);
     this.smartDeals.set([]);
     this.smartDealsLoaded.set(false);
+    this.earnRules.set([]);
+    // Angular reuses this component across a same-route, different-store navigation (see the field comment on
+    // tenantId above). Without resetting these, the header could show "View My Points"/"Following" for a store the
+    // customer has not joined or followed, left over from whichever store was open before, until these two
+    // independent requests below happen to resolve.
+    this.isMember.set(false);
+    this.isFollowing.set(false);
 
     this.customerBusinessService.get(tenantId).subscribe({
       next: business => {
@@ -226,6 +246,11 @@ export class CustomerStoreDetailsComponent implements OnInit {
         this.isLoading.set(false);
         this.loadFailed.set(true);
       },
+    });
+
+    this.customerBusinessService.getEarnRules(tenantId).subscribe({
+      next: rules => this.earnRules.set(rules),
+      error: () => this.earnRules.set([]),
     });
 
     this.membershipsService.getMyWallets().subscribe({

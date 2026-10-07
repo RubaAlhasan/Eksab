@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Eksabli.SmartOffers;
 using Microsoft.AspNetCore.Authorization;
@@ -48,6 +49,25 @@ public class CustomerSmartOffersController : EksabliController
     public Task<CustomerSmartOfferDetailsDto> GetOfferDetailsAsync(Guid tenantId, Guid offerId)
     {
         return _customerSmartOfferAppService.GetOfferDetailsAsync(tenantId, offerId);
+    }
+
+    // "Tell me when this price drops." PUT and DELETE rather than POST so repeating either call is harmless.
+    [HttpPut("tenant/{tenantId}/offers/{offerId}/price-watch")]
+    public Task WatchPriceAsync(Guid tenantId, Guid offerId)
+    {
+        return _customerSmartOfferAppService.WatchPriceAsync(tenantId, offerId);
+    }
+
+    [HttpDelete("tenant/{tenantId}/offers/{offerId}/price-watch")]
+    public Task UnwatchPriceAsync(Guid tenantId, Guid offerId)
+    {
+        return _customerSmartOfferAppService.UnwatchPriceAsync(tenantId, offerId);
+    }
+
+    [HttpGet("price-watches/mine")]
+    public Task<List<SmartOfferWatchDto>> GetMyPriceWatchesAsync()
+    {
+        return _customerSmartOfferAppService.GetMyPriceWatchesAsync();
     }
 
     [HttpGet("orders/{tenantId}/{orderId}")]

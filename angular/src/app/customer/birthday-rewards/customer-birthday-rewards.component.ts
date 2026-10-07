@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
+import { LocalizedNamePipe } from '../../shared/pipes/localized-name.pipe';
 import { CustomerCampaignService } from '../../proxy/controllers/customer-campaign.service';
 import { CustomerProfileService } from '../../proxy/controllers/customer-profile.service';
 import { CampaignType } from '../../proxy/campaigns/campaign-type.enum';
@@ -22,7 +23,7 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
   selector: 'app-customer-birthday-rewards',
   templateUrl: './customer-birthday-rewards.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DatePipe, LocalizationPipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent],
+  imports: [RouterLink, DatePipe, LocalizationPipe, LocalizedNamePipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent],
 })
 export class CustomerBirthdayRewardsComponent implements OnInit {
   private readonly customerCampaignService = inject(CustomerCampaignService);

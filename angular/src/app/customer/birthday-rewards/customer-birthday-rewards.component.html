@@ -13,6 +13,14 @@
     </section>
   }
 
+  @if (!dateOfBirth()) {
+    <section class="eks-panel eks-rise text-center mb-4">
+      <p class="fw-semibold mb-1">{{ '::Wallet:BirthdayRewards:AddBirthdayTitle' | abpLocalization }}</p>
+      <p class="small text-muted mb-3">{{ '::Wallet:BirthdayRewards:AddBirthdayHint' | abpLocalization }}</p>
+      <a routerLink="/customer/profile/edit" class="btn btn-sm btn-outline-primary">{{ '::Wallet:BirthdayRewards:AddBirthdayButton' | abpLocalization }}</a>
+    </section>
+  }
+
   @if (birthdayCampaigns().length === 0) {
     <app-empty-state icon="fa-gift" [title]="'::Wallet:BirthdayRewards:Empty' | abpLocalization" [description]="'::Wallet:BirthdayRewards:EmptyHint' | abpLocalization" />
   } @else {
@@ -22,7 +30,7 @@
           <span class="eks-icon-tile eks-icon-tile--emoji" aria-hidden="true">🎂</span>
           <span class="eks-row__body">
             <span class="eks-row__meta">{{ campaign.businessName }}</span>
-            <span class="eks-row__title">{{ campaign.nameEn }}</span>
+            <span class="eks-row__title">{{ campaign.nameEn | localizedName: campaign.nameAr }}</span>
             <span class="eks-row__meta">
               {{ '::Wallet:Campaigns:Until' | abpLocalization }} {{ campaign.endDate | date: 'mediumDate' }}
             </span>

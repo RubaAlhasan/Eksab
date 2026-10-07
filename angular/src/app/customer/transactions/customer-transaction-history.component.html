@@ -1,9 +1,9 @@
 <div class="eks-chip-row mb-3">
-  <button type="button" class="eks-chip" [class.active]="selectedType() === null" (click)="selectType(null)">
+  <button type="button" class="eks-chip" [class.active]="selectedType() === null" [attr.aria-pressed]="selectedType() === null" (click)="selectType(null)">
     {{ '::Wallet:Transactions:FilterAll' | abpLocalization }}
   </button>
   @for (type of filterTypes; track type) {
-    <button type="button" class="eks-chip" [class.active]="selectedType() === type" (click)="selectType(type)">
+    <button type="button" class="eks-chip" [class.active]="selectedType() === type" [attr.aria-pressed]="selectedType() === type" (click)="selectType(type)">
       {{ typeLabelKey(type) | abpLocalization }}
     </button>
   }

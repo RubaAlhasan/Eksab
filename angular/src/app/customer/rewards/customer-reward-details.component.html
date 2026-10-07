@@ -3,7 +3,7 @@
     <div class="text-center mb-3">
       <span class="eks-icon-tile eks-icon-tile--emoji eks-icon-tile--xl" aria-hidden="true">{{ rewardTypeEmoji(reward.type) }}</span>
     </div>
-    <h1 class="h4 fw-bold text-center mb-1">{{ reward.nameEn }}</h1>
+    <h1 class="h4 fw-bold text-center mb-1">{{ reward.nameEn | localizedName: reward.nameAr }}</h1>
     <p class="eks-points-figure fs-4 text-center mb-3">{{ reward.pointsCost }} {{ '::Wallet:PointsSuffix' | abpLocalization }}</p>
 
     <div class="eks-list mb-3">

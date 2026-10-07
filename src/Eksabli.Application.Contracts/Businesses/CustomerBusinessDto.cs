@@ -17,6 +17,16 @@ public class CustomerBusinessBranchDto
     public string Name { get; set; } = string.Empty;
 
     public string? Phone { get; set; }
+
+    // Free text, as the business wrote it. Shown as-is: opening hours are not structured data on the branch.
+    public string? Address { get; set; }
+
+    public string? OpeningHours { get; set; }
+
+    // Set together or not at all; used for a "open in maps" link.
+    public double? Latitude { get; set; }
+
+    public double? Longitude { get; set; }
 }
 
 // Customer-safe projection of a business: what the consumer app needs to render a

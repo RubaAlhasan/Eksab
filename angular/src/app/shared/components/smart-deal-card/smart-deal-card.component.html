@@ -19,7 +19,7 @@
   </header>
 
   @if (showBusiness() && offer().businessName) {
-    <p class="eks-smart-deal__business text-truncate">{{ offer().businessName }}</p>
+    <a class="eks-smart-deal__business text-truncate" [routerLink]="['/customer/store', tenantId()]">{{ offer().businessName }}</a>
   }
   <h3 class="eks-smart-deal__title">{{ title() }}</h3>
   @if (description(); as text) {
@@ -91,6 +91,22 @@
     </div>
   }
 
+  @if (canWatchPrice()) {
+    <div class="d-flex justify-content-end mb-2">
+      <button
+        type="button"
+        class="btn btn-sm"
+        [class.btn-outline-secondary]="!watched()"
+        [class.btn-secondary]="watched()"
+        [attr.aria-pressed]="watched()"
+        (click)="toggleWatch()"
+      >
+        <i class="fas me-1" [class.fa-bell]="!watched()" [class.fa-bell-slash]="watched()" aria-hidden="true"></i>
+        {{ (watched() ? '::SmartDeals:Customer:StopWatching' : '::SmartDeals:Customer:WatchPrice') | abpLocalization }}
+      </button>
+    </div>
+  }
+
   @if (pendingOrder(); as order) {
     <section class="eks-smart-voucher" [class.eks-smart-voucher--done]="order.status === OrderStatus.Completed">
       @if (order.status === OrderStatus.Completed) {
@@ -140,7 +156,7 @@
         </button>
       </div>
     } @else {
-      <p class="eks-smart-deal__join">{{ '::SmartDeals:Customer:JoinToBuy' | abpLocalization }}</p>
+      <a class="eks-smart-deal__join" [routerLink]="['/customer/store', tenantId()]">{{ '::SmartDeals:Customer:JoinToBuy' | abpLocalization }}</a>
     }
   }
 </article>

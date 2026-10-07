@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { Router } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
 import { UserNotificationsService } from '../../proxy/controllers/user-notifications.service';
 import type { UserNotificationDto } from '../../proxy/user-notifications/models';
@@ -9,6 +10,37 @@ import { SkeletonListComponent } from '../../shared/components/skeleton-list/ske
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
+
+// Where a notification leads, or null when it has nothing to open. The backend names the event in `category` and
+// carries the business (or, for a support reply, the ticket) in `data` as JSON (see the publishers in the backend
+// notification code).
+function destinationFor(item: UserNotificationDto): string | null {
+  const payload = dataPayload(item.data);
+  switch (item.category) {
+    case 'points.earned':
+      return payload.tenantId ? `/customer/wallet/${payload.tenantId}` : null;
+    case 'reward.redeemed':
+    case 'reward.expired':
+      return '/customer/coupons';
+    case 'smartdeal.collected':
+      return '/customer/smart-deals/orders';
+    case 'smartdeal.price_drop':
+      return '/customer/smart-deals';
+    case 'support.replied':
+      return payload.ticketId ? `/customer/support/${payload.ticketId}` : '/customer/support';
+    default:
+      return null;
+  }
+}
+
+function dataPayload(data: string | null | undefined): { tenantId?: string; ticketId?: string } {
+  if (!data) return {};
+  try {
+    return JSON.parse(data) as { tenantId?: string; ticketId?: string };
+  } catch {
+    return {};
+  }
+}
 
 const PAGE_SIZE = 15;
 // Messages longer than this get a three-line preview and a "Show more" hint. Shorter ones are shown whole.
@@ -32,6 +64,7 @@ type FilterTab = 'all' | 'unread';
 export class CustomerNotificationsComponent implements OnInit {
   private readonly userNotificationsService = inject(UserNotificationsService);
   protected readonly hub = inject(NotificationHubService);
+  private readonly router = inject(Router);
 
   protected readonly Type = UserNotificationType;
   // Ids of the long notifications the member has opened to read in full.
@@ -67,11 +100,20 @@ export class CustomerNotificationsComponent implements OnInit {
   }
 
   protected onItemClick(item: UserNotificationDto): void {
-    if (item.isRead) return;
-    this.hub.markAsRead(item.id!);
-    this.notifications.update(list =>
-      list.map(n => (n.id === item.id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n)),
-    );
+    if (!item.isRead) {
+      this.hub.markAsRead(item.id!);
+      this.notifications.update(list =>
+        list.map(n => (n.id === item.id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n)),
+      );
+    }
+
+    // A notification that leads somewhere opens it; any other one just expands its own text.
+    const destination = destinationFor(item);
+    if (destination) {
+      void this.router.navigateByUrl(destination);
+      return;
+    }
+    this.toggleExpanded(item.id);
   }
 
   protected isLongMessage(message: string | null | undefined): boolean {

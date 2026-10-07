@@ -38,7 +38,7 @@
       [class.active]="selectedCategoryId() === category.id"
       (click)="selectCategory(category.id ?? null)"
     >
-      {{ category.nameEn }}
+      {{ category.nameEn | localizedName: category.nameAr }}
     </button>
   }
 </div>
@@ -65,7 +65,7 @@
         <span class="eks-row__body">
           <span class="eks-row__title">{{ business.name }}</span>
           <span class="eks-row__meta">
-            {{ categoryName(business) ?? ('::Wallet:Discover:Uncategorized' | abpLocalization) }}
+            {{ business.categoryNameEn || business.categoryNameAr ? (business.categoryNameEn | localizedName: business.categoryNameAr) : ('::Wallet:Discover:Uncategorized' | abpLocalization) }}
             @if (business.distanceKm !== null && business.distanceKm !== undefined) {
               · {{ business.distanceKm | number: '1.1-1' }} {{ '::Wallet:Discover:KmAway' | abpLocalization }}
             }
