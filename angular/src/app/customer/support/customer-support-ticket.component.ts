@@ -71,6 +71,10 @@ export class CustomerSupportTicketComponent implements OnInit {
       const id = params.get('ticketId');
       this.ticketId.set(id);
       if (id) {
+        // Angular reuses this component instance across a same-route, different-ticket navigation (see
+        // customer-points.component.ts's identical comment on why paramMap is read live rather than once). A draft
+        // reply for the ticket just left behind must not still be sitting in the box for the one just opened.
+        this.replyForm.reset();
         this.load(id);
       }
     });
@@ -153,6 +157,8 @@ export class CustomerSupportTicketComponent implements OnInit {
   private load(id: string): void {
     this.isLoading.set(true);
     this.loadFailed.set(false);
+    this.ticket.set(null);
+    this.messages.set([]);
     this.supportTicketsService.get(id).subscribe({
       next: ticket => {
         this.ticket.set(ticket);

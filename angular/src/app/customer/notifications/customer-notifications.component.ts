@@ -12,12 +12,13 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 
 // Where a notification leads, or null when it has nothing to open. The backend names the event in `category` and
-// carries the business in `data` as JSON (see the publishers in the backend notification code).
+// carries the business (or, for a support reply, the ticket) in `data` as JSON (see the publishers in the backend
+// notification code).
 function destinationFor(item: UserNotificationDto): string | null {
-  const tenantId = tenantIdFrom(item.data);
+  const payload = dataPayload(item.data);
   switch (item.category) {
     case 'points.earned':
-      return tenantId ? `/customer/wallet/${tenantId}` : null;
+      return payload.tenantId ? `/customer/wallet/${payload.tenantId}` : null;
     case 'reward.redeemed':
     case 'reward.expired':
       return '/customer/coupons';
@@ -25,18 +26,19 @@ function destinationFor(item: UserNotificationDto): string | null {
       return '/customer/smart-deals/orders';
     case 'smartdeal.price_drop':
       return '/customer/smart-deals';
+    case 'support.replied':
+      return payload.ticketId ? `/customer/support/${payload.ticketId}` : '/customer/support';
     default:
       return null;
   }
 }
 
-function tenantIdFrom(data: string | null | undefined): string | null {
-  if (!data) return null;
+function dataPayload(data: string | null | undefined): { tenantId?: string; ticketId?: string } {
+  if (!data) return {};
   try {
-    const parsed = JSON.parse(data) as { tenantId?: string | null };
-    return parsed.tenantId ?? null;
+    return JSON.parse(data) as { tenantId?: string; ticketId?: string };
   } catch {
-    return null;
+    return {};
   }
 }
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Eksabli.Notifications;
 using Eksabli.Permissions;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -17,11 +18,16 @@ public class SupportTicketAppService : ApplicationService, ISupportTicketAppServ
 {
     private readonly ISupportTicketRepository _repository;
     private readonly IPermissionChecker _permissionChecker;
+    private readonly INotificationPublisher _notificationPublisher;
 
-    public SupportTicketAppService(ISupportTicketRepository repository, IPermissionChecker permissionChecker)
+    public SupportTicketAppService(
+        ISupportTicketRepository repository,
+        IPermissionChecker permissionChecker,
+        INotificationPublisher notificationPublisher)
     {
         _repository = repository;
         _permissionChecker = permissionChecker;
+        _notificationPublisher = notificationPublisher;
     }
 
     public async Task<SupportTicketDto> CreateAsync(CreateSupportTicketDto input)
@@ -84,6 +90,21 @@ public class SupportTicketAppService : ApplicationService, ISupportTicketAppServ
 
         var message = ticket.AddMessage(GuidGenerator.Create(), CurrentUser.GetId(), input.Body, Clock.Now);
         await _repository.UpdateAsync(ticket);
+
+        // A customer's own ticket has an owner to tell apart from staff: whoever is not that owner is answering it.
+        // The customer replying to their own ticket needs no notice; staff answering it does. There is no equivalent
+        // single owner on a business's own ticket (TenantId set, CustomerId null), so that side is not notified here.
+        if (ticket.CustomerId.HasValue && message.SenderId != ticket.CustomerId.Value)
+        {
+            await _notificationPublisher.PublishToUserAsync(
+                ticket.CustomerId.Value,
+                ticket.TenantId,
+                UserNotificationType.Info,
+                "Support replied",
+                "You have a new reply on your support request.",
+                category: "support.replied",
+                data: new { ticketId = ticket.Id });
+        }
 
         return ObjectMapper.Map<SupportTicketMessage, SupportTicketMessageDto>(message);
     }

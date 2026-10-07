@@ -17,10 +17,12 @@
 } @else if (loadFailed()) {
   <app-error-state [message]="'::Wallet:Activity:LoadError' | abpLocalization" (retry)="retry()" />
 } @else if (isEmpty()) {
-  <app-empty-state icon="fa-clock-rotate-left" [title]="'::Wallet:Activity:Empty' | abpLocalization" [description]="'::Wallet:Activity:EmptyHint' | abpLocalization">
-    @if (hasWallets()) {
-      <p class="text-muted small mb-0">{{ '::Wallet:Activity:EmptyFilterHint' | abpLocalization }}</p>
-    } @else {
+  <app-empty-state
+    icon="fa-clock-rotate-left"
+    [title]="emptyTitleKey() | abpLocalization"
+    [description]="emptyDescriptionKey() ? (emptyDescriptionKey()! | abpLocalization) : undefined"
+  >
+    @if (!hasWallets()) {
       <a routerLink="/customer/search" class="btn btn-sm btn-outline-primary">{{ '::Wallet:Favorites:Discover' | abpLocalization }}</a>
     }
   </app-empty-state>

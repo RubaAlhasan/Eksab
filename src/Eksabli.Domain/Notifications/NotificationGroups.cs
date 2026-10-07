@@ -5,7 +5,8 @@ namespace Eksabli.Notifications;
 public static class NotificationGroups
 {
     // Maps a notification's category to the group a customer can turn off. Null means the category cannot be turned off:
-    // billing notices go to business staff, who have no notification preferences screen.
+    // billing notices go to business staff, who have no notification preferences screen, and a support reply is an
+    // answer to something the customer themselves asked for, not the kind of thing "Offers and announcements" covers.
     public static NotificationGroup? Of(string? category)
     {
         if (string.IsNullOrEmpty(category))
@@ -13,7 +14,7 @@ public static class NotificationGroups
             return NotificationGroup.Offers;
         }
 
-        if (category.StartsWith("billing.", StringComparison.Ordinal))
+        if (category.StartsWith("billing.", StringComparison.Ordinal) || category.StartsWith("support.", StringComparison.Ordinal))
         {
             return null;
         }

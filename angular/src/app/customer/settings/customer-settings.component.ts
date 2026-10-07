@@ -14,13 +14,14 @@ import { CustomerThemeService } from '../../shared/services/customer-theme.servi
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 
 /**
- * Settings — deliberately minimal. The prototype's settings.html also has push/email/SMS toggles, dark
- * mode, and delete-account; none of those are backed by anything real (no notification-preference
- * endpoint exists anywhere, no self-service delete-account endpoint exists, and the customer shell has
- * no dark theme defined yet — see customer-layout.component.ts's own comment on deferring that). Only
- * Language (same `RouteBasedCultureUrlService`/`SessionStateService` pattern already used in
+ * Settings. Notifications (three switches, `CustomerNotificationPreferencesService` —
+ * `NotificationPublisher` drops a switched-off group before anything is written, see its own comment)
+ * and Appearance (dark mode, `CustomerThemeService` — the choice is remembered on this device, not synced
+ * anywhere) are both real, backend-or-device-backed capabilities, same as Language (the
+ * `RouteBasedCultureUrlService`/`SessionStateService` pattern already used in
  * business-layout.component.ts) and Linked Devices (`DevicesService` — real push-token registrations,
- * e.g. from the mobile app) are built here, because those are the only two real capabilities.
+ * e.g. from the mobile app). The prototype's settings.html also has a delete-account action; no
+ * self-service delete-account endpoint exists, so that one is still left out.
  */
 @Component({
   selector: 'app-customer-settings',

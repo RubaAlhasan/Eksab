@@ -347,7 +347,6 @@
     "Wallet:Activity:LoadError": "We could not load your activity. Try again.",
     "Wallet:Activity:Empty": "No activity yet",
     "Wallet:Activity:EmptyHint": "Points you earn and spend at any business you belong to appear here.",
-    "Wallet:Activity:EmptyFilterHint": "Nothing matches this filter.",
     "Wallet:Profile:HelpSupport": "Help & support",
     "Wallet:Support:Title": "Help & support",
     "Wallet:Support:NewTitle": "New request",

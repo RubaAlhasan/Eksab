@@ -17,9 +17,9 @@ import { isCredit, transactionSourceLabelKey, transactionTypeLabelKey } from '..
  * since that's what every downstream endpoint (transaction history, reward catalog, redeem) is actually
  * keyed by; the wallet itself has no by-id getter so it's filtered from `getMyWallets()`.
  *
- * No tier-progress bar: `TiersController` is gated on `Eksabli.Tiers.Default`, a staff-only permission a
- * customer account never holds, so there's no way to fetch the next tier's threshold from here — same
- * kind of documented gap as `business-rewards.component.ts`'s missing redemption-rate metric.
+ * The tier-progress bar reads `PointsWalletDto`'s own tier fields (current tier's floor, next tier's name
+ * and floor) rather than calling `TiersController`, which stays gated on `Eksabli.Tiers.Default`, a
+ * staff-only permission a customer account never holds. `GetMyWalletsAsync` already resolves those fields.
  */
 @Component({
   selector: 'app-customer-points',
@@ -138,6 +138,10 @@ export class CustomerPointsComponent implements OnInit {
   private load(tenantId: string): void {
     this.isLoading.set(true);
     this.loadFailed.set(false);
+    // Reset before either request resolves: this component is reused across a same-route, different-business
+    // navigation (see tenantId's own comment above), and without this the previous business's recent activity
+    // could flash on screen until this business's own history call resolves.
+    this.recentActivity.set([]);
 
     this.membershipsService.getMyWallets().subscribe({
       next: wallets => {

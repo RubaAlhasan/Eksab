@@ -70,6 +70,16 @@ export class CustomerActivityComponent implements OnInit {
 
   protected readonly isEmpty = computed(() => !this.isLoading() && !this.loadFailed() && this.rows().length === 0);
 
+  // "No activity yet" only when that is actually true (no wallets, or no filter narrowing the view). A filter that
+  // matches nothing, with history sitting elsewhere, gets the same "nothing matches this filter" title the per-business
+  // Transactions page already uses — not a claim that the customer has no activity at all.
+  protected readonly emptyTitleKey = computed(() =>
+    this.hasWallets() && this.filter() !== null ? '::Wallet:Transactions:FilterEmpty' : '::Wallet:Activity:Empty',
+  );
+  protected readonly emptyDescriptionKey = computed(() =>
+    !this.hasWallets() || this.filter() === null ? '::Wallet:Activity:EmptyHint' : null,
+  );
+
   ngOnInit(): void {
     this.load();
   }

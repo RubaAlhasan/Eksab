@@ -38,11 +38,9 @@ const SMART_DEALS_PAGE_SIZE = 6;
  * this same form with extra navigation.
  *
  * No star rating anywhere — `CustomerBusinessDto` has no such field (confirmed by reading it); the
- * prototype's rating is fake data, not translated here. Still no per-branch address list or a dedicated
- * "Branches" tab (with pins/addresses) — `BranchCount` stays an aggregate stat — but each branch's own
- * phone number (already a real per-branch field, `Branch.Phone`) is now surfaced under About as a
- * "Phone Numbers" list, since a business's phone numbers already are exactly its branches' phones; no
- * new phone-list concept was added, this just makes existing data customer-visible.
+ * prototype's rating is fake data, not translated here. `BranchCount` stays the header's own aggregate
+ * stat, but About now also lists each branch by name with its address, opening hours (as the business
+ * wrote them — free text, not structured), a maps link when it has been placed on a map, and its phone.
  */
 @Component({
   selector: 'app-customer-store-details',
@@ -231,6 +229,13 @@ export class CustomerStoreDetailsComponent implements OnInit {
     this.offersLoaded.set(false);
     this.smartDeals.set([]);
     this.smartDealsLoaded.set(false);
+    this.earnRules.set([]);
+    // Angular reuses this component across a same-route, different-store navigation (see the field comment on
+    // tenantId above). Without resetting these, the header could show "View My Points"/"Following" for a store the
+    // customer has not joined or followed, left over from whichever store was open before, until these two
+    // independent requests below happen to resolve.
+    this.isMember.set(false);
+    this.isFollowing.set(false);
 
     this.customerBusinessService.get(tenantId).subscribe({
       next: business => {

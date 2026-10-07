@@ -231,7 +231,6 @@
     "Wallet:Activity:LoadError": "تعذّر تحميل نشاطك. حاول مرة أخرى.",
     "Wallet:Activity:Empty": "لا يوجد نشاط بعد",
     "Wallet:Activity:EmptyHint": "تظهر هنا النقاط التي تكسبها وتنفقها في أي متجر أنت عضو فيه.",
-    "Wallet:Activity:EmptyFilterHint": "لا يوجد ما يطابق هذا الفلتر.",
     "Wallet:Profile:HelpSupport": "المساعدة والدعم",
     "Wallet:Support:Title": "المساعدة والدعم",
     "Wallet:Support:NewTitle": "طلب جديد",
