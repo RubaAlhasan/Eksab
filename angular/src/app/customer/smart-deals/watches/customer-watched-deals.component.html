@@ -1,0 +1,19 @@
+<div class="eks-watches">
+  @if (!ready()) {
+    <app-skeleton-list variant="grid" [count]="4" [label]="'::SmartDeals:Loading' | abpLocalization" />
+  } @else if (loadFailed()) {
+    <app-error-state [message]="'::SmartDeals:LoadError' | abpLocalization" (retry)="retry()" />
+  } @else if (watchedDeals().length === 0) {
+    <app-empty-state
+      icon="fa-bell"
+      [title]="'::SmartDeals:Watches:EmptyTitle' | abpLocalization"
+      [description]="'::SmartDeals:Watches:EmptyDescription' | abpLocalization"
+    />
+  } @else {
+    <div class="eks-deal-grid">
+      @for (deal of watchedDeals(); track deal.id) {
+        <app-smart-deal-card [offer]="deal" [tenantId]="deal.tenantId ?? ''" [canBuy]="deal.isMember === true" [showBusiness]="true" />
+      }
+    </div>
+  }
+</div>

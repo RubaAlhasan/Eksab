@@ -5,9 +5,14 @@
         {{ '::SmartDeals:Browse:Summary' | abpLocalization: feed().length.toString() : liveCount().toString() }}
       </p>
     }
-    <a routerLink="/customer/smart-deals/orders" class="eks-section-link">
-      <i class="fas fa-receipt me-1" aria-hidden="true"></i>{{ '::SmartDeals:Browse:MyOrders' | abpLocalization }}
-    </a>
+    <div class="d-flex align-items-center gap-3">
+      <a routerLink="/customer/smart-deals/watches" class="eks-section-link">
+        <i class="fas fa-bell me-1" aria-hidden="true"></i>{{ '::SmartDeals:Browse:MyWatches' | abpLocalization }}
+      </a>
+      <a routerLink="/customer/smart-deals/orders" class="eks-section-link">
+        <i class="fas fa-receipt me-1" aria-hidden="true"></i>{{ '::SmartDeals:Browse:MyOrders' | abpLocalization }}
+      </a>
+    </div>
   </div>
 
   <div class="eks-deals-browse__filters">

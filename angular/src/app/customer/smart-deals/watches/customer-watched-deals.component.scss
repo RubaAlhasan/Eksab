@@ -1,0 +1,22 @@
+.eks-watches {
+  padding-bottom: 1.5rem;
+}
+
+// Same grid as the Browse page (customer-smart-deals.component.scss) — duplicated rather than shared
+// because Angular's emulated style encapsulation scopes it to that component's own template.
+// One column on a phone; two side by side from tablet width. Cards keep their natural height, so a short
+// card never stretches to match a tall neighbour.
+.eks-deal-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.875rem;
+  align-items: start;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (min-width: 1200px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
