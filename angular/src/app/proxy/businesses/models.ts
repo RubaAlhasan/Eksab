@@ -64,6 +64,8 @@ export interface CustomerBusinessDto {
   hasLogo: boolean;
   logoBlobName?: string | null;
   branchCount: number;
+  averageRating: number;
+  reviewCount: number;
   distanceKm?: number | null;
   branches: CustomerBusinessBranchDto[];
 }

@@ -92,6 +92,9 @@ public class EksabliPermissionDefinitionProvider : PermissionDefinitionProvider
         followersPermission.AddChild(EksabliPermissions.Followers.View, L("Permission:Followers.View"), MultiTenancySides.Tenant);
         followersPermission.AddChild(EksabliPermissions.Followers.ConvertToCampaign, L("Permission:Followers.ConvertToCampaign"), MultiTenancySides.Tenant);
 
+        var reviewsPermission = myGroup.AddPermission(EksabliPermissions.Reviews.Default, L("Permission:Reviews"), MultiTenancySides.Tenant);
+        reviewsPermission.AddChild(EksabliPermissions.Reviews.Moderate, L("Permission:Reviews.Moderate"), MultiTenancySides.Tenant);
+
         // This tenant's own Business Portal reports/export — distinct from the Host-only
         // PlatformReports block further down.
         var reportsPermission = myGroup.AddPermission(EksabliPermissions.Reports.Default, L("Permission:Reports"), MultiTenancySides.Tenant);

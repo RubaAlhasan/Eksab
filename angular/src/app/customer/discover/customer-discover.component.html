@@ -70,6 +70,12 @@
         }
         <span class="eks-row__body">
           <span class="eks-row__title">{{ business.name }}</span>
+          @if (business.reviewCount > 0) {
+            <span class="d-flex align-items-center gap-1">
+              <app-star-rating [rating]="business.averageRating" />
+              <span class="eks-row__meta">{{ business.averageRating | number: '1.1-1' }} ({{ business.reviewCount }})</span>
+            </span>
+          }
           <span class="eks-row__meta">
             {{ business.categoryNameEn || business.categoryNameAr ? (business.categoryNameEn | localizedName: business.categoryNameAr) : ('::Wallet:Discover:Uncategorized' | abpLocalization) }}
             @if (business.distanceKm !== null && business.distanceKm !== undefined) {

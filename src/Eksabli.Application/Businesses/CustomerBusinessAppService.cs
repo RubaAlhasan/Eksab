@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Eksabli.Branches;
 using Eksabli.BusinessProfiles;
 using Eksabli.Platform;
+using Eksabli.Reviews;
 using Eksabli.Wallets;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
@@ -35,6 +36,7 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
     private readonly IRepository<Category, Guid> _categoryRepository;
     private readonly IRepository<Branch, Guid> _branchRepository;
     private readonly IRepository<PointRule, Guid> _pointRuleRepository;
+    private readonly IRepository<Review, Guid> _reviewRepository;
     private readonly IDataFilter _dataFilter;
 
     public CustomerBusinessAppService(
@@ -43,6 +45,7 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
         IRepository<Category, Guid> categoryRepository,
         IRepository<Branch, Guid> branchRepository,
         IRepository<PointRule, Guid> pointRuleRepository,
+        IRepository<Review, Guid> reviewRepository,
         IDataFilter dataFilter)
     {
         _businessProfileRepository = businessProfileRepository;
@@ -50,6 +53,7 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
         _categoryRepository = categoryRepository;
         _branchRepository = branchRepository;
         _pointRuleRepository = pointRuleRepository;
+        _reviewRepository = reviewRepository;
         _dataFilter = dataFilter;
     }
 
@@ -174,6 +178,13 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
                 .GroupBy(b => b.TenantId!.Value)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
+            // Review is also IMultiTenant-filtered; already inside the disabled-filter block above, so
+            // this reads every tenant's reviews in one query, same "bounded in-memory batch" shape
+            // CategoryAppService.CountBusinessesByCategoryAsync uses for its own cross-tenant count.
+            var reviewStats = (await _reviewRepository.GetListAsync(r => r.TenantId != null && tenantIds.Contains(r.TenantId.Value)))
+                .GroupBy(r => r.TenantId!.Value)
+                .ToDictionary(g => g.Key, g => (Average: g.Average(r => r.Rating), Count: g.Count()));
+
             return profiles.Select(p =>
             {
                 var tenantId = p.TenantId!.Value;
@@ -181,6 +192,7 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
                 var category = p.CategoryId.HasValue
                     ? categories.GetValueOrDefault(p.CategoryId.Value)
                     : null;
+                var reviewStat = reviewStats.GetValueOrDefault(tenantId);
 
                 return new CustomerBusinessDto
                 {
@@ -203,6 +215,8 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
                     HasLogo = !p.LogoBlobName.IsNullOrWhiteSpace(),
                     LogoBlobName = p.LogoBlobName,
                     BranchCount = tenantBranches.Count,
+                    AverageRating = reviewStat.Average,
+                    ReviewCount = reviewStat.Count,
                     DistanceKm = NearestBranchDistanceKm(tenantBranches, latitude, longitude),
                     Branches = tenantBranches
                                                 .Select(b => new CustomerBusinessBranchDto

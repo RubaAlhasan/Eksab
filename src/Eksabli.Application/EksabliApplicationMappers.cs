@@ -14,6 +14,7 @@ using Eksabli.Offers;
 using Eksabli.Notifications;
 using Eksabli.Engagement;
 using Eksabli.Platform;
+using Eksabli.Reviews;
 using Eksabli.Sms;
 using Eksabli.SmartOffers;
 
@@ -254,6 +255,18 @@ public partial class EksabliCategoryToCategoryDtoMapper : MapperBase<Category, C
 
     [MapperIgnoreTarget(nameof(CategoryDto.BusinessCount))]
     public override partial void Map(Category source, CategoryDto destination);
+}
+
+[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
+public partial class EksabliReviewToReviewDtoMapper : MapperBase<Review, ReviewDto>
+{
+    // ReviewerName isn't a Review property — it's derived from CustomerProfile and set by
+    // CustomerReviewAppService after mapping, same pattern as CategoryDto.BusinessCount above.
+    [MapperIgnoreTarget(nameof(ReviewDto.ReviewerName))]
+    public override partial ReviewDto Map(Review source);
+
+    [MapperIgnoreTarget(nameof(ReviewDto.ReviewerName))]
+    public override partial void Map(Review source, ReviewDto destination);
 }
 
 // Messages is mapped manually in SupportTicketAppService (source is IReadOnlyCollection<SupportTicketMessage>,

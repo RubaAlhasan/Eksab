@@ -10,12 +10,14 @@ import { MembershipsService } from '../../proxy/controllers/memberships.service'
 import { CouponsService } from '../../proxy/controllers/coupons.service';
 import { CustomerSmartOffersService } from '../../proxy/controllers/customer-smart-offers.service';
 import { CustomerCampaignService } from '../../proxy/controllers/customer-campaign.service';
+import { ReviewsService } from '../../proxy/controllers/reviews.service';
 import type { CustomerBusinessBranchDto, CustomerBusinessDto, CustomerEarnRuleDto } from '../../proxy/businesses/models';
 import { PointRuleType } from '../../proxy/wallets/point-rule-type.enum';
 import { Currency } from '../../proxy/shared/currency.enum';
 import type { RewardDto } from '../../proxy/rewards/models';
 import type { CustomerSmartOfferDto } from '../../proxy/smart-offers/models';
 import type { CustomerCampaignDto } from '../../proxy/campaigns/models';
+import type { ReviewDto } from '../../proxy/reviews/models';
 import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
 import { displayUrl, toExternalHref } from '../../shared/utils/contact-display.util';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
@@ -23,8 +25,11 @@ import { rewardTypeEmoji } from '../../shared/utils/reward-display.util';
 import { campaignTypeEmoji, campaignTypeLabelKey } from '../../shared/utils/campaign-display.util';
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { SmartDealCardComponent } from '../../shared/components/smart-deal-card/smart-deal-card.component';
+import { StarRatingComponent } from '../../shared/components/star-rating/star-rating.component';
 
-type StoreTab = 'about' | 'offers' | 'rewards';
+type StoreTab = 'about' | 'offers' | 'rewards' | 'reviews';
+
+const REVIEWS_PAGE_SIZE = 10;
 
 // Smart deals from this business, paged in the browser: the list is already loaded in full for the Offers tab.
 const SMART_DEALS_PAGE_SIZE = 6;
@@ -37,10 +42,15 @@ const SMART_DEALS_PAGE_SIZE = 6;
  * ReferralCode — confirmed by reading it) — so once that tab is dropped, a separate screen would just be
  * this same form with extra navigation.
  *
- * No star rating anywhere — `CustomerBusinessDto` has no such field (confirmed by reading it); the
- * prototype's rating is fake data, not translated here. `BranchCount` stays the header's own aggregate
- * stat, but About now also lists each branch by name with its address, opening hours (as the business
- * wrote them — free text, not structured), a maps link when it has been placed on a map, and its phone.
+ * `BranchCount` stays the header's own aggregate stat, but About also lists each branch by name with
+ * its address, opening hours (as the business wrote them — free text, not structured), a maps link when
+ * it has been placed on a map, and its phone.
+ *
+ * The star rating shown in the header and the Reviews tab is real, server-computed
+ * (`CustomerBusinessDto.AverageRating`/`ReviewCount`, see `CustomerBusinessAppService.BuildAsync`) —
+ * not the prototype's fake data. Writing a review requires an active membership (`isMember`, already
+ * tracked for the Join/Follow buttons); at most one review per customer per business, so submitting
+ * again edits the same row (`ReviewsService.createOrUpdateMyReview`) rather than adding another.
  */
 @Component({
   selector: 'app-customer-store-details',
@@ -57,6 +67,7 @@ const SMART_DEALS_PAGE_SIZE = 6;
     ErrorStateComponent,
     PaginationComponent,
     SmartDealCardComponent,
+    StarRatingComponent,
   ],
 })
 export class CustomerStoreDetailsComponent implements OnInit {
@@ -67,6 +78,7 @@ export class CustomerStoreDetailsComponent implements OnInit {
   private readonly couponsService = inject(CouponsService);
   private readonly customerCampaignService = inject(CustomerCampaignService);
   private readonly customerSmartOffersService = inject(CustomerSmartOffersService);
+  private readonly reviewsService = inject(ReviewsService);
 
   // See customer-points.component.ts's identical comment on why this isn't a snapshot field
   // initializer.
@@ -105,6 +117,18 @@ export class CustomerStoreDetailsComponent implements OnInit {
   protected readonly showJoinForm = signal(false);
   protected readonly referralCode = signal('');
   protected readonly isJoining = signal(false);
+
+  protected readonly reviews = signal<ReviewDto[]>([]);
+  protected readonly reviewsTotalCount = signal(0);
+  protected readonly reviewsPageIndex = signal(0);
+  protected readonly reviewsLoaded = signal(false);
+  protected readonly reviewsPages = computed(() => Math.max(1, Math.ceil(this.reviewsTotalCount() / REVIEWS_PAGE_SIZE)));
+  protected readonly myReview = signal<ReviewDto | null>(null);
+  // Draft state for the "write a review" form — separate from myReview so editing doesn't change what's
+  // shown as "your current review" until Save actually succeeds.
+  protected readonly myReviewRating = signal(0);
+  protected readonly myReviewComment = signal('');
+  protected readonly isSavingReview = signal(false);
 
   protected readonly rewardTypeEmoji = rewardTypeEmoji;
   protected readonly campaignTypeEmoji = campaignTypeEmoji;
@@ -172,6 +196,92 @@ export class CustomerStoreDetailsComponent implements OnInit {
         error: () => undefined,
       });
     }
+    if (tab === 'reviews' && !this.reviewsLoaded()) {
+      this.loadReviews(0);
+      if (this.isMember()) {
+        this.reviewsService.getMyReview(this.tenantId).subscribe({
+          next: review => this.setMyReview(review),
+          error: () => undefined,
+        });
+      }
+    }
+  }
+
+  protected goToReviewsPage(index: number): void {
+    if (index < 0 || index >= this.reviewsPages()) return;
+    this.loadReviews(index);
+  }
+
+  protected setMyReviewRating(rating: number): void {
+    this.myReviewRating.set(rating);
+  }
+
+  protected onReviewCommentInput(event: Event): void {
+    this.myReviewComment.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  protected submitMyReview(): void {
+    if (this.isSavingReview() || this.myReviewRating() < 1) return;
+
+    this.isSavingReview.set(true);
+    this.reviewsService.createOrUpdateMyReview(this.tenantId, {
+      rating: this.myReviewRating(),
+      comment: this.myReviewComment().trim() || null,
+    }).subscribe({
+      next: review => {
+        this.isSavingReview.set(false);
+        this.setMyReview(review);
+        this.loadReviews(0);
+        this.refreshBusinessRating();
+      },
+      error: () => this.isSavingReview.set(false),
+    });
+  }
+
+  protected deleteMyReview(): void {
+    if (this.isSavingReview()) return;
+
+    this.isSavingReview.set(true);
+    this.reviewsService.deleteMyReview(this.tenantId).subscribe({
+      next: () => {
+        this.isSavingReview.set(false);
+        this.setMyReview(null);
+        this.loadReviews(0);
+        this.refreshBusinessRating();
+      },
+      error: () => this.isSavingReview.set(false),
+    });
+  }
+
+  private setMyReview(review: ReviewDto | null): void {
+    this.myReview.set(review);
+    this.myReviewRating.set(review?.rating ?? 0);
+    this.myReviewComment.set(review?.comment ?? '');
+  }
+
+  // The average/count shown in the header and the Reviews tab live on CustomerBusinessDto, a separate
+  // call from the review list itself — re-read after a write so both stay in sync with the new rating.
+  private refreshBusinessRating(): void {
+    this.customerBusinessService.get(this.tenantId).subscribe({
+      next: business => this.business.set(business),
+      error: () => undefined,
+    });
+  }
+
+  private loadReviews(pageIndex: number): void {
+    this.reviewsPageIndex.set(pageIndex);
+    this.reviewsService.getList(this.tenantId, {
+      skipCount: pageIndex * REVIEWS_PAGE_SIZE,
+      maxResultCount: REVIEWS_PAGE_SIZE,
+      sorting: 'creationTime desc',
+    }).subscribe({
+      next: result => {
+        this.reviews.set(result.items ?? []);
+        this.reviewsTotalCount.set(result.totalCount ?? 0);
+        this.reviewsLoaded.set(true);
+      },
+      error: () => undefined,
+    });
   }
 
   protected toggleFollow(): void {
@@ -230,6 +340,11 @@ export class CustomerStoreDetailsComponent implements OnInit {
     this.smartDeals.set([]);
     this.smartDealsLoaded.set(false);
     this.earnRules.set([]);
+    this.reviews.set([]);
+    this.reviewsTotalCount.set(0);
+    this.reviewsPageIndex.set(0);
+    this.reviewsLoaded.set(false);
+    this.setMyReview(null);
     // Angular reuses this component across a same-route, different-store navigation (see the field comment on
     // tenantId above). Without resetting these, the header could show "View My Points"/"Following" for a store the
     // customer has not joined or followed, left over from whichever store was open before, until these two
