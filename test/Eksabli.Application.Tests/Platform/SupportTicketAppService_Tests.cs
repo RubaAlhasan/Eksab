@@ -1,7 +1,9 @@
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Eksabli.Notifications;
 using Shouldly;
+using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Modularity;
 using Volo.Abp.Security.Claims;
 using Xunit;
@@ -13,12 +15,17 @@ public abstract class SupportTicketAppService_Tests<TStartupModule> : EksabliApp
 {
     private readonly ISupportTicketAppService _supportTicketAppService;
     private readonly ICurrentPrincipalAccessor _currentPrincipalAccessor;
+    private readonly IRepository<UserNotification, Guid> _userNotificationRepository;
 
     protected SupportTicketAppService_Tests()
     {
         _supportTicketAppService = GetRequiredService<ISupportTicketAppService>();
         _currentPrincipalAccessor = GetRequiredService<ICurrentPrincipalAccessor>();
+        _userNotificationRepository = GetRequiredService<IRepository<UserNotification, Guid>>();
     }
+
+    private async Task<int> InboxCountAsync(Guid userId) =>
+        (await _userNotificationRepository.GetListAsync(n => n.UserId == userId)).Count;
 
     private IDisposable LoginAs(Guid userId)
     {
@@ -92,6 +99,58 @@ public abstract class SupportTicketAppService_Tests<TStartupModule> : EksabliApp
         var ticket = await WithUnitOfWorkAsync(() => _supportTicketAppService.GetAsync(ticketId));
         ticket.Status.ShouldBe(SupportTicketStatus.InProgress);
         ticket.Messages.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task AddMessageAsync_Should_Notify_The_Customer_When_Someone_Else_Replies()
+    {
+        var customerId = Guid.NewGuid();
+        var staffId = Guid.NewGuid();
+        Guid ticketId;
+
+        using (LoginAs(customerId))
+        {
+            var created = await WithUnitOfWorkAsync(() => _supportTicketAppService.CreateAsync(new CreateSupportTicketDto
+            {
+                Subject = "Can't redeem a coupon",
+                Body = "The QR code isn't scanning at checkout.",
+            }));
+            ticketId = created.Id;
+        }
+
+        using (LoginAs(staffId))
+        {
+            await WithUnitOfWorkAsync(() => _supportTicketAppService.AddMessageAsync(ticketId, new AddSupportTicketMessageDto
+            {
+                Body = "We're looking into this — can you try again now?",
+            }));
+        }
+
+        (await InboxCountAsync(customerId)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task AddMessageAsync_Should_Not_Notify_The_Customer_For_Their_Own_Follow_Up()
+    {
+        var customerId = Guid.NewGuid();
+        Guid ticketId;
+
+        using (LoginAs(customerId))
+        {
+            var created = await WithUnitOfWorkAsync(() => _supportTicketAppService.CreateAsync(new CreateSupportTicketDto
+            {
+                Subject = "Points didn't post",
+                Body = "I bought coffee an hour ago and still see zero points.",
+            }));
+            ticketId = created.Id;
+
+            await WithUnitOfWorkAsync(() => _supportTicketAppService.AddMessageAsync(ticketId, new AddSupportTicketMessageDto
+            {
+                Body = "Still nothing, any update?",
+            }));
+        }
+
+        (await InboxCountAsync(customerId)).ShouldBe(0);
     }
 
     [Fact]

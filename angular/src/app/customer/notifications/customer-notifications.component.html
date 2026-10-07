@@ -44,7 +44,7 @@
         type="button"
         class="eks-row eks-row--action"
         [attr.aria-expanded]="isLongMessage(item.message) ? isExpanded(item.id) : null"
-        (click)="onItemClick(item); toggleExpanded(item.id)"
+        (click)="onItemClick(item)"
       >
         <span class="eks-icon-tile" aria-hidden="true"><i class="fas {{ iconFor(item.type) }}"></i></span>
         <span class="eks-row__body">

@@ -3,19 +3,25 @@ import { DatePipe } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ConfigStateService, LocalizationPipe, RouteBasedCultureUrlService, SessionStateService } from '@abp/ng.core';
 import { DevicesService } from '../../proxy/controllers/devices.service';
+import {
+  CustomerNotificationPreferencesService,
+  NotificationPreferencesDto,
+} from '../../proxy/controllers/customer-notification-preferences.service';
 import type { DeviceDto } from '../../proxy/devices/models';
 import { DevicePlatform } from '../../proxy/devices/device-platform.enum';
 import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
+import { CustomerThemeService } from '../../shared/services/customer-theme.service';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 
 /**
- * Settings — deliberately minimal. The prototype's settings.html also has push/email/SMS toggles, dark
- * mode, and delete-account; none of those are backed by anything real (no notification-preference
- * endpoint exists anywhere, no self-service delete-account endpoint exists, and the customer shell has
- * no dark theme defined yet — see customer-layout.component.ts's own comment on deferring that). Only
- * Language (same `RouteBasedCultureUrlService`/`SessionStateService` pattern already used in
+ * Settings. Notifications (three switches, `CustomerNotificationPreferencesService` —
+ * `NotificationPublisher` drops a switched-off group before anything is written, see its own comment)
+ * and Appearance (dark mode, `CustomerThemeService` — the choice is remembered on this device, not synced
+ * anywhere) are both real, backend-or-device-backed capabilities, same as Language (the
+ * `RouteBasedCultureUrlService`/`SessionStateService` pattern already used in
  * business-layout.component.ts) and Linked Devices (`DevicesService` — real push-token registrations,
- * e.g. from the mobile app) are built here, because those are the only two real capabilities.
+ * e.g. from the mobile app). The prototype's settings.html also has a delete-account action; no
+ * self-service delete-account endpoint exists, so that one is still left out.
  */
 @Component({
   selector: 'app-customer-settings',
@@ -29,6 +35,11 @@ export class CustomerSettingsComponent implements OnInit {
   private readonly sessionState = inject(SessionStateService);
   private readonly cultureUrlService = inject(RouteBasedCultureUrlService);
   private readonly devicesService = inject(DevicesService);
+  protected readonly theme = inject(CustomerThemeService);
+  private readonly notificationPreferences = inject(CustomerNotificationPreferencesService);
+
+  // The three switches. Null until loaded; a switch shows nothing rather than a guess while the answer is pending.
+  protected readonly preferences = signal<NotificationPreferencesDto | null>(null);
 
   protected readonly Platform = DevicePlatform;
   protected readonly languages = computed(() => {
@@ -43,7 +54,25 @@ export class CustomerSettingsComponent implements OnInit {
   protected readonly isLoading = signal(true);
   protected readonly removingIds = signal<Set<string>>(new Set());
 
+  // Each switch saves on change. The new value shows at once and is put back if the server refuses it.
+  protected setPreference(group: keyof NotificationPreferencesDto, enabled: boolean): void {
+    const current = this.preferences();
+    if (!current) return;
+
+    const next = { ...current, [group]: enabled };
+    this.preferences.set(next);
+    this.notificationPreferences.updateMine(next).subscribe({
+      next: saved => this.preferences.set(saved),
+      error: () => this.preferences.set(current),
+    });
+  }
+
   ngOnInit(): void {
+    this.notificationPreferences.getMine().subscribe({
+      next: prefs => this.preferences.set(prefs),
+      error: () => undefined,
+    });
+
     this.devicesService.getList().subscribe({
       next: devices => {
         this.devices.set(devices);

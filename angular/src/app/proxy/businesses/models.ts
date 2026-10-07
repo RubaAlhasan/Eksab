@@ -1,6 +1,7 @@
 import type { TenantApprovalStatus } from '../business-profiles/tenant-approval-status.enum';
 import type { PagedAndSortedResultRequestDto, PagedResultRequestDto } from '@abp/ng.core';
 import type { Currency } from '../shared/currency.enum';
+import type { PointRuleType } from '../wallets/point-rule-type.enum';
 
 export interface AdminTenantDto {
   tenantId?: string;
@@ -42,6 +43,10 @@ export interface CustomerBusinessBranchDto {
   id: string;
   name: string;
   phone?: string | null;
+  address?: string | null;
+  openingHours?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface CustomerBusinessDto {
@@ -100,4 +105,11 @@ export interface RegisterBusinessDto {
   ownerPassword: string;
   // Defaults to Syp server-side when omitted — see the backend DTO's own comment.
   currency?: Currency;
+}
+
+// Hand-added — mirrors Eksabli.Businesses.CustomerEarnRuleDto (CustomerBusinessController's earn-rules endpoint).
+export interface CustomerEarnRuleDto {
+  ruleType: PointRuleType;
+  pointsPerUnit: number;
+  currency?: Currency | null;
 }

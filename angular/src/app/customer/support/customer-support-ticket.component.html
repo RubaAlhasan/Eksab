@@ -1,0 +1,64 @@
+@if (isNew()) {
+  <section class="eks-panel eks-rise">
+    <h1 class="h5 fw-bold mb-3">{{ '::Wallet:Support:NewTitle' | abpLocalization }}</h1>
+    <form [formGroup]="newForm" (ngSubmit)="submitNew()" novalidate>
+      <div class="mb-3">
+        <label class="form-label fw-semibold" for="supportSubject">{{ '::Wallet:Support:SubjectLabel' | abpLocalization }}</label>
+        <input id="supportSubject" type="text" class="form-control" formControlName="subject" [maxlength]="maxSubjectLength" />
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold" for="supportBody">{{ '::Wallet:Support:BodyLabel' | abpLocalization }}</label>
+        <textarea id="supportBody" class="form-control" rows="5" formControlName="body" [maxlength]="maxBodyLength"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="isSaving() || newForm.invalid">
+        {{ '::Wallet:Support:SendRequest' | abpLocalization }}
+      </button>
+    </form>
+  </section>
+} @else if (isLoading()) {
+  <app-skeleton-list variant="panel" [label]="'::Wallet:Support:Loading' | abpLocalization" />
+} @else if (loadFailed()) {
+  <app-error-state [message]="'::Wallet:Support:LoadError' | abpLocalization" (retry)="retry()" />
+} @else if (ticket(); as ticket) {
+  <section class="eks-panel eks-rise mb-3">
+    <div class="d-flex justify-content-between align-items-start gap-2">
+      <h1 class="h5 fw-bold mb-0">{{ ticket.subject }}</h1>
+      <app-status-badge [label]="statusLabelKey(ticket.status) | abpLocalization" [variant]="statusVariant(ticket.status)" />
+    </div>
+    <p class="small text-muted mb-0 mt-1">{{ ticket.creationTime | date: 'mediumDate' }}</p>
+  </section>
+
+  <div class="d-flex flex-column gap-2 mb-4">
+    @for (message of messages(); track message.id) {
+      <div
+        class="p-2 px-3 rounded small"
+        [class.ms-auto]="isMine(message)"
+        [class.me-auto]="!isMine(message)"
+        [class.bg-primary-subtle]="isMine(message)"
+        [class.bg-light]="!isMine(message)"
+        [class.border]="!isMine(message)"
+        style="max-width: 85%; white-space: pre-line"
+      >
+        <p class="mb-1">{{ message.body }}</p>
+        <span class="text-muted">
+          {{ (isMine(message) ? '::Wallet:Support:You' : '::Wallet:Support:Support') | abpLocalization }} · {{ message.createdAt | date: 'short' }}
+        </span>
+      </div>
+    }
+  </div>
+
+  <form [formGroup]="replyForm" (ngSubmit)="sendReply()" novalidate>
+    <label class="form-label fw-semibold" for="supportReply">{{ '::Wallet:Support:Reply' | abpLocalization }}</label>
+    <textarea
+      id="supportReply"
+      class="form-control mb-2"
+      rows="3"
+      formControlName="body"
+      [maxlength]="maxBodyLength"
+      [attr.placeholder]="'::Wallet:Support:ReplyPlaceholder' | abpLocalization"
+    ></textarea>
+    <button type="submit" class="btn btn-primary w-100" [disabled]="isSaving() || replyForm.invalid">
+      {{ '::Wallet:Support:SendReply' | abpLocalization }}
+    </button>
+  </form>
+}

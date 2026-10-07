@@ -13,7 +13,7 @@
     }
     <h1 class="h4 fw-bold mb-1">{{ business.name }}</h1>
     <p class="text-muted small mb-3">
-      {{ business.categoryNameEn ?? ('::Wallet:Discover:Uncategorized' | abpLocalization) }}
+      {{ business.categoryNameEn || business.categoryNameAr ? (business.categoryNameEn | localizedName: business.categoryNameAr) : ('::Wallet:Discover:Uncategorized' | abpLocalization) }}
       · {{ business.branchCount }} {{ (business.branchCount === 1 ? '::Wallet:Discover:Branch' : '::Wallet:Discover:Branches') | abpLocalization }}
       @if (business.distanceKm !== null && business.distanceKm !== undefined) {
         · {{ business.distanceKm | number: '1.1-1' }} {{ '::Wallet:Discover:KmAway' | abpLocalization }}
@@ -98,15 +98,45 @@
       }
     </section>
 
-    @if (branchesWithPhone().length > 0) {
-      <h2 class="eks-section-title">{{ '::Wallet:Store:PhoneNumbers' | abpLocalization }}</h2>
-      <div class="eks-list">
-        @for (branch of branchesWithPhone(); track branch.id) {
-          <a [href]="'tel:' + branch.phone" class="eks-row eks-row--action">
-            <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-phone"></i></span>
-            <span class="eks-row__body"><span class="eks-row__title">{{ branch.name }}</span></span>
-            <span class="eks-row__end small" dir="ltr">{{ branch.phone }}</span>
-          </a>
+    @if (earnRules().length > 0) {
+      <h2 class="eks-section-title">{{ '::Wallet:Store:EarnTitle' | abpLocalization }}</h2>
+      <ul class="list-unstyled eks-earn-rules mb-4">
+        @for (rule of earnRules(); track $index) {
+          <li class="mb-1">
+            @if (rule.ruleType === PointRuleType.PerVisit) {
+              {{ '::Wallet:Store:EarnPerVisit' | abpLocalization: (rule.pointsPerUnit | number: '1.0-2') }}
+            } @else {
+              {{ '::Wallet:Store:EarnPerCurrency' | abpLocalization: (rule.pointsPerUnit | number: '1.0-2') : currencyCode(rule.currency) }}
+            }
+          </li>
+        }
+      </ul>
+    }
+
+    @if (branches().length > 0) {
+      <h2 class="eks-section-title">{{ '::Wallet:Store:Branches' | abpLocalization }}</h2>
+      <div class="eks-list mb-4">
+        @for (branch of branches(); track branch.id) {
+          <div class="eks-row">
+            <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-location-dot"></i></span>
+            <span class="eks-row__body">
+              <span class="eks-row__title">{{ branch.name }}</span>
+              @if (branch.address) {
+                <span class="eks-row__meta">{{ branch.address }}</span>
+              }
+              @if (branch.openingHours) {
+                <span class="eks-row__meta" style="white-space: pre-line">{{ branch.openingHours }}</span>
+              }
+              <span class="d-flex flex-wrap gap-3 small mt-1">
+                @if (mapLink(branch); as link) {
+                  <a [href]="link" target="_blank" rel="noopener">{{ '::Wallet:Store:OpenInMaps' | abpLocalization }}</a>
+                }
+                @if (branch.phone) {
+                  <a [href]="'tel:' + branch.phone" dir="ltr">{{ branch.phone }}</a>
+                }
+              </span>
+            </span>
+          </div>
         }
       </div>
     }
@@ -132,7 +162,7 @@
           <div class="eks-row">
             <span class="eks-icon-tile eks-icon-tile--emoji" aria-hidden="true">{{ campaignTypeEmoji(offer.type) }}</span>
             <span class="eks-row__body">
-              <span class="eks-row__title">{{ offer.nameEn }}</span>
+              <span class="eks-row__title">{{ offer.nameEn | localizedName: offer.nameAr }}</span>
               <span class="eks-row__meta">
                 {{ campaignTypeLabelKey(offer.type) | abpLocalization }}
                 · {{ '::Wallet:Campaigns:Until' | abpLocalization }} {{ offer.endDate | date: 'mediumDate' }}
@@ -150,7 +180,7 @@
         @for (reward of previewRewards(); track reward.id) {
           <div class="eks-tile eks-tile--center">
             <span class="eks-icon-tile eks-icon-tile--emoji" aria-hidden="true">{{ rewardTypeEmoji(reward.type) }}</span>
-            <span class="fw-semibold small">{{ reward.nameEn }}</span>
+            <span class="fw-semibold small">{{ reward.nameEn | localizedName: reward.nameAr }}</span>
             <span class="eks-points-figure small">{{ reward.pointsCost }} {{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
           </div>
         }

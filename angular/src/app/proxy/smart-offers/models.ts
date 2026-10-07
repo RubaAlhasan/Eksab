@@ -163,3 +163,9 @@ export interface SmartOfferOrderCodeDto {
 export interface RejectSmartOfferOrderDto extends SmartOfferOrderCodeDto {
   reason?: string | null;
 }
+
+// Hand-added — mirrors Eksabli.SmartOffers.SmartOfferWatchDto (CustomerSmartOffersController's price-watch endpoints).
+export interface SmartOfferWatchDto {
+  tenantId: string;
+  smartOfferId: string;
+}

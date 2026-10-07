@@ -14,6 +14,11 @@ public static class BusinessProfileConsts
     // the Business dashboard. Editable from Business Settings.
     public const string DefaultTimeZoneId = "Asia/Damascus";
 
+    // How long points a business awards stay spendable, in whole months from the moment they are earned.
+    // Null on the profile means points never expire. Set from Business Settings.
+    public const int MinPointsExpiryMonths = 1;
+    public const int MaxPointsExpiryMonths = 120;
+
     public const int MaxLogoFileSizeBytes = 2 * 1024 * 1024; // 2 MB
 
     public static readonly string[] AllowedLogoContentTypes = { "image/png", "image/jpeg", "image/webp" };

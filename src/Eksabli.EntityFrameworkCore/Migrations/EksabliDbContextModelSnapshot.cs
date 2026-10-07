@@ -408,6 +408,9 @@ namespace Eksabli.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int?>("PointsExpiryMonths")
+                        .HasColumnType("integer");
+
                     b.Property<string>("SocialLinksJson")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
@@ -1070,6 +1073,45 @@ namespace Eksabli.Migrations
                     b.HasIndex("TenantId", "CampaignId");
 
                     b.ToTable("AppNotifications", (string)null);
+                });
+
+            modelBuilder.Entity("Eksabli.Notifications.NotificationGroupOptOut", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<int>("Group")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Group")
+                        .IsUnique();
+
+                    b.ToTable("AppNotificationGroupOptOuts", (string)null);
                 });
 
             modelBuilder.Entity("Eksabli.Notifications.NotificationMessage", b =>
@@ -1937,6 +1979,51 @@ namespace Eksabli.Migrations
                     b.HasIndex("SmartOfferId");
 
                     b.ToTable("AppSmartOfferPriceStages", (string)null);
+                });
+
+            modelBuilder.Entity("Eksabli.SmartOffers.SmartOfferWatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<Guid>("SmartOfferId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "SmartOfferId");
+
+                    b.HasIndex("TenantId", "CustomerId", "SmartOfferId")
+                        .IsUnique();
+
+                    b.ToTable("AppSmartOfferWatches", (string)null);
                 });
 
             modelBuilder.Entity("Eksabli.Sms.SmsLog", b =>

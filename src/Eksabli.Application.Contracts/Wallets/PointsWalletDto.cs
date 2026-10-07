@@ -54,4 +54,18 @@ public class PointsWalletDto : AuditedEntityDto<Guid>
     public string? NextTierName { get; set; }
 
     public int? NextTierMinLifetimePoints { get; set; }
+
+    // ---------------------------------------------------------------------------------------------
+    // Expiry — points this business is about to take back. Set only by MembershipAppService.GetMyWalletsAsync.
+    //
+    // ExpiringPoints is the unspent part of awards that expire within the next 30 days, capped at what is
+    // spendable: the expiry sweep takes no more than that, so the warning never overstates the loss. Zero when the
+    // business does not expire its points.
+    //
+    // ExpiringOn is the earliest of those expiry dates, so the app can say "N points expire on <date>".
+    // ---------------------------------------------------------------------------------------------
+
+    public int ExpiringPoints { get; set; }
+
+    public DateTime? ExpiringOn { get; set; }
 }

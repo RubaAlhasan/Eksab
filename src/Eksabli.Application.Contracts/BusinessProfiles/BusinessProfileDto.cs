@@ -23,5 +23,7 @@ public class BusinessProfileDto : AuditedEntityDto<Guid>
 
     public string TimeZoneId { get; set; } = string.Empty;
 
+    public int? PointsExpiryMonths { get; set; }
+
     public TenantApprovalStatus ApprovalStatus { get; set; }
 }

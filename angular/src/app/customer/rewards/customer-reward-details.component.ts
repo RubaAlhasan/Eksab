@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
+import { LocalizedNamePipe } from '../../shared/pipes/localized-name.pipe';
 import { CouponsService } from '../../proxy/controllers/coupons.service';
 import { MembershipsService } from '../../proxy/controllers/memberships.service';
 import type { RewardDto } from '../../proxy/rewards/models';
@@ -19,7 +20,7 @@ import { CustomerRewardCacheService } from './customer-reward-cache.service';
   templateUrl: './customer-reward-details.component.html',
   styleUrls: ['./customer-reward-details.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, LocalizationPipe],
+  imports: [DatePipe, LocalizationPipe, LocalizedNamePipe],
 })
 export class CustomerRewardDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);

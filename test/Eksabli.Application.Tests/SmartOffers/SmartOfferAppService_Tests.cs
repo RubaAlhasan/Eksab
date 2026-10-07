@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Eksabli.BusinessProfiles;
 using Eksabli.EmployeeAssignments;
 using Eksabli.Memberships;
+using Eksabli.Wallets;
 using Eksabli.Platform;
 using Eksabli.Reports;
 using Eksabli.Shared;
@@ -41,6 +42,9 @@ public abstract class SmartOfferAppService_Tests<TStartupModule> : EksabliApplic
     private readonly IRepository<EmployeeAssignment, Guid> _employeeAssignmentRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly ICurrentPrincipalAccessor _currentPrincipalAccessor;
+    private readonly IRepository<PointsWallet, Guid> _walletRepository;
+    private readonly IRepository<PointRule, Guid> _pointRuleRepository;
+    private readonly IRepository<PointsTransaction, Guid> _transactionRepository;
 
     protected SmartOfferAppService_Tests()
     {
@@ -55,6 +59,9 @@ public abstract class SmartOfferAppService_Tests<TStartupModule> : EksabliApplic
         _employeeAssignmentRepository = GetRequiredService<IRepository<EmployeeAssignment, Guid>>();
         _currentTenant = GetRequiredService<ICurrentTenant>();
         _currentPrincipalAccessor = GetRequiredService<ICurrentPrincipalAccessor>();
+        _walletRepository = GetRequiredService<IRepository<PointsWallet, Guid>>();
+        _pointRuleRepository = GetRequiredService<IRepository<PointRule, Guid>>();
+        _transactionRepository = GetRequiredService<IRepository<PointsTransaction, Guid>>();
     }
 
     private IDisposable LoginAs(Guid userId)
@@ -256,6 +263,87 @@ public abstract class SmartOfferAppService_Tests<TStartupModule> : EksabliApplic
         var offer = await CreateOfferAsync(tenantId, AlwaysOnDeal());
 
         await Should.ThrowAsync<UserFriendlyException>(() => PlaceAsync(stranger, tenantId, offer.Id));
+    }
+
+    [Fact]
+    public async Task A_customer_can_watch_a_deals_price_once_and_stop_watching()
+    {
+        var tenantId = await CreateTenantAsync();
+        var customerId = Guid.NewGuid();
+        await JoinAsync(tenantId, customerId);
+        var offer = await CreateOfferAsync(tenantId, AlwaysOnDeal(price: 6m, quantity: 2));
+
+        using (LoginAs(customerId))
+        {
+            await WithUnitOfWorkAsync(() => _customerService.WatchPriceAsync(tenantId, offer.Id));
+            await WithUnitOfWorkAsync(() => _customerService.WatchPriceAsync(tenantId, offer.Id)); // watching again changes nothing
+
+            var watched = await WithUnitOfWorkAsync(() => _customerService.GetMyPriceWatchesAsync());
+            watched.Count.ShouldBe(1);
+            watched.Single().SmartOfferId.ShouldBe(offer.Id);
+            watched.Single().TenantId.ShouldBe(tenantId);
+
+            await WithUnitOfWorkAsync(() => _customerService.UnwatchPriceAsync(tenantId, offer.Id));
+            (await WithUnitOfWorkAsync(() => _customerService.GetMyPriceWatchesAsync())).ShouldBeEmpty();
+        }
+    }
+
+    [Fact]
+    public async Task A_customer_who_has_not_joined_the_business_cannot_watch_its_deals()
+    {
+        var tenantId = await CreateTenantAsync();
+        var stranger = Guid.NewGuid();
+        var offer = await CreateOfferAsync(tenantId, AlwaysOnDeal(price: 6m, quantity: 2));
+
+        using (LoginAs(stranger))
+        {
+            await Should.ThrowAsync<Volo.Abp.UserFriendlyException>(() => WithUnitOfWorkAsync(() => _customerService.WatchPriceAsync(tenantId, offer.Id)));
+        }
+    }
+
+    [Fact]
+    public async Task A_collected_deal_earns_the_business_points_rule_on_the_amount_paid()
+    {
+        var tenantId = await CreateTenantAsync();
+        var customerId = Guid.NewGuid();
+        var walletId = Guid.Empty;
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var membership = Membership.Create(Guid.NewGuid(), customerId, DateTime.UtcNow);
+                await _membershipRepository.InsertAsync(membership, autoSave: true);
+
+                var wallet = PointsWallet.Create(Guid.NewGuid(), membership.Id);
+                await _walletRepository.InsertAsync(wallet, autoSave: true);
+                walletId = wallet.Id;
+
+                await _pointRuleRepository.InsertAsync(PointRule.Create(Guid.NewGuid(), PointRuleType.PerCurrencyUnit, 2m, Currency.Usd), autoSave: true);
+            }
+        });
+
+        var cashier = await CreateStaffAsync(tenantId, EmployeeRole.Cashier);
+        var offer = await CreateOfferAsync(tenantId, AlwaysOnDeal(price: 6m, quantity: 2));
+        var order = await PlaceAsync(customerId, tenantId, offer.Id, quantity: 2);
+
+        using (_currentTenant.Change(tenantId))
+        using (LoginAs(cashier))
+        {
+            await WithUnitOfWorkAsync(() => _staffService.CompleteAsync(new SmartOfferOrderCodeDto { Code = order.Code }));
+        }
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var wallet = await _walletRepository.GetAsync(walletId);
+                wallet.Balance.ShouldBe(24); // 2 units at 6 USD = 12 USD paid, at 2 points per dollar
+
+                var earned = await _transactionRepository.GetListAsync(t => t.WalletId == walletId && t.Type == PointsTransactionType.Earn);
+                earned.Single().Points.ShouldBe(24);
+                earned.Single().ReferenceId.ShouldBe(order.Id);
+            }
+        });
     }
 
     [Fact]
