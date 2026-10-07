@@ -5,6 +5,7 @@ using Eksabli.Platform;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.Application.Dtos;
+using Volo.Abp.Content;
 
 namespace Eksabli.Controllers;
 
@@ -54,5 +55,31 @@ public class CategoriesController : EksabliController
     public Task DeleteAsync(Guid id)
     {
         return _categoryAppService.DeleteAsync(id);
+    }
+
+    // [Consumes] is required here, same as BusinessController.UploadLogoAsync: without it, the controller's
+    // default JSON input formatter rejects a multipart upload with 415 before this method is ever reached.
+    [Authorize(EksabliPermissions.Categories.Edit)]
+    [HttpPut("{id}/icon")]
+    [Consumes("multipart/form-data")]
+    public Task<CategoryDto> UploadIconAsync(Guid id, [FromForm] IRemoteStreamContent file)
+    {
+        return _categoryAppService.UploadIconAsync(id, file);
+    }
+
+    [Authorize(EksabliPermissions.Categories.Edit)]
+    [HttpDelete("{id}/icon")]
+    public Task<CategoryDto> RemoveIconAsync(Guid id)
+    {
+        return _categoryAppService.RemoveIconAsync(id);
+    }
+
+    // Public — no [Authorize] — so it works as a plain <img src> URL with no auth context, same as the
+    // business logo's own serving endpoint.
+    [AllowAnonymous]
+    [HttpGet("{id}/icon")]
+    public Task<IRemoteStreamContent> GetIconAsync(Guid id)
+    {
+        return _categoryAppService.GetIconAsync(id);
     }
 }

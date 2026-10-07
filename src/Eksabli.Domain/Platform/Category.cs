@@ -16,6 +16,8 @@ public class Category : FullAuditedAggregateRoot<Guid>
 
     public string? IconBlobName { get; private set; }
 
+    public string? IconContentType { get; private set; }
+
     public Guid? ParentCategoryId { get; private set; }
 
     protected Category()
@@ -43,7 +45,11 @@ public class Category : FullAuditedAggregateRoot<Guid>
         NameEn = Check.NotNullOrWhiteSpace(nameEn, nameof(nameEn), CategoryConsts.MaxNameLength);
     }
 
-    public void SetIconBlobName(string? iconBlobName) => IconBlobName = iconBlobName;
+    public void SetIcon(string? iconBlobName, string? iconContentType)
+    {
+        IconBlobName = iconBlobName;
+        IconContentType = iconContentType;
+    }
 
     public void SetParent(Guid? parentCategoryId)
     {

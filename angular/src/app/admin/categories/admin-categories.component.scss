@@ -1,3 +1,43 @@
-// No page-specific overrides needed yet — table/card/modal styling comes from Bootstrap (via Lepton-X)
-// plus the shared components this page composes. Kept as a real file (not removed from styleUrls)
-// since every other Admin feature page in this codebase follows the ts/html/scss triple consistently.
+.eks-category-icon-placeholder {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bs-secondary-bg);
+  color: var(--bs-secondary-color);
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.eks-category-icon-preview {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--bs-secondary-bg);
+}
+
+.eks-category-icon-placeholder-lg {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bs-secondary-bg);
+  color: var(--bs-secondary-color);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.eks-category-icon-preview-lg {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--bs-secondary-bg);
+}

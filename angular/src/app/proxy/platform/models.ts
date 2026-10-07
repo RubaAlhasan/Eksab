@@ -68,7 +68,6 @@ export interface CreateSupportTicketDto {
 export interface CreateUpdateCategoryDto {
   nameAr: string;
   nameEn: string;
-  iconBlobName?: string | null;
   parentCategoryId?: string | null;
 }
 

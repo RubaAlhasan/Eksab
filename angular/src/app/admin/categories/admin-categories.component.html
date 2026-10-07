@@ -59,8 +59,17 @@
           @for (category of categories(); track category.id) {
             <tr>
               <td>
-                <div class="fw-semibold"><i class="fas fa-tag text-muted me-2"></i>{{ category.nameEn }}</div>
-                <div class="text-muted small">{{ category.nameAr }}</div>
+                <div class="d-flex align-items-center gap-2">
+                  @if (iconUrlFor(category); as url) {
+                    <img [src]="url" alt="" class="eks-category-icon-preview" />
+                  } @else {
+                    <div class="eks-category-icon-placeholder"><i class="fas fa-tag"></i></div>
+                  }
+                  <div>
+                    <div class="fw-semibold">{{ category.nameEn }}</div>
+                    <div class="text-muted small">{{ category.nameAr }}</div>
+                  </div>
+                </div>
               </td>
               <td class="text-muted">{{ category.businessCount }}</td>
               <td class="text-muted">{{ parentName(category) ?? '—' }}</td>
@@ -137,16 +146,43 @@
       </select>
     </div>
     <div>
-      <label class="form-label" for="iconBlobName">{{ '::AdminPanel:Categories:FieldIcon' | abpLocalization }}</label>
-      <input
-        id="iconBlobName"
-        type="text"
-        class="form-control"
-        formControlName="iconBlobName"
-        placeholder="categories/coffee.png"
-      />
-      @if (form.controls.iconBlobName.invalid && form.controls.iconBlobName.touched) {
-        <p class="text-danger small mt-1">{{ '::AdminPanel:Categories:IconMaxLength' | abpLocalization }}</p>
+      <label class="form-label">{{ '::AdminPanel:Categories:FieldIcon' | abpLocalization }}</label>
+      @if (editingCategoryId) {
+        <div class="d-flex align-items-center gap-3">
+          @if (iconUrl(); as url) {
+            <img [src]="url" alt="" class="eks-category-icon-preview-lg" />
+          } @else {
+            <div class="eks-category-icon-placeholder-lg"><i class="fas fa-tag"></i></div>
+          }
+          <div>
+            @if (!editingCategoryIcon()) {
+              <p class="text-muted small mb-1">{{ '::AdminPanel:Categories:NoIcon' | abpLocalization }}</p>
+            }
+            <div class="d-flex align-items-center gap-2">
+              <label class="btn btn-sm btn-outline-secondary mb-0" [class.disabled]="isUploadingIcon()">
+                @if (isUploadingIcon()) {
+                  <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                }
+                {{ (editingCategoryIcon() ? '::AdminPanel:Categories:ChangeIcon' : '::AdminPanel:Categories:UploadIcon') | abpLocalization }}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  class="d-none"
+                  [disabled]="isUploadingIcon()"
+                  (change)="onIconFileSelected($event)"
+                />
+              </label>
+              @if (editingCategoryIcon()) {
+                <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="isUploadingIcon()" (click)="removeIcon()">
+                  {{ '::AdminPanel:Categories:RemoveIcon' | abpLocalization }}
+                </button>
+              }
+            </div>
+            <p class="text-muted small mb-0 mt-1">{{ '::AdminPanel:Categories:IconHint' | abpLocalization }}</p>
+          </div>
+        </div>
+      } @else {
+        <p class="text-muted small mb-0">{{ '::AdminPanel:Categories:IconHintNew' | abpLocalization }}</p>
       }
     </div>
   </form>

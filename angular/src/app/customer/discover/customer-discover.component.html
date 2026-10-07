@@ -39,7 +39,11 @@
       [class.active]="selectedCategoryId() === category.id"
       (click)="selectCategory(category.id ?? null)"
     >
-      <i class="fas {{ categoryIcon(category.nameEn) }}" aria-hidden="true"></i>
+      @if (categoryIconUrl(category); as iconUrl) {
+        <img [src]="iconUrl" alt="" class="eks-chip-icon" (error)="markCategoryIconFailed(category.id!)" />
+      } @else {
+        <i class="fas {{ categoryIcon(category.nameEn) }}" aria-hidden="true"></i>
+      }
       {{ category.nameEn | localizedName: category.nameAr }}
     </button>
   }

@@ -129,6 +129,20 @@ export class CustomerDiscoverComponent implements OnInit {
     this.logoFailedIds.update(ids => new Set(ids).add(tenantId));
   }
 
+  // A real admin-uploaded icon (CategoryAppService.UploadIconAsync) takes priority over the keyword
+  // fallback below — the fallback only exists for categories nobody has uploaded a real icon for yet,
+  // which matters once an admin adds a new category the keyword list doesn't recognize.
+  protected readonly categoryIconFailedIds = signal<Set<string>>(new Set());
+
+  protected categoryIconUrl(category: CategoryDto): string | null {
+    if (!category.id || !category.iconBlobName || this.categoryIconFailedIds().has(category.id)) return null;
+    return `${environment.apis.default.url}/api/app/category/${category.id}/icon?v=${encodeURIComponent(category.iconBlobName)}`;
+  }
+
+  protected markCategoryIconFailed(categoryId: string): void {
+    this.categoryIconFailedIds.update(ids => new Set(ids).add(categoryId));
+  }
+
   private load(): void {
     this.isLoading.set(true);
     this.loadFailed.set(false);

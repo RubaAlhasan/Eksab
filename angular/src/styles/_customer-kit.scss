@@ -153,6 +153,14 @@
   }
 }
 
+.eks-chip-icon {
+  width: 0.9rem;
+  height: 0.9rem;
+  object-fit: cover;
+  border-radius: 2px;
+  vertical-align: -1px;
+}
+
 // ---------------------------------------------------------------------------
 // Activity row — one transaction or event: a direction icon, a title + meta stack, and a signed amount.
 // Used by the home page, My Points and Transaction History. The `--action` modifier makes the whole row a
