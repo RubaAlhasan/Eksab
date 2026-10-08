@@ -84,6 +84,14 @@ export const APP_ROUTES: Routes = [
         data: { titleKey: '::Wallet:Rewards:DetailsTitle' },
       },
       {
+        // Cross-business — every reward across every approved business the customer is an active
+        // member of, not one business at a time (that's 'wallet/:tenantId/rewards' above).
+        path: 'rewards',
+        loadComponent: () =>
+          import('./customer/rewards/customer-rewards-feed.component').then(c => c.CustomerRewardsFeedComponent),
+        data: { titleKey: '::Wallet:RewardsFeed:Title' },
+      },
+      {
         path: 'redeem/:tenantId/:couponId',
         loadComponent: () => import('./customer/redeem/customer-redeem.component').then(c => c.CustomerRedeemComponent),
         data: { titleKey: '::Wallet:Redeem:Title' },

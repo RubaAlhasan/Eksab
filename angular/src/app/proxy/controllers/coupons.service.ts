@@ -1,7 +1,7 @@
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedAndSortedResultRequestDto, PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { CouponDto, RedeemRewardDto, RewardDto } from '../rewards/models';
+import type { CouponDto, CustomerRewardListDto, RedeemRewardDto, RewardDto } from '../rewards/models';
 
 @Injectable({
   providedIn: 'root',
@@ -55,6 +55,16 @@ export class CouponsService {
       method: 'POST',
       url: '/api/app/coupon/redeem',
       body: input,
+    },
+    { apiName: this.apiName,...config });
+
+
+  // Hand-added — see getMyCoupon's comment above for why.
+  getMyFeed = (maxResultCount = 50, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, CustomerRewardListDto>({
+      method: 'GET',
+      url: '/api/app/coupon/feed',
+      params: { maxResultCount },
     },
     { apiName: this.apiName,...config });
 }

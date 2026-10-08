@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Eksabli.BusinessProfiles;
 using Eksabli.Memberships;
 using Eksabli.Wallets;
 using Volo.Abp;
@@ -20,10 +21,17 @@ public class CouponAppService : ApplicationService, ICouponAppService
 {
     private const int MaxCodeGenerationAttempts = 5;
 
+    // The cross-business feed is filtered/paged in the browser (same shape
+    // CustomerSmartOfferAppService.GetFeedAsync's own Browse page uses), so it needs the whole bounded
+    // feed, not one page.
+    private const int MaxFeedSize = 200;
+    private const string FallbackBusinessName = "Business";
+
     private readonly IRewardRepository _rewardRepository;
     private readonly ICouponRepository _couponRepository;
     private readonly IRepository<Membership, Guid> _membershipRepository;
     private readonly IRepository<PointsWallet, Guid> _walletRepository;
+    private readonly IRepository<BusinessProfile, Guid> _businessProfileRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
 
@@ -32,6 +40,7 @@ public class CouponAppService : ApplicationService, ICouponAppService
         ICouponRepository couponRepository,
         IRepository<Membership, Guid> membershipRepository,
         IRepository<PointsWallet, Guid> walletRepository,
+        IRepository<BusinessProfile, Guid> businessProfileRepository,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter)
     {
@@ -39,6 +48,7 @@ public class CouponAppService : ApplicationService, ICouponAppService
         _couponRepository = couponRepository;
         _membershipRepository = membershipRepository;
         _walletRepository = walletRepository;
+        _businessProfileRepository = businessProfileRepository;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
     }
@@ -54,6 +64,76 @@ public class CouponAppService : ApplicationService, ICouponAppService
                 maxResultCount: input.MaxResultCount);
 
             return new PagedResultDto<RewardDto>(totalCount, ObjectMapper.Map<List<Reward>, List<RewardDto>>(rewards));
+        }
+    }
+
+    public async Task<CustomerRewardListDto> GetMyFeedAsync(int maxResultCount = 50)
+    {
+        var customerId = CurrentUser.GetId();
+        var take = Math.Clamp(maxResultCount, 1, MaxFeedSize);
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var memberships = (await _membershipRepository.GetListAsync(m => m.CustomerId == customerId && m.Status == MembershipStatus.Active))
+                .Where(m => m.TenantId.HasValue)
+                .ToList();
+            if (memberships.Count == 0)
+            {
+                return new CustomerRewardListDto();
+            }
+
+            var tenantIds = memberships.Select(m => m.TenantId!.Value).Distinct().ToList();
+
+            var profiles = (await _businessProfileRepository.GetListAsync(p => p.TenantId != null && tenantIds.Contains(p.TenantId.Value)))
+                .Where(p => p.ApprovalStatus == TenantApprovalStatus.Approved)
+                .ToList();
+            if (profiles.Count == 0)
+            {
+                return new CustomerRewardListDto();
+            }
+
+            var approvedTenantIds = profiles.Select(p => p.TenantId!.Value).ToList();
+            var businessNames = profiles.ToDictionary(
+                p => p.TenantId!.Value,
+                p => string.IsNullOrWhiteSpace(p.DisplayName) ? FallbackBusinessName : p.DisplayName!);
+
+            var membershipIds = memberships.Select(m => m.Id).ToList();
+            var balanceByTenant = (await _walletRepository.GetListAsync(w => membershipIds.Contains(w.MembershipId)))
+                .Where(w => w.TenantId.HasValue)
+                .ToDictionary(w => w.TenantId!.Value, w => w.AvailableBalance);
+
+            var rewards = await _rewardRepository.GetActiveForTenantsAsync(approvedTenantIds);
+
+            var items = rewards
+                .Select(r =>
+                {
+                    var tenantId = r.TenantId!.Value;
+                    var availableBalance = balanceByTenant.GetValueOrDefault(tenantId);
+                    var canAfford = availableBalance >= r.PointsCost;
+                    return new CustomerRewardDto
+                    {
+                        Id = r.Id,
+                        TenantId = tenantId,
+                        NameAr = r.NameAr,
+                        NameEn = r.NameEn,
+                        Type = r.Type,
+                        PointsCost = r.PointsCost,
+                        StockRemaining = r.StockRemaining,
+                        ImageBlobName = r.ImageBlobName,
+                        BusinessName = businessNames.GetValueOrDefault(tenantId, FallbackBusinessName),
+                        AvailableBalance = availableBalance,
+                        CanAfford = canAfford,
+                        PointsNeeded = canAfford ? 0 : r.PointsCost - availableBalance,
+                    };
+                })
+                // Affordable first, cheapest first within each group — the reward a customer can grab
+                // right now, for the fewest points, leads the feed.
+                .OrderByDescending(d => d.CanAfford)
+                .ThenBy(d => d.PointsCost)
+                .Take(take)
+                .ToList();
+
+            return new CustomerRewardListDto { Items = items };
         }
     }
 

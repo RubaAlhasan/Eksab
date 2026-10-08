@@ -128,6 +128,7 @@
       <section class="eks-home-span eks-rise" style="--eks-rise-delay: 120ms">
         <div class="eks-section-header">
           <h2 class="eks-section-title">{{ '::Wallet:Home:AffordableRewards' | abpLocalization }}</h2>
+          <a routerLink="/customer/rewards" class="eks-section-link">{{ '::Wallet:Points:SeeAll' | abpLocalization }}</a>
         </div>
         <div class="eks-home-carousel">
           @for (item of affordableRewards(); track item.reward.id) {

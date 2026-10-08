@@ -15,4 +15,9 @@ public interface IRewardRepository : IRepository<Reward, Guid>
         int skipCount = 0,
         int maxResultCount = int.MaxValue,
         CancellationToken cancellationToken = default);
+
+    // Same "active" definition as the activeOnly branch above (in stock, within its validity window),
+    // but across many tenants in one query instead of the ambient ICurrentTenant — for a cross-business
+    // feed, the same shape ISmartOfferRepository.GetEnabledForTenantsAsync already uses.
+    Task<List<Reward>> GetActiveForTenantsAsync(IReadOnlyCollection<Guid> tenantIds, CancellationToken cancellationToken = default);
 }

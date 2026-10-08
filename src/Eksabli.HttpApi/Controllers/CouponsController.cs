@@ -26,6 +26,12 @@ public class CouponsController : EksabliController
         return _couponAppService.GetCatalogAsync(tenantId, input);
     }
 
+    [HttpGet("feed")]
+    public Task<CustomerRewardListDto> GetMyFeedAsync([FromQuery] int maxResultCount = 50)
+    {
+        return _couponAppService.GetMyFeedAsync(maxResultCount);
+    }
+
     [HttpPost("redeem")]
     public Task<CouponDto> RedeemAsync(RedeemRewardDto input)
     {
