@@ -12,6 +12,7 @@ import { CustomerSmartOffersService } from '../../proxy/controllers/customer-sma
 import { CustomerCampaignService } from '../../proxy/controllers/customer-campaign.service';
 import { ReviewsService } from '../../proxy/controllers/reviews.service';
 import type { CustomerBusinessBranchDto, CustomerBusinessDto, CustomerEarnRuleDto } from '../../proxy/businesses/models';
+import { DayOfWeek } from '../../proxy/branches/day-of-week.enum';
 import { PointRuleType } from '../../proxy/wallets/point-rule-type.enum';
 import { Currency } from '../../proxy/shared/currency.enum';
 import type { RewardDto } from '../../proxy/rewards/models';
@@ -30,6 +31,27 @@ import { StarRatingComponent } from '../../shared/components/star-rating/star-ra
 type StoreTab = 'about' | 'offers' | 'rewards' | 'reviews';
 
 const REVIEWS_PAGE_SIZE = 10;
+
+// Monday-first display order, same as the Business Portal's own branch-hours editor.
+const WEEK_DAYS: DayOfWeek[] = [
+  DayOfWeek.Monday,
+  DayOfWeek.Tuesday,
+  DayOfWeek.Wednesday,
+  DayOfWeek.Thursday,
+  DayOfWeek.Friday,
+  DayOfWeek.Saturday,
+  DayOfWeek.Sunday,
+];
+
+const DAY_LABEL_KEYS: Record<DayOfWeek, string> = {
+  [DayOfWeek.Monday]: '::Wallet:Store:DayMonday',
+  [DayOfWeek.Tuesday]: '::Wallet:Store:DayTuesday',
+  [DayOfWeek.Wednesday]: '::Wallet:Store:DayWednesday',
+  [DayOfWeek.Thursday]: '::Wallet:Store:DayThursday',
+  [DayOfWeek.Friday]: '::Wallet:Store:DayFriday',
+  [DayOfWeek.Saturday]: '::Wallet:Store:DaySaturday',
+  [DayOfWeek.Sunday]: '::Wallet:Store:DaySunday',
+};
 
 // Smart deals from this business, paged in the browser: the list is already loaded in full for the Offers tab.
 const SMART_DEALS_PAGE_SIZE = 6;
@@ -148,6 +170,21 @@ export class CustomerStoreDetailsComponent implements OnInit {
   protected mapLink(branch: CustomerBusinessBranchDto): string | null {
     if (branch.latitude == null || branch.longitude == null) return null;
     return `https://www.google.com/maps/search/?api=1&query=${branch.latitude},${branch.longitude}`;
+  }
+
+  protected readonly weekDays = WEEK_DAYS;
+  protected readonly dayLabelKey = (day: DayOfWeek): string => DAY_LABEL_KEYS[day];
+
+  /** A "9:00 – 18:00" / "Closed" summary per day — null when the branch has no entry for that day at all. */
+  protected hoursSummary(branch: CustomerBusinessBranchDto, day: DayOfWeek): string | null {
+    const entry = branch.openingHours.find(d => d.dayOfWeek === day);
+    if (!entry) return null;
+    return entry.isClosed ? null : `${entry.openTime} – ${entry.closeTime}`;
+  }
+
+  /** Whether any day is listed as closed, so the week list can show "Closed" rows too. */
+  protected isDayClosed(branch: CustomerBusinessBranchDto, day: DayOfWeek): boolean {
+    return branch.openingHours.find(d => d.dayOfWeek === day)?.isClosed === true;
   }
 
   ngOnInit(): void {

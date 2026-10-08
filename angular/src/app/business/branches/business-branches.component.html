@@ -65,10 +65,14 @@
           <p class="fw-bold small mb-1">{{ branch.name }}</p>
           <p class="text-muted small mb-1">{{ branch.address ?? '—' }}</p>
           <p class="text-muted small mb-0">{{ branch.phone ?? '—' }}</p>
-          @if (branch.openingHoursJson) {
-            <p class="text-muted small mb-0 mt-1">
-              <i class="fas fa-clock me-1"></i>{{ branch.openingHoursJson }}
-            </p>
+          @if (branch.openingHours.length > 0) {
+            <div class="text-muted small mb-0 mt-1">
+              @for (day of weekDays; track day) {
+                @if (hoursSummary(branch, day); as summary) {
+                  <p class="mb-0"><i class="fas fa-clock me-1"></i>{{ dayLabelKey(day) | abpLocalization }}: {{ summary }}</p>
+                }
+              }
+            </div>
           }
         </div>
       </div>
@@ -93,14 +97,35 @@
       <label class="form-label" for="branchAddress">{{ '::BusinessPanel:Branches:FieldAddress' | abpLocalization }}</label>
       <input id="branchAddress" type="text" class="form-control" formControlName="address" />
     </div>
-    <div class="row g-3">
-      <div class="col-12 col-sm-6">
-        <label class="form-label" for="branchPhone">{{ '::BusinessPanel:Branches:FieldPhone' | abpLocalization }}</label>
-        <input id="branchPhone" type="text" class="form-control" formControlName="phone" />
-      </div>
-      <div class="col-12 col-sm-6">
-        <label class="form-label" for="branchHours">{{ '::BusinessPanel:Branches:FieldHours' | abpLocalization }}</label>
-        <input id="branchHours" type="text" class="form-control" formControlName="openingHoursJson" placeholder="9:00 AM – 10:00 PM" />
+    <div>
+      <label class="form-label" for="branchPhone">{{ '::BusinessPanel:Branches:FieldPhone' | abpLocalization }}</label>
+      <input id="branchPhone" type="text" class="form-control" formControlName="phone" />
+    </div>
+
+    <div>
+      <label class="form-label">{{ '::BusinessPanel:Branches:FieldHours' | abpLocalization }}</label>
+      <div class="eks-hours-editor" formArrayName="hours">
+        @for (day of weekDays; track day; let i = $index) {
+          <div class="eks-hours-row" [formGroupName]="i">
+            <span class="eks-hours-row__day">{{ dayLabelKey(day) | abpLocalization }}</span>
+            <div class="form-check eks-hours-row__closed">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                [id]="'branchDayClosed' + i"
+                formControlName="isClosed"
+              />
+              <label class="form-check-label small" [for]="'branchDayClosed' + i">
+                {{ '::BusinessPanel:Branches:DayClosed' | abpLocalization }}
+              </label>
+            </div>
+            @if (!dayGroup(i).controls.isClosed.value) {
+              <input type="time" class="form-control form-control-sm" formControlName="openTime" />
+              <span class="eks-hours-row__to">{{ '::BusinessPanel:Branches:HoursTo' | abpLocalization }}</span>
+              <input type="time" class="form-control form-control-sm" formControlName="closeTime" />
+            }
+          </div>
+        }
       </div>
     </div>
   </form>

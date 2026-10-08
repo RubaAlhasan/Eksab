@@ -25,7 +25,7 @@ public class BranchAppService : ApplicationService, IBranchAppService
     public async Task<BranchDto> GetAsync(Guid id)
     {
         var branch = await _repository.GetAsync(id);
-        return ObjectMapper.Map<Branch, BranchDto>(branch);
+        return ToDto(branch);
     }
 
     public async Task<PagedResultDto<BranchDto>> GetListAsync(PagedAndSortedResultRequestDto input)
@@ -35,10 +35,7 @@ public class BranchAppService : ApplicationService, IBranchAppService
             skipCount: input.SkipCount,
             maxResultCount: input.MaxResultCount);
 
-        return new PagedResultDto<BranchDto>(
-            totalCount,
-            ObjectMapper.Map<List<Branch>, List<BranchDto>>(branches)
-        );
+        return new PagedResultDto<BranchDto>(totalCount, branches.Select(ToDto).ToList());
     }
 
     public async Task<BranchDto> CreateAsync(CreateUpdateBranchDto input)
@@ -55,7 +52,7 @@ public class BranchAppService : ApplicationService, IBranchAppService
         var branch = Branch.Create(GuidGenerator.Create(), input.Name);
         ApplyInput(branch, input);
         await _repository.InsertAsync(branch);
-        return ObjectMapper.Map<Branch, BranchDto>(branch);
+        return ToDto(branch);
     }
 
     public async Task<BranchDto> UpdateAsync(Guid id, CreateUpdateBranchDto input)
@@ -64,7 +61,7 @@ public class BranchAppService : ApplicationService, IBranchAppService
         branch.SetName(input.Name);
         ApplyInput(branch, input);
         await _repository.UpdateAsync(branch);
-        return ObjectMapper.Map<Branch, BranchDto>(branch);
+        return ToDto(branch);
     }
 
     public async Task DeleteAsync(Guid id)
@@ -77,6 +74,13 @@ public class BranchAppService : ApplicationService, IBranchAppService
         branch.SetAddress(input.Address);
         branch.SetLocation(input.Latitude, input.Longitude);
         branch.SetPhone(input.Phone);
-        branch.SetOpeningHours(input.OpeningHoursJson);
+        branch.SetOpeningHours(BranchOpeningHoursMapper.Serialize(input.OpeningHours));
+    }
+
+    private BranchDto ToDto(Branch branch)
+    {
+        var dto = ObjectMapper.Map<Branch, BranchDto>(branch);
+        dto.OpeningHours = BranchOpeningHoursMapper.Deserialize(branch.OpeningHoursJson);
+        return dto;
     }
 }

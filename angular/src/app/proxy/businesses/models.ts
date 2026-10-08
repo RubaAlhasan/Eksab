@@ -2,6 +2,7 @@ import type { TenantApprovalStatus } from '../business-profiles/tenant-approval-
 import type { PagedAndSortedResultRequestDto, PagedResultRequestDto } from '@abp/ng.core';
 import type { Currency } from '../shared/currency.enum';
 import type { PointRuleType } from '../wallets/point-rule-type.enum';
+import type { DayOpeningHoursDto } from '../branches/models';
 
 export interface AdminTenantDto {
   tenantId?: string;
@@ -44,7 +45,14 @@ export interface CustomerBusinessBranchDto {
   name: string;
   phone?: string | null;
   address?: string | null;
-  openingHours?: string | null;
+  openingHours: DayOpeningHoursDto[];
+  // Server-computed from openingHours + the business's own time zone (never the device clock) — null
+  // when this branch has no hours set, so the client can tell "unknown" apart from "closed".
+  isOpenNow?: boolean | null;
+  // "HH:mm" in the business's own local time, paired with isOpenNow the same way a Smart Deal's own
+  // nextChangeLocalTime/nextChangeIsTomorrow already pair with its availability flag.
+  nextChangeLocalTime?: string | null;
+  nextChangeIsTomorrow: boolean;
   latitude?: number | null;
   longitude?: number | null;
 }

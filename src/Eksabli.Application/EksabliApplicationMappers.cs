@@ -31,8 +31,15 @@ public partial class EksabliBusinessProfileToBusinessProfileDtoMapper : MapperBa
 [Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
 public partial class EksabliBranchToBranchDtoMapper : MapperBase<Branch, BranchDto>
 {
+    // OpeningHoursJson (source, a raw string column) and OpeningHours (target, the structured list) are
+    // deliberately different shapes of the same data — BranchAppService deserializes one into the other
+    // after mapping, same pattern as CategoryDto.BusinessCount.
+    [MapperIgnoreSource(nameof(Branch.OpeningHoursJson))]
+    [MapperIgnoreTarget(nameof(BranchDto.OpeningHours))]
     public override partial BranchDto Map(Branch source);
 
+    [MapperIgnoreSource(nameof(Branch.OpeningHoursJson))]
+    [MapperIgnoreTarget(nameof(BranchDto.OpeningHours))]
     public override partial void Map(Branch source, BranchDto destination);
 }
 

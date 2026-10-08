@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace Eksabli.Branches;
@@ -18,6 +19,7 @@ public class CreateUpdateBranchDto
     [StringLength(BranchConsts.MaxPhoneLength)]
     public string? Phone { get; set; }
 
-    [StringLength(BranchConsts.MaxOpeningHoursJsonLength)]
-    public string? OpeningHoursJson { get; set; }
+    // At most one entry per day of week (BranchOpeningHoursMapper.Serialize enforces this and does the
+    // actual HH:mm validation) — null/empty means no hours set, same as before this was structured.
+    public List<DayOpeningHoursDto>? OpeningHours { get; set; }
 }
