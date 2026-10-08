@@ -9,3 +9,38 @@
   background-color: var(--eks-primary-subtle-bg);
   color: var(--eks-primary-subtle-fg);
 }
+
+.eks-hours-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.eks-hours-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+
+  &__day {
+    width: 5.5rem;
+    flex-shrink: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  &__closed {
+    flex-shrink: 0;
+    margin-bottom: 0;
+  }
+
+  &__to {
+    font-size: 0.8125rem;
+    color: var(--bs-secondary-color);
+  }
+
+  input[type='time'] {
+    width: auto;
+    flex: 1 1 7rem;
+  }
+}

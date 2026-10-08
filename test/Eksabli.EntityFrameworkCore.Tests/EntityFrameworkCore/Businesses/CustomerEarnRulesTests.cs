@@ -93,7 +93,12 @@ public class CustomerEarnRulesTests : EksabliEntityFrameworkCoreTestBase
                 branch.SetAddress("Main street 1");
                 branch.SetLocation(33.5, 36.3);
                 branch.SetPhone("+963 11 000");
-                branch.SetOpeningHours("Sat-Thu 09:00-22:00");
+                // Open every day, all day — makes IsOpenNow deterministic regardless of when this test
+                // runs or what the business's own time zone is.
+                var openAllWeek = Enum.GetValues<DayOfWeek>()
+                    .Select(d => new DayOpeningHoursDto { DayOfWeek = d, IsClosed = false, OpenTime = "00:00", CloseTime = "24:00" })
+                    .ToList();
+                branch.SetOpeningHours(BranchOpeningHoursMapper.Serialize(openAllWeek));
                 await _branchRepository.InsertAsync(branch, autoSave: true);
             }
         });
@@ -104,6 +109,51 @@ public class CustomerEarnRulesTests : EksabliEntityFrameworkCoreTestBase
         listed.Address.ShouldBe("Main street 1");
         listed.Latitude.ShouldBe(33.5);
         listed.Longitude.ShouldBe(36.3);
-        listed.OpeningHours.ShouldBe("Sat-Thu 09:00-22:00");
+        listed.OpeningHours.Count.ShouldBe(7);
+        listed.IsOpenNow.ShouldBe(true);
+    }
+
+    [Fact]
+    public async Task A_branch_closed_every_day_reports_closed_with_no_next_change()
+    {
+        var tenantId = await CreateBusinessAsync(approved: true);
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var branch = Branch.Create(Guid.NewGuid(), "Downtown");
+                var closedAllWeek = Enum.GetValues<DayOfWeek>()
+                    .Select(d => new DayOpeningHoursDto { DayOfWeek = d, IsClosed = true })
+                    .ToList();
+                branch.SetOpeningHours(BranchOpeningHoursMapper.Serialize(closedAllWeek));
+                await _branchRepository.InsertAsync(branch, autoSave: true);
+            }
+        });
+
+        var business = await _customerBusinessService.GetAsync(tenantId);
+
+        var listed = business.Branches.Single();
+        listed.IsOpenNow.ShouldBe(false);
+        listed.NextChangeLocalTime.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task A_branch_with_no_opening_hours_set_reports_an_unknown_open_state()
+    {
+        var tenantId = await CreateBusinessAsync(approved: true);
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var branch = Branch.Create(Guid.NewGuid(), "Downtown");
+                await _branchRepository.InsertAsync(branch, autoSave: true);
+            }
+        });
+
+        var business = await _customerBusinessService.GetAsync(tenantId);
+
+        var listed = business.Branches.Single();
+        listed.OpeningHours.ShouldBeEmpty();
+        listed.IsOpenNow.ShouldBeNull();
     }
 }

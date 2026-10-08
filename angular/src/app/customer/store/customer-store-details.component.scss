@@ -107,3 +107,30 @@
     outline-offset: 2px;
   }
 }
+
+.eks-open-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+
+  &--open {
+    background: var(--eks-success-subtle-bg);
+    color: var(--eks-success-subtle-fg);
+  }
+
+  &--closed {
+    background: var(--eks-secondary-bg, var(--bs-secondary-bg));
+    color: var(--eks-text-muted);
+  }
+}
+
+.eks-hours-details {
+  summary {
+    color: var(--eks-primary);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+}

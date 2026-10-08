@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Eksabli.Branches;
 
 namespace Eksabli.Businesses;
 
@@ -18,10 +19,23 @@ public class CustomerBusinessBranchDto
 
     public string? Phone { get; set; }
 
-    // Free text, as the business wrote it. Shown as-is: opening hours are not structured data on the branch.
+    // Free text, as the business wrote it.
     public string? Address { get; set; }
 
-    public string? OpeningHours { get; set; }
+    // Structured weekly schedule — see DayOpeningHoursDto. Empty when the business hasn't set any hours.
+    public List<DayOpeningHoursDto> OpeningHours { get; set; } = new();
+
+    // Server-computed from OpeningHours + the business's own BusinessProfile.TimeZoneId (never the
+    // caller's device clock) — null when this branch has no hours set, so the client can tell "unknown"
+    // apart from "closed". See CustomerBusinessAppService.BuildAsync.
+    public bool? IsOpenNow { get; set; }
+
+    // "HH:mm" in the business's own local time, paired with IsOpenNow the same way
+    // CustomerSmartOfferDto.NextChangeLocalTime/NextChangeIsTomorrow already pair with its own
+    // availability flag. Null when OpeningHours has no open day at all.
+    public string? NextChangeLocalTime { get; set; }
+
+    public bool NextChangeIsTomorrow { get; set; }
 
     // Set together or not at all; used for a "open in maps" link.
     public double? Latitude { get; set; }

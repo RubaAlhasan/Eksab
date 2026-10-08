@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LocalizationPipe, PermissionService } from '@abp/ng.core';
 import { ToasterService } from '@abp/ng.theme.shared';
 import { BranchesService } from '../../proxy/controllers/branches.service';
 import { BillingService } from '../../proxy/controllers/billing.service';
-import type { BranchDto } from '../../proxy/branches/models';
+import type { BranchDto, DayOpeningHoursDto } from '../../proxy/branches/models';
+import { DayOfWeek } from '../../proxy/branches/day-of-week.enum';
 import type { UsageDto } from '../../proxy/billing/models';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
@@ -12,12 +13,47 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 
+// Monday-first display order — the week's natural reading order for most of this app's users,
+// independent of DayOfWeek's own Sunday=0 numeric storage order.
+const WEEK_DAYS: DayOfWeek[] = [
+  DayOfWeek.Monday,
+  DayOfWeek.Tuesday,
+  DayOfWeek.Wednesday,
+  DayOfWeek.Thursday,
+  DayOfWeek.Friday,
+  DayOfWeek.Saturday,
+  DayOfWeek.Sunday,
+];
+
+const DAY_LABEL_KEYS: Record<DayOfWeek, string> = {
+  [DayOfWeek.Monday]: '::BusinessPanel:Branches:DayMonday',
+  [DayOfWeek.Tuesday]: '::BusinessPanel:Branches:DayTuesday',
+  [DayOfWeek.Wednesday]: '::BusinessPanel:Branches:DayWednesday',
+  [DayOfWeek.Thursday]: '::BusinessPanel:Branches:DayThursday',
+  [DayOfWeek.Friday]: '::BusinessPanel:Branches:DayFriday',
+  [DayOfWeek.Saturday]: '::BusinessPanel:Branches:DaySaturday',
+  [DayOfWeek.Sunday]: '::BusinessPanel:Branches:DaySunday',
+};
+
+function buildDayGroup(): FormGroup {
+  return new FormGroup({
+    isClosed: new FormControl(true, { nonNullable: true }),
+    openTime: new FormControl('09:00', { nonNullable: true, validators: [Validators.required] }),
+    closeTime: new FormControl('18:00', { nonNullable: true, validators: [Validators.required] }),
+  });
+}
+
 /**
  * Business Portal > Branches — mirrors prototype/business/branches.html, built against
  * `BranchAppService`'s real full CRUD (`GetListAsync`/`CreateAsync`/`UpdateAsync`, whole controller
  * gated on `Eksabli.Branches.Default`; `Create`/`Edit` children gate the two actions this page
- * exposes). Proxy (`proxy/branches/*`, `proxy/controllers/branches.service.ts`) already existed, fully
- * generated — no backend changes needed for the CRUD itself.
+ * exposes).
+ *
+ * Opening hours is a real structured weekly schedule now (`DayOpeningHoursDto[]`, one HTML
+ * `<input type="time">` pair per day with a "Closed" toggle) — previously free text into
+ * `Branch.OpeningHoursJson` with no schema. "24:00" (midnight) isn't reachable through a native time
+ * input (max "23:59"), so a business that's genuinely open to midnight types "23:59" — a deliberate,
+ * negligible rounding rather than a custom time-widget just for that one edge case.
  *
  * Real fields only, deliberately different from the prototype's exact card shape:
  * - No "Status" badge (Active/Inactive) — `Branch` has no such field anywhere in the domain (confirmed
@@ -30,11 +66,6 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
  *   codebase (the real `WalletQrToken` flow is a *customer's own wallet* QR for a staff member to scan
  *   at POS, a completely different thing from a *branch's* own printable check-in code). The prototype
  *   generates a literal random pixel grid for this — pure decoration with nothing real behind it.
- * - Opening hours is captured as free text into `Branch.OpeningHoursJson`, a freeform string column
- *   (`[StringLength(2000)]`, no enforced schema — confirmed by reading `BranchAppService`/`Branch.cs`)
- *   — same "freeform blob, not a schema the column itself enforces" treatment as
- *   `BusinessProfile.SocialLinksJson` elsewhere in this app. Stored as whatever text is typed, not
- *   parsed/validated as JSON.
  * - **Plan-quota alert IS real** — `IBillingAppService.GetMyUsageAsync()` (`Eksabli.Billing.ManageOwn`)
  *   returns the real `{ BranchCount, MaxBranches }` pair, computed server-side from the same
  *   `FeatureChecker`/`EksabliFeatures.MaxBranches` check `BranchAppService.CreateAsync` itself already
@@ -71,6 +102,9 @@ export class BusinessBranchesComponent implements OnInit {
   private readonly toaster = inject(ToasterService);
   private readonly permissionService = inject(PermissionService);
 
+  protected readonly weekDays = WEEK_DAYS;
+  protected readonly dayLabelKey = (day: DayOfWeek): string => DAY_LABEL_KEYS[day];
+
   protected readonly branches = signal<BranchDto[]>([]);
   protected readonly isLoading = signal(true);
   protected readonly loadFailed = signal(false);
@@ -88,8 +122,19 @@ export class BusinessBranchesComponent implements OnInit {
     name: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(128)] }),
     address: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(512)] }),
     phone: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(32)] }),
-    openingHoursJson: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(2000)] }),
+    hours: new FormArray(WEEK_DAYS.map(() => buildDayGroup())),
   });
+
+  protected dayGroup(index: number): FormGroup {
+    return this.form.controls.hours.at(index) as FormGroup;
+  }
+
+  /** A short "9:00 AM – 10:00 PM" / "Closed" summary per day, for the read-only branch list. */
+  protected hoursSummary(branch: BranchDto, day: DayOfWeek): string {
+    const entry = branch.openingHours.find((d) => d.dayOfWeek === day);
+    if (!entry || entry.isClosed) return '';
+    return `${entry.openTime} – ${entry.closeTime}`;
+  }
 
   ngOnInit(): void {
     this.load();
@@ -102,7 +147,8 @@ export class BusinessBranchesComponent implements OnInit {
 
   protected openCreateModal(): void {
     this.editingBranchId = null;
-    this.form.reset({ name: '', address: '', phone: '', openingHoursJson: '' });
+    this.form.reset({ name: '', address: '', phone: '' });
+    this.resetHours([]);
     this.formModalOpen.set(true);
   }
 
@@ -113,8 +159,8 @@ export class BusinessBranchesComponent implements OnInit {
       name: branch.name ?? '',
       address: branch.address ?? '',
       phone: branch.phone ?? '',
-      openingHoursJson: branch.openingHoursJson ?? '',
     });
+    this.resetHours(branch.openingHours);
     this.formModalOpen.set(true);
   }
 
@@ -129,11 +175,21 @@ export class BusinessBranchesComponent implements OnInit {
     }
 
     const value = this.form.getRawValue();
+    const openingHours: DayOpeningHoursDto[] = WEEK_DAYS.map((day, index) => {
+      const dayValue = value.hours[index];
+      return {
+        dayOfWeek: day,
+        isClosed: dayValue.isClosed,
+        openTime: dayValue.isClosed ? null : dayValue.openTime,
+        closeTime: dayValue.isClosed ? null : dayValue.closeTime,
+      };
+    });
+
     const input = {
       name: value.name,
       address: value.address || null,
       phone: value.phone || null,
-      openingHoursJson: value.openingHoursJson || null,
+      openingHours,
       latitude: null,
       longitude: null,
     };
@@ -157,6 +213,18 @@ export class BusinessBranchesComponent implements OnInit {
         this.isSaving.set(false);
         this.toaster.error('::BusinessPanel:Branches:SaveErrorMessage');
       },
+    });
+  }
+
+  private resetHours(existing: DayOpeningHoursDto[]): void {
+    const byDay = new Map(existing.map((d) => [d.dayOfWeek, d]));
+    WEEK_DAYS.forEach((day, index) => {
+      const entry = byDay.get(day);
+      this.dayGroup(index).reset({
+        isClosed: entry?.isClosed ?? true,
+        openTime: entry?.openTime || '09:00',
+        closeTime: entry?.closeTime || '18:00',
+      });
     });
   }
 

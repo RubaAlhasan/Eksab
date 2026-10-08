@@ -7,6 +7,7 @@ using Eksabli.Branches;
 using Eksabli.BusinessProfiles;
 using Eksabli.Platform;
 using Eksabli.Reviews;
+using Eksabli.SmartOffers;
 using Eksabli.Wallets;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
@@ -185,6 +186,8 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
                 .GroupBy(r => r.TenantId!.Value)
                 .ToDictionary(g => g.Key, g => (Average: g.Average(r => r.Rating), Count: g.Count()));
 
+            var nowUtc = Clock.Now;
+
             return profiles.Select(p =>
             {
                 var tenantId = p.TenantId!.Value;
@@ -193,6 +196,9 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
                     ? categories.GetValueOrDefault(p.CategoryId.Value)
                     : null;
                 var reviewStat = reviewStats.GetValueOrDefault(tenantId);
+                // Validated at write time (BusinessProfile.SetTimeZoneId), so every row's TimeZoneId is
+                // already a real IANA id — no try/catch needed around resolving it on this read path.
+                var timeZone = p.ResolveTimeZone();
 
                 return new CustomerBusinessDto
                 {
@@ -219,20 +225,42 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
                     ReviewCount = reviewStat.Count,
                     DistanceKm = NearestBranchDistanceKm(tenantBranches, latitude, longitude),
                     Branches = tenantBranches
-                                                .Select(b => new CustomerBusinessBranchDto
-                        {
-                            Id = b.Id,
-                            Name = b.Name,
-                            Phone = b.Phone,
-                            Address = b.Address,
-                            OpeningHours = b.OpeningHoursJson,
-                            Latitude = b.Latitude,
-                            Longitude = b.Longitude,
-                        })
+                        .Select(b => BuildBranchDto(b, timeZone, nowUtc))
                         .ToList(),
                 };
             }).ToList();
         }
+    }
+
+    private static CustomerBusinessBranchDto BuildBranchDto(Branch b, TimeZoneInfo timeZone, DateTime nowUtc)
+    {
+        var openingHours = BranchOpeningHoursMapper.Deserialize(b.OpeningHoursJson);
+        var dto = new CustomerBusinessBranchDto
+        {
+            Id = b.Id,
+            Name = b.Name,
+            Phone = b.Phone,
+            Address = b.Address,
+            OpeningHours = openingHours,
+            Latitude = b.Latitude,
+            Longitude = b.Longitude,
+        };
+
+        if (openingHours.Count == 0) return dto;
+
+        var week = BranchOpeningHoursMapper.ToDomain(openingHours);
+        dto.IsOpenNow = BranchOpeningHours.IsOpenAt(week, nowUtc, timeZone);
+
+        var nextChangeUtc = BranchOpeningHours.GetNextChangeUtc(week, nowUtc, timeZone);
+        if (nextChangeUtc is { } changeUtc)
+        {
+            var (today, _) = SmartOfferTiming.ToLocal(nowUtc, timeZone);
+            var (changeDate, changeMinute) = SmartOfferTiming.ToLocal(changeUtc, timeZone);
+            dto.NextChangeLocalTime = MinuteOfDay.Format(changeMinute);
+            dto.NextChangeIsTomorrow = changeDate > today;
+        }
+
+        return dto;
     }
 
     private static double? NearestBranchDistanceKm(

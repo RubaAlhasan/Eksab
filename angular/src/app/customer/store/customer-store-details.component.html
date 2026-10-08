@@ -132,12 +132,41 @@
           <div class="eks-row">
             <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-location-dot"></i></span>
             <span class="eks-row__body">
-              <span class="eks-row__title">{{ branch.name }}</span>
+              <span class="d-flex align-items-center gap-2">
+                <span class="eks-row__title">{{ branch.name }}</span>
+                @if (branch.isOpenNow === true) {
+                  <span class="badge eks-open-badge eks-open-badge--open">{{ '::Wallet:Store:OpenNow' | abpLocalization }}</span>
+                } @else if (branch.isOpenNow === false) {
+                  <span class="badge eks-open-badge eks-open-badge--closed">{{ '::Wallet:Store:ClosedNow' | abpLocalization }}</span>
+                }
+              </span>
               @if (branch.address) {
                 <span class="eks-row__meta">{{ branch.address }}</span>
               }
-              @if (branch.openingHours) {
-                <span class="eks-row__meta" style="white-space: pre-line">{{ branch.openingHours }}</span>
+              @if (branch.nextChangeLocalTime) {
+                <span class="eks-row__meta">
+                  {{ (branch.isOpenNow
+                    ? (branch.nextChangeIsTomorrow ? '::Wallet:Store:ClosesTomorrowAt' : '::Wallet:Store:ClosesAt')
+                    : (branch.nextChangeIsTomorrow ? '::Wallet:Store:OpensTomorrowAt' : '::Wallet:Store:OpensAt')
+                  ) | abpLocalization: branch.nextChangeLocalTime }}
+                </span>
+              }
+              @if (branch.openingHours.length > 0) {
+                <details class="eks-hours-details">
+                  <summary class="small">{{ '::Wallet:Store:ViewHours' | abpLocalization }}</summary>
+                  <div class="eks-row__meta">
+                    @for (day of weekDays; track day) {
+                      <div class="d-flex justify-content-between gap-3">
+                        <span>{{ dayLabelKey(day) | abpLocalization }}</span>
+                        @if (hoursSummary(branch, day); as summary) {
+                          <span>{{ summary }}</span>
+                        } @else if (isDayClosed(branch, day)) {
+                          <span>{{ '::Wallet:Store:DayClosed' | abpLocalization }}</span>
+                        }
+                      </div>
+                    }
+                  </div>
+                </details>
               }
               <span class="d-flex flex-wrap gap-3 small mt-1">
                 @if (mapLink(branch); as link) {
