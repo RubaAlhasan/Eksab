@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Eksabli.BusinessProfiles;
 using Eksabli.Memberships;
 using Eksabli.Wallets;
 using Shouldly;
@@ -25,6 +26,7 @@ public abstract class CouponAppService_Tests<TStartupModule> : EksabliApplicatio
     private readonly IRepository<Membership, Guid> _membershipRepository;
     private readonly IRepository<PointsWallet, Guid> _walletRepository;
     private readonly IRepository<PointsTransaction, Guid> _transactionRepository;
+    private readonly IRepository<BusinessProfile, Guid> _businessProfileRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly ICurrentPrincipalAccessor _currentPrincipalAccessor;
 
@@ -37,8 +39,23 @@ public abstract class CouponAppService_Tests<TStartupModule> : EksabliApplicatio
         _membershipRepository = GetRequiredService<IRepository<Membership, Guid>>();
         _walletRepository = GetRequiredService<IRepository<PointsWallet, Guid>>();
         _transactionRepository = GetRequiredService<IRepository<PointsTransaction, Guid>>();
+        _businessProfileRepository = GetRequiredService<IRepository<BusinessProfile, Guid>>();
         _currentTenant = GetRequiredService<ICurrentTenant>();
         _currentPrincipalAccessor = GetRequiredService<ICurrentPrincipalAccessor>();
+    }
+
+    private async Task ApproveBusinessAsync(Guid tenantId, string displayName)
+    {
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (_currentTenant.Change(tenantId))
+            {
+                var profile = BusinessProfile.Create(Guid.NewGuid());
+                profile.SetDisplayName(displayName);
+                profile.Approve();
+                await _businessProfileRepository.InsertAsync(profile, autoSave: true);
+            }
+        });
     }
 
     private IDisposable LoginAs(Guid userId)
@@ -344,6 +361,88 @@ public abstract class CouponAppService_Tests<TStartupModule> : EksabliApplicatio
             var coupons = await WithUnitOfWorkAsync(() => _couponAppService.GetMyCouponsAsync());
             coupons.Count.ShouldBe(2);
             coupons.Select(c => c.TenantId).ShouldBe(new Guid?[] { tenantA, tenantB }, ignoreOrder: true);
+        }
+    }
+
+    [Fact]
+    public async Task My_Feed_Shows_Affordable_And_Unaffordable_Rewards_Across_Joined_Approved_Businesses()
+    {
+        var tenantId = await CreateTenantAsync();
+        await ApproveBusinessAsync(tenantId, "Joined Cafe");
+        var customerId = Guid.NewGuid();
+        await JoinBusinessWithBalanceAsync(tenantId, customerId, 50);
+        await CreateRewardAsync(tenantId, pointsCost: 30);
+        await CreateRewardAsync(tenantId, pointsCost: 100);
+
+        using (LoginAs(customerId))
+        {
+            var feed = await WithUnitOfWorkAsync(() => _couponAppService.GetMyFeedAsync());
+
+            feed.Items.Count.ShouldBe(2);
+            var affordable = feed.Items.Single(i => i.PointsCost == 30);
+            affordable.CanAfford.ShouldBeTrue();
+            affordable.PointsNeeded.ShouldBe(0);
+            affordable.AvailableBalance.ShouldBe(50);
+            affordable.BusinessName.ShouldBe("Joined Cafe");
+
+            var unaffordable = feed.Items.Single(i => i.PointsCost == 100);
+            unaffordable.CanAfford.ShouldBeFalse();
+            unaffordable.PointsNeeded.ShouldBe(50);
+
+            // Affordable first, regardless of insertion order.
+            feed.Items.Select(i => i.PointsCost).ShouldBe(new[] { 30, 100 });
+        }
+    }
+
+    [Fact]
+    public async Task My_Feed_Excludes_A_Business_The_Customer_Has_Not_Joined()
+    {
+        var joined = await CreateTenantAsync();
+        await ApproveBusinessAsync(joined, "Joined Cafe");
+        var stranger = await CreateTenantAsync();
+        await ApproveBusinessAsync(stranger, "Stranger Grill");
+        var customerId = Guid.NewGuid();
+        await JoinBusinessWithBalanceAsync(joined, customerId, 100);
+        await CreateRewardAsync(joined, pointsCost: 10);
+        await CreateRewardAsync(stranger, pointsCost: 10);
+
+        using (LoginAs(customerId))
+        {
+            var feed = await WithUnitOfWorkAsync(() => _couponAppService.GetMyFeedAsync());
+            feed.Items.Single().BusinessName.ShouldBe("Joined Cafe");
+        }
+    }
+
+    [Fact]
+    public async Task My_Feed_Excludes_A_Joined_Business_That_Is_Not_Yet_Approved()
+    {
+        var tenantId = await CreateTenantAsync(); // never approved
+        var customerId = Guid.NewGuid();
+        await JoinBusinessWithBalanceAsync(tenantId, customerId, 100);
+        await CreateRewardAsync(tenantId, pointsCost: 10);
+
+        using (LoginAs(customerId))
+        {
+            var feed = await WithUnitOfWorkAsync(() => _couponAppService.GetMyFeedAsync());
+            feed.Items.ShouldBeEmpty();
+        }
+    }
+
+    [Fact]
+    public async Task My_Feed_Excludes_Out_Of_Stock_And_Expired_Rewards()
+    {
+        var tenantId = await CreateTenantAsync();
+        await ApproveBusinessAsync(tenantId, "Joined Cafe");
+        var customerId = Guid.NewGuid();
+        await JoinBusinessWithBalanceAsync(tenantId, customerId, 100);
+        await CreateRewardAsync(tenantId, pointsCost: 10, stockRemaining: 0);
+        await CreateRewardAsync(tenantId, pointsCost: 10, validTo: DateTime.UtcNow.AddDays(-1));
+        await CreateRewardAsync(tenantId, pointsCost: 10); // the one real survivor
+
+        using (LoginAs(customerId))
+        {
+            var feed = await WithUnitOfWorkAsync(() => _couponAppService.GetMyFeedAsync());
+            feed.Items.Count.ShouldBe(1);
         }
     }
 }

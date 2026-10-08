@@ -61,3 +61,25 @@ export interface RewardDto extends FullAuditedEntityDto<string> {
   imageBlobName?: string | null;
   approvalThresholdPoints?: number | null;
 }
+
+// Deliberately separate from RewardDto, which the Business Portal's own reward CRUD also uses —
+// businessName/availableBalance/canAfford only make sense once a reward is seen in the context of
+// "across every business I belong to".
+export interface CustomerRewardDto {
+  id: string;
+  tenantId: string;
+  nameAr: string;
+  nameEn: string;
+  type: RewardType;
+  pointsCost: number;
+  stockRemaining?: number | null;
+  imageBlobName?: string | null;
+  businessName: string;
+  availableBalance: number;
+  canAfford: boolean;
+  pointsNeeded: number;
+}
+
+export interface CustomerRewardListDto {
+  items: CustomerRewardDto[];
+}

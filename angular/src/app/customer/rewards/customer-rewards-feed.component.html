@@ -1,0 +1,76 @@
+<div class="eks-rewards-feed">
+  <div class="eks-rewards-feed__filters">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <div class="eks-filter-search">
+        <app-search-input
+          [placeholder]="'::Wallet:RewardsFeed:SearchPlaceholder' | abpLocalization"
+          (valueChange)="setQuery($event)"
+        ></app-search-input>
+      </div>
+      <select
+        class="form-select eks-filter-select"
+        [attr.aria-label]="'::Wallet:RewardsFeed:SortLabel' | abpLocalization"
+        (change)="setSort($any($event.target).value)"
+      >
+        <option value="affordableFirst">{{ '::Wallet:RewardsFeed:SortAffordableFirst' | abpLocalization }}</option>
+        <option value="cheapest">{{ '::Wallet:RewardsFeed:SortCheapest' | abpLocalization }}</option>
+        <option value="mostExpensive">{{ '::Wallet:RewardsFeed:SortMostExpensive' | abpLocalization }}</option>
+      </select>
+    </div>
+
+    <div class="eks-chip-row" role="group" [attr.aria-label]="'::Wallet:RewardsFeed:AffordabilityLabel' | abpLocalization">
+      <button type="button" class="eks-chip" [class.active]="affordableOnly()" (click)="setAffordableOnly(true)">
+        {{ '::Wallet:RewardsFeed:FilterAffordable' | abpLocalization: affordableCount().toString() }}
+      </button>
+      <button type="button" class="eks-chip" [class.active]="!affordableOnly()" (click)="setAffordableOnly(false)">
+        {{ '::Wallet:RewardsFeed:FilterAll' | abpLocalization: feed().length.toString() }}
+      </button>
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <app-skeleton-list variant="grid" [count]="6" [label]="'::Wallet:RewardsFeed:Loading' | abpLocalization" />
+  } @else if (loadFailed()) {
+    <app-error-state [message]="'::Wallet:RewardsFeed:LoadError' | abpLocalization" (retry)="retry()" />
+  } @else if (feed().length === 0) {
+    <app-empty-state
+      icon="fa-gift"
+      [title]="'::Wallet:RewardsFeed:EmptyTitle' | abpLocalization"
+      [description]="'::Wallet:RewardsFeed:EmptyDescription' | abpLocalization"
+    />
+  } @else if (filtered().length === 0) {
+    <app-empty-state
+      icon="fa-filter"
+      [title]="'::Wallet:RewardsFeed:NoMatchTitle' | abpLocalization"
+    />
+  } @else {
+    <div class="eks-tile-grid mb-3">
+      @for (reward of pageItems(); track reward.id) {
+        <a
+          [routerLink]="['/customer/wallet', reward.tenantId, 'rewards', reward.id]"
+          class="eks-tile eks-rise"
+          [class.eks-tile--disabled]="!reward.canAfford || isOutOfStock(reward)"
+        >
+          <span class="eks-icon-tile eks-icon-tile--emoji" aria-hidden="true">{{ rewardTypeEmoji(reward.type) }}</span>
+          <span class="fw-semibold text-truncate">{{ name(reward) }}</span>
+          <span class="text-muted small text-truncate">{{ reward.businessName }}</span>
+          <span class="d-flex align-items-center gap-2 flex-wrap">
+            @if (isOutOfStock(reward)) {
+              <span class="badge bg-danger-subtle text-danger-emphasis">{{ '::Wallet:Rewards:OutOfStock' | abpLocalization }}</span>
+            } @else if (isLowStock(reward)) {
+              <span class="badge bg-warning-subtle text-warning-emphasis">{{ '::Wallet:Rewards:LowStock' | abpLocalization }}</span>
+            }
+          </span>
+          <span class="eks-points-figure">{{ reward.pointsCost }} {{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
+          @if (!reward.canAfford) {
+            <span class="text-muted small">{{ '::Wallet:RewardsFeed:PointsNeeded' | abpLocalization: reward.pointsNeeded.toString() }}</span>
+          }
+        </a>
+      }
+    </div>
+
+    @if (totalPages() > 1) {
+      <app-pagination [pageIndex]="pageIndex()" [totalPages]="totalPages()" (pageChange)="goToPage($event)" />
+    }
+  }
+</div>

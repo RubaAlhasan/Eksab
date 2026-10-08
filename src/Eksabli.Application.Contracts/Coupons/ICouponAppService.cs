@@ -13,6 +13,11 @@ public interface ICouponAppService : IApplicationService
 {
     Task<PagedResultDto<RewardDto>> GetCatalogAsync(Guid tenantId, PagedAndSortedResultRequestDto input);
 
+    // Across every business the customer has an active membership at, approved only — same
+    // business-selection shape as CustomerSmartOfferAppService.GetFeedAsync /
+    // CustomerCampaignAppService.GetMyFeedAsync. Capped, not paginated — a feed, not a report.
+    Task<CustomerRewardListDto> GetMyFeedAsync(int maxResultCount = 50);
+
     // Creates a PENDING coupon and RESERVES the points — it does not debit them. The reward is not
     // the customer's until staff approve the returned code at the till (PosAppService).
     Task<CouponDto> RedeemAsync(RedeemRewardDto input);

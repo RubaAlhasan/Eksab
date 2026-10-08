@@ -44,6 +44,20 @@ public class EfCoreRewardRepository : EfCoreRepository<EksabliDbContext, Reward,
         return (items, totalCount);
     }
 
+    public async Task<List<Reward>> GetActiveForTenantsAsync(IReadOnlyCollection<Guid> tenantIds, CancellationToken cancellationToken = default)
+    {
+        var ids = tenantIds.Select(id => (Guid?)id).ToList();
+        var now = _clock.Now;
+
+        var query = (await GetQueryableAsync())
+            .Where(x => ids.Contains(x.TenantId))
+            .Where(x => x.StockRemaining == null || x.StockRemaining > 0)
+            .Where(x => x.ValidFrom == null || x.ValidFrom <= now)
+            .Where(x => x.ValidTo == null || x.ValidTo >= now);
+
+        return await AsyncExecuter.ToListAsync(query, GetCancellationToken(cancellationToken));
+    }
+
     protected virtual IQueryable<Reward> ApplyFilter(IQueryable<Reward> query, string? filterText, bool activeOnly)
     {
         if (!filterText.IsNullOrWhiteSpace())
