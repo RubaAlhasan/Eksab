@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Eksabli.Billing;
 using Eksabli.BusinessProfiles;
 using Eksabli.Branches;
+using Eksabli.Data.Seeders;
 using Eksabli.EmployeeAssignments;
 using Eksabli.Settings;
 using Eksabli.Shared;
@@ -104,7 +105,8 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
             await _dataSeeder.SeedAsync(
                 new DataSeedContext(tenant.Id)
                     .WithProperty(IdentityDataSeedContributor.AdminEmailPropertyName, input.OwnerEmail)
-                    .WithProperty(IdentityDataSeedContributor.AdminPasswordPropertyName, input.OwnerPassword));
+                    .WithProperty(IdentityDataSeedContributor.AdminPasswordPropertyName, input.OwnerPassword)
+                    .WithProperty(SmartOfferPermissionBackfillDataSeederContributor.NewTenantRegistrationPropertyName, true));
 
             var ownerUser = await _identityUserRepository.FindByNormalizedUserNameAsync("ADMIN")
                 ?? throw new AbpException("Tenant admin seeding did not produce the expected user.");

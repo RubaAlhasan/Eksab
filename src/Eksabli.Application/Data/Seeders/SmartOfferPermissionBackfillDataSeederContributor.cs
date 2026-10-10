@@ -18,7 +18,12 @@ namespace Eksabli.Data.Seeders;
 // is a no-op for a role that already exists. So no existing tenant ever received the Eksabli.SmartOffers.*
 // grants, and its Owner got 403s on every Smart Offers endpoint. This tenant-scoped contributor fills that gap.
 // It runs on every DbMigrator pass for each tenant (EksabliDbMigrationService.SeedDataAsync) and during
-// registration, where it is a harmless no-op for the brand-new tenant.
+// registration. A brand-new tenant must NOT be granted here: registration seeds inside its own still-open
+// transaction, then grants the Owner's full set (Smart Offers included) in a separate requires-new one
+// (BusinessAppService.RegisterAsync). Granting the same AbpPermissionGrants row in the outer transaction
+// first makes the inner insert wait on the outer's uncommitted unique key, which in turn waits on the inner
+// — on PostgreSQL that hangs until the command timeout. So registration passes NewTenantRegistration and
+// this contributor only records the marker.
 //
 // Runs once per tenant. The marker setting is what keeps it from regranting: without it, an Owner who
 // deliberately removed a Smart Offers permission would get it back on the next migrator run. Only the Smart
@@ -29,6 +34,8 @@ namespace Eksabli.Data.Seeders;
 // at a time, not the bulk seeder, for the same reason as the other per-tenant grant helpers in this codebase.
 public class SmartOfferPermissionBackfillDataSeederContributor : IDataSeedContributor, ITransientDependency
 {
+    public const string NewTenantRegistrationPropertyName = "Eksabli.NewTenantRegistration";
+
     private const string AdminRoleName = "admin";
 
     private static readonly string[] SmartOfferPermissions =
@@ -68,6 +75,12 @@ public class SmartOfferPermissionBackfillDataSeederContributor : IDataSeedContri
             EksabliSettings.SmartOffers.PermissionsBackfilled, TenantSettingValueProvider.ProviderName, providerKey);
         if (alreadyBackfilled == "true")
         {
+            return;
+        }
+
+        if (context[NewTenantRegistrationPropertyName] is true)
+        {
+            await _settingManager.SetForTenantAsync(tenantId, EksabliSettings.SmartOffers.PermissionsBackfilled, "true");
             return;
         }
 
