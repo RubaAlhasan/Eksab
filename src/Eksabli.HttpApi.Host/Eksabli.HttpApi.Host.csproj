@@ -8,12 +8,13 @@
     <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
     <RootNamespace>Eksabli</RootNamespace>
     <PreserveCompilationReferences>true</PreserveCompilationReferences>
+    <UserSecretsId>c5ee75f2-0190-4c0d-a22e-709ba1fb8d95</UserSecretsId>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Eksabli.HttpApi.Host' " />
 
   <ItemGroup>
-    <PackageReference Include="KubernetesClient" Version="18.0.5"/>
+    <PackageReference Include="KubernetesClient" Version="18.0.5" />
     <PackageReference Include="IdentityModel" Version="7.0.0" />
     <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="10.0.9" />
