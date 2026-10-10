@@ -25,4 +25,8 @@ public interface IAdminUserAppService : IApplicationService
     // .GetMyTransactionHistoryAsync, just parameterized by an explicit membershipId/tenantId instead of
     // the caller's own CustomerId (this runs as Host-realm staff looking at an arbitrary customer).
     Task<PagedResultDto<TransactionListItemDto>> GetCustomerTransactionsAsync(Guid membershipId, Guid tenantId, PagedAndSortedResultRequestDto input);
+
+    // One customer's completed smart-deal sales at one business (the membership's own tenant), read exactly as that
+    // business's Smart deal sales tab reads them.
+    Task<PagedResultDto<SmartDealSaleDto>> GetCustomerSmartDealSalesAsync(Guid membershipId, Guid tenantId, PagedAndSortedResultRequestDto input);
 }

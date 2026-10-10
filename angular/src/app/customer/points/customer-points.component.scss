@@ -48,7 +48,7 @@
 // Two quick-link tiles, styled to match the home page's quick actions.
 .eks-points-quicklinks {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
 }
 

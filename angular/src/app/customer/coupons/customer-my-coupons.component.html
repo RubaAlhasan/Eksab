@@ -3,19 +3,21 @@
 } @else if (loadFailed()) {
   <app-error-state [message]="'::Wallet:Coupons:LoadError' | abpLocalization" (retry)="retry()" />
 } @else if (coupons().length === 0) {
-  <app-empty-state icon="fa-ticket" [title]="'::Wallet:Coupons:Empty' | abpLocalization" />
+  <app-empty-state icon="fa-ticket" [title]="'::Wallet:Coupons:Empty' | abpLocalization">
+    <a routerLink="/customer/search" class="btn btn-sm btn-outline-primary">{{ '::Wallet:Favorites:Discover' | abpLocalization }}</a>
+  </app-empty-state>
 } @else {
   <div class="eks-chip-row mb-3">
-    <button type="button" class="eks-chip" [class.active]="filter() === 'all'" (click)="selectFilter('all')">
+    <button type="button" class="eks-chip" [class.active]="filter() === 'all'" [attr.aria-pressed]="filter() === 'all'" (click)="selectFilter('all')">
       {{ '::Wallet:Coupons:FilterAll' | abpLocalization }}
     </button>
-    <button type="button" class="eks-chip" [class.active]="filter() === 'active'" (click)="selectFilter('active')">
+    <button type="button" class="eks-chip" [class.active]="filter() === 'active'" [attr.aria-pressed]="filter() === 'active'" (click)="selectFilter('active')">
       {{ '::Wallet:Coupons:FilterActive' | abpLocalization }}
     </button>
-    <button type="button" class="eks-chip" [class.active]="filter() === 'used'" (click)="selectFilter('used')">
+    <button type="button" class="eks-chip" [class.active]="filter() === 'used'" [attr.aria-pressed]="filter() === 'used'" (click)="selectFilter('used')">
       {{ '::Wallet:Coupons:FilterUsed' | abpLocalization }}
     </button>
-    <button type="button" class="eks-chip" [class.active]="filter() === 'expired'" (click)="selectFilter('expired')">
+    <button type="button" class="eks-chip" [class.active]="filter() === 'expired'" [attr.aria-pressed]="filter() === 'expired'" (click)="selectFilter('expired')">
       {{ '::Wallet:Coupons:FilterExpired' | abpLocalization }}
     </button>
   </div>
@@ -35,8 +37,11 @@
         >
           <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-ticket"></i></span>
           <span class="eks-row__body">
-            <span class="eks-row__title">{{ coupon.rewardNameEn }}</span>
+            <span class="eks-row__title">{{ coupon.rewardNameEn | localizedName: coupon.rewardNameAr }}</span>
             <span class="eks-row__meta">
+              @if (businessNameFor(coupon); as businessName) {
+                {{ businessName }} ·
+              }
               {{ coupon.pointsCost }} {{ '::Wallet:PointsSuffix' | abpLocalization }} · {{ coupon.issuedAt | date: 'mediumDate' }}
             </span>
           </span>

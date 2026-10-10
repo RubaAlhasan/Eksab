@@ -26,7 +26,7 @@
     </div>
 
     <div class="eks-points-hero__balance">
-      <span class="eks-points-hero__value">{{ wallet()!.balance | number }}</span>
+      <span class="eks-points-hero__value"><app-animated-number [value]="wallet()!.balance ?? 0" /></span>
       <span class="eks-points-hero__unit">{{ '::Wallet:PointsSuffix' | abpLocalization }}</span>
     </div>
 
@@ -47,6 +47,21 @@
     </div>
   </section>
 
+  @if (tierProgress(); as progress) {
+    <section class="eks-tier-progress mb-3">
+      <p class="small mb-1">{{ '::Wallet:Points:NextTier' | abpLocalization: progress.remaining.toString() : progress.nextName }}</p>
+      <div class="progress" role="progressbar" [attr.aria-valuenow]="progress.percent" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="'::Wallet:Points:NextTierAria' | abpLocalization">
+        <div class="progress-bar" [style.width.%]="progress.percent"></div>
+      </div>
+    </section>
+  }
+
+  @if ((wallet()!.expiringPoints ?? 0) > 0) {
+    <p class="alert alert-warning small py-2 px-3 mb-3" role="status">
+      {{ '::Wallet:Points:ExpiringNotice' | abpLocalization: wallet()!.expiringPoints!.toString() : (wallet()!.expiringOn | date: 'mediumDate') }}
+    </p>
+  }
+
   <div class="eks-points-quicklinks mb-4">
     <a [routerLink]="['/customer/wallet', tenantId, 'rewards']" class="card eks-points-quicklink eks-rise" style="--eks-rise-delay: 80ms">
       <div class="card-body text-center">
@@ -56,7 +71,15 @@
         <span class="d-block small fw-semibold">{{ '::Wallet:Points:RewardsLink' | abpLocalization }}</span>
       </div>
     </a>
-    <a [routerLink]="['/customer/wallet', tenantId, 'transactions']" class="card eks-points-quicklink eks-rise" style="--eks-rise-delay: 140ms">
+    <a [routerLink]="['/customer/store', tenantId]" class="card eks-points-quicklink eks-rise" style="--eks-rise-delay: 140ms">
+      <div class="card-body text-center">
+        <span class="eks-points-quicklink__icon" aria-hidden="true">
+          <i class="fas fa-store"></i>
+        </span>
+        <span class="d-block small fw-semibold">{{ '::Wallet:Points:BusinessLink' | abpLocalization }}</span>
+      </div>
+    </a>
+    <a [routerLink]="['/customer/wallet', tenantId, 'transactions']" class="card eks-points-quicklink eks-rise" style="--eks-rise-delay: 200ms">
       <div class="card-body text-center">
         <span class="eks-points-quicklink__icon" aria-hidden="true">
           <i class="fas fa-clock-rotate-left"></i>

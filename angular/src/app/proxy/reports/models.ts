@@ -65,6 +65,47 @@ export interface ReportPeriodDto {
   to: string;
 }
 
+export interface SmartDealSaleDto extends EntityDto<string> {
+  smartOfferId?: string;
+  code?: string;
+  offerTitleAr?: string;
+  offerTitleEn?: string;
+  offerDescriptionAr?: string | null;
+  offerDescriptionEn?: string | null;
+  quantity?: number;
+  unitPrice?: number;
+  basePrice?: number;
+  totalAmount?: number;
+  currency?: Currency;
+  serviceDate?: string;
+  placedAt?: string;
+  completedAt?: string | null;
+  completedBranchId?: string | null;
+  branchName?: string | null;
+  completedByEmployeeId?: string | null;
+  staffEmail?: string | null;
+  customerFirstName?: string | null;
+  customerLastName?: string | null;
+}
+
+export interface SmartDealSalesExcelDownloadDto {
+  downloadToken?: string;
+  branchId?: string | null;
+  staffId?: string | null;
+  from?: string | null;
+  to?: string | null;
+  search?: string | null;
+}
+
+export interface SmartDealSaleFilterDto extends PagedAndSortedResultRequestDto {
+  branchId?: string | null;
+  staffId?: string | null;
+  from?: string | null;
+  to?: string | null;
+  search?: string | null;
+  membershipId?: string | null;
+}
+
 export interface TierDistributionDto {
   tierId?: string | null;
   tierName?: string | null;

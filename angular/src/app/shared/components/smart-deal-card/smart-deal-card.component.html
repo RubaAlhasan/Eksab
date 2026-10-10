@@ -1,0 +1,162 @@
+<article
+  class="card eks-smart-deal eks-rise"
+  [class.eks-smart-deal--live]="offer().isAvailableNow"
+  [class.eks-smart-deal--paused]="!offer().isAvailableNow"
+>
+  <header class="eks-smart-deal__head">
+    <span class="eks-smart-deal__badge">
+      <span aria-hidden="true">🔥</span>{{ '::SmartDeals:Customer:SmartDeal' | abpLocalization }}
+    </span>
+    @if (discount(); as pct) {
+      <span class="eks-smart-deal__drop">{{ '::SmartDeals:Customer:PriceDrop' | abpLocalization }} −{{ pct }}%</span>
+    }
+    @if (endingSoon()) {
+      <span class="eks-smart-deal__soon"><i class="fas fa-hourglass-half" aria-hidden="true"></i>{{ '::SmartDeals:Customer:EndingSoon' | abpLocalization }}</span>
+    }
+    @if (offer().validTo) {
+      <span class="eks-smart-deal__ends">{{ '::SmartDeals:Customer:EndsOn' | abpLocalization: (offer().validTo | date: 'mediumDate') }}</span>
+    }
+  </header>
+
+  @if (showBusiness() && offer().businessName) {
+    <a class="eks-smart-deal__business text-truncate" [routerLink]="['/customer/store', tenantId()]">{{ offer().businessName }}</a>
+  }
+  <h3 class="eks-smart-deal__title">{{ title() }}</h3>
+  @if (description(); as text) {
+    <p class="eks-smart-deal__desc">{{ text }}</p>
+  }
+
+  <div class="eks-smart-deal__price" [class.eks-smart-deal__price--flash]="priceDropped()" aria-live="polite">
+    @if (offer().isAvailableNow && offer().currentPrice !== null && offer().currentPrice !== undefined) {
+      @if (offer().basePrice && offer().basePrice! > offer().currentPrice!) {
+        <s class="eks-smart-deal__base">{{ money(offer().basePrice, offer().currency) }}</s>
+      }
+      <span class="eks-smart-deal__now">{{ money(offer().currentPrice, offer().currency) }}</span>
+    } @else {
+      <span class="eks-smart-deal__idle">{{ '::SmartDeals:NotOnSaleNow' | abpLocalization }}</span>
+    }
+  </div>
+
+  <div class="eks-smart-deal__meta">
+    @if (remaining(); as left) {
+      @if (left === 0) {
+        <span class="eks-smart-deal__soldout">{{ '::SmartDeals:Customer:SoldOut' | abpLocalization }}</span>
+      } @else {
+        <span class="eks-smart-deal__left" [class.eks-smart-deal__left--urgent]="left <= 5">
+          <span class="eks-smart-deal__dot" aria-hidden="true"></span>
+          {{ '::SmartDeals:Customer:OnlyLeft' | abpLocalization: left.toString() }}
+        </span>
+      }
+    }
+    @if (offer().currentStageStartTime && offer().currentStageEndTime) {
+      <span class="eks-smart-deal__window">
+        {{ '::SmartDeals:Customer:StageWindow' | abpLocalization: offer().currentStageStartTime! : offer().currentStageEndTime! }}
+      </span>
+    }
+  </div>
+
+  @switch (nextChangeKind()) {
+    @case ('drops') {
+      <p class="eks-smart-deal__next eks-smart-deal__next--drop">
+        {{ '::SmartDeals:Customer:PriceDropsAt' | abpLocalization: money(offer().nextPrice, offer().currency) : nextChangeTime() }}
+        @if (offer().nextChangeIsTomorrow) {
+          <span>· {{ '::SmartDeals:Customer:Tomorrow' | abpLocalization }}</span>
+        }
+      </p>
+    }
+    @case ('rises') {
+      <p class="eks-smart-deal__next">
+        {{ '::SmartDeals:Customer:PriceRisesAt' | abpLocalization: money(offer().nextPrice, offer().currency) : nextChangeTime() }}
+      </p>
+    }
+    @case ('offSale') {
+      <p class="eks-smart-deal__next">
+        {{ '::SmartDeals:Customer:OffSaleAt' | abpLocalization: nextChangeTime() }}
+      </p>
+    }
+    @case ('backOnSale') {
+      <p class="eks-smart-deal__next">
+        {{ '::SmartDeals:Customer:BackOnSaleAt' | abpLocalization: money(offer().nextPrice, offer().currency) : nextChangeTime() }}
+        @if (offer().nextChangeIsTomorrow) {
+          <span>· {{ '::SmartDeals:Customer:Tomorrow' | abpLocalization }}</span>
+        }
+      </p>
+    }
+  }
+
+  @if (nextChangeKind() && nextChangeInMs() !== null && nextChangeInMs()! > 0) {
+    <div class="eks-smart-deal__countdown" aria-live="off">
+      <span class="eks-smart-deal__countdown-label">{{ '::SmartDeals:Customer:CountdownLabel' | abpLocalization }}</span>
+      <span class="eks-smart-deal__countdown-value">{{ formatCountdown(nextChangeInMs()!) }}</span>
+    </div>
+  }
+
+  @if (canWatchPrice()) {
+    <div class="d-flex justify-content-end mb-2">
+      <button
+        type="button"
+        class="btn btn-sm"
+        [class.btn-outline-secondary]="!watched()"
+        [class.btn-secondary]="watched()"
+        [attr.aria-pressed]="watched()"
+        (click)="toggleWatch()"
+      >
+        <i class="fas me-1" [class.fa-bell]="!watched()" [class.fa-bell-slash]="watched()" aria-hidden="true"></i>
+        {{ (watched() ? '::SmartDeals:Customer:StopWatching' : '::SmartDeals:Customer:WatchPrice') | abpLocalization }}
+      </button>
+    </div>
+  }
+
+  @if (pendingOrder(); as order) {
+    <section class="eks-smart-voucher" [class.eks-smart-voucher--done]="order.status === OrderStatus.Completed">
+      @if (order.status === OrderStatus.Completed) {
+        <div class="eks-smart-voucher__done">
+          <i class="fas fa-circle-check" aria-hidden="true"></i>
+          <span>{{ '::SmartDeals:Customer:Collected' | abpLocalization }}</span>
+        </div>
+        <div class="d-flex justify-content-end">
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="dismissOrder()">{{ '::SmartDeals:Customer:Dismiss' | abpLocalization }}</button>
+        </div>
+      } @else if (order.status === OrderStatus.Pending && holdIsOpen(order)) {
+        <p class="eks-smart-voucher__label">{{ '::SmartDeals:Customer:ShowAtCounter' | abpLocalization }}</p>
+        <div class="eks-smart-voucher__code" [attr.aria-label]="'::SmartDeals:Customer:CodeAria' | abpLocalization">{{ order.code }}</div>
+        <div class="eks-smart-voucher__hold">
+          <span>{{ '::SmartDeals:Customer:HoldsFor' | abpLocalization }}</span>
+          <span class="eks-smart-voucher__hold-time">{{ formatCountdown(holdLeftMs()!) }}</span>
+        </div>
+        <div class="d-flex justify-content-end">
+          <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="isBusy()" (click)="cancelOrder()">
+            {{ '::SmartDeals:Customer:CancelOrder' | abpLocalization }}
+          </button>
+        </div>
+      } @else {
+        <p class="eks-smart-voucher__label">
+          {{ (order.status === OrderStatus.Rejected ? '::SmartDeals:Customer:Declined' : '::SmartDeals:Customer:Closed') | abpLocalization }}
+        </p>
+        @if (order.rejectionReason) {
+          <p class="small text-muted mb-2">{{ order.rejectionReason }}</p>
+        }
+        <div class="d-flex justify-content-end">
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="dismissOrder()">{{ '::SmartDeals:Customer:Dismiss' | abpLocalization }}</button>
+        </div>
+      }
+    </section>
+  } @else if (canOrderNow()) {
+    @if (canBuy()) {
+      <div class="eks-smart-buy">
+        <div class="eks-stepper" role="group" [attr.aria-label]="'::SmartDeals:Customer:QuantityAria' | abpLocalization">
+          <button type="button" class="eks-stepper__btn" [disabled]="quantity() <= 1" (click)="step(-1)" aria-label="−">−</button>
+          <span class="eks-stepper__value" aria-live="polite">{{ quantity() }}</span>
+          <button type="button" class="eks-stepper__btn" [disabled]="quantity() >= maxQuantity()" (click)="step(1)" aria-label="+">+</button>
+        </div>
+        <button type="button" class="btn btn-primary eks-smart-buy__cta" [disabled]="isBusy()" (click)="buy()">
+          <i class="fas fa-bolt me-1" aria-hidden="true"></i>
+          {{ '::SmartDeals:Customer:BuyNow' | abpLocalization }}
+          <span class="eks-smart-buy__total">{{ money(orderTotal(), offer().currency) }}</span>
+        </button>
+      </div>
+    } @else {
+      <a class="eks-smart-deal__join" [routerLink]="['/customer/store', tenantId()]">{{ '::SmartDeals:Customer:JoinToBuy' | abpLocalization }}</a>
+    }
+  }
+</article>

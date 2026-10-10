@@ -58,6 +58,7 @@ public class CampaignSweepWorker : AsyncPeriodicBackgroundWorkerBase
         var backgroundJobManager = serviceProvider.GetRequiredService<IBackgroundJobManager>();
         var guidGenerator = serviceProvider.GetRequiredService<IGuidGenerator>();
         var clock = serviceProvider.GetRequiredService<IClock>();
+        var pointsExpiryPolicy = serviceProvider.GetRequiredService<IPointsExpiryPolicy>();
         // The Notification/NotificationChannel.Push row below only ever reaches a real device via
         // NotificationSender -> IPushNotificationSender, and the registered implementation
         // (NullPushNotificationSender) is a dev placeholder that just logs — no FCM/APNs is configured
@@ -118,13 +119,15 @@ public class CampaignSweepWorker : AsyncPeriodicBackgroundWorkerBase
                 if (rules.BonusPoints is > 0)
                 {
                     var wallet = await walletRepository.FirstAsync(w => w.MembershipId == membership.Id);
+                    var expiresAt = await pointsExpiryPolicy.GetExpiresAtForEarnAsync();
                     var transaction = PointsTransaction.Create(
                         guidGenerator.Create(),
                         wallet.Id,
                         PointsTransactionType.Earn,
                         rules.BonusPoints.Value,
                         pointsSource,
-                        referenceId: campaign.Id);
+                        referenceId: campaign.Id,
+                        expiresAt: expiresAt);
                     await transactionRepository.InsertAsync(transaction);
 
                     wallet.ApplyTransaction(PointsTransactionType.Earn, rules.BonusPoints.Value);

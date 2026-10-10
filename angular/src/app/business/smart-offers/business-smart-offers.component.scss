@@ -1,0 +1,65 @@
+// Owner cards reuse the portal's .card surface and the tokens from styles/_tokens.scss; this file only adds the
+// price-first layout. No raw colours here.
+
+.eks-smart-card {
+  border: 1px solid var(--eks-border);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: var(--eks-shadow-md);
+  }
+
+  &--paused {
+    opacity: 0.72;
+  }
+}
+
+.eks-smart-card__title {
+  font-weight: 700;
+  color: var(--eks-text);
+}
+
+.eks-smart-card__price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.eks-smart-card__now {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--eks-text);
+}
+
+.eks-smart-card__base {
+  font-size: 1rem;
+  color: var(--eks-text-muted);
+}
+
+.eks-smart-card__chip {
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--eks-radius-pill);
+  background: var(--eks-success-subtle-bg);
+  color: var(--eks-success-subtle-fg);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.eks-smart-card__caption {
+  width: 100%;
+  font-size: 0.75rem;
+  color: var(--eks-text-muted);
+}
+
+.eks-smart-card__idle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--eks-text-muted);
+}
+
+.min-w-0 {
+  min-width: 0;
+}

@@ -70,6 +70,11 @@ public class EksabliPermissionDefinitionProvider : PermissionDefinitionProvider
         offersPermission.AddChild(EksabliPermissions.Offers.Edit, L("Permission:Offers.Edit"), MultiTenancySides.Tenant);
         offersPermission.AddChild(EksabliPermissions.Offers.Delete, L("Permission:Offers.Delete"), MultiTenancySides.Tenant);
 
+        var smartOffersPermission = myGroup.AddPermission(EksabliPermissions.SmartOffers.Default, L("Permission:SmartOffers"), MultiTenancySides.Tenant);
+        smartOffersPermission.AddChild(EksabliPermissions.SmartOffers.Create, L("Permission:SmartOffers.Create"), MultiTenancySides.Tenant);
+        smartOffersPermission.AddChild(EksabliPermissions.SmartOffers.Edit, L("Permission:SmartOffers.Edit"), MultiTenancySides.Tenant);
+        smartOffersPermission.AddChild(EksabliPermissions.SmartOffers.Delete, L("Permission:SmartOffers.Delete"), MultiTenancySides.Tenant);
+
         // Notifications itself has real children on BOTH sides (a tenant's own campaign-channel send
         // vs. the platform admin's cross-tenant broadcast) — same "Both on the parent, restrict each
         // child" shape as Billing above.

@@ -2,7 +2,7 @@ import { RestService, Rest } from '@abp/ng.core';
 import type { PagedAndSortedResultRequestDto, PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 import type { AdminCustomerDetailDto, AdminUserDto, AdminUserFilterDto } from '../platform/models';
-import type { TransactionListItemDto } from '../reports/models';
+import type { SmartDealSaleDto, TransactionListItemDto } from '../reports/models';
 
 @Injectable({
   providedIn: 'root',
@@ -19,6 +19,14 @@ export class AdminUsersService {
     },
     { apiName: this.apiName,...config });
 
+
+  getCustomerSmartDealSales = (membershipId: string, tenantId: string, input: PagedAndSortedResultRequestDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, PagedResultDto<SmartDealSaleDto>>({
+      method: 'GET',
+      url: `/api/app/admin-users/memberships/${membershipId}/smart-deal-sales`,
+      params: { tenantId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+    },
+    { apiName: this.apiName,...config });
 
   getCustomerTransactions = (membershipId: string, tenantId: string, input: PagedAndSortedResultRequestDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PagedResultDto<TransactionListItemDto>>({

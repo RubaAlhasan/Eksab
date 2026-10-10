@@ -1,4 +1,5 @@
 using System;
+using Eksabli.SmartOffers;
 using Volo.Abp;
 using Volo.Abp.Domain.Entities.Auditing;
 using Volo.Abp.MultiTenancy;
@@ -31,6 +32,15 @@ public class BusinessProfile : AuditedAggregateRoot<Guid>, IMultiTenant
     public string? Website { get; private set; }
 
     public string? SocialLinksJson { get; private set; }
+
+    // IANA zone of the business's own clock. "Today", the day boundaries and peak hours on the Business
+    // dashboard are computed here, never in the server's zone, so a business never sees yesterday's sales as today's.
+    public string TimeZoneId { get; private set; } = BusinessProfileConsts.DefaultTimeZoneId;
+
+    // Per-business points expiry. Every positive earn row stores its own ExpiresAt, computed from this value at
+    // the moment it is earned, so changing the setting never moves the expiry of points already awarded.
+    // Null means this business's points never expire.
+    public int? PointsExpiryMonths { get; private set; }
 
     // Manual approval queue until self-serve moderation tooling exists — see
     // docs/eksabli-loyalty-platform/features/08-admin-panel/README.md#business-rules. Every new
@@ -99,6 +109,32 @@ public class BusinessProfile : AuditedAggregateRoot<Guid>, IMultiTenant
     public void SetWebsite(string? website) => Website = website;
 
     public void SetSocialLinks(string? socialLinksJson) => SocialLinksJson = socialLinksJson;
+
+    // Validated here, not only in the DTO: a bad zone would silently move every "today" to the wrong day.
+    public void SetTimeZone(string timeZoneId)
+    {
+        Check.NotNullOrWhiteSpace(timeZoneId, nameof(timeZoneId), BusinessProfileConsts.MaxTimeZoneIdLength);
+        SmartOfferTiming.ResolveTimeZone(timeZoneId);
+        TimeZoneId = timeZoneId;
+    }
+
+    public TimeZoneInfo ResolveTimeZone() => SmartOfferTiming.ResolveTimeZone(TimeZoneId);
+
+    // Validated here, not only in the DTO: an out-of-range value would silently create points that expire at once
+    // or never. Null switches expiry off for this business.
+    public void SetPointsExpiryMonths(int? months)
+    {
+        if (months is int value)
+        {
+            Check.Range(value, nameof(months), BusinessProfileConsts.MinPointsExpiryMonths, BusinessProfileConsts.MaxPointsExpiryMonths);
+        }
+
+        PointsExpiryMonths = months;
+    }
+
+    // The ExpiresAt an earn row gets when it is awarded at utcNow. Null when the business has no expiry configured.
+    public DateTime? ComputeExpiresAt(DateTime utcNow) =>
+        PointsExpiryMonths is int months ? utcNow.AddMonths(months) : null;
 
     public void SetLogo(string? logoBlobName, string? logoContentType)
     {

@@ -17,6 +17,16 @@ public class CustomerBusinessBranchDto
     public string Name { get; set; } = string.Empty;
 
     public string? Phone { get; set; }
+
+    // Free text, as the business wrote it. Shown as-is: opening hours are not structured data on the branch.
+    public string? Address { get; set; }
+
+    public string? OpeningHours { get; set; }
+
+    // Set together or not at all; used for a "open in maps" link.
+    public double? Latitude { get; set; }
+
+    public double? Longitude { get; set; }
 }
 
 // Customer-safe projection of a business: what the consumer app needs to render a
@@ -43,6 +53,12 @@ public class CustomerBusinessDto
     public string? DescriptionEn { get; set; }
 
     public string? Website { get; set; }
+
+    // The business's own social profiles, read from BusinessProfile.SocialLinksJson under the "instagram" and
+    // "facebook" keys the business settings screen writes. Null when not set.
+    public string? Instagram { get; set; }
+
+    public string? Facebook { get; set; }
 
     // The logo is served by BusinessController.GetLogoAsync, which is keyed by
     // BusinessProfile id (not tenant id) and is AllowAnonymous — so the client can

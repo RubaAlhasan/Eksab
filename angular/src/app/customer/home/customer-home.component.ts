@@ -15,23 +15,42 @@ import { NotificationHubService } from '../../shared/services/notification-hub.s
 import type { PointsWalletDto } from '../../proxy/wallets/models';
 import type { CustomerCampaignDto } from '../../proxy/campaigns/models';
 import type { CustomerBusinessDto } from '../../proxy/businesses/models';
-import type { CouponDto } from '../../proxy/rewards/models';
+import type { CouponDto, RewardDto } from '../../proxy/rewards/models';
+import { isOutOfStock, rewardStatus } from '../../shared/utils/reward-display.util';
 import { CouponStatus } from '../../proxy/rewards/coupon-status.enum';
 import type { TransactionListItemDto } from '../../proxy/reports/models';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { LocalizedNamePipe } from '../../shared/pipes/localized-name.pipe';
+import { AnimatedNumberComponent } from '../../shared/components/animated-number/animated-number.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { campaignTypeEmoji, campaignTypeLabelKey } from '../../shared/utils/campaign-display.util';
+import { DEFAULT_DEAL_FILTERS, filterDeals, sortDeals } from '../../shared/utils/smart-deal-feed.util';
+import { SmartDealTileComponent } from '../../shared/components/smart-deal-tile/smart-deal-tile.component';
+import { CustomerSmartOffersService } from '../../proxy/controllers/customer-smart-offers.service';
+import type { CustomerSmartOfferDto } from '../../proxy/smart-offers/models';
 import { isCredit, transactionSourceLabelKey, transactionTypeLabelKey } from '../../shared/utils/transaction-display.util';
 
 const DISCOVER_CANDIDATE_COUNT = 8;
 const DISCOVER_PREVIEW_COUNT = 4;
 const CAMPAIGN_PREVIEW_COUNT = 6;
+const SMART_DEAL_PREVIEW_COUNT = 6;
 // How many of the customer's joined businesses to pull recent activity from — bounded so a member of
 // many businesses doesn't fan out into dozens of parallel requests just to render a home-page preview.
 const RECENT_ACTIVITY_WALLET_FANOUT = 6;
 const RECENT_ACTIVITY_PER_WALLET = 3;
 const RECENT_ACTIVITY_PREVIEW_COUNT = 5;
 const REWARDS_PREVIEW_COUNT = 3;
+// Rewards the customer can afford right now, across the businesses they hold points with. Same bounded fan-out as
+// recent activity, so a member of many businesses does not issue a request per business on every home visit.
+const AFFORDABLE_WALLET_FANOUT = 6;
+const AFFORDABLE_CATALOG_SIZE = 20;
+const AFFORDABLE_PREVIEW_COUNT = 6;
+
+interface AffordableReward {
+  reward: RewardDto;
+  tenantId: string;
+  businessName: string;
+}
 
 // One row of the Home page's own cross-business "Recent Activity" feed — TransactionListItemDto itself
 // has no business name (it's the same shape WalletService returns for a single, already-known tenant
@@ -65,8 +84,11 @@ interface RecentActivityItem {
     DecimalPipe,
     DatePipe,
     LocalizationPipe,
+    LocalizedNamePipe,
     EmptyStateComponent,
     ErrorStateComponent,
+    AnimatedNumberComponent,
+    SmartDealTileComponent,
   ],
 })
 export class CustomerHomeComponent implements OnInit {
@@ -76,6 +98,7 @@ export class CustomerHomeComponent implements OnInit {
   private readonly customerBusinessService = inject(CustomerBusinessService);
   private readonly walletService = inject(WalletService);
   private readonly couponsService = inject(CouponsService);
+  private readonly customerSmartOffersService = inject(CustomerSmartOffersService);
   private readonly configState = inject(ConfigStateService);
   protected readonly hub = inject(NotificationHubService);
 
@@ -85,6 +108,10 @@ export class CustomerHomeComponent implements OnInit {
   protected readonly displayName = signal<string | null>(null);
 
   protected readonly campaigns = signal<CustomerCampaignDto[]>([]);
+  // The section is always shown once the feed has answered, so an empty feed reads as "nothing running" rather
+  // than as a missing section. A failed request hides it instead of claiming there are no campaigns.
+  protected readonly campaignsLoaded = signal(false);
+  protected readonly campaignsFailed = signal(false);
   protected readonly discoverCandidates = signal<CustomerBusinessDto[]>([]);
 
   // Recent activity and rewards previews are genuinely secondary content (the hero stats and wallet
@@ -94,6 +121,7 @@ export class CustomerHomeComponent implements OnInit {
   protected readonly recentActivityLoading = signal(true);
   protected readonly recentActivity = signal<RecentActivityItem[]>([]);
   protected readonly activeCoupons = signal<CouponDto[]>([]);
+  protected readonly affordableRewards = signal<AffordableReward[]>([]);
 
   protected readonly campaignTypeEmoji = campaignTypeEmoji;
   protected readonly campaignTypeLabelKey = campaignTypeLabelKey;
@@ -106,6 +134,16 @@ export class CustomerHomeComponent implements OnInit {
   protected readonly totalPoints = computed(() => this.wallets().reduce((sum, w) => sum + (w.balance ?? 0), 0));
   protected readonly businessCount = computed(() => this.wallets().length);
   protected readonly activeCouponsCount = computed(() => this.activeCoupons().length);
+
+  // Points about to expire across every business, and the earliest date among them, from the wallets already loaded.
+  protected readonly expiringPoints = computed(() => this.wallets().reduce((sum, w) => sum + (w.expiringPoints ?? 0), 0));
+  protected readonly expiringOn = computed<string | null>(() => {
+    const dates = this.wallets()
+      .filter(w => (w.expiringPoints ?? 0) > 0 && !!w.expiringOn)
+      .map(w => w.expiringOn as string);
+    if (dates.length === 0) return null;
+    return dates.reduce((earliest, date) => (Date.parse(date) < Date.parse(earliest) ? date : earliest));
+  });
 
   protected readonly rewardsPreview = computed(() => this.activeCoupons().slice(0, REWARDS_PREVIEW_COUNT));
 
@@ -136,6 +174,13 @@ export class CustomerHomeComponent implements OnInit {
     return map;
   });
 
+  // A business name with no spaces cannot wrap cleanly, so it is shown on one line with an ellipsis instead of
+  // being split mid-word. Names with spaces wrap at the spaces as normal.
+  protected isUnbrokenLongName(name: string | null | undefined): boolean {
+    const trimmed = (name ?? '').trim();
+    return trimmed.length > 12 && !/\s/.test(trimmed);
+  }
+
   protected rewardBusinessName(coupon: CouponDto): string | null {
     return coupon.tenantId ? (this.businessNameByTenantId().get(coupon.tenantId) ?? null) : null;
   }
@@ -161,6 +206,17 @@ export class CustomerHomeComponent implements OnInit {
 
   protected readonly campaignPreview = computed(() => this.campaigns().slice(0, CAMPAIGN_PREVIEW_COUNT));
 
+  // Smart deals from every business the customer joined or follows. The strip leads with deals on sale right now, best
+  // saving first; when nothing is on sale it falls back to what is coming, so the section never reads as empty by accident.
+  protected readonly smartDeals = signal<CustomerSmartOfferDto[]>([]);
+  protected readonly smartDealsLoaded = signal(false);
+  protected readonly smartDealsFailed = signal(false);
+  protected readonly smartDealPreview = computed(() => {
+    const all = this.smartDeals();
+    const live = filterDeals(all, { ...DEFAULT_DEAL_FILTERS, availability: 'liveNow' });
+    return sortDeals(live.length > 0 ? live : all, 'biggestSaving').slice(0, SMART_DEAL_PREVIEW_COUNT);
+  });
+
   private readonly joinedTenantIds = computed(
     () => new Set(this.wallets().map(w => w.tenantId).filter((id): id is string => !!id)),
   );
@@ -180,10 +236,8 @@ export class CustomerHomeComponent implements OnInit {
       error: () => undefined,
     });
 
-    this.customerCampaignService.getMyFeed().subscribe({
-      next: campaigns => this.campaigns.set(campaigns),
-      error: () => undefined,
-    });
+    this.loadCampaigns();
+    this.loadSmartDeals();
 
     this.customerBusinessService
       .getList({
@@ -215,6 +269,42 @@ export class CustomerHomeComponent implements OnInit {
     this.load();
   }
 
+  protected retryCampaigns(): void {
+    this.loadCampaigns();
+  }
+
+  protected retrySmartDeals(): void {
+    this.loadSmartDeals();
+  }
+
+  private loadSmartDeals(): void {
+    this.smartDealsFailed.set(false);
+    this.customerSmartOffersService.getFeed(12).subscribe({
+      next: result => {
+        this.smartDeals.set(result.items ?? []);
+        this.smartDealsLoaded.set(true);
+      },
+      error: () => {
+        this.smartDealsLoaded.set(true);
+        this.smartDealsFailed.set(true);
+      },
+    });
+  }
+
+  private loadCampaigns(): void {
+    this.campaignsFailed.set(false);
+    this.customerCampaignService.getMyFeed().subscribe({
+      next: campaigns => {
+        this.campaigns.set(campaigns);
+        this.campaignsLoaded.set(true);
+      },
+      error: () => {
+        this.campaignsLoaded.set(true);
+        this.campaignsFailed.set(true);
+      },
+    });
+  }
+
   // Per-card fallback state for Discover-preview logos (a Set keyed by tenantId) — same pattern as
   // CustomerDiscoverComponent/CustomerFavoritesComponent. Wallet cards have no logo field on
   // PointsWalletDto at all, so they always use the initials fallback, no tracking needed.
@@ -237,11 +327,48 @@ export class CustomerHomeComponent implements OnInit {
         this.wallets.set(wallets);
         this.isLoading.set(false);
         this.loadRecentActivity(wallets);
+        this.loadAffordableRewards(wallets);
       },
       error: () => {
         this.isLoading.set(false);
         this.loadFailed.set(true);
       },
+    });
+  }
+
+  // Rewards that are active, in stock and within the customer's spendable balance at that business. Only businesses where
+  // the customer has something to spend are asked, and each reward is judged against that business's own balance.
+  private loadAffordableRewards(wallets: PointsWalletDto[]): void {
+    const candidates = wallets
+      .filter((w): w is PointsWalletDto & { tenantId: string } => !!w.tenantId && (w.availableBalance ?? 0) > 0)
+      .slice(0, AFFORDABLE_WALLET_FANOUT);
+
+    if (candidates.length === 0) {
+      this.affordableRewards.set([]);
+      return;
+    }
+
+    const requests = candidates.map(wallet => {
+      const spendable = wallet.availableBalance ?? 0;
+      return this.couponsService
+        .getCatalog(wallet.tenantId, { sorting: 'creationTime desc', skipCount: 0, maxResultCount: AFFORDABLE_CATALOG_SIZE })
+        .pipe(
+          map(result =>
+            (result.items ?? [])
+              .filter(reward => rewardStatus(reward) === 'active' && !isOutOfStock(reward) && (reward.pointsCost ?? Infinity) <= spendable)
+              .map((reward): AffordableReward => ({ reward, tenantId: wallet.tenantId, businessName: wallet.businessName ?? '' })),
+          ),
+          catchError(() => of<AffordableReward[]>([])),
+        );
+    });
+
+    forkJoin(requests).subscribe(perWallet => {
+      // Most valuable first: the rewards that take the most of what the customer has are the ones worth showing.
+      const merged = perWallet
+        .flat()
+        .sort((a, b) => (b.reward.pointsCost ?? 0) - (a.reward.pointsCost ?? 0))
+        .slice(0, AFFORDABLE_PREVIEW_COUNT);
+      this.affordableRewards.set(merged);
     });
   }
 

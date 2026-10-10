@@ -1,0 +1,52 @@
+// The counter is used on a tablet at a till, so the code field and the amount are the two things that must be large
+// and unmistakable. Colours come from tokens; nothing here is raw hex.
+
+.eks-smart-code-input {
+  font-family: var(--bs-font-monospace);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.eks-counter-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed var(--eks-border);
+}
+
+.eks-counter-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 1rem 0;
+}
+
+.eks-counter-total__value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--eks-text);
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+
+// Each settled sale opens its details, so the whole row is the click target.
+.eks-history__row {
+  cursor: pointer;
+}
+
+.eks-history__title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  color: var(--eks-text);
+}

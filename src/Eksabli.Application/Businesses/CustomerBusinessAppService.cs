@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Eksabli.Branches;
 using Eksabli.BusinessProfiles;
 using Eksabli.Platform;
+using Eksabli.Wallets;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -32,6 +34,7 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
     private readonly IRepository<Tenant, Guid> _tenantRepository;
     private readonly IRepository<Category, Guid> _categoryRepository;
     private readonly IRepository<Branch, Guid> _branchRepository;
+    private readonly IRepository<PointRule, Guid> _pointRuleRepository;
     private readonly IDataFilter _dataFilter;
 
     public CustomerBusinessAppService(
@@ -39,12 +42,14 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
         IRepository<Tenant, Guid> tenantRepository,
         IRepository<Category, Guid> categoryRepository,
         IRepository<Branch, Guid> branchRepository,
+        IRepository<PointRule, Guid> pointRuleRepository,
         IDataFilter dataFilter)
     {
         _businessProfileRepository = businessProfileRepository;
         _tenantRepository = tenantRepository;
         _categoryRepository = categoryRepository;
         _branchRepository = branchRepository;
+        _pointRuleRepository = pointRuleRepository;
         _dataFilter = dataFilter;
     }
 
@@ -87,6 +92,20 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
             ?? throw new EntityNotFoundException(typeof(BusinessProfile), tenantId);
     }
 
+    public async Task<List<CustomerEarnRuleDto>> GetEarnRulesAsync(Guid tenantId)
+    {
+        // Same visibility as the store page: a business that is not approved has no public earn rules either.
+        await GetAsync(tenantId);
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var rules = await _pointRuleRepository.GetListAsync(r => r.TenantId == tenantId);
+            return rules
+                .Select(r => new CustomerEarnRuleDto { RuleType = r.RuleType, PointsPerUnit = r.PointsPerUnit, Currency = r.Currency })
+                .ToList();
+        }
+    }
+
     public async Task<List<CustomerBusinessDto>> GetManyAsync(CustomerBusinessLookupDto input)
     {
         if (input.TenantIds.Count == 0)
@@ -101,6 +120,26 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
 
     // Single place that assembles the projection: profiles (Approved only) joined to
     // tenant names, category names and branch data.
+    // BusinessProfile.SocialLinksJson is a freeform blob (see BusinessAppService.BuildSocialLinksJson). Read one key
+    // defensively: malformed or unexpected JSON means "not set", never a failed directory request.
+    private static string? ReadSocialLink(string? socialLinksJson, string key)
+    {
+        if (socialLinksJson.IsNullOrWhiteSpace()) return null;
+        try
+        {
+            using var document = JsonDocument.Parse(socialLinksJson!);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object) return null;
+            if (!root.TryGetProperty(key, out var value) || value.ValueKind != JsonValueKind.String) return null;
+            var link = value.GetString();
+            return link.IsNullOrWhiteSpace() ? null : link!.Trim();
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     private async Task<List<CustomerBusinessDto>> BuildAsync(
         System.Linq.Expressions.Expression<Func<BusinessProfile, bool>> profileFilter,
         double? latitude = null,
@@ -158,13 +197,24 @@ public class CustomerBusinessAppService : ApplicationService, ICustomerBusinessA
                     DescriptionAr = p.DescriptionAr,
                     DescriptionEn = p.DescriptionEn,
                     Website = p.Website,
+                    Instagram = ReadSocialLink(p.SocialLinksJson, "instagram"),
+                    Facebook = ReadSocialLink(p.SocialLinksJson, "facebook"),
                     BusinessProfileId = p.Id,
                     HasLogo = !p.LogoBlobName.IsNullOrWhiteSpace(),
                     LogoBlobName = p.LogoBlobName,
                     BranchCount = tenantBranches.Count,
                     DistanceKm = NearestBranchDistanceKm(tenantBranches, latitude, longitude),
                     Branches = tenantBranches
-                        .Select(b => new CustomerBusinessBranchDto { Id = b.Id, Name = b.Name, Phone = b.Phone })
+                                                .Select(b => new CustomerBusinessBranchDto
+                        {
+                            Id = b.Id,
+                            Name = b.Name,
+                            Phone = b.Phone,
+                            Address = b.Address,
+                            OpeningHours = b.OpeningHoursJson,
+                            Latitude = b.Latitude,
+                            Longitude = b.Longitude,
+                        })
                         .ToList(),
                 };
             }).ToList();

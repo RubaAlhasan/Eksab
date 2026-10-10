@@ -1,3 +1,7 @@
+<header class="eks-page-header">
+  <h1 class="eks-page-title">{{ '::Wallet:Layout:NavProfile' | abpLocalization }}</h1>
+</header>
+
 @if (isLoading()) {
   <app-skeleton-list variant="panel" [label]="'::Wallet:Profile:Loading' | abpLocalization" />
 } @else if (loadFailed()) {
@@ -12,7 +16,7 @@
     @if (phoneNumber()) {
       <p class="text-muted small mb-0">{{ '::Wallet:Profile:PhoneLabel' | abpLocalization }}: {{ phoneNumber() }}</p>
     }
-    <p class="text-muted small mb-0">
+    <p class="text-muted small mb-0 eks-profile__detail">
       {{ '::Wallet:Profile:EmailLabel' | abpLocalization }}: {{ email() ?? ('::Wallet:Profile:NotSet' | abpLocalization) }}
     </p>
   </section>
@@ -36,6 +40,11 @@
     <a routerLink="/customer/birthday-rewards" class="eks-row eks-row--action">
       <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-cake-candles"></i></span>
       <span class="eks-row__body"><span class="eks-row__title">{{ '::Wallet:Profile:BirthdayRewards' | abpLocalization }}</span></span>
+      <span class="eks-row__end"><i class="fas fa-chevron-right"></i></span>
+    </a>
+    <a routerLink="/customer/support" class="eks-row eks-row--action">
+      <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-headset"></i></span>
+      <span class="eks-row__body"><span class="eks-row__title">{{ '::Wallet:Profile:HelpSupport' | abpLocalization }}</span></span>
       <span class="eks-row__end"><i class="fas fa-chevron-right"></i></span>
     </a>
     <a routerLink="/customer/settings" class="eks-row eks-row--action">

@@ -41,4 +41,11 @@ public interface IReportsAppService : IApplicationService
     Task<IRemoteStreamContent> GetTransactionsAsExcelFileAsync(TransactionsExcelDownloadDto input);
 
     Task<PagedResultDto<TransactionListItemDto>> GetTransactionsListAsync(TransactionFilterDto input);
+
+    // Completed Buy Now sales, for the Transactions page's "Smart deal sales" tab. Not on the points ledger above.
+    Task<PagedResultDto<SmartDealSaleDto>> GetSmartDealSalesAsync(SmartDealSaleFilterDto input);
+
+    Task<DownloadTokenResultDto> GetSmartDealSalesDownloadTokenAsync();
+
+    Task<IRemoteStreamContent> GetSmartDealSalesAsExcelFileAsync(SmartDealSalesExcelDownloadDto input);
 }

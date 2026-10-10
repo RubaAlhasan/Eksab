@@ -8,6 +8,7 @@ using Eksabli.EmployeeAssignments;
 using Eksabli.Devices;
 using Eksabli.Wallets;
 using Eksabli.Rewards;
+using Eksabli.SmartOffers;
 using Eksabli.Billing;
 using Eksabli.Campaigns;
 using Eksabli.Offers;
@@ -62,9 +63,19 @@ public class EksabliDbContext :
 
     public DbSet<PointRule> PointRules { get; set; }
 
+    public DbSet<SmartOfferWatch> SmartOfferWatches { get; set; }
+
+    public DbSet<NotificationGroupOptOut> NotificationGroupOptOuts { get; set; }
+
     public DbSet<Reward> Rewards { get; set; }
 
     public DbSet<Coupon> Coupons { get; set; }
+
+    public DbSet<SmartOffer> SmartOffers { get; set; }
+
+    public DbSet<SmartOfferInventory> SmartOfferInventories { get; set; }
+
+    public DbSet<SmartOfferOrder> SmartOfferOrders { get; set; }
 
     public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
 
@@ -188,6 +199,7 @@ public class EksabliDbContext :
             b.Property(x => x.DescriptionEn).HasMaxLength(BusinessProfileConsts.MaxDescriptionLength);
             b.Property(x => x.Website).HasMaxLength(BusinessProfileConsts.MaxWebsiteLength);
             b.Property(x => x.SocialLinksJson).HasMaxLength(BusinessProfileConsts.MaxSocialLinksJsonLength);
+            b.Property(x => x.TimeZoneId).IsRequired().HasMaxLength(BusinessProfileConsts.MaxTimeZoneIdLength).HasDefaultValue(BusinessProfileConsts.DefaultTimeZoneId);
             b.HasIndex(x => x.TenantId).IsUnique();
         });
 
@@ -252,6 +264,8 @@ public class EksabliDbContext :
             b.HasIndex(x => new { x.WalletId, x.CreationTime });
             b.HasIndex(x => new { x.TenantId, x.ExpiresAt });
             b.HasIndex(x => new { x.TenantId, x.CreationTime });
+            // Platform-wide (Host) date-range aggregations span every tenant, so they can't use the TenantId-leading index above.
+            b.HasIndex(x => new { x.Type, x.CreationTime });
             b.HasIndex(x => x.BatchId);
         });
 
@@ -262,6 +276,23 @@ public class EksabliDbContext :
             b.Property(x => x.Name).IsRequired().HasMaxLength(TierConsts.MaxNameLength);
             b.Property(x => x.Multiplier).HasColumnType("numeric(5,2)");
             b.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+        });
+
+        builder.Entity<NotificationGroupOptOut>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "NotificationGroupOptOuts", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            // One switched-off group per customer: switching it off again is a no-op.
+            b.HasIndex(x => new { x.UserId, x.Group }).IsUnique();
+        });
+
+        builder.Entity<SmartOfferWatch>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "SmartOfferWatches", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            // One watch per customer per deal: watching again is a no-op rather than a second row.
+            b.HasIndex(x => new { x.TenantId, x.CustomerId, x.SmartOfferId }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.SmartOfferId });
         });
 
         builder.Entity<PointRule>(b =>
@@ -294,6 +325,61 @@ public class EksabliDbContext :
             // RedemptionReservationWorker's sweep predicate — it runs every 5 minutes across every
             // tenant, and without this it is a full table scan of the coupon history each time.
             b.HasIndex(x => new { x.Status, x.ReservationExpiresAt });
+        });
+
+        builder.Entity<SmartOffer>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "SmartOffers", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.TitleAr).IsRequired().HasMaxLength(SmartOfferConsts.MaxTitleLength);
+            b.Property(x => x.TitleEn).IsRequired().HasMaxLength(SmartOfferConsts.MaxTitleLength);
+            b.Property(x => x.DescriptionAr).HasMaxLength(SmartOfferConsts.MaxDescriptionLength);
+            b.Property(x => x.DescriptionEn).HasMaxLength(SmartOfferConsts.MaxDescriptionLength);
+            b.Property(x => x.BasePrice).HasPrecision(18, 2);
+            b.Property(x => x.MinimumPrice).HasPrecision(18, 2);
+            b.Property(x => x.TimeZoneId).IsRequired().HasMaxLength(SmartOfferConsts.MaxTimeZoneIdLength);
+            b.HasIndex(x => new { x.TenantId, x.IsEnabled });
+
+            // Child collection, no separate repository — see SmartOfferPriceStage's own comment.
+            b.HasMany(x => x.Stages).WithOne().HasForeignKey(x => x.SmartOfferId).OnDelete(DeleteBehavior.Cascade);
+            b.Navigation(x => x.Stages).UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        builder.Entity<SmartOfferPriceStage>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "SmartOfferPriceStages", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.Price).HasPrecision(18, 2);
+            b.HasIndex(x => x.SmartOfferId);
+        });
+
+        builder.Entity<SmartOfferInventory>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "SmartOfferInventories", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            // One row per slot per local day — the uniqueness is what makes two concurrent first-buyers agree on a row.
+            b.HasIndex(x => new { x.SlotId, x.ServiceDate }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.SmartOfferId, x.ServiceDate });
+        });
+
+        builder.Entity<SmartOfferOrder>(b =>
+        {
+            b.ToTable(EksabliConsts.DbTablePrefix + "SmartOfferOrders", EksabliConsts.DbSchema);
+            b.ConfigureByConvention(); //auto configure for the base class props
+            b.Property(x => x.Code).IsRequired().HasMaxLength(SmartOfferConsts.CodeLength);
+            b.Property(x => x.OfferTitleAr).IsRequired().HasMaxLength(SmartOfferConsts.MaxTitleLength);
+            b.Property(x => x.OfferTitleEn).IsRequired().HasMaxLength(SmartOfferConsts.MaxTitleLength);
+            b.Property(x => x.UnitPrice).HasPrecision(18, 2);
+            b.Property(x => x.BasePrice).HasPrecision(18, 2);
+            b.Property(x => x.TotalAmount).HasPrecision(18, 2);
+            b.Property(x => x.RejectionReason).HasMaxLength(SmartOfferConsts.MaxRejectionReasonLength);
+            b.HasIndex(x => x.Code).IsUnique();
+            b.HasIndex(x => new { x.MembershipId, x.SmartOfferId, x.Status });
+            b.HasIndex(x => new { x.Status, x.ReservationExpiresAt });
+            b.HasIndex(x => new { x.TenantId, x.Status });
+            // Business dashboard order counts by placement date, and platform sales by completion date.
+            b.HasIndex(x => new { x.TenantId, x.PlacedAt });
+            b.HasIndex(x => new { x.Status, x.CompletedAt });
         });
 
         builder.Entity<SubscriptionPlan>(b =>

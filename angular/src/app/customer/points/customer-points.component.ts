@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
 import { MembershipsService } from '../../proxy/controllers/memberships.service';
@@ -8,6 +8,7 @@ import type { PointsWalletDto } from '../../proxy/wallets/models';
 import type { TransactionListItemDto } from '../../proxy/reports/models';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
+import { AnimatedNumberComponent } from '../../shared/components/animated-number/animated-number.component';
 import { TransactionDetailModalComponent } from '../../shared/components/transaction-detail-modal/transaction-detail-modal.component';
 import { isCredit, transactionSourceLabelKey, transactionTypeLabelKey } from '../../shared/utils/transaction-display.util';
 
@@ -16,16 +17,16 @@ import { isCredit, transactionSourceLabelKey, transactionTypeLabelKey } from '..
  * since that's what every downstream endpoint (transaction history, reward catalog, redeem) is actually
  * keyed by; the wallet itself has no by-id getter so it's filtered from `getMyWallets()`.
  *
- * No tier-progress bar: `TiersController` is gated on `Eksabli.Tiers.Default`, a staff-only permission a
- * customer account never holds, so there's no way to fetch the next tier's threshold from here — same
- * kind of documented gap as `business-rewards.component.ts`'s missing redemption-rate metric.
+ * The tier-progress bar reads `PointsWalletDto`'s own tier fields (current tier's floor, next tier's name
+ * and floor) rather than calling `TiersController`, which stays gated on `Eksabli.Tiers.Default`, a
+ * staff-only permission a customer account never holds. `GetMyWalletsAsync` already resolves those fields.
  */
 @Component({
   selector: 'app-customer-points',
   templateUrl: './customer-points.component.html',
   styleUrls: ['./customer-points.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DatePipe, LocalizationPipe, EmptyStateComponent, ErrorStateComponent, TransactionDetailModalComponent],
+  imports: [RouterLink, DatePipe, DecimalPipe, LocalizationPipe, EmptyStateComponent, ErrorStateComponent, TransactionDetailModalComponent, AnimatedNumberComponent],
 })
 export class CustomerPointsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -46,6 +47,26 @@ export class CustomerPointsComponent implements OnInit {
 
   protected readonly walletNotFound = computed(() => !this.isLoading() && !this.loadFailed() && !this.wallet());
   protected readonly reservedPoints = computed(() => this.wallet()?.reserved ?? 0);
+
+  // Progress from where the current tier starts to where the next one begins, measured on lifetime points, the same
+  // number the tiers are awarded on. The bar starts at the current tier's floor, not zero, so a customer who has just
+  // reached a tier does not look nearly done. Null when this business has no next tier to show.
+  protected readonly tierProgress = computed(() => {
+    const wallet = this.wallet();
+    if (!wallet?.nextTierName || wallet.nextTierMinLifetimePoints == null) return null;
+
+    const lifetime = wallet.lifetimeEarned ?? 0;
+    const floor = wallet.currentTierMinLifetimePoints ?? 0;
+    const target = wallet.nextTierMinLifetimePoints;
+    const span = Math.max(1, target - floor);
+    const progressed = Math.min(span, Math.max(0, lifetime - floor));
+
+    return {
+      percent: Math.round((progressed / span) * 100),
+      remaining: Math.max(0, target - lifetime),
+      nextName: wallet.nextTierName,
+    };
+  });
 
   protected readonly typeLabelKey = transactionTypeLabelKey;
   protected readonly sourceLabelKey = transactionSourceLabelKey;
@@ -117,6 +138,10 @@ export class CustomerPointsComponent implements OnInit {
   private load(tenantId: string): void {
     this.isLoading.set(true);
     this.loadFailed.set(false);
+    // Reset before either request resolves: this component is reused across a same-route, different-business
+    // navigation (see tenantId's own comment above), and without this the previous business's recent activity
+    // could flash on screen until this business's own history call resolves.
+    this.recentActivity.set([]);
 
     this.membershipsService.getMyWallets().subscribe({
       next: wallets => {

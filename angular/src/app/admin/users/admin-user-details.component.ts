@@ -1,11 +1,13 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
 import { AdminUsersService } from '../../proxy/controllers/admin-users.service';
 import type { AdminCustomerDetailDto, AdminCustomerMembershipDto } from '../../proxy/platform/models';
-import type { TransactionListItemDto } from '../../proxy/reports/models';
+import type { SmartDealSaleDto, TransactionListItemDto } from '../../proxy/reports/models';
+import { Currency } from '../../proxy/shared/currency.enum';
+import { SmartSaleDetailsComponent, SmartSaleDetailsView } from '../../shared/components/smart-sale-details/smart-sale-details.component';
 import { PointsTransactionType } from '../../proxy/wallets/points-transaction-type.enum';
 import { PointsTransactionSource } from '../../proxy/wallets/points-transaction-source.enum';
 import { MembershipStatus } from '../../proxy/memberships/membership-status.enum';
@@ -17,8 +19,10 @@ import { PaginationComponent } from '../../shared/components/pagination/paginati
 import { StatusBadgeComponent, StatusBadgeVariant } from '../../shared/components/status-badge/status-badge.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 
+type MembershipTab = 'transactions' | 'smartDeals';
+
 /**
- * Admin Portal > Users > Customer Details — the drill-down `admin-users.component.html` never had
+ *Admin Portal > Users > Customer Details — the drill-down `admin-users.component.html` never had
  * (its own list page previously had no click-through anywhere). Customer-only: a Staff row from the
  * list has no wallet/membership concept to show here, so `admin-users.component.html` only links
  * Customer rows to this route (see that template's own guard).
@@ -52,6 +56,7 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
+    DecimalPipe,
     RouterLink,
     LocalizationPipe,
     PageHeaderComponent,
@@ -61,6 +66,7 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
     PaginationComponent,
     StatusBadgeComponent,
     ModalComponent,
+    SmartSaleDetailsComponent,
   ],
 })
 export class AdminUserDetailsComponent implements OnInit {
@@ -80,6 +86,17 @@ export class AdminUserDetailsComponent implements OnInit {
 
   // --- Expanded membership's transaction ledger ---
   protected readonly expandedMembershipId = signal<string | null>(null);
+
+  // Inside an expanded business: its points transactions, or the customer's smart-deal sales there.
+  protected readonly expandedTab = signal<MembershipTab>('transactions');
+  protected readonly smartSales = signal<SmartDealSaleDto[]>([]);
+  protected readonly smartSalesTotalCount = signal(0);
+  protected readonly smartSalesPageIndex = signal(0);
+  protected readonly smartSalesTotalPages = computed(() => Math.max(1, Math.ceil(this.smartSalesTotalCount() / this.pageSize)));
+  protected readonly smartSalesLoading = signal(false);
+  protected readonly smartSalesFailed = signal(false);
+  protected readonly selectedSmartSale = signal<SmartSaleDetailsView | null>(null);
+  protected readonly smartSaleDetailsOpen = signal(false);
   protected readonly transactions = signal<TransactionListItemDto[]>([]);
   protected readonly transactionsTotalCount = signal(0);
   protected readonly transactionsPageIndex = signal(0);
@@ -214,8 +231,59 @@ export class AdminUserDetailsComponent implements OnInit {
     }
 
     this.expandedMembershipId.set(id);
+    this.expandedTab.set('transactions');
     this.transactionsPageIndex.set(0);
+    this.smartSalesPageIndex.set(0);
     this.loadTransactions(membership);
+  }
+
+  protected selectExpandedTab(tab: MembershipTab, membership: AdminCustomerMembershipDto): void {
+    this.expandedTab.set(tab);
+    if (tab === 'smartDeals') {
+      this.smartSalesPageIndex.set(0);
+      this.loadSmartSales(membership);
+    }
+  }
+
+  protected retrySmartSales(membership: AdminCustomerMembershipDto): void {
+    this.loadSmartSales(membership);
+  }
+
+  protected goToSmartSalesPage(index: number, membership: AdminCustomerMembershipDto): void {
+    this.smartSalesPageIndex.set(index);
+    this.loadSmartSales(membership);
+  }
+
+  protected openSmartSale(sale: SmartDealSaleDto): void {
+    const name = [sale.customerFirstName, sale.customerLastName].filter(Boolean).join(' ').trim();
+    this.selectedSmartSale.set({
+      smartOfferId: sale.smartOfferId,
+      code: sale.code,
+      offerTitleEn: sale.offerTitleEn,
+      offerTitleAr: sale.offerTitleAr,
+      offerDescriptionEn: sale.offerDescriptionEn,
+      offerDescriptionAr: sale.offerDescriptionAr,
+      quantity: sale.quantity,
+      unitPrice: sale.unitPrice,
+      basePrice: sale.basePrice,
+      totalAmount: sale.totalAmount,
+      currency: sale.currency,
+      serviceDate: sale.serviceDate,
+      placedAt: sale.placedAt,
+      completedAt: sale.completedAt,
+      customerName: name || null,
+      branchName: sale.branchName,
+      staffEmail: sale.staffEmail,
+    });
+    this.smartSaleDetailsOpen.set(true);
+  }
+
+  protected closeSmartSale(): void {
+    this.smartSaleDetailsOpen.set(false);
+  }
+
+  protected currencyCode(currency: Currency | null | undefined): string {
+    return currency === Currency.Usd ? 'USD' : 'SYP';
   }
 
   protected retryTransactions(membership: AdminCustomerMembershipDto): void {
@@ -256,6 +324,37 @@ export class AdminUserDetailsComponent implements OnInit {
         }
       },
     });
+  }
+
+  private loadSmartSales(membership: AdminCustomerMembershipDto): void {
+    const membershipId = membership.membershipId;
+    const tenantId = membership.tenantId;
+    if (!membershipId || !tenantId) return;
+
+    this.smartSales.set([]);
+    this.smartSalesLoading.set(true);
+    this.smartSalesFailed.set(false);
+
+    this.usersService
+      .getCustomerSmartDealSales(membershipId, tenantId, {
+        sorting: undefined,
+        skipCount: this.smartSalesPageIndex() * this.pageSize,
+        maxResultCount: this.pageSize,
+      })
+      .subscribe({
+        next: (result) => {
+          // Same guard as the transactions view: a slow answer for a business the admin has since switched away from is dropped.
+          if (this.expandedMembershipId() !== membershipId) return;
+          this.smartSales.set(result.items ?? []);
+          this.smartSalesTotalCount.set(result.totalCount ?? 0);
+          this.smartSalesLoading.set(false);
+        },
+        error: () => {
+          if (this.expandedMembershipId() !== membershipId) return;
+          this.smartSalesLoading.set(false);
+          this.smartSalesFailed.set(true);
+        },
+      });
   }
 
   private loadTransactions(membership: AdminCustomerMembershipDto): void {

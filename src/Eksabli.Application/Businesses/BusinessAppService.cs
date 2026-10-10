@@ -293,6 +293,14 @@ public class BusinessAppService : ApplicationService, IBusinessAppService
         profile.SetDescription(input.DescriptionAr, input.DescriptionEn);
         profile.SetWebsite(input.Website);
         profile.SetSocialLinks(input.SocialLinksJson);
+        // Null keeps the current zone rather than clearing it: the zone is never meant to be empty.
+        if (!string.IsNullOrWhiteSpace(input.TimeZoneId))
+        {
+            profile.SetTimeZone(input.TimeZoneId);
+        }
+        // Not "keep if null" like the zone: null here means "never expire", and that is a real choice a business can make.
+        profile.SetPointsExpiryMonths(input.PointsExpiryMonths);
+
         await _businessProfileRepository.UpdateAsync(profile);
         return ObjectMapper.Map<BusinessProfile, BusinessProfileDto>(profile);
     }

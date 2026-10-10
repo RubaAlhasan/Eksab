@@ -34,6 +34,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
     private readonly IDistributedCache _qrCache;
+    private readonly IRepository<PointsTransaction, Guid> _transactionRepository;
 
     public MembershipAppService(
         IRepository<Membership, Guid> membershipRepository,
@@ -46,8 +47,10 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
         IRepository<Tenant, Guid> tenantRepository,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
-        IDistributedCache qrCache)
+        IDistributedCache qrCache,
+        IRepository<PointsTransaction, Guid> transactionRepository)
     {
+        _transactionRepository = transactionRepository;
         _membershipRepository = membershipRepository;
         _walletRepository = walletRepository;
         _tierRepository = tierRepository;
@@ -174,6 +177,7 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
             var dtos = ObjectMapper.Map<List<PointsWallet>, List<PointsWalletDto>>(wallets);
             await SetTierProgressAsync(dtos);
             await SetBusinessNamesAsync(dtos);
+            await SetExpiringPointsAsync(dtos);
             return dtos;
         }
     }
@@ -368,6 +372,29 @@ public class MembershipAppService : ApplicationService, IMembershipAppService
     // showing the one the rule gives. Same relationship Balance has to the transaction ledger.
     //
     // CurrentTierId is still reported as stored, so a caller can tell the two apart.
+    // Points each wallet is about to lose, from its own ledger: one query for every wallet in the result, replayed in
+    // memory, same batching shape as SetTierProgressAsync. Runs inside GetMyWalletsAsync's Disable<IMultiTenant> block,
+    // so the ledger rows of every business the customer belongs to are visible.
+    private async Task SetExpiringPointsAsync(List<PointsWalletDto> dtos)
+    {
+        if (dtos.Count == 0)
+        {
+            return;
+        }
+
+        var walletIds = dtos.Select(d => d.Id).ToList();
+        var ledgerByWallet = (await _transactionRepository.GetListAsync(t => walletIds.Contains(t.WalletId))).ToLookup(t => t.WalletId);
+
+        var now = Clock.Now;
+        var windowEnd = now + PointsExpiryPolicy.ExpiringSoonWindow;
+        foreach (var dto in dtos)
+        {
+            var (points, earliestExpiry) = PointsLotReplay.ExpiringBetween(ledgerByWallet[dto.Id], now, windowEnd, dto.AvailableBalance);
+            dto.ExpiringPoints = points;
+            dto.ExpiringOn = earliestExpiry;
+        }
+    }
+
     private async Task SetTierProgressAsync(List<PointsWalletDto> dtos)
     {
         if (dtos.Count == 0)

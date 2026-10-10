@@ -12,6 +12,7 @@
     <meta name="theme-color" content="#F7F4EC" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0B120F" media="(prefers-color-scheme: dark)" />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="__APP_BASE_URL__/" />
     <meta property="og:site_name" content="Eksabli" />
     <meta property="og:title" content="Eksabli — The Loyalty Platform Customers Already Have" />
     <meta
@@ -24,10 +25,40 @@
       name="twitter:description"
       content="Eksabli is the loyalty platform where customers earn and redeem points across every business they join from one shared wallet — no new app to install, no punch-cards to lose."
     />
+    <link rel="canonical" href="__APP_BASE_URL__/" />
+    <meta name="app-base-url" content="__APP_BASE_URL__" />
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <!-- Organization + WebSite structured data. The landing page updates this same element (same id) per locale. -->
+    <script id="landing-structured-data" type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "name": "Eksabli",
+            "url": "__APP_BASE_URL__/",
+            "description": "Eksabli is the loyalty platform where customers earn and redeem points across every business they join from one shared wallet."
+          },
+          {
+            "@type": "WebSite",
+            "name": "Eksabli",
+            "url": "__APP_BASE_URL__/",
+            "description": "Eksabli is the loyalty platform where customers earn and redeem points across every business they join from one shared wallet.",
+            "inLanguage": "en"
+          }
+        ]
+      }
+    </script>
     <link rel="icon" type="image/svg+xml" href="assets/images/eksabli-mark.svg" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="assets/images/pwa/apple-touch-icon.png" />
+    <!-- "Add to Home Screen" on iOS reads these directly; it does not use the manifest above. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Eksabli" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <style>
       /* Pre-bootstrap splash.
        *

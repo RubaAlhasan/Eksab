@@ -21,4 +21,11 @@ public class UpdateBusinessProfileDto
 
     [StringLength(BusinessProfileConsts.MaxSocialLinksJsonLength)]
     public string? SocialLinksJson { get; set; }
+
+    [StringLength(BusinessProfileConsts.MaxTimeZoneIdLength)]
+    public string? TimeZoneId { get; set; }
+
+    // Null switches points expiry off: the whole profile is replaced on every save, same as the other fields here.
+    [Range(BusinessProfileConsts.MinPointsExpiryMonths, BusinessProfileConsts.MaxPointsExpiryMonths)]
+    public int? PointsExpiryMonths { get; set; }
 }

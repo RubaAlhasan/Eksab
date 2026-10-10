@@ -7,6 +7,7 @@ using Eksabli.CustomerProfiles;
 using Eksabli.EmployeeAssignments;
 using Eksabli.Engagement;
 using Eksabli.Memberships;
+using Eksabli.Notifications;
 using Eksabli.Rewards;
 using Eksabli.Shared;
 using Eksabli.Wallets;
@@ -43,6 +44,8 @@ public class PosAppService : ApplicationService, IPosAppService
     private readonly ICampaignRulesEngine _campaignRulesEngine;
     private readonly IReferralCompletionService _referralCompletionService;
     private readonly ITierRecomputeService _tierRecomputeService;
+    private readonly IPointsExpiryPolicy _pointsExpiryPolicy;
+    private readonly INotificationPublisher _notificationPublisher;
 
     public PosAppService(
         IRepository<Membership, Guid> membershipRepository,
@@ -59,8 +62,11 @@ public class PosAppService : ApplicationService, IPosAppService
         IDistributedCache qrCache,
         ICampaignRulesEngine campaignRulesEngine,
         IReferralCompletionService referralCompletionService,
-        ITierRecomputeService tierRecomputeService)
+        ITierRecomputeService tierRecomputeService,
+        IPointsExpiryPolicy pointsExpiryPolicy,
+        INotificationPublisher notificationPublisher)
     {
+        _notificationPublisher = notificationPublisher;
         _membershipRepository = membershipRepository;
         _walletRepository = walletRepository;
         _transactionRepository = transactionRepository;
@@ -76,6 +82,7 @@ public class PosAppService : ApplicationService, IPosAppService
         _campaignRulesEngine = campaignRulesEngine;
         _referralCompletionService = referralCompletionService;
         _tierRecomputeService = tierRecomputeService;
+        _pointsExpiryPolicy = pointsExpiryPolicy;
     }
 
     public async Task<CustomerLookupResultDto> LookupCustomerByPhoneAsync(PhoneLookupDto input)
@@ -239,12 +246,16 @@ public class PosAppService : ApplicationService, IPosAppService
         // ReportsAppService.GetTransactionsListAsync). Generated even when only one row ends up produced.
         var batchId = GuidGenerator.Create();
 
+        // Every earn row in this checkout expires on the same schedule, taken from the business's own setting at award time.
+        var expiresAt = await _pointsExpiryPolicy.GetExpiresAtForEarnAsync();
+
         var transaction = PointsTransaction.Create(
             GuidGenerator.Create(),
             wallet.Id,
             PointsTransactionType.Earn,
             purchasePoints,
             PointsTransactionSource.Purchase,
+            expiresAt: expiresAt,
             batchId: batchId,
             amount: purchaseAmount,
             currency: currency);
@@ -261,6 +272,7 @@ public class PosAppService : ApplicationService, IPosAppService
                 PointsTransactionSource.Tier,
                 referenceId: tierId.Value,
                 tierMultiplierSnapshot: tierMultiplier,
+                expiresAt: expiresAt,
                 batchId: batchId);
             await _transactionRepository.InsertAsync(tierTransaction);
             wallet.ApplyTransaction(PointsTransactionType.Earn, preview.TierExtraPoints);
@@ -275,6 +287,7 @@ public class PosAppService : ApplicationService, IPosAppService
                 preview.CampaignMultiplierExtraPoints,
                 PointsTransactionSource.Campaign,
                 referenceId: preview.CampaignId.Value,
+                expiresAt: expiresAt,
                 batchId: batchId);
             await _transactionRepository.InsertAsync(multiplierTransaction);
             wallet.ApplyTransaction(PointsTransactionType.Earn, preview.CampaignMultiplierExtraPoints);
@@ -289,6 +302,7 @@ public class PosAppService : ApplicationService, IPosAppService
                 preview.CampaignBonusPoints,
                 PointsTransactionSource.Campaign,
                 referenceId: preview.BonusCampaignId.Value,
+                expiresAt: expiresAt,
                 batchId: batchId);
             await _transactionRepository.InsertAsync(bonusTransaction);
             wallet.ApplyTransaction(PointsTransactionType.Earn, preview.CampaignBonusPoints);
@@ -300,6 +314,15 @@ public class PosAppService : ApplicationService, IPosAppService
         // Feature 06's referral bonus — awarded only on the referee's actual first purchase, not just
         // signup. See docs/eksabli-loyalty-platform/features/06-engagement-gamification/README.md.
         await _referralCompletionService.TryCompleteAsync(membership, wallet, isFirstEarn);
+
+        await _notificationPublisher.PublishToUserAsync(
+            customerId,
+            _currentTenant.Id,
+            UserNotificationType.Success,
+            "Points added",
+            $"{preview.TotalPoints} points were added to your balance.",
+            category: "points.earned",
+            data: new { tenantId = _currentTenant.Id });
 
         return await BuildResultAsync(transaction.Id, preview.TotalPoints, wallet);
     }
@@ -521,6 +544,17 @@ public class PosAppService : ApplicationService, IPosAppService
 
         var membership = await _membershipRepository.GetAsync(coupon.MembershipId);
         var (name, _) = await ResolveCustomerIdentityAsync(membership.CustomerId);
+
+        await _notificationPublisher.PublishToUserAsync(
+            membership.CustomerId,
+            _currentTenant.Id,
+            UserNotificationType.Success,
+            "Reward redeemed",
+            pointsDebited > 0
+                ? $"{reward.NameEn} was redeemed. {pointsDebited} points were used."
+                : $"{reward.NameEn} is ready to use.",
+            category: "reward.redeemed",
+            data: new { tenantId = _currentTenant.Id });
 
         return new RedemptionConfirmationDto
         {

@@ -1,8 +1,13 @@
 // Store-specific rules only. Panels, tabs, rows, offers and the reward grid are shared kit primitives.
+// The logo overlaps the bottom edge of the cover band, the way a business profile is usually framed. Its
+// ring is the panel surface, so it reads as cut out of the cover rather than pasted on top.
 .eks-store-logo {
-  width: 4.5rem;
-  height: 4.5rem;
-  border-radius: var(--eks-radius-md);
+  width: 5.5rem;
+  height: 5.5rem;
+  margin-top: -2.75rem;
+  border: 4px solid var(--eks-surface);
+  border-radius: var(--eks-radius-lg);
+  box-shadow: var(--eks-shadow-md);
   object-fit: cover;
 
   &--fallback {
@@ -19,4 +24,60 @@
 .eks-join-form {
   max-width: 320px;
   margin-inline: auto;
+}
+
+// Store header card. The cover is a soft tint of the brand colour, so the violet primary stays the only strong
+// colour on the page; the business name and actions sit below it.
+.eks-panel.eks-store-header {
+  padding: 0;
+  overflow: hidden;
+}
+
+.eks-store-header__cover {
+  height: 6.5rem;
+  background: linear-gradient(135deg, var(--eks-primary-subtle-bg), var(--eks-surface-2));
+}
+
+.eks-store-header__body {
+  padding: 0 1.25rem 1.5rem;
+}
+
+// Instagram / Facebook links on the About tab. Brand names are proper nouns, so they are not localised.
+.eks-social-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.eks-social-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--eks-border);
+  border-radius: var(--eks-radius-pill);
+  background: var(--eks-surface);
+  color: var(--eks-text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.15s ease-out, color 0.15s ease-out, transform 0.15s ease-out;
+
+  i {
+    color: var(--eks-primary);
+  }
+
+  &:hover {
+    background: var(--eks-primary-subtle-bg);
+    color: var(--eks-primary-subtle-fg);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--eks-primary);
+    outline-offset: 2px;
+  }
 }

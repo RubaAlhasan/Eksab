@@ -10,6 +10,8 @@ export interface BusinessProfileDto extends AuditedEntityDto<string> {
   descriptionEn?: string | null;
   website?: string | null;
   socialLinksJson?: string | null;
+  timeZoneId: string;
+  pointsExpiryMonths?: number | null;
   approvalStatus: TenantApprovalStatus;
 }
 
@@ -20,4 +22,6 @@ export interface UpdateBusinessProfileDto {
   descriptionEn?: string | null;
   website?: string | null;
   socialLinksJson?: string | null;
+  timeZoneId?: string | null;
+  pointsExpiryMonths?: number | null;
 }

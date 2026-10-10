@@ -85,6 +85,11 @@
             {{ '::BusinessPanel:CustomerDetails:TabCoupons' | abpLocalization }}
           </button>
         </li>
+        <li class="nav-item">
+          <button type="button" class="nav-link" [class.active]="activeTab() === 'smartDeals'" (click)="selectTab('smartDeals')">
+            {{ '::BusinessPanel:CustomerDetails:TabSmartDeals' | abpLocalization }}
+          </button>
+        </li>
       </ul>
 
       @if (activeTab() === 'transactions') {
@@ -143,6 +148,62 @@
             </div>
           </div>
           <app-pagination [pageIndex]="transactionsPageIndex()" [totalPages]="transactionsTotalPages()" (pageChange)="goToTransactionsPage($event)"></app-pagination>
+        }
+      }
+
+      @if (activeTab() === 'smartDeals') {
+        @if (smartSalesLoading()) {
+          <app-loading-spinner [label]="'::BusinessPanel:CustomerDetails:Loading' | abpLocalization"></app-loading-spinner>
+        } @else if (smartSalesFailed()) {
+          <app-error-state
+            [message]="'::BusinessPanel:CustomerDetails:LoadErrorMessage' | abpLocalization"
+            [retryLabel]="'::BusinessPanel:CustomerDetails:TryAgain' | abpLocalization"
+            (retry)="retrySmartSales()"
+          >
+          </app-error-state>
+        } @else if (smartSales().length === 0) {
+          <app-empty-state
+            icon="fa-bolt"
+            [title]="'::BusinessPanel:CustomerDetails:SmartDealsEmptyTitle' | abpLocalization"
+            [description]="'::BusinessPanel:CustomerDetails:SmartDealsEmptyDescription' | abpLocalization"
+          >
+          </app-empty-state>
+        } @else {
+          <div class="card overflow-hidden mb-3">
+            <div class="table-responsive">
+              <table class="table mb-0">
+                <thead>
+                  <tr>
+                    <th>{{ '::BusinessPanel:Transactions:ColumnDate' | abpLocalization }}</th>
+                    <th>{{ '::BusinessPanel:Transactions:SalesColumnCode' | abpLocalization }}</th>
+                    <th>{{ '::BusinessPanel:Transactions:SalesColumnDeal' | abpLocalization }}</th>
+                    <th>{{ '::SmartDeals:SaleDetails:DealId' | abpLocalization }}</th>
+                    <th>{{ '::BusinessPanel:Transactions:SalesColumnQuantity' | abpLocalization }}</th>
+                    <th>{{ '::BusinessPanel:Transactions:SalesColumnAmount' | abpLocalization }}</th>
+                    <th class="text-end">{{ '::BusinessPanel:Transactions:ColumnDetails' | abpLocalization }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (sale of smartSales(); track sale.id) {
+                    <tr>
+                      <td class="text-muted">{{ sale.completedAt | date: 'mediumDate' }}</td>
+                      <td class="fw-semibold font-monospace">{{ sale.code }}</td>
+                      <td>{{ sale.offerTitleEn }}</td>
+                      <td class="font-monospace small text-muted" [title]="sale.smartOfferId ?? ''">{{ sale.smartOfferId?.slice(0, 8) }}</td>
+                      <td>{{ sale.quantity }}</td>
+                      <td class="fw-semibold">{{ sale.totalAmount | number: '1.0-2' }} {{ currencyCode(sale.currency) }}</td>
+                      <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="openSmartSale(sale)">
+                          <i class="fas fa-circle-info me-1"></i>{{ '::BusinessPanel:Transactions:ViewDetails' | abpLocalization }}
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <app-pagination [pageIndex]="smartSalesPageIndex()" [totalPages]="smartSalesTotalPages()" (pageChange)="goToSmartSalesPage($event)"></app-pagination>
         }
       }
 
@@ -290,6 +351,22 @@
   <div slot="footer" class="d-flex justify-content-end w-100">
     <button type="button" class="btn btn-secondary" (click)="closeTransactionDetails()">
       {{ '::BusinessPanel:Customers:Cancel' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>
+
+<app-modal
+  [open]="smartSaleDetailsOpen()"
+  [title]="'::SmartDeals:SaleDetails:Title' | abpLocalization"
+  (closed)="closeSmartSale()"
+>
+  @if (selectedSmartSale(); as sale) {
+    <app-smart-sale-details [sale]="sale" />
+  }
+
+  <div slot="footer" class="d-flex justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeSmartSale()">
+      {{ '::SmartDeals:SaleDetails:Close' | abpLocalization }}
     </button>
   </div>
 </app-modal>

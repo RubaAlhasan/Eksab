@@ -1,3 +1,7 @@
+<header class="eks-page-header">
+  <h1 class="eks-page-title">{{ '::Wallet:Layout:NavSearch' | abpLocalization }}</h1>
+</header>
+
 <div class="eks-search-box mb-3">
   <i class="fas fa-magnifying-glass"></i>
   <input
@@ -34,7 +38,7 @@
       [class.active]="selectedCategoryId() === category.id"
       (click)="selectCategory(category.id ?? null)"
     >
-      {{ category.nameEn }}
+      {{ category.nameEn | localizedName: category.nameAr }}
     </button>
   }
 </div>
@@ -61,11 +65,11 @@
         <span class="eks-row__body">
           <span class="eks-row__title">{{ business.name }}</span>
           <span class="eks-row__meta">
-            {{ categoryName(business) ?? ('::Wallet:Discover:Uncategorized' | abpLocalization) }}
+            {{ business.categoryNameEn || business.categoryNameAr ? (business.categoryNameEn | localizedName: business.categoryNameAr) : ('::Wallet:Discover:Uncategorized' | abpLocalization) }}
             @if (business.distanceKm !== null && business.distanceKm !== undefined) {
               · {{ business.distanceKm | number: '1.1-1' }} {{ '::Wallet:Discover:KmAway' | abpLocalization }}
             }
-            · {{ business.branchCount }} {{ '::Wallet:Discover:Branches' | abpLocalization }}
+            · {{ business.branchCount }} {{ (business.branchCount === 1 ? '::Wallet:Discover:Branch' : '::Wallet:Discover:Branches') | abpLocalization }}
           </span>
         </span>
         <span class="eks-row__end"><i class="fas fa-chevron-right"></i></span>

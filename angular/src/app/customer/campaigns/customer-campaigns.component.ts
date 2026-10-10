@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
+import { LocalizedNamePipe } from '../../shared/pipes/localized-name.pipe';
 import { CustomerCampaignService } from '../../proxy/controllers/customer-campaign.service';
 import type { CustomerCampaignDto } from '../../proxy/campaigns/models';
 import { SkeletonListComponent } from '../../shared/components/skeleton-list/skeleton-list.component';
@@ -18,7 +19,7 @@ import { campaignTypeEmoji, campaignTypeLabelKey } from '../../shared/utils/camp
   selector: 'app-customer-campaigns',
   templateUrl: './customer-campaigns.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, DatePipe, LocalizationPipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent],
+  imports: [RouterLink, DatePipe, LocalizationPipe, LocalizedNamePipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent],
 })
 export class CustomerCampaignsComponent implements OnInit {
   private readonly customerCampaignService = inject(CustomerCampaignService);

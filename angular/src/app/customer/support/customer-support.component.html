@@ -1,0 +1,28 @@
+@if (isLoading()) {
+  <app-skeleton-list variant="list" [count]="3" [label]="'::Wallet:Support:Loading' | abpLocalization" />
+} @else if (loadFailed()) {
+  <app-error-state [message]="'::Wallet:Support:LoadError' | abpLocalization" (retry)="retry()" />
+} @else {
+  <div class="d-flex justify-content-end mb-3">
+    <a routerLink="/customer/support/new" class="btn btn-primary btn-sm">{{ '::Wallet:Support:NewRequest' | abpLocalization }}</a>
+  </div>
+
+  @if (tickets().length === 0) {
+    <app-empty-state icon="fa-headset" [title]="'::Wallet:Support:Empty' | abpLocalization" [description]="'::Wallet:Support:EmptyHint' | abpLocalization" />
+  } @else {
+    <div class="eks-list">
+      @for (ticket of tickets(); track ticket.id) {
+        <a [routerLink]="['/customer/support', ticket.id]" class="eks-row eks-row--action eks-rise">
+          <span class="eks-icon-tile" aria-hidden="true"><i class="fas fa-headset"></i></span>
+          <span class="eks-row__body">
+            <span class="eks-row__title text-truncate">{{ ticket.subject }}</span>
+            <span class="eks-row__meta">{{ ticket.creationTime | date: 'mediumDate' }}</span>
+          </span>
+          <span class="eks-row__end">
+            <app-status-badge [label]="statusLabelKey(ticket.status) | abpLocalization" [variant]="statusVariant(ticket.status)" />
+          </span>
+        </a>
+      }
+    </div>
+  }
+}

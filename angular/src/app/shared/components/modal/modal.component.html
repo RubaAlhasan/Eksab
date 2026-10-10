@@ -1,9 +1,13 @@
 @if (open()) {
   <div
     class="modal d-block"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="title()"
     tabindex="-1"
     style="background: rgba(0, 0, 0, 0.5)"
     (click)="onBackdropClick($event)"
+    (keydown.escape)="closed.emit()"
   >
     <div
       class="modal-dialog modal-dialog-centered"

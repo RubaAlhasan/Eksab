@@ -1,0 +1,163 @@
+<app-page-header
+  [title]="'::SmartDeals:Counter:Title' | abpLocalization"
+  [subtitle]="'::SmartDeals:Counter:Subtitle' | abpLocalization"
+  [breadcrumbs]="[{ label: 'Business Portal', link: '/business/dashboard' }, { label: ('::SmartDeals:Counter:Title' | abpLocalization) }]"
+></app-page-header>
+
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8 col-xl-6">
+    <!-- Native submit, not (ngSubmit): ngSubmit only exists when FormsModule is imported, and without the handler the
+         browser reloads the page and drops the search. -->
+    <form class="card p-4 mb-4" (submit)="$event.preventDefault(); lookup()">
+      <label class="form-label" for="smart-order-code">{{ '::SmartDeals:Counter:CodeLabel' | abpLocalization }}</label>
+      <div class="input-group input-group-lg">
+        <input
+          id="smart-order-code"
+          class="form-control eks-smart-code-input"
+          type="text"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          maxlength="16"
+          [value]="code()"
+          (input)="onCodeInput($event)"
+          [placeholder]="'::SmartDeals:Counter:CodePlaceholder' | abpLocalization"
+        />
+        <button type="submit" class="btn btn-primary" [disabled]="!code().trim() || isBusy()">
+          {{ '::SmartDeals:Counter:Find' | abpLocalization }}
+        </button>
+      </div>
+      <div class="form-text">{{ '::SmartDeals:Counter:CodeHint' | abpLocalization }}</div>
+    </form>
+
+    @if (order(); as order) {
+      <section class="card p-4" aria-live="polite">
+        <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+          <div class="min-w-0">
+            <div class="small text-muted">{{ '::SmartDeals:Counter:Customer' | abpLocalization }}</div>
+            <div class="fw-semibold">{{ order.customerName || ('::SmartDeals:Counter:UnnamedCustomer' | abpLocalization) }}</div>
+            @if (order.customerPhone) {
+              <div class="small text-muted">{{ order.customerPhone }}</div>
+            }
+          </div>
+          <app-status-badge [label]="statusLabelKey(order.status) | abpLocalization" [variant]="statusVariant(order.status)" />
+        </div>
+
+        <div class="eks-counter-line">
+          <span class="fw-semibold">{{ order.offerTitleEn }}</span>
+          <span class="text-muted">× {{ order.quantity }}</span>
+        </div>
+
+        <div class="eks-counter-total">
+          <span class="small text-muted">{{ '::SmartDeals:Counter:AmountDue' | abpLocalization }}</span>
+          <span class="eks-counter-total__value">{{ money(order.totalAmount, order.currency) }}</span>
+          <span class="small text-muted">{{ '::SmartDeals:Counter:UnitPriceNote' | abpLocalization: money(order.unitPrice, order.currency) }}</span>
+        </div>
+
+        @if (isPending()) {
+          <div class="small text-muted mb-3">
+            {{ '::SmartDeals:Counter:ValidFor' | abpLocalization: validFor(order) }}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small" for="smart-order-reason">{{ '::SmartDeals:Counter:RejectReason' | abpLocalization }}</label>
+            <input
+              id="smart-order-reason"
+              class="form-control form-control-sm"
+              type="text"
+              maxlength="256"
+              [value]="reason()"
+              (input)="onReasonInput($event)"
+            />
+          </div>
+
+          <div class="d-flex flex-wrap justify-content-end gap-2">
+            <button type="button" class="btn btn-outline-danger" [disabled]="isBusy()" (click)="reject()">
+              {{ '::SmartDeals:Counter:Reject' | abpLocalization }}
+            </button>
+            <button type="button" class="btn btn-success" [disabled]="isBusy()" (click)="complete()">
+              <i class="fas fa-circle-check me-1"></i>{{ '::SmartDeals:Counter:Complete' | abpLocalization }}
+            </button>
+          </div>
+        } @else {
+          <div class="d-flex justify-content-end">
+            <button type="button" class="btn btn-outline-secondary" (click)="newOrder()">
+              {{ '::SmartDeals:Counter:NextCustomer' | abpLocalization }}
+            </button>
+          </div>
+        }
+      </section>
+    }
+
+    <section class="card p-4 mt-4" [attr.aria-label]="'::SmartDeals:Counter:HistoryTitle' | abpLocalization">
+      <h2 class="eks-history__title">{{ '::SmartDeals:Counter:HistoryTitle' | abpLocalization }}</h2>
+      @if (!historyLoaded()) {
+        <p class="text-muted small mb-0">{{ '::SmartDeals:Loading' | abpLocalization }}</p>
+      } @else if (historyFailed()) {
+        <p class="text-danger small mb-0">{{ '::SmartDeals:Counter:HistoryError' | abpLocalization }}</p>
+      } @else if (history().length === 0) {
+        <p class="text-muted small mb-0">{{ '::SmartDeals:Counter:HistoryEmpty' | abpLocalization }}</p>
+      } @else {
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr class="small text-muted">
+                <th scope="col">{{ '::SmartDeals:Counter:HistoryTime' | abpLocalization }}</th>
+                <th scope="col">{{ '::SmartDeals:Counter:Customer' | abpLocalization }}</th>
+                <th scope="col">{{ '::SmartDeals:Counter:HistoryDeal' | abpLocalization }}</th>
+                <th scope="col" class="text-end">{{ '::SmartDeals:Counter:HistoryAmount' | abpLocalization }}</th>
+                <th scope="col">{{ '::SmartDeals:Counter:HistoryStatus' | abpLocalization }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (sale of history(); track sale.id) {
+                <tr
+                  class="eks-history__row"
+                  role="button"
+                  tabindex="0"
+                  [attr.aria-label]="('::SmartDeals:SaleDetails:Open' | abpLocalization) + ': ' + sale.offerTitleEn"
+                  (click)="openSale(sale)"
+                  (keydown.enter)="openSale(sale)"
+                >
+                  <td class="small text-nowrap">{{ sale.creationTime | date: 'dd MMM, HH:mm' }}</td>
+                  <td class="small">{{ sale.customerName || ('::SmartDeals:Counter:UnnamedCustomer' | abpLocalization) }}</td>
+                  <td class="small">{{ sale.offerTitleEn }} × {{ sale.quantity }}</td>
+                  <td class="small text-end text-nowrap fw-semibold">
+                    {{ money(sale.status === Status.Completed ? sale.totalAmount : null, sale.currency) }}
+                  </td>
+                  <td>
+                    <app-status-badge [label]="statusLabelKey(sale.status) | abpLocalization" [variant]="statusVariant(sale.status)" />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (historyPages() > 1) {
+          <app-pagination [pageIndex]="historyPageIndex()" [totalPages]="historyPages()" (pageChange)="goToHistoryPage($event)" />
+        }
+      }
+    </section>
+  </div>
+</div>
+
+<app-modal
+  [open]="selectedSale() !== null"
+  [title]="'::SmartDeals:SaleDetails:Title' | abpLocalization"
+  (closed)="closeSale()"
+>
+  @if (selectedSale(); as sale) {
+    <div class="d-flex flex-column gap-3">
+      <div class="d-flex justify-content-end">
+        <app-status-badge [label]="statusLabelKey(sale.status) | abpLocalization" [variant]="statusVariant(sale.status)" />
+      </div>
+      <app-smart-sale-details [sale]="sale" />
+    </div>
+  }
+
+  <div slot="footer" class="d-flex justify-content-end w-100">
+    <button type="button" class="btn btn-secondary" (click)="closeSale()">
+      {{ '::SmartDeals:SaleDetails:Close' | abpLocalization }}
+    </button>
+  </div>
+</app-modal>

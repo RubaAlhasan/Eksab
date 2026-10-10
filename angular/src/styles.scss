@@ -1,5 +1,6 @@
 @use './styles/tokens';
 @use './styles/customer-kit';
+@use './styles/dashboard-kit';
 
 /* You can add global styles to this file, and also import other style files */
 
@@ -581,10 +582,12 @@ body {
 // size/shape of the content that will replace it reads as "this is already loading in" rather than
 // "the page has stopped to think," which matters most on card/grid-heavy pages. Apply directly to an
 // element sized like the real content (e.g. a fixed-height div matching a card's height).
+// --eks-border, not --eks-surface-2: the surface-2 tone is almost the page background, so a loading placeholder
+// was invisible and the screen looked empty while it loaded.
 .eks-skeleton {
   position: relative;
   overflow: hidden;
-  background: var(--eks-surface-2);
+  background: var(--eks-border);
   border-radius: var(--eks-radius-md);
 
   &::after {

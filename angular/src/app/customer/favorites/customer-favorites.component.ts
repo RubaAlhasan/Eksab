@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
+import { LocalizedNamePipe } from '../../shared/pipes/localized-name.pipe';
 import { environment } from '../../../environments/environment';
 import { FollowsService } from '../../proxy/controllers/follows.service';
 import { CustomerBusinessService } from '../../proxy/controllers/customer-business.service';
@@ -18,8 +19,9 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 @Component({
   selector: 'app-customer-favorites',
   templateUrl: './customer-favorites.component.html',
+  styleUrls: ['./customer-favorites.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, LocalizationPipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent],
+  imports: [RouterLink, LocalizationPipe, LocalizedNamePipe, SkeletonListComponent, EmptyStateComponent, ErrorStateComponent],
 })
 export class CustomerFavoritesComponent implements OnInit {
   private readonly followsService = inject(FollowsService);

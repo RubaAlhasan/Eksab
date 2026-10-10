@@ -1,0 +1,80 @@
+// The track is a plain block with absolutely positioned segments, so its width is the whole day and a stage's place is
+// just a percentage of that width. Colors come from --eks-* tokens, which keep light and dark mode in step.
+
+.eks-timeline {
+  width: 100%;
+}
+
+.eks-timeline__track {
+  position: relative;
+  height: 2.25rem;
+  border-radius: var(--eks-radius-md);
+  background: var(--eks-surface-2);
+  border: 1px solid var(--eks-border);
+  overflow: hidden;
+}
+
+.eks-timeline__segment {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--eks-primary-subtle-bg);
+  border-inline-start: 2px solid var(--eks-primary);
+  transition: background-color 0.2s ease;
+
+  &--live {
+    background: var(--eks-success-subtle-bg);
+    border-inline-start-color: var(--eks-success);
+  }
+
+  &--invalid {
+    background: var(--eks-danger-subtle-bg);
+    border-inline-start-color: var(--eks-danger);
+  }
+}
+
+.eks-timeline__label {
+  padding: 0 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--eks-primary-subtle-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.eks-timeline__now {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-inline-start: -1px;
+  background: var(--eks-text);
+  border-radius: 1px;
+
+  // A small cap so the "now" line is findable on a dense track.
+  &::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--eks-text);
+  }
+}
+
+.eks-timeline__ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.25rem;
+  font-size: 0.6875rem;
+  color: var(--eks-text-muted);
+  font-variant-numeric: tabular-nums;
+}

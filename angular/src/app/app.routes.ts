@@ -99,12 +99,30 @@ export const APP_ROUTES: Routes = [
         data: { titleKey: '::Wallet:Coupons:Title' },
       },
       {
+        path: 'smart-deals',
+        loadComponent: () => import('./customer/smart-deals/customer-smart-deals.component').then(c => c.CustomerSmartDealsComponent),
+        data: { titleKey: '::SmartDeals:Browse:Title' },
+      },
+      {
+        // Declared after 'smart-deals' only for readability: the two paths do not overlap.
+        path: 'smart-deals/orders',
+        loadComponent: () => import('./customer/smart-deals/orders/customer-deal-orders.component').then(c => c.CustomerDealOrdersComponent),
+        data: { titleKey: '::SmartDeals:Orders:Title' },
+      },
+      {
+        // A deal opened from one of the customer's orders. Readable after the deal's sale window has ended.
+        path: 'smart-deals/offer/:tenantId/:offerId',
+        loadComponent: () => import('./customer/smart-deals/offer/customer-deal-offer.component').then(c => c.CustomerDealOfferComponent),
+        data: { titleKey: '::SmartDeals:Offer:Title' },
+      },
+      {
         path: 'search',
         loadComponent: () => import('./customer/discover/customer-discover.component').then(c => c.CustomerDiscoverComponent),
       },
       {
         path: 'store/:tenantId',
         loadComponent: () => import('./customer/store/customer-store-details.component').then(c => c.CustomerStoreDetailsComponent),
+        data: { titleKey: '::Wallet:Store:Title' },
       },
       {
         path: 'favorites',
@@ -147,6 +165,29 @@ export const APP_ROUTES: Routes = [
         path: 'profile/edit',
         loadComponent: () => import('./customer/profile/customer-edit-profile.component').then(c => c.CustomerEditProfileComponent),
         data: { titleKey: '::Wallet:Profile:EditTitle' },
+      },
+      {
+        path: 'activity',
+        loadComponent: () => import('./customer/activity/customer-activity.component').then(c => c.CustomerActivityComponent),
+        data: { titleKey: '::Wallet:Activity:Title' },
+      },
+      {
+        path: 'support',
+        loadComponent: () => import('./customer/support/customer-support.component').then(c => c.CustomerSupportComponent),
+        data: { titleKey: '::Wallet:Support:Title' },
+      },
+      {
+        // Declared before ':ticketId' so that "new" is read as the request form, not as a ticket id.
+        path: 'support/new',
+        loadComponent: () =>
+          import('./customer/support/customer-support-ticket.component').then(c => c.CustomerSupportTicketComponent),
+        data: { titleKey: '::Wallet:Support:NewTitle' },
+      },
+      {
+        path: 'support/:ticketId',
+        loadComponent: () =>
+          import('./customer/support/customer-support-ticket.component').then(c => c.CustomerSupportTicketComponent),
+        data: { titleKey: '::Wallet:Support:Title' },
       },
     ],
   },
@@ -469,6 +510,36 @@ export const APP_ROUTES: Routes = [
         path: 'redemption',
         loadComponent: () =>
           import('./business/redemption/business-redemption.component').then(c => c.BusinessRedemptionComponent),
+      },
+      {
+        // Staff counter for Buy Now pickups. No requiredPolicy, same as 'redemption' above: Cashiers staff the counter,
+        // and SmartOfferOrderAppService checks their EmployeeAssignment.Role itself.
+        path: 'smart-orders',
+        loadComponent: () =>
+          import('./business/smart-offers/business-smart-orders.component').then(c => c.BusinessSmartOrdersComponent),
+      },
+      {
+        path: 'smart-offers',
+        loadComponent: () =>
+          import('./business/smart-offers/business-smart-offers.component').then(c => c.BusinessSmartOffersComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.SmartOffers' },
+      },
+      {
+        // 'new' is a valid id here, and the editor reads it as "create" (see BusinessSmartOfferEditorComponent.ngOnInit).
+        path: 'smart-offers/:id',
+        loadComponent: () =>
+          import('./business/smart-offers/business-smart-offer-editor.component').then(c => c.BusinessSmartOfferEditorComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.SmartOffers' },
+      },
+      {
+        // Opened from a sale's "Open deal" link. The same page, showing the deal with nothing that can change it.
+        path: 'smart-offers/:id/view',
+        loadComponent: () =>
+          import('./business/smart-offers/business-smart-offer-editor.component').then(c => c.BusinessSmartOfferEditorComponent),
+        canActivate: [permissionGuard],
+        data: { requiredPolicy: 'Eksabli.SmartOffers', readOnly: true },
       },
       {
         path: 'rewards',
